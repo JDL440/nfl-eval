@@ -14,6 +14,8 @@ How to decide who handles what.
 | Defensive scheme fit | Defense | "Can this CB play man?", defensive front analysis, coverage scheme evaluation |
 | Special teams value | SpecialTeams | Kicker/punter evaluation, return game, ST roster spots, rule impact |
 | Team-specific questions | {TEAM} | "What do the Bills need?", "Show me the Eagles roster", team cap situation |
+| Advanced analytics, stats, metrics | Analytics | EPA, PFF grades, player comps, efficiency rankings, contract value |
+| College prospect evaluation | CollegeScout | Prospect scouting, measurables, film evaluation, college production |
 | News, rumors, transactions | Media | Breaking news, rumor tracking, transaction monitoring, reporter intel |
 | Session logging | Scribe | Automatic - never needs routing |
 | Work monitoring | Ralph | Backlog, issue tracking, pipeline management |

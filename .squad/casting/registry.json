@@ -359,6 +359,24 @@
       "legacy_named": false,
       "universe": null,
       "persistent_name": "Media"
+    },
+    "analytics": {
+      "domain_named": true,
+      "created_at": "2026-03-12",
+      "status": "active",
+      "legacy_named": false,
+      "role": "Advanced Analytics Expert",
+      "persistent_name": "Analytics",
+      "universe": null
+    },
+    "collegescout": {
+      "domain_named": true,
+      "created_at": "2026-03-12",
+      "status": "active",
+      "legacy_named": false,
+      "role": "College Player Scouting",
+      "persistent_name": "CollegeScout",
+      "universe": null
     }
   }
 }
