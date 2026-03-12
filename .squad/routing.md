@@ -16,6 +16,7 @@ How to decide who handles what.
 | Team-specific questions | {TEAM} | "What do the Bills need?", "Show me the Eagles roster", team cap situation |
 | Advanced analytics, stats, metrics | Analytics | EPA, PFF grades, player comps, efficiency rankings, contract value |
 | College prospect evaluation | CollegeScout | Prospect scouting, measurables, film evaluation, college production |
+| Player perspective, CBA rules, contract fairness | PlayerRep | Prospect scouting, measurables, film evaluation, college production |
 | News, rumors, transactions | Media | Breaking news, rumor tracking, transaction monitoring, reporter intel |
 | Session logging | Scribe | Automatic - never needs routing |
 | Work monitoring | Ralph | Backlog, issue tracking, pipeline management |

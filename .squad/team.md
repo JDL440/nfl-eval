@@ -25,6 +25,7 @@
 | Media | NFL Media and Rumors | .squad/agents/media/charter.md | Active |
 | Analytics | Advanced Analytics Expert | .squad/agents/analytics/charter.md | Active |
 | CollegeScout | College Player Scouting | .squad/agents/collegescout/charter.md | Active |
+| PlayerRep | Player Advocate & CBA Expert | .squad/agents/playerrep/charter.md | Active |
 
 ### AFC East
 

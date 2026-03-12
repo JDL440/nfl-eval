@@ -377,6 +377,15 @@
       "role": "College Player Scouting",
       "persistent_name": "CollegeScout",
       "universe": null
+    },
+    "playerrep": {
+      "persistent_name": "PlayerRep",
+      "role": "Player Advocate & CBA Expert",
+      "domain_named": true,
+      "universe": null,
+      "legacy_named": false,
+      "created_at": "2026-03-12",
+      "status": "active"
     }
   }
 }
