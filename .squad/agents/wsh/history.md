@@ -334,3 +334,5 @@ _Last updated: 2026-03-12_
 - Commanders have NFL's most cap space and cleanest cap structure entering 2026
 - Deebo Samuel trade was a 1-year rental (2025 5th-round pick → 49ers); now $12.3M dead cap
 - Tunsil trade cost R2 + R4 in 2026 draft — significant draft capital loss
+
+📌 Media update (2026-03-13): Re-signed Marcus Mariota (1yr/$7M backup QB). QB room secured behind Jayden Daniels.

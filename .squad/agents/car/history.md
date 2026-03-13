@@ -331,3 +331,5 @@ _Last updated: 2026-03-12_
 5. **Phillips/Lloyd contracts haven't hit the cap yet.** OTC shows $0 for both. Real cap space after those contracts process will be much tighter than the current $29.4M shows. Estimate ~$0-5M actual space remaining.
 
 6. **Draft at #19 is a swing pick.** Not high enough for elite EDGE/QB, but in range for top WR (Lemon), TE (Sadiq), OT (Fano), or defensive help (Downs, Allen). Board will dictate BPA approach.
+
+📌 Media update (2026-03-13): Signed Kenny Pickett (1yr/$7.5M QB — bridge/backup behind Bryce Young).

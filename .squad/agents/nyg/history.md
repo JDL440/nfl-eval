@@ -343,3 +343,5 @@ _Source: ESPN schedule — fetched 2026-03-12_
 - ✅ Washington is the rising NFC East threat, not just Philadelphia anymore
 - 📊 This is a **transition year** — building for 2027 when cap space explodes and Dart/Carter/Nabers/Skattebo core matures
 - 📊 The #5 pick is the most important asset — must hit on a playmaker (WR or trade down for capital)
+
+📌 Media update (2026-03-13): Signed Tremaine Edmunds (3yr/$36M LB) and Calvin Austin (1yr/$4.5M WR). LB room upgraded significantly.

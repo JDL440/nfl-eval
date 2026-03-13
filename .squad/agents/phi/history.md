@@ -362,3 +362,7 @@ _Last updated: 2026-03-12_
 - 🚨 $52M dead money draining 2026 resources
 - 🚨 TE room went from top-5 (Goedert) to bottom-10 overnight
 - 🚨 Washington emerging as a legitimate division contender with Daniels + Oweh
+
+## Learnings
+
+📌 Media update (2026-03-13): Signed Arnold Ebiketie (1yr/$7.3M EDGE) and Jonathan Jones (1yr CB). Pass rush and CB depth addressed.

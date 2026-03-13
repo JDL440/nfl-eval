@@ -294,3 +294,7 @@ _Last updated: 2026-03-13 via ESPN transaction pages + web search_
 - ❓ Darnold's full contract breakdown (year-by-year through 2028?)
 - ❓ OC Fleury's specific offensive scheme install — 2025 SF run game film study would help predict 2026 SEA offense
 - ❓ Veteran cut/trade candidates — could Lawrence ($12.3M) be moved for draft capital?
+
+## Learnings
+
+📌 Media update (2026-03-13): Re-signed D'Anthony Bell (1yr DB). Nate Hobbs signed by LAR — remove from SEA target board.

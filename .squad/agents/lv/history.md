@@ -333,3 +333,5 @@ _Last updated: 2026-03-13_
 3. **Brock Bowers is untouchable:** TE1 on a rookie deal with generational production. Cornerstone piece. Do not trade.
 4. **Kubiak coaching tree:** Zone-run, play-action, bootleg offense. Fits Mendoza's strengths. Rick Dennison as OL coach is key (Kubiak tree lifer).
 5. **Ashton Jeanty is the real deal:** R1 pick from 2025 draft. Franchise RB. Averaged leader in rushing attempts. Locked in on rookie deal through 2028.
+
+📌 Media update (2026-03-13): Maxx Crosby trade to BAL **VOIDED** (failed physical). Crosby remains on roster but trade market reopens. Signed Jalen Nailor (3yr/$35M WR), Connor Heyward (2yr TE/FB).

@@ -316,3 +316,5 @@ _Accumulated from research sessions_
 8. **Bradley Chubb injury flag** — Signed 3yr/$43.5M but has ACL/knee history from MIA. Bills need EDGE depth as insurance.
 9. **Deone Walker is the DL future** — 2025 R1 pick, 6'7" 331 lbs, starting at NT in the 3-4. Massive upside.
 10. **Joe Brady's "Super Bowl or bust" mandate** — Ownership fired McDermott after 12-5 and a Divisional loss. Expectation is clear: Super Bowl or else.
+
+📌 Media update (2026-03-13): Signed Chauncey Gardner-Johnson (1yr/$6M S) and Kyle Allen (2yr backup QB).

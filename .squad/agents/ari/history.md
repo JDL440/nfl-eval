@@ -15,6 +15,8 @@
 - ESPN depth chart may be stale post-coaching-change; treat as baseline only.
 - Spotrac free agent tracker works with web_fetch (unlike OTC /free-agency which is JS-only).
 
+📌 Media update (2026-03-13): Signed Gardner Minshew (1yr/$5.75M backup QB) and Jonah Williams (DE). #3 pick trade buzz cooling — consensus ARI uses pick (OT Mauigoa projected).
+
 ## Knowledge Base
 
 ### Coaching Staff

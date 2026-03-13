@@ -384,3 +384,5 @@ _Last updated: 2026-03-12_
 5. 📊 **Cap is tight NOW but gets much better.** ~$9-14M in current space isn't enough for big moves. But 2027 flexibility means the Vikings can afford to take short-term deals and roll cap forward.
 
 6. ✅ **Coaching stability is the bright spot.** O'Connell + Flores + Frank Smith is a strong coaching trio. The Flores extension was crucial — he's the most important non-player on the roster.
+
+📌 Media update (2026-03-13): Kirk Cousins now UFA (released by ATL, not traded). Russell Wilson also UFA with minimal market. QB landscape shifted — potential veteran QB options available if McCarthy doesn't develop.

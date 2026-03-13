@@ -339,3 +339,5 @@ _Last updated: 2026-03-12 via spotrac.com_
 6. **NE is the rising division threat.** Their spending spree (Doubs, Dre'Mont Jones, AVT, Byard) around Drake Maye makes them dangerous. MIA should be monitoring NE's trajectory closely.
 
 7. **Draft capital is the team's greatest asset.** 9 picks with 5 in the top 90 gives MIA the ammunition to either stock the roster with young talent or package picks to trade up for a franchise-altering player.
+
+📌 Media update (2026-03-13): Signed Tutu Atwell (1yr WR). Tua Tagovailoa confirmed signed with ATL (1yr/$1.3M) — officially gone from MIA.

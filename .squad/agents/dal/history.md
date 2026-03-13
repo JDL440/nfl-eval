@@ -333,3 +333,7 @@ _Last updated: 2026-03-12_
 - ⚠️ 2027 cap situation is a looming crisis — Prescott's $76M hit will force major decisions
 - 📊 Draft (April 23-25) is the primary vehicle for roster improvement given cap constraints
 - 📊 Two first-round picks (#12, #20) give Cowboys rare opportunity to add two Day 1 starters
+
+## Learnings
+
+📌 Media update (2026-03-13): Signed Cobie Durant (1yr CB). No Rashan Gary trade confirmed.

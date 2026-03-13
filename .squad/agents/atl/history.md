@@ -355,3 +355,5 @@ _Last updated: 2026-03-12_
 5. **WR2 is the biggest hole.** Losing Mooney (even with dead cap) and not replacing him with a high-caliber WR leaves London isolated. Dotson is a speed option but hasn't been a consistent WR2. Draft or trade needed.
 
 6. **Division is wide open.** CAR is the favorite (defending champs + Phillips), but TB lost Evans and is weakened. NO is spending but unproven at QB. ATL has a path to contend if Penix/Tua are healthy and the defense takes a step forward.
+
+📌 Media update (2026-03-13): Signed Tua Tagovailoa (1yr/$1.3M vet min). Released Kirk Cousins outright. QB room completely reset — Tua + Penix Jr. (rehabbing ACL). Major cap implications from Cousins release.

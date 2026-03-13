@@ -323,3 +323,7 @@ _Last updated: 2026-03-12_
 3. **Explore FA tight end market** — Durham Smythe? Veteran TE available?
 4. **Draft CENTER at #45** — Must replace Linderbaum
 5. **March 15 decisions** — Stanley's $20.2M option, Henry's $9.7M option, Andrews' $9.2M option are MASSIVE decisions that reshape the cap
+
+## Learnings
+
+📌 Media update (2026-03-13): Maxx Crosby trade VOIDED (failed physical — knee). BAL keeps draft picks but pass rush remains critical unaddressed need. Remove Crosby from roster projections.

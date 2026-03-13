@@ -407,3 +407,5 @@ _Last updated: 2026-03-12 via overthecap.com_
 5. **2026-03-12:** BAL adding Trey Hendrickson from CIN is the biggest division move — Hendrickson was the #1 pass rusher in the AFC North and now joins Lamar's Ravens.
 6. **2026-03-12:** D.K. Metcalf trade (from SEA, pre-2025 season) transformed the offense. Combined with Pittman Jr., this is one of the best WR duos in the league. The offense has weapons — it just needs a QB to throw to them.
 7. **2026-03-12:** 12 draft picks including 3 third-rounders is elite capital. Steelers could easily package picks to move up for a QB or load up on defensive depth.
+
+📌 Media update (2026-03-13): Traded for Michael Pittman Jr. from IND (3yr/$59M ext). Signed Jamel Dean (3yr/$36.75M CB), Rico Dowdle (2yr/$12.5M RB), Jaquan Brisker (1yr/$5.5M S). Major win-now build: Metcalf + Pittman WR duo. Rodgers decision still pending.

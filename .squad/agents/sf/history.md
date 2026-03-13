@@ -342,3 +342,7 @@ _Items to investigate in follow-up research:_
 6. ❓ **Mike Evans $0 GTD at signing** — Unusual structure. What are the guarantee escalators?
 7. ❓ **Kicker/Punter plan** — Critical roster holes with no current solution on the roster.
 8. ❓ **2026 compensatory picks** — Any comp picks expected beyond the 7 confirmed picks?
+
+## Learnings
+
+📌 Media update (2026-03-13): Signed Vederian Lowe (2yr/$12M OT). Bryce Huff retired. Joey Bosa reunion rumored but no deal. Jauan Jennings still unsigned, likely departing. EDGE room thinned by Huff retirement.

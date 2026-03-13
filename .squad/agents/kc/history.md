@@ -392,3 +392,7 @@ The 2025 season was a catastrophic disappointment — the three-peat dream died,
 | ESPN Schedule | espn.com/nfl/team/schedule (kc) | Full 18-week results + stats | ✅ Excellent |
 | NFL.com Roster | nfl.com/teams/kansas-city-chiefs/roster | UFA/RFA/ERFA status flags | ✅ Good |
 | Web Search | Multiple (ESPN, SI, Yahoo, etc.) | Coaching, injury, rumors, draft | 📊 Cross-verified |
+
+## Learnings
+
+📌 Media update (2026-03-13): Signed Emari Demercado (1yr RB). Mahomes "way ahead of schedule" with 7hr daily rehab — Week 1 target realistic. Backup QB still needed (Minshew signed with ARI, not KC).

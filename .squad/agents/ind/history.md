@@ -341,3 +341,7 @@ _Last updated: 2026-03-12_
 3. **✅ Offensive Foundation:** Taylor (RB), Nelson (G), Warren (TE), Pierce (WR) — strong skill position core
 4. **✅ Young Edge Talent:** Latu (25) + Tuimoloau (22) — premium young pass rushers
 5. **✅ Coaching Continuity:** Steichen/Cooter/Anarumo all retained — scheme stability
+
+## Learnings
+
+📌 Media update (2026-03-13): Extended Alec Pierce (4yr/$116M — now WR1). Traded Michael Pittman Jr. to PIT (cap clearing). Daniel Jones on transition tag. WR room reshaped around Pierce as the centerpiece.

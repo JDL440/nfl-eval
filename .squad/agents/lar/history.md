@@ -297,3 +297,5 @@ _Last updated: 2026-03-15 via espn.com schedule_
 - ✅ OTC vs Spotrac cap numbers differ due to methodology — always record both with context.
 - ✅ Stafford's void years through 2034 mean dead money persists long after retirement — important for future cap planning.
 - ✅ Two first-round picks (#13, #29) is the most draft capital the Rams have had in the Snead/McVay era — this is a pivotal draft.
+
+📌 Media update (2026-03-13): Signed Nate Hobbs (1yr CB). CB room depth added.
