@@ -291,3 +291,291 @@ _Last updated: 2026-03-12 via OverTheCap_
 - **QB Cost Divergence:** Purdy ($24.4M) vs. Murray ($52.7M) is a $28M gap — SF's key structural edge
 - **2027 Warning:** SF projected over the cap; LAR projected at ~$3M — only ARI and SEA have comfortable 2027 runways
 - **Seattle's Paradox:** Cleanest cap sheet BUT lost 3 quality starters (Mafe, Walker, C. Bryant) — cap space means nothing if not deployed wisely
+
+---
+
+## Extension Modeling: JSN & Devon Witherspoon
+
+_Analysis date: 2026-03-13 | Requested by: Joe Robinson_
+
+### Executive Summary
+
+Seattle can afford both extensions simultaneously. The combined 2027 cap hit of ~$36M is absorbable given $75.9M effective space. Darnold/Williams restructures create an additional ~$19.8M in 2026 breathing room if needed. The championship window (2026-2029) remains intact with proper sequencing.
+
+**Recommended approach:** Extend both players this offseason (summer 2026), before the 2026 season. This locks in prices before another year of production potentially inflates them, and allows the signing bonus proration to begin immediately for maximum cap efficiency.
+
+---
+
+### Player Profiles
+
+**Jaxon Smith-Njigba (WR)**
+- Age: 24 (2026 season) | Entry: 2023 R1 #20
+- Current deal: 4yr/$14.4M rookie contract, 2026 cap hit $4,587,325 (final year)
+- 2025 production: 119 rec, 1,793 yds, 10 TD — elite WR1 output
+- OTC Valuation: $34,238,000 vs. $3,604,327 APY — **massive surplus value**
+- Free agency: UFA 2027 (5th-year option available, ~$24-28M projected value)
+
+**Devon Witherspoon (CB)**
+- Age: 26 (2026 season) | Entry: 2023 R1 #5
+- Current deal: 4yr/$31.9M rookie contract, 2026 cap hit $10,137,639 (final year)
+- 2025: Pro Bowl caliber when healthy, missed 5 games (12 GP)
+- OTC Valuation: $11,763,000 vs. $7,965,288 APY — surplus value
+- Free agency: UFA 2027 (5th-year option available, ~$20-22M projected value for top-10 pick)
+- ⚠️ Injury history is a negotiation factor — may reduce total guarantees slightly
+
+---
+
+### WR Market Comps (for JSN)
+
+| Player | Team | Year | Yrs | Total | AAV | Total GTD | Fully GTD | Context |
+|--------|------|------|-----|-------|-----|-----------|-----------|---------|
+| Ja'Marr Chase | CIN | 2025 | 4 | $161M | $40.25M | $109.8M | $73.9M | Market-setter, elite production |
+| Justin Jefferson | MIN | 2024 | 4 | $140M | $35.0M | $110M | $88.7M | Elite WR, set market in 2024 |
+| CeeDee Lamb | DAL | 2024 | 4 | $136M | $34.0M | $100M | $77.5M | WR1 deal |
+| Garrett Wilson | NYJ | 2025 | 5 | $130M | $32.5M | $90M | $60M | Less production than JSN |
+| Amon-Ra St. Brown | DET | 2024 | 4 | $120M | $30.0M | $77M | $58M | Slot/versatile, PPR machine |
+| Alec Pierce | IND | 2026 | 4 | $116M | $29.0M | $84M | — | 2026 FA market-setter |
+| Jameson Williams | DET | 2025 | 3 | $80M | $26.67M | $66.1M | $44M | Less proven than JSN |
+| DeVonta Smith | PHI | 2024 | 3 | $75M | $25.0M | $51M | — | WR2 deal |
+
+**JSN's comp tier:** $32-35M AAV. His 119/1,793/10 season at age 23 is comparable to Chase/Jefferson production levels. However, it's one elite season vs. multi-year track records for those players. He slots between Garrett Wilson ($32.5M) and CeeDee Lamb ($34M). **Projected AAV: $33.5M.**
+
+---
+
+### CB Market Comps (for Witherspoon)
+
+| Player | Team | Year | Yrs | Total | AAV | Total GTD | Fully GTD | Context |
+|--------|------|------|-----|-------|-----|-----------|-----------|---------|
+| Sauce Gardner | IND | 2025 | 4 | $120.4M | $30.1M | $84.65M | $40.5M | Market-setter, traded to IND |
+| Derek Stingley | HOU | 2025 | 3 | $90M | $30.0M | $89M | — | Near-full GTD, elite CB |
+| Jaycee Horn | CAR | 2025 | 4 | $100M | $25.0M | $70M | — | Injury history factored in |
+| Pat Surtain II | DEN | 2024 | 4 | $96M | $24.0M | $77.5M | $40.7M | Gold standard CB deal |
+| DaRon Bland | DAL | 2025 | 4 | $90M | $22.5M | $50M | — | Ball-hawk specialist |
+| A.J. Terrell | ATL | 2024 | 4 | $81M | $20.25M | $65.8M | — | Solid CB1 |
+| Alontae Taylor | TEN | 2026 | 3 | $58M | $19.33M | — | — | 2026 FA CB market |
+
+**Witherspoon's comp tier:** $24-27M AAV. His talent is Gardner/Stingley caliber, but the injury concern (missed 5 games in 2025) will moderate guarantees. The Surtain ($24M) and Horn ($25M) deals are the most relevant structural comps — both are elite young CBs with some durability questions. **Projected AAV: $26M.**
+
+---
+
+### Extension Model: Jaxon Smith-Njigba
+
+**Deal: 4 new years (2027-2030), $134M new money, $33.5M AAV**
+- Signed: Summer 2026 (layered onto final rookie year)
+- Signing bonus: $45M ($9M/yr proration over 2026-2030)
+- Fully guaranteed at signing: $65M
+- Total guarantees (rolling): $95M
+- New base salaries (2027-2030): $89M
+
+| Year | Age | Base Salary | SB Proration | Orig Proration | Cap Hit | Projected Cap | Cap % |
+|------|-----|-------------|-------------|----------------|---------|---------------|-------|
+| 2026 | 24 | $2,716,000 | $9,000,000 | $1,871,325 | **$13,587,325** | $301,200,000 | 4.5% |
+| 2027 | 25 | $12,000,000 | $9,000,000 | — | **$21,000,000** | $327,000,000 | 6.4% |
+| 2028 | 26 | $19,000,000 | $9,000,000 | — | **$28,000,000** | $352,000,000 | 8.0% |
+| 2029 | 27 | $26,000,000 | $9,000,000 | — | **$35,000,000** | $375,000,000 | 9.3% |
+| 2030 | 28 | $32,000,000 | $9,000,000 | — | **$41,000,000** | $400,000,000 | 10.3% |
+
+**2026 cap impact:** +$9.0M over current ($4.59M → $13.59M)
+**Key cap feature:** The 2027 hit of $21M is extremely favorable — only 6.4% of the projected cap. By the time the deal peaks at $41M in 2030, the cap is projected at ~$400M, keeping it at ~10% — market rate.
+
+**Why now vs. after 2026:**
+| Factor | Extend Now (Summer 2026) | Wait (After 2026 Season) |
+|--------|--------------------------|--------------------------|
+| Projected AAV | $33.5M | $35-38M (market inflation + another big year) |
+| Signing bonus proration | Starts in 2026 (extra year of spread) | Starts in 2027 (1 fewer year to spread) |
+| Risk for team | Pays before confirming 2025 wasn't a fluke | Higher price if he repeats |
+| Risk for player | Leaves money on table if market jumps | Risk of injury in 2026 |
+| **Recommendation** | **✅ Strongly prefer** | ⚠️ Only if negotiations stall |
+
+---
+
+### Extension Model: Devon Witherspoon
+
+**Deal: 4 new years (2027-2030), $104M new money, $26M AAV**
+- Signed: Summer 2026 (layered onto final rookie year)
+- Signing bonus: $35M ($7M/yr proration over 2026-2030)
+- Fully guaranteed at signing: $50M
+- Total guarantees (rolling): $75M
+- New base salaries (2027-2030): $69M
+- Note: 5th-year option should be exercised in May 2026 as insurance during negotiations
+
+| Year | Age | Base Salary | SB Proration | Orig Cap Components | Cap Hit | Projected Cap | Cap % |
+|------|-----|-------------|-------------|---------------------|---------|---------------|-------|
+| 2026 | 26 | $1,755,477 | $7,000,000 | $8,382,162 (orig) | **$17,137,639** | $301,200,000 | 5.7% |
+| 2027 | 27 | $8,000,000 | $7,000,000 | — | **$15,000,000** | $327,000,000 | 4.6% |
+| 2028 | 28 | $15,000,000 | $7,000,000 | — | **$22,000,000** | $352,000,000 | 6.3% |
+| 2029 | 29 | $22,000,000 | $7,000,000 | — | **$29,000,000** | $375,000,000 | 7.7% |
+| 2030 | 30 | $24,000,000 | $7,000,000 | — | **$31,000,000** | $400,000,000 | 7.8% |
+
+**2026 cap impact:** +$7.0M over current ($10.14M → $17.14M)
+**Key cap feature:** The 2027 hit of only $15M is exceptional — lower than the 5th-year option value ($20-22M) would have been. This is the primary cap advantage of extending early.
+
+**Guarantee discount for injury risk:** The $50M fully guaranteed at signing is lower than Surtain's $54.2M new guarantee and well below Gardner's structure, reflecting Witherspoon's 5-game absence in 2025. If he plays a full 2026, future rolling guarantees vest via standard March roster date triggers.
+
+**5th-Year Option Strategy:**
+Exercise the option in May 2026 as a negotiating bridge. If the extension is finalized, the option year gets rolled into the new deal. If negotiations stall, the option guarantees Witherspoon is under contract for 2027 at ~$20-22M (fully guaranteed for injury only). This is the standard approach for first-round CBs.
+
+---
+
+### Combined Cap Impact: Year-by-Year Comparison
+
+#### Scenario 1: Baseline (No Extensions — Both Walk as UFAs)
+
+| Year | Projected Cap | Current Committed | Effective Space | Key Notes |
+|------|---------------|-------------------|-----------------|-----------|
+| 2026 | $301,200,000 | $263,930,635 | **$37,269,365** | 53-man roster, 65 under contract |
+| 2027 | $327,000,000 | $231,613,465 | **$75,856,535** | Only 30 under contract; need ~21 fill |
+| 2028 | $352,000,000 | $109,871,202 | **$207,996,000** | Only 16 under contract; massive open space |
+| 2029 | $375,000,000 | ~$40,000,000 | ~$290,000,000 | Extremely few committed |
+
+⚠️ In this scenario, JSN and Witherspoon leave in FA. Replacement cost at WR1 + CB1 is likely $35-50M combined AAV anyway — so "saving" money by letting them walk is illusory.
+
+#### Scenario 2: Witherspoon Extension Only
+
+| Year | New Witherspoon Hit | 2026 Change | Remaining Space |
+|------|---------------------|-------------|-----------------|
+| 2026 | $17,137,639 | +$7,000,000 | **$30,269,365** |
+| 2027 | $15,000,000 | +$15,000,000 | **$60,856,535** |
+| 2028 | $22,000,000 | +$22,000,000 | **$185,996,000** |
+| 2029 | $29,000,000 | +$29,000,000 | ~$261,000,000 |
+
+#### Scenario 3: Both Extensions ✅ RECOMMENDED
+
+| Year | JSN Hit | Witherspoon Hit | Combined Add | Remaining Space |
+|------|---------|-----------------|--------------|-----------------|
+| 2026 | $13,587,325 | $17,137,639 | **+$16,000,000** | **$21,269,365** |
+| 2027 | $21,000,000 | $15,000,000 | **+$36,000,000** | **$39,856,535** |
+| 2028 | $28,000,000 | $22,000,000 | **+$50,000,000** | **$157,996,000** |
+| 2029 | $35,000,000 | $29,000,000 | **+$64,000,000** | ~$226,000,000 |
+
+**Key takeaway:** Even with BOTH extensions, Seattle has $21.3M effective space in 2026 and $39.9M in 2027. That's more than SF has TODAY ($12M). The math works comfortably.
+
+#### Scenario 4: Both Extensions + Darnold/Williams Restructures 💪 MAX FLEXIBILITY
+
+| Year | Extension Add | Restructure Savings | Net Change | Remaining Space |
+|------|---------------|---------------------|------------|-----------------|
+| 2026 | +$16,000,000 | **-$19,758,000** | **-$3,758,000** | **$41,027,365** |
+| 2027 | +$36,000,000 | +$8,342,000 | +$44,342,000 | **$31,514,535** |
+| 2028 | +$50,000,000 | +$8,342,000 | +$58,342,000 | **$149,654,000** |
+
+---
+
+### Restructure Detail
+
+#### Sam Darnold (QB) — 2026 Restructure
+
+| Metric | Current | After Restructure | Change |
+|--------|---------|-------------------|--------|
+| 2026 cap hit | $37,900,000 | **$28,675,000** | **-$9,225,000** |
+| 2027 cap hit | $44,900,000 | $47,975,000 | +$3,075,000 |
+| 2028 void | $12,800,000 | $15,875,000 | +$3,075,000 |
+| 2029 void | $0 | $3,075,000 | +$3,075,000 |
+
+**Mechanism:** Convert $12.3M base salary to signing bonus, prorating over 4 remaining years (2026-2029 including void years). Creates $9.225M in 2026 cap space at the cost of $3.075M/yr in future dead money.
+
+**Risk assessment:** Low. Darnold's 2027 contract year ($44.9M → $48M) is already his peak cap hit. The added void year dead money ($15.9M in 2028, $3.1M in 2029) is manageable against projected caps of $352M and $375M.
+
+#### Leonard Williams (DT) — 2026 Restructure
+
+| Metric | Current | After Restructure | Change |
+|--------|---------|-------------------|--------|
+| 2026 cap hit | $29,636,250 | **$19,103,250** | **-$10,533,000** |
+| 2027 void | $9,372,500 | $14,639,500 | +$5,267,000 |
+| 2028 void | $0 | $5,267,000 | +$5,267,000 |
+
+**Mechanism:** Convert $15.8M base salary to signing bonus, prorating over 3 remaining years (2026-2028 including void years). Creates $10.533M in 2026 cap space.
+
+**Risk assessment:** Moderate. Williams' void year dead money increases significantly ($14.6M in 2027). However, since he's already on a void-year structure, this is just accelerating guaranteed money. The $14.6M in 2027 dead money against a $327M cap is only 4.5%.
+
+**⚠️ Note:** Williams was already restructured once (2025, $18.745M conversion). A second restructure is unusual but permissible. The team should weigh whether Williams is a long-term piece before adding more dead money.
+
+#### Combined Restructure Impact
+
+| Year | Darnold Savings | Williams Savings | Total Savings |
+|------|-----------------|------------------|---------------|
+| 2026 | **$9,225,000** | **$10,533,000** | **$19,758,000** |
+| 2027 | -$3,075,000 | -$5,267,000 | -$8,342,000 |
+| 2028 | -$3,075,000 | -$5,267,000 | -$8,342,000 |
+| 2029 | -$3,075,000 | — | -$3,075,000 |
+
+---
+
+### Championship Window Analysis (2026-2029)
+
+#### The Core Question: Can Seattle extend both AND win?
+
+**YES.** Here's the year-by-year math with both extensions and available restructures:
+
+| Year | Cap | Committed (w/ extensions) | True Usable Space | Window Status |
+|------|-----|---------------------------|-------------------|---------------|
+| 2026 | $301.2M | $279.9M | **$21.3M** ($41M w/ restructures) | 🟢 OPEN — can add FA starters |
+| 2027 | $327M | $267.6M | **$39.9M** ($31.5M w/ restructures) | 🟢 OPEN — tightest year, still flexible |
+| 2028 | $352M | $159.9M | **$158M** | 🟢 WIDE OPEN — Darnold off books, massive space |
+| 2029 | $375M | ~$104M | **~$226M** | 🟢 WIDE OPEN — reset opportunity |
+
+#### Key Window Dynamics
+
+1. **2026 is the action year.** With $21-41M in space, Seattle can:
+   - Sign 2-3 quality starters on 1-2 year deals to replace Mafe/Walker/Bryant
+   - Address EDGE rusher need (market: $15-20M AAV for quality starter)
+   - Add RB depth ($3-5M range)
+   - Still have room for draft picks ($5-7M for class)
+
+2. **2027 is the tightest year** but still workable at $31-40M effective space. Key factors:
+   - Darnold's peak hit ($44.9-48M) is the primary constraint
+   - Extensions produce favorable Year 1 hits ($21M JSN + $15M Witherspoon)
+   - If Seattle drafts a QB in 2026, the rookie would cost only $3-7M in 2027
+
+3. **2028 is the financial reset.** Darnold comes off the books (only $15.9M dead money). Williams is gone. The cap jumps to $352M. Seattle will have $150M+ to build around JSN (28M hit), Witherspoon ($22M hit), and whoever replaces Darnold.
+
+4. **2029 and beyond** — with a projected $375M cap and only ~$104M committed (extensions + a few young players), Seattle has extraordinary flexibility to build the next iteration of the roster.
+
+#### The Sequencing Recommendation
+
+| Priority | Action | Timing | Cap Impact |
+|----------|--------|--------|------------|
+| 1 | Extend Witherspoon | May-June 2026 | Exercise 5th-year option first as insurance |
+| 2 | Extend JSN | June-July 2026 | Lock in before 2026 season |
+| 3 | Restructure Darnold | If needed for FA signings | Only if $21M space insufficient |
+| 4 | Restructure Williams | Last resort | Only if 2026 spending requires it |
+| 5 | Address EDGE/RB in FA | March-April 2026 | 1-2 year deals, avoid long-term commitments |
+
+**Do the extensions first, restructures second.** The extensions are the long-term investments; restructures are tactical cap tools to increase 2026 spending if needed. Don't restructure unless specific FA targets require the extra room.
+
+---
+
+### Risk Factors
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| JSN regresses after 2025 breakout | Low (20%) | Overpay by $3-5M AAV | Structure with performable incentives in Year 3-4 |
+| Witherspoon's injury recurrence | Moderate (35%) | Dead cap if cut/traded | Lower fully-GTD ($50M vs. $65M for healthy CB), per-game roster bonuses |
+| Cap growth slows (< $25M/yr) | Low (15%) | 2029-2030 contracts pinch harder | Void year in JSN deal provides escape valve |
+| Darnold underperforms / replaced early | Moderate (30%) | $12-16M dead money in 2028 | Already priced in; 2028 cap ($352M) absorbs it easily |
+| Both players demand top-of-market | Low-Moderate (25%) | Combined $65M+ AAV | Negotiate JSN first (cleaner comp set), use as leverage for Witherspoon |
+
+---
+
+### Bottom Line
+
+Seattle is in a **rare and enviable position**: two franchise-caliber players on expiring rookie deals, the cleanest cap sheet in the NFL, and 4 years of rising salary caps ahead. The math doesn't just "work" — it works comfortably.
+
+- **Extend both now** at a combined ~$59.5M AAV ($33.5M JSN + $26M Witherspoon)
+- **2026 remains flexible** with $21-41M to address roster holes
+- **2027 is manageable** at $31-40M effective space despite Darnold's peak hit
+- **2028-2029 are wide open** for the next phase of roster building
+- **Use restructures tactically**, not preemptively — save them for specific FA acquisitions
+
+The bigger risk is NOT extending these players and watching them walk into a WR/CB market that's inflating 8-10% annually. Every year Seattle waits, it costs $2-4M more per player.
+
+---
+
+### 2026-03-13: Extension Modeling Learnings
+
+- **OTC player pages** (`/player/{name}/{id}/`) return complete year-by-year contract breakdowns including base salary, prorated bonus, roster bonuses, option bonuses, per-game bonuses, and void year details ✅
+- **OTC cap space projections** for 2027-2028 reflect only currently signed players — must mentally account for roster-filling costs (~$1.1M × missing players to reach 51)
+- **Cap % of hit is the best comparison metric** — raw dollar amounts are misleading across years with different cap ceilings
+- **Signing bonus proration** is the primary tool for front-loading cap efficiency: $45M SB over 5 years = $9M/yr proration, keeping Year 1 hits dramatically below AAV
+- **Restructure math with void years:** Darnold's 4-year spread (2026-2029 including voids) creates $9.225M savings; Williams' 3-year spread (2026-2028 including voids) creates $10.533M savings
+- **The "replacement cost fallacy":** When modeling "no extension" scenarios, must account for the cost of replacing departed players in FA — the savings are largely illusory since WR1/CB1 replacements cost $25-35M AAV anyway
+- **5th-year option as bridge strategy:** For 2023 first-rounders, exercise the option in May 2026 as insurance while negotiating the extension; if the extension is finalized, the option year gets rolled in
