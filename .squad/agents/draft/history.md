@@ -344,3 +344,259 @@ _Rumor tracking will activate as draft day approaches and beat reporters begin s
 - ✅ NFC West draft capital details available via NFL.com's "Every team's full set of picks" article
 - ✅ This is a defense-heavy draft — teams needing defensive playmakers are well-positioned
 - ✅ QB-needy teams face a tough class — Mendoza is the clear QB1 with a significant drop-off after him
+
+---
+
+### Draft Capital by Team — All 32 Teams
+_Last updated: 2025-07-17 via Sporting News, Sharp Football Analysis, DraftKings Network, NFL.com, Pro Football Rumors_
+
+#### Total Pick Counts
+
+| Team | Total Picks | R1 Picks | Extra Picks Acquired | Picks Traded Away | Notes |
+|------|:-----------:|:--------:|---------------------|-------------------|-------|
+| ✅ Pittsburgh Steelers | 12 | 1 | DAL R3 (Pickens trade), multiple late-round | STL R6 (Dugger) | Pick-rich via many small trades |
+| ✅ New York Jets | 11 | 2 | IND R1 (Sauce Gardner), multiple R5-R6 | R3 to PHI (Reddick), R5 to BAL, R6 to TEN, R6 to LV | Two 1sts but bled mid-round capital |
+| ✅ Baltimore Ravens | 11 | 0 | NYJ R5, LAC R5, PHI R6 (Alexander), NYJ R6 (Loop) | R1 to LV (Crosby trade) | Lost R1 but stocked up late |
+| ✅ New England Patriots | 11 | 1 | KC R4 (from Bears/Thuney chain), SF R6 (Keion White), PIT R6 (Dugger), KC R6 (Uche) | — | Capital-rich through veteran trades |
+| ✅ Las Vegas Raiders | 10 | 2 | BAL R1 (Crosby trade), JAX R4 (Meyers), JAX R6, NYJ R6 (Geno Smith), LV R5 | — | Two 1sts (own #1 + BAL), strong position |
+| ✅ Cleveland Browns | 10 | 2 | JAX R1 (Hunter trade-down), CIN R5 (Flacco), SEA R6, CHI R6, multiple R6-R7 | R5 to HOU (Howard), R6 to CIN, R6 to JAX | Two 1sts + deep capital |
+| ✅ Jacksonville Jaguars | 10 | 0 | DET R3 (TeSlaa), VIK R4 cond. (Cam Robinson), SEA R6, PHI R6 (Bigsby), multiple R7 | R1 to CLE (Hunter), R6 to DET, R6 to CLE | Lost R1 but loaded late |
+| 📊 Kansas City Chiefs | 9 | 2 | LAR R1 (McDuffie trade), CHI R4 (Thuney chain) | R4 to NE (Nohl Williams), R6 to NE (Uche) | Two 1sts — #9 own + #29 from LAR |
+| 📊 Houston Texans | 9 | 1 | WSH R2 + R4 (Tunsil), HOU R3→MIA (Marks), PHI R6, VIK R6 chain, multiple | R3 to MIA, R5 to DET (Montgomery), R5 to CLE chain | Tunsil deal loaded them with capital |
+| 📊 Dallas Cowboys | 8 | 2 | GB R1 (Parsons), SF R3 (Odighizuwa), TEN R6 (Thomas) | R3 to PIT (Pickens), R6 to NYG (Jordan Phillips) | Two 1sts — #12 own + #20 from GB |
+| 📊 Tennessee Titans | 8 | 1 | LAR R5 (McCreary), BAL R5 chain (Dre'Mont Jones), NYJ R6 (Brownlee), DAL R6 | — | Mostly intact + late-round acquisitions |
+| 📊 Carolina Panthers | 7 | 1 | — | — | Standard 7-pick slate, fully intact |
+| ✅ Arizona Cardinals | 7 | 1 | — | — | **NFC WEST** — Full 7 picks, all rounds |
+| 📊 New York Giants | 7 | 1 | DAL R6 (Jordan Phillips), MIA R6 (Waller) | R3 to HOU (Dart trade-up) | Lost R3, gained R6s |
+| 📊 Cincinnati Bengals | 7 | 1 | CLE R6 (Flacco) | R5 to CLE (Flacco) | Mostly intact |
+| 📊 Detroit Lions | 7 | 1 | HOU R5 (Montgomery), JAX R6 chain (TeSlaa, Patrick) | R3 to JAX (TeSlaa), R6 to JAX | Net neutral on capital |
+| 📊 Minnesota Vikings | 7 | 1 | PHI R5 (Sam Howell), IND R6 (Blackmon), chain R6 | R4 cond. to JAX (Cam Robinson) | Mostly intact + late adds |
+| 📊 Denver Broncos | 7 | 1 | NO R4 (Vele) | R6 chain to NYJ (JFM) | Mostly intact |
+| 📊 Philadelphia Eagles | 7 | 1 | NYJ R3 (Reddick), HOU R5 (Green/CJGJ), ATL R5 (Watts) | R3 to MIA (Jaelan Phillips), R5 cond. to SF (Huff), R5 to MIN (Howell), R6 to BAL, R6 to JAX, R6 to HOU | Churned many picks via trades |
+| 📊 Buffalo Bills | 7 | 1 | LV R6 (Taron Johnson) | R2 to CHI (D.J. Moore), R5 to CHI (Moore) | Lost R2 in Moore deal |
+| 📊 Los Angeles Rams | 7 | 1 | ATL R1 (James Pearce Jr.), HOU R6 (Skowronek), TEN R5 (Ernest Jones chain), TEN R6 (McCreary) | Own R1 to KC (McDuffie), R4 to CHI (Ty Hamilton), R5 chain | **NFC WEST** — Higher R1 via ATL (#13 vs original #29) |
+| 📊 Washington Commanders | 7 | 1 | SF R6 (Brian Robinson) | R2 to HOU (Tunsil), R4 to HOU (Tunsil) | Lost R2+R4 in Tunsil trade, thin top-150 |
+| 📊 New Orleans Saints | 7 | 1 | SEA R4 (Shaheed), SEA R5 (Shaheed) | R4 to DEN (Vele) | Swapped R4s, net neutral |
+| 📊 Tampa Bay Buccaneers | 7 | 1 | — | — | Standard slate, intact |
+| 📊 Chicago Bears | 7 | 1 | BUF R2 (D.J. Moore), BUF R5 (Moore) | R4 to KC (Thuney), R6 to CLE (Tryon-Shoyinka) | Gained R2 in Moore deal |
+| 📊 Miami Dolphins | 7 | 1 | HOU R3 (Marks chain), PHI R3 (Jaelan Phillips) | — | Two extra R3 picks — mid-round rich |
+| ❓ San Francisco 49ers | 6 | 1 | VIK R6 (Jordan Mason chain) | R3 to DAL (Odighizuwa), R5 cond. to PHI (Bryce Huff), R6 to WSH (Brian Robinson), R6 to NE (Keion White) | **NFC WEST** — Missing R3, thin mid-rounds |
+| ❓ Indianapolis Colts | 6 | 0 | PIT R7 (Michael Pittman Jr.) | R1 to NYJ (Sauce Gardner), R6 to MIN (Blackmon) | Lost R1, very limited capital |
+| ❓ Los Angeles Chargers | 6 | 1 | — | R5 to BAL (Oweh/Gilman) | Thin overall |
+| ❓ Green Bay Packers | 5 | 0 | — | R1 to DAL (Parsons trade) | Lost R1, limited total capital |
+| ❓ Atlanta Falcons | 5 | 0 | PHI R5 (Xavier Watts) | R1 to LAR (James Pearce Jr.), R5 to PHI (Watts) | Lost R1, very pick-poor |
+| ❓ Seattle Seahawks | 4 | 1 | CLE R6 (Nick Harris) | R4 to NO (Shaheed), R5 to NO (Shaheed), R6 chain | **NFC WEST** — Fewest picks in NFL |
+
+---
+
+### Top 10 Teams by Draft Capital
+_Last updated: 2025-07-17 via Sharp Football Analysis, DraftKings Network, Sporting News_
+
+| Rank | Team | Total Picks | R1 Picks | Early-Round Picks (R1-R3) | Key Advantage |
+|------|------|:-----------:|:--------:|:-------------------------:|---------------|
+| 📊 1 | Pittsburgh Steelers | 12 | 1 | 3 | Volume king — 12 picks give maximum roster-building swings |
+| 📊 2 | New York Jets | 11 | 2 | 2 | Two 1sts (#2 + #16 from IND) — premier trade-up ammo |
+| 📊 3 | Baltimore Ravens | 11 | 0 | 2 | Volume in R5-R7 compensates for no R1 |
+| 📊 4 | New England Patriots | 11 | 1 | 2 | Volume + multiple 6th-rounders from veteran deals |
+| 📊 5 | Las Vegas Raiders | 10 | 2 | 3 | Two 1sts (#1 + BAL) + highest single pick value in draft |
+| 📊 6 | Cleveland Browns | 10 | 2 | 3 | Two 1sts (#6 + #24 from JAX) — elite top-32 position |
+| 📊 7 | Jacksonville Jaguars | 10 | 0 | 1 | Volume compensates but no early-round firepower |
+| 📊 8 | Kansas City Chiefs | 9 | 2 | 2 | Two 1sts (#9 + #29 from LAR) — defending champs stocking talent |
+| 📊 9 | Houston Texans | 9 | 1 | 1 | R2 + R4 from Tunsil deal, but lost R3 |
+| 📊 10 | Dallas Cowboys | 8 | 2 | 3 | Two 1sts (#12 + #20 from GB) + SF R3 — excellent early capital |
+
+---
+
+### Bottom 10 Teams by Draft Capital
+_Last updated: 2025-07-17 via Sharp Football Analysis, DraftKings Network, Sporting News_
+
+| Rank | Team | Total Picks | R1 Picks | Why They're Pick-Poor |
+|------|------|:-----------:|:--------:|----------------------|
+| ❓ 32 | Seattle Seahawks | 4 | 1 | **Fewest picks in NFL.** Shaheed trade sent R4+R5 to NO. Only R1, R2, R3, R6. **NFC WEST** |
+| ❓ 31 | Atlanta Falcons | 5 | 0 | Lost R1 to LAR (James Pearce Jr. trade). No first-round pick. |
+| ❓ 30 | Green Bay Packers | 5 | 0 | Parsons trade sent R1 to DAL. No first-rounder + limited volume. |
+| ❓ 29 | Indianapolis Colts | 6 | 0 | Sauce Gardner trade sent R1 to NYJ. No first-rounder. |
+| ❓ 28 | Los Angeles Chargers | 6 | 1 | Gave up R5 in Oweh/Gilman swap. Thin overall. |
+| ❓ 27 | San Francisco 49ers | 6 | 1 | Missing R3 (to DAL for Odighizuwa), Huff/White/Robinson/Mason trades bled picks. **NFC WEST** |
+| 📊 26 | Washington Commanders | 7 | 1 | Tunsil trade cost R2+R4 — only 3 picks in top 150. Rebuild with few bullets. |
+| 📊 25 | Buffalo Bills | 7 | 1 | D.J. Moore trade cost R2+R5. No second-rounder. |
+| 📊 24 | New York Giants | 7 | 1 | Lost R3 in Dart trade-up. Limited mid-round. |
+| 📊 23 | Cincinnati Bengals | 7 | 1 | Mostly intact but no extra picks acquired. Standard slate. |
+
+---
+
+### Draft Trade Value Chart (Jimmy Johnson)
+_Last updated: 2025-07-17 via Drafttek, NFL Mock Draft Database, Pro Football Reference_
+
+| Pick | JJ Value | Pick | JJ Value | Pick | JJ Value | Pick | JJ Value |
+|------|:--------:|------|:--------:|------|:--------:|------|:--------:|
+| 1 | 3000 | 9 | 1350 | 17 | 950 | 25 | 720 |
+| 2 | 2600 | 10 | 1300 | 18 | 900 | 26 | 700 |
+| 3 | 2200 | 11 | 1250 | 19 | 875 | 27 | 680 |
+| 4 | 1800 | 12 | 1200 | 20 | 850 | 28 | 660 |
+| 5 | 1700 | 13 | 1150 | 21 | 800 | 29 | 640 |
+| 6 | 1600 | 14 | 1100 | 22 | 780 | 30 | 620 |
+| 7 | 1500 | 15 | 1050 | 23 | 760 | 31 | 600 |
+| 8 | 1400 | 16 | 1000 | 24 | 740 | 32 | 590 |
+
+**Extended Values (Rounds 2-4):**
+
+| Pick | Value | Pick | Value | Pick | Value | Pick | Value |
+|------|:-----:|------|:-----:|------|:-----:|------|:-----:|
+| 33 | 580 | 40 | 440 | 50 | 340 | 65 | 265 |
+| 34 | 560 | 41 | 420 | 55 | 310 | 70 | 240 |
+| 35 | 550 | 42 | 400 | 60 | 280 | 80 | 195 |
+| 36 | 530 | 43 | 380 | 64 | 270 | 96 | 145 |
+| 37 | 510 | 44 | 360 | | | 100 | 130 |
+| 38 | 490 | 45 | 350 | | | 128 | 56 |
+| 39 | 470 | 48 | 340 | | | 160 | 27 |
+
+**Modern Analytics Adjustments:**
+- 📊 Rich Hill model: Values top-5 picks ~15-20% higher than JJ chart; values late-round picks ~10-15% lower
+- 📊 Fitzgerald-Spielberger model: Accounts for position-specific surplus value on rookie contracts — QBs at #1 worth significantly more than JJ suggests
+- 📊 Current NFL trend: Teams consistently "overpay" by JJ chart standards to move up into top 5 — actual trade costs ~10-15% above chart value for premium picks
+- 📊 Future pick discounting: A 2027 first-rounder is worth ~85% of a 2026 first; a 2028 first is worth ~72%
+
+**Key Trade Value Benchmarks:**
+- Moving from #10 to #1: Costs ~1,700 points = roughly a 1st + 2nd + 3rd
+- Moving from #20 to #10: Costs ~450 points = roughly a 2nd-rounder
+- Moving from #32 to #20: Costs ~260 points = roughly a 3rd-rounder
+
+---
+
+### Pick-by-Pick Need Matching — First Round (Picks 1-32)
+_Last updated: 2025-07-17 via NFL Mock Draft Database consensus, Sharp Football Analysis, FantasyPros, ESPN (Kiper/Reid), CBS Sports, Stadium Rant, Dynasty Nerds_
+
+| Pick | Team | Primary Need | Consensus Pick | Confidence | Alt. Projections |
+|------|------|-------------|----------------|:----------:|-----------------|
+| 1 | ✅ LV Raiders | Franchise QB | Fernando Mendoza, QB, Indiana | ✅ | — (near-universal) |
+| 2 | NYJ Jets | Pass rush / Defense | Arvell Reese, EDGE/LB, Ohio State | 📊 | Could trade pick for QB |
+| 3 | **ARI Cardinals** | EDGE / OL | Francis Mauigoa, OT, Miami (FL) | 📊 | Rueben Bain Jr. (EDGE), David Bailey (EDGE) — **NFC WEST** |
+| 4 | TEN Titans | Pass rush | David Bailey, EDGE, Texas Tech | 📊 | Carnell Tate (WR), Jeremiyah Love (RB) |
+| 5 | NYG Giants | OL / Defense | Spencer Fano, OT, Utah | 📊 | Sonny Styles (LB), Caleb Downs (S) |
+| 6 | CLE Browns | OL (Tackle) | Monroe Freeling, OT, Georgia | 📊 | Mauigoa if available |
+| 7 | WSH Commanders | Defensive playmaker | Sonny Styles, LB, Ohio State | 📊 | Caleb Downs (S) |
+| 8 | NO Saints | Playmaking WR | Carnell Tate, WR, Ohio State | 📊 | Makai Lemon (WR, USC) |
+| 9 | KC Chiefs | Three-down RB / Offense | Jeremiyah Love, RB, Notre Dame | 📊 | Caleb Downs (S) |
+| 10 | CIN Bengals | Safety / Defense | Caleb Downs, S, Ohio State | 📊 | — |
+| 11 | MIA Dolphins | Pass rush | Rueben Bain Jr., EDGE, Miami (FL) | 📊 | Local product, defensive rebuild |
+| 12 | DAL Cowboys | Secondary (CB) | Mansoor Delane, CB, LSU | 📊 | Could go EDGE |
+| 13 | **LA Rams** | TE / Playmaker | Kenyon Sadiq, TE, Oregon | 📊 | Jermod McCoy (CB), Makai Lemon (WR) — **NFC WEST** |
+| 14 | BAL Ravens | EDGE | Keldric Faulk, EDGE, Auburn | 📊 | Post-Crosby trade rebuild |
+| 15 | TB Buccaneers | Front seven | Akheem Mesidor, EDGE, Miami (FL) | 📊 | DL options |
+| 16 | NYJ Jets (from IND) | WR | Makai Lemon, WR, USC | 📊 | Receiver for new QB |
+| 17 | DET Lions | DL (Interior) | Caleb Banks, DL, Florida | 📊 | — |
+| 18 | MIN Vikings | Safety | Dillon Thieneman, S, Oregon | 📊 | Secondary leader |
+| 19 | CAR Panthers | DL | Peter Woods, DL, Clemson | 📊 | Rebuild continues |
+| 20 | DAL Cowboys (from GB) | LB | CJ Allen, LB, Georgia | 📊 | Second 1st, add defense |
+| 21 | PIT Steelers | WR | Jordyn Tyson, WR, Arizona State | 📊 | Need playmaker alongside Pickens haul |
+| 22 | LAC Chargers | IOL | Olaivavega Ioane, OG, Penn State | 📊 | Protecting QB |
+| 23 | PHI Eagles | CB | Jermod McCoy, CB, Tennessee | 📊 | Secondary rebuild |
+| 24 | CLE Browns (from JAX) | WR | Omar Cooper Jr., WR, Indiana | 📊 | Weapons for offense |
+| 25 | CHI Bears | DL | Kayden McDonald, DL, Ohio State | 📊 | Front reinforcement |
+| 26 | BUF Bills | WR | Denzel Boston, WR, Washington | 📊 | WR reload post-Moore trade |
+| 27 | **SF 49ers** | OT | Kadyn Proctor, OT, Alabama | 📊 | Caleb Lomu (OT, Utah) — **NFC WEST** |
+| 28 | HOU Texans | OT | Blake Miller, OT, Clemson | 📊 | Protect C.J. Stroud |
+| 29 | KC Chiefs (from LAR) | CB | Avieon Terrell, CB, Clemson | 📊 | Secondary for playoff runs |
+| 30 | DEN Broncos | Safety | Emmanuel McNeil-Warren, S, Toledo | 📊 | Secondary need |
+| 31 | NE Patriots | EDGE | Cashius Howell, EDGE, Texas A&M | 📊 | Defense-first rebuild |
+| 32 | **SEA Seahawks** | CB | Brandon Cisse, CB, South Carolina | 📊 | Colton Hood (CB, TEN) also in play — **NFC WEST** |
+
+---
+
+### First-Round Trades That Moved Picks
+_Last updated: 2025-07-17 via Pro Football Rumors_
+
+| Trade | From | To | Key Asset Exchanged | Impact |
+|-------|------|----|--------------------|----|
+| ✅ JAX R1 → CLE | Jaguars | Browns | CLE traded down from #2 to #5 for Travis Hunter | CLE holds #6 + #24 (JAX) |
+| ✅ ATL R1 → LAR | Falcons | Rams | LAR sent OLB James Pearce Jr. to ATL | LAR upgraded from #29 area to #13 |
+| ✅ GB R1 → DAL | Packers | Cowboys | DAL sent DE Micah Parsons to GB | DAL holds #12 + #20 (GB) |
+| ✅ IND R1 → NYJ | Colts | Jets | NYJ sent CB Sauce Gardner to IND | NYJ holds #2 + #16 (IND) |
+| ✅ BAL R1 → LV | Ravens | Raiders | LV sent OLB Maxx Crosby to BAL | LV holds #1 + BAL's 1st |
+| ✅ LAR R1 → KC | Rams | Chiefs | KC sent CB Trent McDuffie to LAR | KC holds #9 + #29 (LAR); LAR uses ATL pick at #13 |
+
+**Net Result:** 6 first-round picks changed hands. Teams without R1 picks: ATL, GB, IND, JAX, BAL.
+
+---
+
+### Trade-Up and Trade-Down Scenarios
+_Last updated: 2025-07-17 via PFF, Bleacher Report, FanSided, Dynasty Nerds, Pro Football Network_
+
+#### Teams Most Likely to Trade UP
+
+| Team | Current Position | Target | Capital Available | Likelihood |
+|------|:----------------:|--------|-------------------|:----------:|
+| 📊 New York Jets | #2, #16 | QB Mendoza at #1 | Two 1sts + multiple mid-rounders = ~3,600+ JJ points | ⚠️ HIGH |
+| 📊 Miami Dolphins | #11 | QB in top 3 | R1 + two R3 picks + mid-rounders | ❓ MODERATE |
+| 📊 Cleveland Browns | #6, #24 | Elite OT/EDGE in top 5 | Two 1sts + deep capital = massive trade-up flexibility | ❓ MODERATE |
+| ❓ Minnesota Vikings | #18 | Specific defensive target | Standard capital, limited ammo | ❓ LOW |
+
+**Jets trade-up math for #1:**
+- NYJ sends: #2 (2600) + #16 (1000) = 3,600 points
+- LV #1 = 3,000 points
+- NYJ would overpay but has the ammo. LV could demand a future 1st as well.
+
+#### Teams Most Likely to Trade DOWN
+
+| Team | Current Position | Why Trade Down | Potential Haul |
+|------|:----------------:|----------------|---------------|
+| 📊 Las Vegas Raiders | #1 | If Mendoza isn't the pick or if a bidding war erupts for #1 | Could net 2+ future 1sts + day-2 picks |
+| 📊 New York Giants | #5 | Already have Jaxson Dart at QB; could capitalize on QB demand | Extra 1st or 2nd + mid-round picks |
+| 📊 Tennessee Titans | #4 | Could attract a QB-desperate team | Premium return from teams bidding for QB access |
+| 📊 Washington Commanders | #7 | Only 3 picks in top 150 — need volume desperately | Would accept less per-pick value for more total picks |
+| ❓ Seattle Seahawks | #32 | Only 4 total picks in draft — need to create more selections | **NFC WEST** — Could trade back into early R2 for 2-3 picks |
+| ❓ Arizona Cardinals | #3 | Full 7-round capital; if elite EDGE available later, trade down for haul | **NFC WEST** — #3 = 2,200 JJ points, massive trade-down leverage |
+
+#### Hypothetical Trade Scenarios
+
+**Scenario 1: Jets trade up to #1 for Mendoza**
+- NYJ sends: #2 + #16 (IND) + 2027 2nd
+- LV receives: ~3,800+ points of value
+- 📊 Likelihood: Moderate-to-High — multiple mocks project this
+
+**Scenario 2: Dolphins jump to top 3 for QB**
+- MIA sends: #11 + R3 (from PHI) + R3 (from HOU) + 2027 2nd
+- Target team (ARI/TEN): Gets massive day-2 haul
+- ❓ Likelihood: Low-to-Moderate — depends on MIA's QB commitment
+
+**Scenario 3: Seahawks trade #32 for R2 picks**
+- SEA sends: #32 (590 JJ points)
+- Receives: Early R2 (#35-40 area, ~510-440) + R4 pick
+- 📊 Likelihood: Moderate — SEA desperately needs pick volume with only 4 total
+
+**Scenario 4: Cardinals trade down from #3**
+- ARI sends: #3 (2,200 JJ points)
+- Receives: #8-12 range pick + future 1st + R3
+- 📊 Likelihood: Moderate — ARI has full capital and could target EDGE later in top 12
+
+---
+
+### Teams with Most Draft Value (JJ Points)
+_Last updated: 2025-07-17 — calculated from pick positions and Jimmy Johnson chart_
+
+| Rank | Team | Key Picks | Estimated R1 JJ Value | Total Early Capital |
+|------|------|-----------|:---------------------:|:-------------------:|
+| 📊 1 | Las Vegas Raiders | #1 + BAL 1st | ~3,000 + ~1,100 = 4,100 | Elite — two 1sts anchored by #1 overall |
+| 📊 2 | New York Jets | #2 + #16 (IND) | ~2,600 + 1,000 = 3,600 | Two premium 1sts |
+| 📊 3 | Cleveland Browns | #6 + #24 (JAX) | ~1,600 + 740 = 2,340 | Two 1sts + deep late capital |
+| 📊 4 | Dallas Cowboys | #12 + #20 (GB) | ~1,200 + 850 = 2,050 | Two mid-1sts + SF R3 |
+| 📊 5 | Kansas City Chiefs | #9 + #29 (LAR) | ~1,350 + 640 = 1,990 | Two 1sts for defending champs |
+| 📊 6 | Arizona Cardinals | #3 | 2,200 | Single highest-value pick after LV **NFC WEST** |
+| 📊 7 | Tennessee Titans | #4 | 1,800 | Top-5 pick = premium asset |
+| 📊 8 | New York Giants | #5 | 1,700 | Top-5 value |
+| 📊 9 | Pittsburgh Steelers | #21 + 12 total picks | 800 + volume | Volume compensates for later R1 slot |
+| 📊 10 | Chicago Bears | #25 + BUF R2 | 720 + 560 = 1,280 | R2 from Moore trade adds early value |
+
+---
+
+### Learnings (Updated)
+
+- ✅ Pro Football Rumors (profootballrumors.com) is the best single source for tracking all traded draft picks with full trade context
+- ✅ Six first-round picks changed hands pre-draft — an unusually active trade market driven by star player trades (Parsons, Crosby, Sauce Gardner, McDuffie, Pearce Jr.)
+- ✅ Seattle Seahawks have the fewest picks in the NFL (4) — extreme pick poverty driven by the Shaheed trade
+- ✅ Pittsburgh Steelers lead the league with 12 picks, accumulated through many small veteran-for-pick deals
+- ✅ Five teams have no first-round pick: ATL, GB, IND, JAX, BAL
+- ✅ Five teams hold two first-round picks: LV, NYJ, CLE, DAL, KC — these are the draft's power brokers
+- ✅ Jimmy Johnson chart values remain the industry standard but modern analytics models (Rich Hill, Fitzgerald-Spielberger) adjust for position-specific surplus value
+- ✅ QB scarcity makes #1 overall worth significantly more than JJ chart suggests — only Mendoza is consensus R1 QB
