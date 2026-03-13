@@ -8,6 +8,7 @@
 - **Model:** auto
 - **Current Phase:** Mid-March FA Wave 1 — highest volume signing period
 - **Dashboard Last Updated:** 2026-03-12
+- **Last Availability Audit:** 2026-03-12 — Verified 20 Seahawks FA targets
 
 ---
 
@@ -32,7 +33,11 @@ _Last updated: 2026-03-12 via ESPN, NFL.com, CBS Sports, Spotrac, PFF_
 | ✅ Javon Hargrave | DT | GB | 2yr/$23M | FOX Sports |
 | ✅ Braden Mann | P | PHI | 4yr/$14M | ESPN |
 | ✅ Nick Cross | S | WSH | 2yr/$14M | CBS Sports |
-| ✅ Joey Bosa | EDGE | BUF | 1yr/$12.6M | ESPN |
+| ✅ Joey Bosa | EDGE | BUF (2025) | 1yr/$12.6M (expired) | ESPN |
+| ✅ Malcolm Koonce | EDGE | LV | 1yr/$11M (re-signed) | Raiders.com/PFR |
+| ✅ Chidobe Awuzie | CB | BAL | 1yr/$5M | Ravens.com/ESPN |
+| ✅ Taron Johnson | CB | LV (trade from BUF) | Under contract thru 2027 | NFL.com/ESPN |
+| ✅ Kader Kohou | CB | KC | Prove-it deal (post-ACL) | ESPN/PFR |
 | ✅ Keaton Mitchell | RB | LAC | 2yr/$9.25M | FOX Sports |
 | ✅ Daniel Jones | QB | IND | 2yr/$88M | RotoBaller |
 | ✅ Dre Greenlaw | LB | SF | 1yr/$7.5M | Sporting News |
@@ -120,13 +125,14 @@ _Last updated: 2026-03-12 via ESPN, Sporting News, PFF, Yahoo, NFL.com_
 | Tua Tagovailoa | QB | 28 | MIA | ATL (front-runner), MIN, IND, NYJ, ARI | Post-June 1 release. Concussion history a factor. |
 | Stefon Diggs | WR | 32 | NE | TBD — just released | Elite route-runner. Age/contract concerns limit market. |
 | Aaron Rodgers | QB | 42 | NYJ | PIT (met), MIN, NYG, CLE | Retirement possible. One-year deal if he plays. |
-| Jauan Jennings | WR | 28 | SF | Unknown | Versatile slot/outside WR. Physical red-zone threat. |
-| Deebo Samuel | WR | 30 | WSH | TBD | Traded to WSH for R5 but may not be retained long-term. |
+| Jauan Jennings | WR | 28 | SF | ATL, WSH, SEA, NE | Versatile slot/outside WR. Physical red-zone threat. ~$22-23M AAV projected. |
+| Deebo Samuel | WR | 30 | WSH (voided) | SF reunion speculated | Contract voided with WSH ($12M dead cap). Now UFA. ~$13-16M/yr. |
 
 ### Tier 2 — Quality Starters/Rotational
 
 | Player | Pos | Age | Former Team | Notes |
 |--------|-----|-----|-------------|-------|
+| Joey Bosa | EDGE | 31 | BUF (2025) | 2025 deal expired. SF strong favorite (brother reunion). BAL, CHI also linked. |
 | Russell Wilson | QB | 37 | PIT | Bridge QB option for CLE/NYG |
 | Kirk Cousins | QB | 37 | ATL | Has NTC. Market limited by age + contract. |
 | Keenan Allen | WR | 33 | CHI | Possession receiver. LAC reunion speculated. |
@@ -252,6 +258,56 @@ _Last updated: 2026-03-12 via FOX Sports, Yahoo, Gridiron Experts, Sportsnaut_
 | ✅ PIT | DC | Patrick Graham | LV DC | Veteran DC |
 | ✅ TEN | OC | Brian Daboll | NYG HC (fired) | Play-calling pedigree |
 | ✅ TEN | DC | Gus Bradley | Veteran DC | Cover-3 scheme |
+
+---
+
+## 🔍 Seahawks FA Target Availability Audit — 2026-03-12
+
+_Requested by Joe Robinson. Verified all 20 players from Seahawks FA recommendations._
+
+### ❌ UNAVAILABLE (Signed/Traded Elsewhere)
+
+| Player | Pos | Status | New Team | Deal |
+|--------|-----|--------|----------|------|
+| Trey Hendrickson | EDGE | ✅ Signed | BAL | 4yr/$112M ($60M gtd) |
+| Malcolm Koonce | EDGE | ✅ Re-signed | LV | 1yr/$11M |
+| Chidobe Awuzie | CB | ✅ Signed | BAL | 1yr/$5M |
+| Taron Johnson | CB | ✅ Traded | LV (from BUF) | Under contract thru 2027 |
+| Kader Kohou | CB | ✅ Signed | KC | Prove-it deal (post-ACL) |
+| Rachaad White | RB | ✅ Signed | WSH | 1yr deal |
+
+### 🟢 CONFIRMED AVAILABLE
+
+| Player | Pos | Projected Market | Key Notes |
+|--------|-----|-----------------|-----------|
+| Joey Bosa | EDGE | Mid-tier 1yr | SF strong favorite (Nick Bosa reunion). BAL, CHI also linked. |
+| Jadeveon Clowney | EDGE | Low-tier 1yr | DAL return possible. PHI linked. Age 33, situational. |
+| Von Miller | EDGE | Low-tier 1yr | Wants WSH return. DEN fallback. Age 37. |
+| Calais Campbell | DL | Vet minimum | GB projected. Age 40. 6.5 sacks in 2025. Retirement possible. |
+| Marshon Lattimore | CB | Prove-it 1yr | Released by WSH. Rehabbing torn ACL. Age 30. |
+| Rasul Douglas | CB | ~$4M/1yr | Played MIA 2025. 62 tackles, 13 PDs, 2 INTs. Zone-scheme fit. |
+| Nate Hobbs | CB | Low-tier 1yr | Released by GB ($48M bust). Best as slot/nickel. Injury concerns. |
+| Tre'Davious White | CB | ~$1.2M/1yr | Solid 2025 with BUF. 16 starts. Depth/value signing. |
+| Najee Harris | RB | ~$3M/1yr | Post-Achilles recovery. SEA named as landing spot (CBS). |
+| Bobby Wagner | LB | Mid-tier 1yr | 162 tackles 2025. DEN, LAR projected. SEA reunion angle. Age 35. |
+| D.J. Reader | DT | Mid-tier | Wants DET return. Negotiations stalling. Top run-stuffer. |
+| Jauan Jennings | WR | ~$22-23M AAV | Top remaining WR FA. SEA projected by ESPN. High demand. |
+| Deebo Samuel | WR | ~$13-16M/yr | Contract voided with WSH ($12M dead cap). Now UFA. |
+
+### ⚠️ UNCERTAIN
+
+| Player | Pos | Status | Notes |
+|--------|-----|--------|-------|
+| Joel Bitonio | IOL | Mulling retirement | Contract voided with CLE. CLE signed replacements. |
+
+### Key Takeaways
+
+1. **7 of 20 recommended players are unavailable** — 35% of the target board is already off the market.
+2. **EDGE class is thinning fast** — Hendrickson and Koonce gone. Bosa likely headed to SF. Only Clowney, Miller, Campbell remain as realistic SEA targets, all age 33+.
+3. **CB market still has options** — Douglas and Hobbs are affordable. Lattimore is a health risk. White is a value play.
+4. **RB pivot needed** — White gone to WSH. Harris is available but coming off Achilles.
+5. **Jennings is the highest-upside available target** — ESPN and NBC project SEA as a destination. Priority signing.
+6. **Inbox alert filed** — `decisions/inbox/media-fa-availability.md` flags all unavailable players for team revision.
 
 ---
 

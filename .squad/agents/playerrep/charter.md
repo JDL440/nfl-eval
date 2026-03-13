@@ -79,13 +79,13 @@
 
 ### State Income Tax Impact
 **No State Income Tax (Player Advantage):**
-| State | Teams | Tax Savings on $20M salary |
-|-------|-------|---------------------------|
-| Texas | DAL, HOU | ~$1.0M+ |
-| Florida | JAX, MIA, TB | ~$1.0M+ |
-| Tennessee | TEN | ~$0 state tax |
-| Washington | SEA | ~$0 state tax |
-| Nevada | LV | ~$0 state tax |
+| State | Teams | Tax Savings on $20M salary | Status |
+|-------|-------|---------------------------|--------|
+| Texas | DAL, HOU | ~$1.0M+ | STABLE |
+| Florida | JAX, MIA, TB | ~$1.0M+ | STABLE |
+| Tennessee | TEN | ~$0 state tax | STABLE |
+| Washington | SEA | ~$0 state tax (thru 2027); **9.9% on income >$1M starting 2028** | ⚠️ CHANGING — SB 6346 |
+| Nevada | LV | ~$0 state tax | STABLE |
 
 **High State Income Tax (Player Disadvantage):**
 | State | Teams | Top Rate |
