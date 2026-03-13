@@ -579,3 +579,283 @@ The bigger risk is NOT extending these players and watching them walk into a WR/
 - **Restructure math with void years:** Darnold's 4-year spread (2026-2029 including voids) creates $9.225M savings; Williams' 3-year spread (2026-2028 including voids) creates $10.533M savings
 - **The "replacement cost fallacy":** When modeling "no extension" scenarios, must account for the cost of replacing departed players in FA — the savings are largely illusory since WR1/CB1 replacements cost $25-35M AAV anyway
 - **5th-year option as bridge strategy:** For 2023 first-rounders, exercise the option in May 2026 as insurance while negotiating the extension; if the extension is finalized, the option year gets rolled in
+
+---
+
+## League-Wide Cap Landscape (All 32 Teams)
+
+**Timestamp:** 2026-03-13 (OverTheCap snapshot)  
+**2026 Salary Cap:** $301,200,000 ✅ confirmed  
+**2027 Projected Cap:** $327,000,000 📊 reliable source  
+**Franchise Tag Data:** OTC tag values were JS-rendered and returned outdated content during collection ❓ unverified
+
+### Top 10 Cap Space
+
+| Rank | Team | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|------|-----------|---------------------|------------|------|
+| 1 | WAS | $66,354,397 | $59,610,242 | $20,692,736 | Most space in NFL |
+| 2 | LAC | $63,587,408 | $59,282,433 | $5,548,177 | Clean contender books |
+| 3 | BAL | $55,070,187 | $49,052,216 | $18,198,715 | Premium flexibility |
+| 4 | IND | $50,517,289 | $48,512,590 | $9,593,644 | Clean top-tier room |
+| 5 | TEN | $50,268,372 | $38,901,526 | $17,069,272 | Big room, lower effective cushion |
+| 6 | NE | $50,149,044 | $46,028,520 | $33,690,382 | Room despite notable dead |
+| 7 | ARI | $41,678,185 | $30,153,792 | $23,268,104 | Flexible, but not clean |
+| 8 | SEA | $40,451,262 | $37,269,365 | $483,723 | Near-cleanest books in NFL |
+| 9 | LV | $37,925,609 | $25,169,525 | $52,012,266 | Space masked by heavy dead |
+| 10 | NYJ | $37,124,446 | $21,194,266 | $91,246,438 | Massive dead-money drag |
+
+### Bottom 10 Cap Space
+
+| Rank | Team | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|------|-----------|---------------------|------------|------|
+| 23 | PIT | $13,877,382 | $8,254,197 | $12,221,838 | Middle-class flexibility |
+| 24 | TB | $12,874,177 | $7,313,725 | $13,329,591 | Manageable but tight |
+| 25 | NYG | $12,083,735 | $1,984,435 | $11,368,472 | Thin effective margin |
+| 26 | PHI | $11,520,188 | $6,373,697 | $52,031,852 | Heavy dead-money load |
+| 27 | MIN | $8,913,599 | $3,884,590 | $19,473,074 | Little operating room |
+| 28 | CHI | $6,806,499 | $2,132,621 | $19,355,493 | Tight despite no QB mega-hit |
+| 29 | MIA | $6,336,786 | -$1,030,564 | $89,603,387 | Effectively underwater |
+| 30 | CLE | $1,876,833 | -$10,252,708 | $77,141,821 | Watson + dead money squeeze |
+| 31 | JAX | -$1,108,711 | -$3,577,742 | $53,340,647 | Over the cap |
+| 32 | BUF | -$4,725,450 | -$8,393,836 | $46,378,219 | Over the cap |
+
+### Dead Money Leaders
+
+| Rank | Team | Dead Money | Primary Drivers |
+|------|------|------------|-----------------|
+| 1 | NO | $113,971,682 | Derek Carr $36.7M, Cameron Jordan $18.8M, Demario Davis $14.3M, Taysom Hill $13.7M |
+| 2 | NYJ | $91,246,438 | Aaron Rodgers $35.0M, Ahmad Gardner $11.0M, Quinnen Williams $9.8M |
+| 3 | MIA | $89,603,387 | Tyreek Hill $28.2M, Jalen Ramsey $20.9M, Minkah Fitzpatrick $13.0M |
+| 4 | CLE | $77,141,821 | Joel Bitonio $23.5M, Jack Conklin $12.4M, Dalvin Tomlinson $12.1M |
+| 5 | HOU | $66,366,709 | Tytus Howard $23.7M, Christian Kirk $11.4M, Shaquille Mason $7.3M |
+| 6 | JAX | $53,340,647 | Tyson Campbell $19.5M, Gabriel Davis $14.6M |
+| 7 | PHI | $52,031,852 | Bryce Huff $16.6M, Darius Slay $13.3M, James Bradberry $7.7M |
+| 8 | LV | $52,012,266 | Christian Wilkins $29.8M, Geno Smith $16.2M |
+| 9 | BUF | $46,378,219 | Matt Milano $11.1M, Taron Johnson $9.5M, Joey Bosa $7.2M |
+| 10 | DAL | $42,744,177 | Zack Martin $16.5M, Osa Odighizuwa $16.0M |
+
+### League-Level Observations
+
+- **New Orleans is the clear dead-money outlier** at $114.0M, roughly $22.7M worse than the next-closest team (NYJ) and easily the worst cap cleanup in the league.
+- **Washington leads the NFL in cap space** at $66.4M and still sits above $59.6M in effective room.
+- **Buffalo and Jacksonville are over the cap** already, while Miami and Cleveland are effectively underwater even before deeper roster work.
+- **Denver and Seattle have the cleanest dead-money structures** among viable contenders, with DEN at $1.2M and SEA at just $483,723.
+- **Cleveland remains structurally compromised** by Deshaun Watson's $45.0M cap hit and a broader $77.1M dead-money burden.
+
+### AFC East
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| BUF | 32 | -$4,725,450 | -$8,393,836 | $46,378,219 | Over the cap |
+| MIA | 29 | $6,336,786 | -$1,030,564 | $89,603,387 | Effectively underwater |
+| NE | 6 | $50,149,044 | $46,028,520 | $33,690,382 | Best position in division |
+| NYJ | 10 | $37,124,446 | $21,194,266 | $91,246,438 | Heavy dead-money drag |
+
+#### Top 5 Cap Hits
+
+- **BUF:** Josh Allen $44.2M, Dion Dawkins $24.8M, D.J. Moore $24.5M, Dawson Knox $17.1M, Ed Oliver $13.7M
+- **MIA:** Tua Tagovailoa $56.3M, Bradley Chubb $31.2M, Jaylen Waddle $11.6M, Zach Sieler $11.3M, Jordyn Brooks $10.9M
+- **NE:** Milton Williams $28.4M, Michael Onwenu $25.0M, Carlton Davis $22.0M, Christian Barmore $17.1M, Harold Landry $16.4M
+- **NYJ:** Justin Fields $23.0M, Minkah Fitzpatrick $15.6M, Breece Hall $14.3M, Brandon Stephens $14.0M, Jamien Sherwood $11.5M
+
+#### Dead Money Detail
+
+- **BUF:** Matt Milano $11.1M, Taron Johnson $9.5M, Joey Bosa $7.2M drive a $46.4M dead-money total.
+- **MIA:** Tyreek Hill $28.2M, Jalen Ramsey $20.9M, Minkah Fitzpatrick $13.0M are the core of an $89.6M dead-money bill.
+- **NE:** Kyle Dugger $12.2M and Stefon Diggs $9.7M headline $33.7M dead.
+- **NYJ:** Aaron Rodgers alone counts $35.0M dead, with Ahmad Gardner $11.0M and Quinnen Williams $9.8M pushing the club to $91.2M.
+
+#### Key Observations
+
+- **New England has the division's healthiest balance sheet** and can be aggressive without immediate restructures.
+- **Buffalo is over the cap** and lacks easy relief because the room issue sits alongside $46.4M already dead.
+- **Miami's nominal cap space is misleading**; effective space is negative once minimum roster accounting is applied.
+- **The Jets carry top-10 raw space but bottom-tier cap health** because $91.2M dead money erodes flexibility.
+
+### AFC North
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| BAL | 3 | $55,070,187 | $49,052,216 | $18,198,715 | Strongest contender posture |
+| CIN | 15 | $24,182,216 | $17,055,650 | $11,248,222 | Adequate, not abundant |
+| CLE | 30 | $1,876,833 | -$10,252,708 | $77,141,821 | Structurally squeezed |
+| PIT | 23 | $13,877,382 | $8,254,197 | $12,221,838 | Manageable middle tier |
+
+#### Top 5 Cap Hits
+
+- **BAL:** Lamar Jackson $34.5M, Roquan Smith $32.7M, Nnamdi Madubuike $31.0M, Marlon Humphrey $26.3M, Kyle Hamilton $10.7M
+- **CIN:** Joe Burrow $48.0M, Tee Higgins $26.5M, Ja'Marr Chase $26.2M, Orlando Brown Jr. $22.0M, Boye Mafe $17.0M
+- **CLE:** Deshaun Watson $45.0M, Denzel Ward $30.9M, Myles Garrett $23.7M, Tytus Howard $18.0M, David Njoku $10.8M
+- **PIT:** T.J. Watt $42.0M, D.K. Metcalf $31.0M, Michael Pittman Jr. $24.0M, Alex Highsmith $20.1M, Jalen Ramsey $19.5M
+
+#### Dead Money Detail
+
+- **BAL:** Marcus Williams $6.0M and Justin Tucker $4.6M are the main dead-money charges within an $18.2M total.
+- **CIN:** Trey Hendrickson $6.5M and Logan Wilson $4.0M lead a relatively light $11.2M dead figure.
+- **CLE:** Joel Bitonio $23.5M, Jack Conklin $12.4M, and Dalvin Tomlinson $12.1M make the $77.1M dead figure one of the league's worst.
+- **PIT:** Minkah Fitzpatrick $6.9M and Jonnu Smith $3.9M drive a modest $12.2M dead tally.
+
+#### Key Observations
+
+- **Baltimore has both contending talent and premium cap optionality**, a dangerous combination.
+- **Cleveland is pinned down by Watson's $45.0M cap hit plus $77.1M dead money**, leaving almost no practical flexibility.
+- **Cincinnati can support the Burrow-Chase-Higgins core**, but the effective cushion is already down to $17.1M.
+- **Pittsburgh has workable room**, though its veteran-heavy top end limits how far that flexibility stretches.
+
+### AFC South
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| HOU | 14 | $27,502,831 | $21,790,529 | $66,366,709 | Dead-money heavy |
+| IND | 4 | $50,517,289 | $48,512,590 | $9,593,644 | Cleanest division setup |
+| JAX | 31 | -$1,108,711 | -$3,577,742 | $53,340,647 | Over the cap |
+| TEN | 5 | $50,268,372 | $38,901,526 | $17,069,272 | Big nominal room |
+
+#### Top 5 Cap Hits
+
+- **HOU:** Nico Collins $27.5M, Danielle Hunter $16.1M, Azeez Al-Shaair $15.2M, C.J. Stroud $11.5M, Will Anderson Jr. $11.2M
+- **IND:** DeForest Buckner $26.6M, Quenton Nelson $24.2M, Charvarius Ward $20.2M, Jonathan Taylor $15.6M, Cam Bynum $15.0M
+- **JAX:** Trevor Lawrence $24.0M, Josh Hines-Allen $23.4M, Arik Armstead $19.4M, Foyesade Oluokun $17.1M, Travon Walker $15.2M
+- **TEN:** Calvin Ridley $26.5M, Dan Moore Jr. $26.3M, Jeffery Simmons $25.7M, L'Jarius Sneed $19.6M, Alontae Taylor $14.0M
+
+#### Dead Money Detail
+
+- **HOU:** Tytus Howard $23.7M, Christian Kirk $11.4M, and Shaquille Mason $7.3M drive a $66.4M dead-money load.
+- **IND:** Michael Pittman Jr. $5.0M and Zaire Franklin $2.5M headline a very manageable $9.6M dead total.
+- **JAX:** Tyson Campbell $19.5M and Gabriel Davis $14.6M are the biggest pieces of $53.3M dead money.
+- **TEN:** Lloyd Cushenberry $9.1M and Arden Key $4.6M lead a moderate $17.1M dead charge.
+
+#### Key Observations
+
+- **Indianapolis is the clean winner on cap health**, combining top-five room with sub-$10M dead money.
+- **Tennessee has top-five cap space**, but its effective cushion drops meaningfully once minimum roster costs are applied.
+- **Houston's room is respectable, yet the $66.4M dead-money drag is a real constraint beneath the surface.**
+- **Jacksonville is over the cap and carrying $53.3M dead**, making it one of the tougher 2026 cleanup jobs.
+
+### AFC West
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| DEN | 19 | $18,623,570 | $14,586,793 | $1,218,922 | Cleanest dead-money sheet after SEA |
+| KC | 16 | $21,351,968 | $11,356,301 | $9,773,977 | Contender, tighter cushion |
+| LAC | 2 | $63,587,408 | $59,282,433 | $5,548,177 | Elite cap posture |
+| LV | 9 | $37,925,609 | $25,169,525 | $52,012,266 | Dead-money distorted |
+
+#### Top 5 Cap Hits
+
+- **DEN:** Mike McGlinchey $23.8M, Ben Powers $18.2M, Patrick Surtain II $16.8M, Zach Allen $16.5M, D.J. Jones $14.6M
+- **KC:** Chris Jones $44.9M, Patrick Mahomes $34.7M, Trey Smith $24.5M, Nick Bolton $19.3M, Jaylon Moore $18.7M
+- **LAC:** Justin Herbert $46.3M, Derwin James $24.6M, Rashawn Slater $23.8M, Khalil Mack $18.0M, Joe Alt $9.0M
+- **LV:** Maxx Crosby $35.8M, Kolton Miller $22.5M, Tyler Linderbaum $16.7M, Malcolm Koonce $11.0M, Jeremy Chinn $9.6M
+
+#### Dead Money Detail
+
+- **DEN:** Only $1.2M total dead money, the cleanest position in the league outside Seattle's nearly spotless sheet.
+- **KC:** Jawaan Taylor's $7.4M is the main dead-money charge within a reasonable $9.8M total.
+- **LAC:** Only $5.5M total dead money, supporting one of the most flexible books in football.
+- **LV:** Christian Wilkins $29.8M and Geno Smith $16.2M account for most of a massive $52.0M dead-money total.
+
+#### Key Observations
+
+- **The Chargers own one of the league's best cap situations**: top-two space, top-two effective room, and low dead money.
+- **Denver's balance sheet is exceptionally clean**, giving the club unusual freedom even without elite raw cap space.
+- **Kansas City remains viable, but the stars-and-contenders tax is real** with only $11.4M effective room.
+- **Las Vegas is a reminder that raw space can lie** when $52.0M is already trapped in dead money.
+
+### NFC East
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| DAL | 22 | $15,209,634 | $7,295,503 | $42,744,177 | OTC discrepancy noted |
+| NYG | 25 | $12,083,735 | $1,984,435 | $11,368,472 | Thin operating room |
+| PHI | 26 | $11,520,188 | $6,373,697 | $52,031,852 | Heavy dead-money carry |
+| WAS | 1 | $66,354,397 | $59,610,242 | $20,692,736 | Most space in NFL |
+
+#### Top 5 Cap Hits
+
+- **DAL:** Dak Prescott $43.5M, George Pickens $27.3M, Quinnen Williams $21.6M, CeeDee Lamb $19.8M, Rashan Gary $19.5M
+- **NYG:** Brian Burns $36.6M, Dexter Lawrence $27.0M, Paulson Adebo $24.2M, Andrew Thomas $24.0M, Jevon Holland $18.5M
+- **PHI:** Jalen Hurts $32.0M, A.J. Brown $23.4M, Dallas Goedert $20.5M, Lane Johnson $20.3M, Jordan Mailata $15.9M
+- **WAS:** Daron Payne $28.0M, Laremy Tunsil $24.9M, Samuel Cosmi $20.3M, Terry McLaurin $18.0M, Javon Kinlaw $16.2M
+
+#### Dead Money Detail
+
+- **DAL:** Zack Martin $16.5M and Osa Odighizuwa $16.0M are the biggest pieces of a $42.7M dead-money bill. OTC also displayed a conflicting $1,149,634 figure elsewhere; cap-space page value used here.
+- **NYG:** Bobby Okereke $5.5M is the largest dead-money hit in an otherwise manageable $11.4M total.
+- **PHI:** Bryce Huff $16.6M, Darius Slay $13.3M, and James Bradberry $7.7M push dead money above $52.0M.
+- **WAS:** Deebo Samuel $12.3M and Tyler Biadasz $8.1M headline a moderate $20.7M dead figure.
+
+#### Key Observations
+
+- **Washington has the best cap position in football** and can attack roster construction from strength.
+- **Dallas is workable but not clean**, especially if the higher $15.2M cap-space figure is the operative number.
+- **The Giants have almost no effective room**, despite technically sitting above water.
+- **Philadelphia is still functional, but $52.0M dead money limits how aggressively it can pivot.**
+
+### NFC North
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| CHI | 28 | $6,806,499 | $2,132,621 | $19,355,493 | Tight budget |
+| DET | 11 | $35,944,651 | $30,923,104 | $26,468,791 | Core is expensive but healthy |
+| GB | 13 | $29,099,808 | $27,339,690 | $39,199,303 | Strong room, heavier dead |
+| MIN | 27 | $8,913,599 | $3,884,590 | $19,473,074 | Limited flexibility |
+
+#### Top 5 Cap Hits
+
+- **CHI:** Montez Sweat $25.1M, Jaylon Johnson $24.5M, Joe Thuney $21.5M, Dayo Odeyingbo $20.5M, Jonah Jackson $19.5M
+- **DET:** Jared Goff $37.6M, Amon-Ra St. Brown $33.1M, Alim McNeill $29.0M, Penei Sewell $28.0M, D.J. Reed $17.9M
+- **GB:** Jordan Love $36.1M, Micah Parsons $19.2M, Josh Jacobs $14.5M, Devonte Wyatt $12.9M, Nate Hobbs $12.8M
+- **MIN:** Jonathan Allen $23.9M, Brian O'Neill $23.1M, Jonathan Greenard $22.2M, Justin Jefferson $21.2M, Andrew Van Ginkel $19.3M
+
+#### Dead Money Detail
+
+- **CHI:** D.J. Moore $12.0M and Drew Dalman $4.0M make up most of a $19.4M dead-money total.
+- **DET:** Taylor Decker $9.4M and David Montgomery $4.9M are the biggest charges inside $26.5M dead.
+- **GB:** Rashan Gary $17.0M and Kenny Clark $17.0M are the central drivers of a $39.2M dead-money load.
+- **MIN:** Javon Hargrave $10.5M and Harrison Phillips $3.5M are the leading dead-money hits in a $19.5M total.
+
+#### Key Observations
+
+- **Detroit has successfully paid its core and still preserved strong flexibility**, a notable win for its cap management.
+- **Green Bay has healthy room, but the $39.2M dead-money number is the caution flag.**
+- **Chicago and Minnesota are both operating with thin effective cushions**, limiting discretionary moves.
+- **The NFC North is not cap-broken, but only Detroit and Green Bay have meaningful maneuvering room.**
+
+### NFC South
+
+| Team | NFL Rank | Cap Space | Effective Cap Space | Dead Money | Flag |
+|------|----------|-----------|---------------------|------------|------|
+| ATL | 18 | $20,267,624 | $18,443,656 | $16,285,354 | Stable structure |
+| CAR | 12 | $29,450,804 | $24,608,467 | $16,442,844 | Quietly healthy books |
+| NO | 20 | $16,102,740 | $8,504,981 | $113,971,682 | Worst dead-money load in NFL |
+| TB | 24 | $12,874,177 | $7,313,725 | $13,329,591 | Tight but manageable |
+
+#### Top 5 Cap Hits
+
+- **ATL:** Chris Lindstrom $26.3M, Jessie Bates III $24.8M, Kirk Cousins $24.6M, A.J. Terrell $22.5M, Drake London $16.8M
+- **CAR:** Robert Hunt $24.3M, Jaycee Horn $24.0M, Trevon Moehrig $21.3M, Taylor Moton $21.1M, Tershawn Wharton $18.6M
+- **NO:** Carl Granderson $18.1M, Chris Olave $15.5M, Cesar Ruiz $14.2M, Alvin Kamara $10.4M, Erik McCoy $10.3M
+- **TB:** Baker Mayfield $40.0M, Tristan Wirfs $36.3M, Chris Godwin $33.7M, Antoine Winfield Jr. $27.5M, Luke Goedeke $22.7M
+
+#### Dead Money Detail
+
+- **ATL:** Darnell Mooney's $11.0M is the clear leader within a manageable $16.3M dead total.
+- **CAR:** Austin Corbett $4.4M and Adam Thielen $3.3M headline a reasonable $16.4M dead-money number.
+- **NO:** Derek Carr $36.7M, Cameron Jordan $18.8M, Demario Davis $14.3M, Taysom Hill $13.7M, Ryan Ramczyk $12.0M, and Tyrann Mathieu $7.2M create a staggering $114.0M dead-money bill.
+- **TB:** Mike Evans $13.1M drives most of Tampa Bay's $13.3M dead total.
+
+#### Key Observations
+
+- **New Orleans is the league's cap warning label**: $114.0M dead money, by far the NFL's worst cleanup, and only $8.5M effective room.
+- **Carolina quietly owns one of the healthier books in the conference**, with top-12 space and moderate dead money.
+- **Atlanta has usable flexibility without severe structural damage**, unusual for a team carrying Kirk Cousins at $24.6M.
+- **Tampa Bay is tight but not distressed**, with a concentrated veteran top end rather than a dead-money crisis.
+
+### Learnings
+
+- **Data collection timestamp:** 2026-03-13 from OTC cap-space and player contract pages 📊
+- **League cap baseline:** OTC confirms a 2026 salary cap of $301,200,000 ✅
+- **Forward planning baseline:** OTC currently points to a 2027 cap projection of $327,000,000 📊
+- **Dead money remains the fastest shorthand for cap health** — raw cap space alone misses situations like MIA, NYJ, CLE, and NO.
+- **Franchise tag values remain unresolved** because OTC's tag content rendered inconsistently and surfaced outdated data during collection ❓
