@@ -10,7 +10,7 @@ Devon Witherspoon just won a Super Bowl. He was PFF's #1-graded cornerback in fo
 
 Somewhere in Renton, John Schneider knows the clock is ticking. Somewhere in a high-rise, Witherspoon's agent is laminating Trent McDuffie's $31 million contract and highlighting the words "one hundred million guaranteed."
 
-We asked our Cap Analyst and Player Representative to independently model this extension. They came back with numbers that are **$25 million apart in total value and $30 million apart in guarantees.**
+We asked our Cap Analyst and Player Representative to independently model this extension. They came back with numbers that are **$22 million apart in total value and $25 million apart in guaranteed money.**
 
 Both of them think they're right. Both of them have the receipts.
 
@@ -22,11 +22,11 @@ Let's get into it.
 
 Before we get to the money fight, here's what our Seahawks Expert wants you to understand about why this deal *has* to happen:
 
-Seattle's CB room just got gutted. Riq Woolen left for Philadelphia ($15M). Coby Bryant went to Chicago (3yr/$40M). The current depth chart behind Witherspoon is Josh Jobe, Nick Emmanwori, and... that's it.
+Seattle's secondary just got gutted. Riq Woolen left for Philadelphia ($15M). Coby Bryant — who'd converted to safety — went to Chicago (3yr/$40M). The current depth chart behind Witherspoon is Josh Jobe, Nick Emmanwori, and... that's it.
 
 | Role | Player | Reality Check |
 |------|--------|---------------|
-| CB1 | **Devon Witherspoon** | Elite. PFF #1. Super Bowl hero. On a $10.1M option year. |
+| CB1 | **Devon Witherspoon** | Elite. PFF #1. Super Bowl hero. Final year of rookie deal at $10.1M. |
 | CB2 | Josh Jobe | Solid. Re-signed 3yr/$24M. But he's a UDFA — not a CB1. |
 | Nickel | Nick Emmanwori | Versatile big nickel. Limited outside reps. |
 | CB4 | ??? | Literally nobody. |
@@ -48,9 +48,9 @@ Before we get to the disagreement, let's agree on the facts. The CB market has m
 | **Trent McDuffie** | LAR | **Mar 2026** | **$31.0M** | **~$100M** | **$100M** |
 | Sauce Gardner | IND | Jul 2025 | $30.1M | $40.5M | $85.7M |
 | Derek Stingley Jr. | HOU | Mar 2025 | $30.0M | $48.0M | $89.0M |
-| Jaycee Horn | CAR | 2025 | $25.0M | $46.7M | $72.0M |
+| Jaycee Horn | CAR | 2025 | $25.0M | $46.7M | $70.0M |
 | Pat Surtain II | DEN | Sep 2024 | $24.0M | $40.7M | $77.5M |
-| DaRon Bland | DAL | 2025 | $22.5M | $36.3M | $50.0M |
+| DaRon Bland | DAL | 2025 | $23.0M | $36.3M | $50.0M |
 
 That's a **29% increase in AAV** from Surtain's $24M (September 2024) to McDuffie's $31M (March 2026). The cap grew 18% in the same period. The CB market is outpacing everything.
 
@@ -116,19 +116,19 @@ Here's the agent's opening position:
 
 ### The McDuffie Problem
 
-This is the comp that changes everything. Trent McDuffie — who has never been All-Pro — just got $31M/yr and $100M guaranteed from the *Rams* (Seattle's division rival, no less).
+This is the comp that changes everything. Trent McDuffie — a 2x All-Pro who won two Super Bowls in Kansas City — just got $31M/yr and $100M guaranteed from the *Rams* (Seattle's division rival, no less).
 
-PlayerRep built the comparison table that Witherspoon's agent will bring to the meeting:
+McDuffie is excellent. But PlayerRep built the comparison table that Witherspoon's agent will bring to the meeting — and the case for a premium still holds:
 
 | Category | McDuffie | Witherspoon |
 |----------|----------|-------------|
-| Pro Bowls | 1 | **3** |
-| All-Pro | 0 | **1 (2nd Team)** |
+| Pro Bowls | 1 | **3 (consecutive)** |
+| All-Pro | 2 (1st Team '23, 2nd Team '24) | **1 (2nd Team '25)** |
 | Super Bowl Wins | 2 (KC) | **1 (SEA)** |
 | PFF #1 CB Season | No | **Yes (2025, 90.1)** |
 | Age at Extension | 25 | 26 |
 
-If McDuffie got $31M with no All-Pro selections, the agent's argument writes itself.
+McDuffie has the All-Pro edge. But Witherspoon has three straight Pro Bowls, PFF's #1 overall grade, and was the defensive centerpiece of a Super Bowl champion — not a secondary piece on a Mahomes-led offense. The agent's argument: *"My client was the best corner in football last year. Period. Pay accordingly."*
 
 ### Where PlayerRep Thinks It Actually Lands
 
@@ -188,7 +188,7 @@ Over a 4-year extension, Witherspoon would lose an estimated **$9.2M to the new 
 What if the deal doesn't get done?
 
 **The timeline:**
-- 2026: Witherspoon plays on his option year ($10.1M)
+- 2026: Witherspoon plays on the final year of his rookie deal ($10.1M)
 - 2027: Seattle exercises 5th-year option ($21.16M) — fully guaranteed
 - 2028: Witherspoon hits unrestricted free agency at age 28
 
@@ -200,8 +200,8 @@ And would he actually leave? PlayerRep makes a credible case:
 
 - ✅ He already has his Super Bowl ring — no "unfinished business" narrative
 - ✅ WA's new income tax makes Seattle less attractive financially
-- ✅ Dallas, Houston, Miami, Jacksonville, Tampa, Vegas, Tennessee — 9 teams with zero state tax
-- ✅ He's from Illinois — no hometown pull to the Pacific Northwest
+- ✅ Dallas, Houston, Miami, Jacksonville, Tampa, Vegas, Tennessee — 7 teams with zero state tax
+- ✅ He's from Pensacola, Florida — a zero-tax state with no hometown pull to the Pacific Northwest
 - ✅ Bigger endorsement markets exist (Dallas, Houston, Miami)
 
 > *"The agent doesn't need Witherspoon to actually want to leave. The agent just needs Seattle to believe he might. And given the tax change, the Super Bowl ring, and the economics — it's entirely credible."* — **PlayerRep**
