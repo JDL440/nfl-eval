@@ -51,7 +51,37 @@ Complex evaluations require multiple agents. Lead orchestrates these.
 | Possible | Single reporter or indirect signals | One insider, agent leaks, workout visits |
 | Speculative | Fan/media speculation, mock scenarios | Social media, opinion pieces, "what if" analysis |
 
-## Rules
+## Phase 2 Automation Routing (GitHub Issues Mode)
+
+| Work Type | Route To | Examples |
+|-----------|----------|----------|
+| Queue system, job scheduling, Substack API | Backend | M1: BullMQ setup, cron triggers, state persistence |
+| Approval dashboard, UI, audit log display | Frontend | M2: React dashboard, approve/reject controls, cost tracking |
+| End-to-end testing, cost validation, QA | Tester | M3: Integration tests, token budget validation, edge cases |
+| Architecture decisions, milestone sequencing, production deployment | Lead | Oversee all 4 milestones, approve/reject work from Backend/Frontend/Tester |
+
+### GitHub Issues Workflow (Phase 2)
+
+1. **Create issue** with milestone template (M1/M2/M3/M4)
+2. **Label:** `squad` + `squad:{role}` (e.g., `squad:backend`, `squad:frontend`, `squad:tester`)
+3. **Assign to agent:** Squad auto-routes based on label
+4. **Agent creates branch:** `squad/{issue-number}-{slug}` (e.g., `squad/1-bullmq-queue`)
+5. **Agent commits & pushes:** References issue in commit message (`fixes #{issue-number}`)
+6. **Open PR:** Agent opens PR from branch to main
+7. **Lead reviews:** Approves or requests changes
+8. **Merge:** Once approved, PR merges and issue auto-closes
+
+### Milestone Dependencies
+
+```
+M1 (Backend) → M2 (Frontend) ─┐
+      ↓          ↓             ├→ M3 (Tester) → M4 (Backend + Frontend)
+      └─────────────────────┘
+```
+
+Agents must respect dependencies: don't spawn M2 work until M1 is complete.
+
+## Rules (Phase 1 + Phase 2)
 
 1. **Team agents advocate for their team** - they evaluate moves from their team's perspective.
 2. **Specialists provide objective analysis** - cap mechanics, injury risk, scheme fit are factual, not partisan.
@@ -61,3 +91,4 @@ Complex evaluations require multiple agents. Lead orchestrates these.
 6. **Quick facts -> coordinator answers directly.** Don't spawn for "who is the Bills QB?"
 7. **"Team, ..." -> fan-out.** Spawn all relevant agents in parallel.
 8. **Cross-team trades always involve both team agents** - each advocates for their side.
+9. **GitHub Issues (Phase 2):** Route by `squad:{role}` label. Agents create branches, PRs, commit with issue reference.
