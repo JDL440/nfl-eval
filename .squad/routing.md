@@ -18,6 +18,7 @@ How to decide who handles what.
 | College prospect evaluation | CollegeScout | Prospect scouting, measurables, film evaluation, college production |
 | Player perspective, CBA rules, contract fairness | PlayerRep | Prospect scouting, measurables, film evaluation, college production |
 | News, rumors, transactions | Media | Breaking news, rumor tracking, transaction monitoring, reporter intel |
+| Article writing, Substack content | Writer | Transforms expert analysis into polished Substack articles with consistent voice |
 | Article review, fact-checking, editing | Editor | Pre-publish review of all Substack articles — verifies names, stats, contracts, style, structure |
 | Session logging | Scribe | Automatic - never needs routing |
 | Work monitoring | Ralph | Backlog, issue tracking, pipeline management |

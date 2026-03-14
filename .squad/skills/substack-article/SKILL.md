@@ -50,7 +50,16 @@ Provide your expert assessment with:
 - Areas where you DISAGREE with other experts (Cap vs PlayerRep, Team vs Scheme, etc.)
 ```
 
-### Phase 3: Write the Article (Coordinator or Writing Agent)
+### Phase 3: Write the Article (Writer Agent)
+
+**Writer takes the raw expert output and crafts it into a polished Substack article.** Writer follows the house style guide in their charter and the structure template below. Writer does NOT fact-check — that's Editor's job.
+
+Spawn Writer with:
+- The topic brief
+- All raw expert analysis (pasted into the prompt)
+- The structure template below
+
+Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 
 **Structure Template:**
 
@@ -166,3 +175,18 @@ If 🔴 errors exist, fix them and re-submit. The Emmanwori name error (mixing N
   - Used: SEA + Cap + Injury + CollegeScout + Offense + Media
   - Result: ~3,500 words, strong narrative arc, expert quotes throughout
   - Feedback: User said "Wow - that came out amazing"
+- ✅ "Our Cap Expert Says $27 Million..." — Witherspoon extension (2026-03-14)
+  - Used: Cap + PlayerRep + SEA → Editor caught 6 errors including McDuffie All-Pro miscount
+  - Result: ~3,800 words, expert disagreement format worked perfectly
+  - First article through the Editorial Review pipeline
+
+## Production Pipeline (Updated)
+
+```
+1. Topic selected from content/article-ideas.md
+2. Expert agents spawned in parallel (Phase 2)
+3. Writer assembles draft from expert output (Phase 3)
+4. Editor reviews draft — fact-check + style + structure (Phase 5)
+5. Fixes applied if needed → re-review if 🔴 errors
+6. Published to content/articles/ and committed (Phase 6)
+```
