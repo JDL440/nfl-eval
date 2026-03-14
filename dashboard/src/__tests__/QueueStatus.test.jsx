@@ -1,8 +1,10 @@
+import QueueStatus from '../components/QueueStatus';
+
 describe('QueueStatus Component', () => {
   test('component file exists and can be imported', () => {
     // This test ensures the component is properly created
     // Full integration tests will run when Backend M1 is complete
-    expect(true).toBe(true);
+    expect(QueueStatus).toBeDefined();
   });
 
   test('mock queue data structure is valid', () => {
