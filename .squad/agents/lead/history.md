@@ -56,3 +56,35 @@
 - **Analytics** (`.squad/agents/analytics/`) — NFL Advanced Analytics Expert. The team's numbers engine: EPA, DVOA, PFF grades, QBR, win probability, success rate, AV. Provides statistical context for player evaluation, player comparison models, positional value analysis, contract value modeling, draft pick value analytics, team efficiency rankings, and opponent-adjusted metrics. Challenges narrative-driven evaluations with data. Integrates with Cap (contract value), Draft (prospect modeling), Offense/Defense (scheme context), and team agents (team-specific analytics). Created per Joe Robinson's request.
 - **CollegeScout** (`.squad/agents/collegescout/`) — College Player Scouting Expert. The team's college-to-pro projection specialist: deep prospect evaluation (film patterns, technique, athleticism, football IQ), measurables analysis with positional thresholds, college production in context (conference, system, usage), historical prospect comps, scheme fit projection (with Offense/Defense), medical red flags (with Injury), character/intangibles tracking, small school/FCS discovery, all-star game evaluation, and transfer portal tracking. Position-specific criteria for QB, WR, OL, EDGE, CB, S, LB, DL, RB, TE. Provides scouting intelligence that Draft and team agents use — does NOT make pick recommendations. Created per Joe Robinson's request.
 - **PlayerRep** (`.squad/agents/playerrep/`) — Player Advocate & CBA Expert. The other side of the negotiation table: advocates from the player's perspective in trade, signing, and contract evaluations. Deep CBA expertise (accrued seasons, FA types, franchise/transition tags, comp pick formula, rookie wage scale, 5th-year option, guaranteed money structures, void years). Player destination preference analysis (state income tax impact, market size, winning culture, scheme fit/role clarity, coaching reputation, lifestyle, family proximity). Contract negotiation dynamics (extension vs. FA timing, leverage points, comparable contracts, guaranteed money as #1 priority). Career trajectory modeling (optimal extension windows by position, age curves, 2nd vs. 3rd contract dynamics). Player movement patterns (ring-chasing, return-home narratives, prove-it deals). Serves as counterpoint to team agents — PlayerRep + Cap together give full negotiation picture. Does NOT evaluate talent or scheme fit — defers to team agents, Offense, Defense. Created per Joe Robinson's request.
+
+### Phase 2 Automation Proposal (2026-03-14)
+
+**Deliverable:** `content/proposals/phase2-automation-proposal.md`
+
+**Key Architectural Decisions Proposed:**
+
+1. **State Machine Design** — Article lifecycle with 6 states: PROPOSED → DRAFTING → REVIEWING → APPROVED → PUBLISHED / ARCHIVED. Each transition is explicit with recovery semantics.
+
+2. **Queue Architecture** — Recommended BullMQ (Node.js + Redis) for job scheduling. Five queues: media-sweep (cron), article-draft (event), article-review (event), article-publish (manual), knowledge-sync (cron).
+
+3. **Hybrid Scheduling** — GitHub Actions for cron triggers (free, auditable), BullMQ for event-driven jobs (priority, retry, concurrency control).
+
+4. **Persistence Strategy** — Git-based JSON for MVP (audit trail, no setup), migrate to SQLite before 32-team scale.
+
+5. **Significance Scoring** — Rules engine to auto-trigger article drafts: +3 for Seahawks starter, +2 for $10M+ AAV or top-60 pick, +2 for division rival, +1 for position of need. Threshold: 4 points.
+
+6. **Cost Model** — Estimated ~$3.20/article with Opus everywhere. Proposed tiered strategy: Opus for Writer/Editor (quality-critical), Sonnet for expert spawns (~$2.00/article).
+
+7. **Error Recovery** — Idempotent operations, state checkpointing on every transition, recovery-on-startup scans for incomplete articles.
+
+**Open Questions for User:**
+- Workflow engine preference (BullMQ vs Celery vs Actions-only)
+- Cost aggressiveness (Opus everywhere vs tiered models)
+- Substack integration (email-to-post vs Puppeteer vs manual)
+- First automated article target date (before/during/after draft)
+
+**Learnings:**
+- Phase 1 proved the editorial model works (Editor caught 6 errors in Witherspoon article)
+- Current manual workflow: ~2-3 hours human involvement per article, 4 human touchpoints
+- 32-team scale bottlenecks: Editor single-threaded, dashboard UX overwhelmed, git state performance
+- Substack has no public API — need workaround (email-to-post or Puppeteer)
