@@ -2,8 +2,25 @@ import axios from 'axios';
 import mockJobs from './mockQueue';
 
 // Use mock API by default, switch to real API when Backend M1 is ready
-const USE_MOCK_API = process.env.REACT_APP_USE_MOCK_API !== 'false';
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const USE_MOCK_API =
+  (
+    // Prefer Vite env var when available
+    (typeof import.meta !== 'undefined' &&
+      import.meta.env &&
+      import.meta.env.VITE_USE_MOCK_API) ??
+    // Fallback for environments (e.g., Node tests) that still use REACT_APP_*
+    (typeof process !== 'undefined' ? process.env.REACT_APP_USE_MOCK_API : undefined)
+  ) !== 'false';
+
+const API_BASE =
+  (
+    // Prefer Vite env var when available
+    (typeof import.meta !== 'undefined' &&
+      import.meta.env &&
+      import.meta.env.VITE_API_URL) ??
+    // Fallback for environments (e.g., Node tests) that still use REACT_APP_*
+    (typeof process !== 'undefined' ? process.env.REACT_APP_API_URL : undefined)
+  ) || 'http://localhost:3001/api';
 
 class QueueClient {
   constructor() {

@@ -148,6 +148,12 @@ button, .btn {
   gap: 8px;
 }
 
+button:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid #111827; /* high-contrast focus ring */
+  outline-offset: 2px;
+}
+
 .btn-primary {
   background: #3b82f6;
   color: white;

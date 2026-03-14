@@ -14,6 +14,22 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('queue');
 
   useEffect(() => {
+    // Keep selectedJobId in sync with the jobs list.
+    if (jobs.length === 0) {
+      if (selectedJobId !== null) {
+        setSelectedJobId(null);
+      }
+      return;
+    }
+
+    const hasSelectedJob = jobs.some((j) => j.id === selectedJobId);
+    if (!hasSelectedJob) {
+      // Default to the first job when there is no valid selection.
+      setSelectedJobId(jobs[0].id);
+    }
+  }, [jobs, selectedJobId]);
+
+  useEffect(() => {
     fetchJobs();
     const interval = setInterval(fetchJobs, 2000);
     return () => clearInterval(interval);
@@ -37,12 +53,34 @@ export function Dashboard() {
     setJobs(updatedJobs);
   };
 
+  useEffect(() => {
+    // Initialize selection when jobs are first loaded and nothing is selected yet
+    if (!selectedJobId && jobs.length > 0) {
+      setSelectedJobId(jobs[0].id);
+    }
+  }, [jobs, selectedJobId]);
+
   const statuses = {
     pending: jobs.filter((j) => j.status === 'pending_approval').length,
     ready: jobs.filter((j) => j.status === 'ready_for_review').length,
     approved: jobs.filter((j) => j.status === 'approved').length,
     published: jobs.filter((j) => j.status === 'published').length
   };
+
+  useEffect(() => {
+    if (jobs.length === 0) {
+      if (selectedJobId !== null) {
+        setSelectedJobId(null);
+      }
+      return;
+    }
+
+    const hasSelectedJob = selectedJobId !== null && jobs.some((j) => j.id === selectedJobId);
+
+    if (!hasSelectedJob) {
+      setSelectedJobId(jobs[0].id);
+    }
+  }, [jobs, selectedJobId]);
 
   return (
     <div className="dashboard-container">
@@ -89,7 +127,7 @@ export function Dashboard() {
       <div className="dashboard-grid">
         {/* Queue List */}
         <div style={{ gridColumn: '1 / -1' }}>
-          <QueueStatus />
+          <QueueStatus jobs={jobs} selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} />
         </div>
 
         {/* Article Preview */}
