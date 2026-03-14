@@ -2,6 +2,20 @@
 
 ## Active Decisions
 
+### 2026-03-14: Phase 2 — Autonomous PR Review (No Human Gate)
+**By:** Joe Robinson (via Copilot)
+**Status:** Adopted
+**What:**
+1. Remove manual human approval gate on Phase 2 PRs
+2. Lead agent autonomously reviews + approves PRs when GitHub Actions CI passes (objective gate)
+3. Lead rejects/requests changes if CI fails, coverage drops, or architecture concerns exist
+4. Lead merges automatically once approved (no human merge step)
+5. Escalate to user ONLY for policy/scope/architecture decisions (rare)
+
+**Why:** Faster iteration. Humans were not the bottleneck (tests are). Tests provide objective quality signal. Lead can make routine code review decisions in seconds using test results + code inspection. Normal PR cycle: push → 10 min CI → 5 min Lead review → merge. No human wait.
+
+**Impacts:** Lead charter updated with autonomous approval authority. Normal workflow: agent push → CI passes → auto-merge. Failed tests get Lead feedback immediately.
+
 ### 2026-03-14: Phase 2 Automation — Scale & Quality Gates
 **By:** Joe Robinson (via Copilot)
 **Status:** Adopted
