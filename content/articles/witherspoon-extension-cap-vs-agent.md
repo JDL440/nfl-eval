@@ -22,13 +22,13 @@ Let's get into it.
 
 Before we get to the money fight, here's what our Seahawks Expert wants you to understand about why this deal *has* to happen:
 
-Seattle's CB room just got gutted. Riq Woolen left for Philadelphia ($15M). Coby Bryant went to Chicago (3yr/$40M). The current depth chart behind Witherspoon is Josh Jobe, Nehemiah Emmanwori, and... that's it.
+Seattle's CB room just got gutted. Riq Woolen left for Philadelphia ($15M). Coby Bryant went to Chicago (3yr/$40M). The current depth chart behind Witherspoon is Josh Jobe, Nick Emmanwori, and... that's it.
 
 | Role | Player | Reality Check |
 |------|--------|---------------|
 | CB1 | **Devon Witherspoon** | Elite. PFF #1. Super Bowl hero. On a $10.1M option year. |
 | CB2 | Josh Jobe | Solid. Re-signed 3yr/$24M. But he's a UDFA — not a CB1. |
-| Nickel | Nehemiah Emmanwori | Versatile big nickel. Limited outside reps. |
+| Nickel | Nick Emmanwori | Versatile big nickel. Limited outside reps. |
 | CB4 | ??? | Literally nobody. |
 
 > *"If Witherspoon leaves, this is what Seattle's CB room looks like: Josh Jobe as your CB1 with a converted safety in the slot and no proven bodies behind them. That's not a championship defense — that's a bottom-10 secondary overnight."* — **SEA Expert**

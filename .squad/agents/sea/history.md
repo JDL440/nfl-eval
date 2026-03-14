@@ -88,7 +88,7 @@ _Last updated: 2026-03-13 via espn.com depth chart + nfl.com roster + transactio
 | ILB | ✅ Tyrel Dodson | — | |
 | CB1 | ✅ Devon Witherspoon | — | Elite CB, 5th-year option ($10.1M), **extension candidate** |
 | CB2 | ✅ Josh Jobe | — | Re-signed 3yr/$24M |
-| NB | ✅ Nehemiah Emmanwori | — | Versatile nickel/big slot |
+| NB | ✅ Nick Emmanwori | — | Versatile nickel/big slot |
 | FS | 📊 Rodney Thomas II (NEW) | Ty Okada (tendered) | Thomas from IND; Okada key depth |
 | SS | ✅ Julian Love | AJ Finley (RFA tendered) | Love at $12.9M |
 

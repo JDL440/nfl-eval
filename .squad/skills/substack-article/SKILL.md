@@ -123,7 +123,20 @@ Headlines should be:
 - `We Asked {N} Experts About {Topic}. They Can't Agree — and That's the Point.`
 - `{Bold Claim}. Our Expert Panel Explains Why.`
 
-### Phase 5: Polish & Store
+### Phase 5: Editorial Review (MANDATORY)
+
+**Editor reviews every article before it goes to `content/articles/`.** This is non-negotiable.
+
+Spawn Editor (sync) with the draft article. Editor produces:
+- 🔴 **ERRORS** — factual mistakes that must be fixed (wrong names, bad stats, stale info)
+- 🟡 **SUGGESTIONS** — strong recommendations for style/structure
+- 🟢 **NOTES** — minor polish items
+
+**Verdict:** ✅ APPROVED / 🟡 REVISE / 🔴 REJECT
+
+If 🔴 errors exist, fix them and re-submit. The Emmanwori name error (mixing Nick Emmanwori with Nehemiah Pritchett) is the founding example of why this step exists.
+
+### Phase 6: Polish & Store
 
 1. Save article to `content/articles/{slug}.md`
 2. Commit with descriptive message

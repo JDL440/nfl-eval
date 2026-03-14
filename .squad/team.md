@@ -103,6 +103,7 @@
 
 | Name | Role | Charter | Status |
 |------|------|---------|--------|
+| Editor | Article Editor & Fact-Checker | .squad/agents/editor/charter.md | Active |
 | Scribe | Session Logger | .squad/agents/scribe/charter.md | Active |
 | Ralph | Work Monitor | - | Monitor |
 
