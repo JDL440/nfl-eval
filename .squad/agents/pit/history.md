@@ -409,3 +409,5 @@ _Last updated: 2026-03-12 via overthecap.com_
 7. **2026-03-12:** 12 draft picks including 3 third-rounders is elite capital. Steelers could easily package picks to move up for a QB or load up on defensive depth.
 
 📌 Media update (2026-03-13): Traded for Michael Pittman Jr. from IND (3yr/$59M ext). Signed Jamel Dean (3yr/$36.75M CB), Rico Dowdle (2yr/$12.5M RB), Jaquan Brisker (1yr/$5.5M S). Major win-now build: Metcalf + Pittman WR duo. Rodgers decision still pending.
+
+📌 Media update (2026-03-14): ⬇️ Rodgers return DOWNGRADED to 🟡 Possible (was 🟢 Likely). Insiders say retirement probable — no contract offer. Must plan for life without Rodgers. Fallback: Rudolph/Howard. Win-now build at risk.

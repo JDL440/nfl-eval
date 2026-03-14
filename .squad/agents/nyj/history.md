@@ -342,3 +342,5 @@ _Last updated: 2026-03-12_
 - ✅ Division rival NE is the clear threat — Maye/Vrabel combo is the AFC East's dominant force for the foreseeable future
 - ✅ MIA's implosion (Tua release, $99M dead cap) means the division's bottom is even worse than the Jets' situation
 - ✅ Glenn's coaching overhaul (12 of 22 coaches replaced) signals organizational awareness that 2025 was a scheme/coaching problem, not just a talent problem
+
+📌 Media update (2026-03-14): Acquired Geno Smith (trade from LV) + Minkah Fitzpatrick (trade from MIA, 3yr/$40M ext). Major QB + safety upgrades. Smith likely starter. Draft strategy may shift away from QB.

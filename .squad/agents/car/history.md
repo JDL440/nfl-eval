@@ -333,3 +333,5 @@ _Last updated: 2026-03-12_
 6. **Draft at #19 is a swing pick.** Not high enough for elite EDGE/QB, but in range for top WR (Lemon), TE (Sadiq), OT (Fano), or defensive help (Downs, Allen). Board will dictate BPA approach.
 
 📌 Media update (2026-03-13): Signed Kenny Pickett (1yr/$7.5M QB — bridge/backup behind Bryce Young).
+
+📌 Media update (2026-03-14): Signed Jaelan Phillips (EDGE, 4yr/$120M). Massive defensive investment — Phillips + Derrick Brown + Nic Scourton = elite front. Cap hit significant; update defensive projections.

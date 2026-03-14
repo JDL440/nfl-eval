@@ -337,3 +337,5 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-13): Signed Cobie Durant (1yr CB). No Rashan Gary trade confirmed.
+
+📌 Media update (2026-03-14): Signed Rashan Gary (DE, 2yr/$32M) + Javonte Williams (RB, 3yr/$24M) + Matt Hennessy (C). Major additions across defense, RB room, and OL.

@@ -340,3 +340,7 @@ _Last updated: 2026-03-12_
 4. **Consider one more WR signing** — Doubs is good but need a true explosive threat. Could target remaining FAs or draft.
 5. **Plan Gonzalez extension** — Lock up the CB1 of the future before costs escalate.
 6. **Prepare for Maye mega-extension** — Will need $55M+ AAV. Structure future contracts accordingly.
+
+## Learnings
+
+📌 Media update (2026-03-14): Signed Romeo Doubs (WR, 4yr/$68-80M). Released Diggs. WR room completely turned over — Doubs is new WR1 for Drake Maye. Update offensive projections.

@@ -366,3 +366,5 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-13): Signed Arnold Ebiketie (1yr/$7.3M EDGE) and Jonathan Jones (1yr CB). Pass rush and CB depth addressed.
+
+📌 Media update (2026-03-14): Signed Michael Carter II (CB, restructured). Minor secondary depth addition.

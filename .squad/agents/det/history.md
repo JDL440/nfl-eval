@@ -394,3 +394,5 @@ _Last updated: 2026-03-12 by DET agent_
 - ✅ Muhammad loss (11 sacks) is the single most impactful departure — EDGE is the #1 need
 - ✅ Dead money of $26.5M is significant but not crippling — mostly from necessary moves (Decker, Montgomery, Ragnow)
 - ✅ 2025 rollover of $19.2M (6th in NFL) gives Lions more flexibility than raw cap space suggests
+
+📌 Media update (2026-03-14): Signed Tyler Conklin (TE). Minor move, fills TE depth roster spot.

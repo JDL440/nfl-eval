@@ -373,3 +373,5 @@ _via overthecap.com_
 - 2027 is the true "Year 1" of the post-Watson competitive window
 - Division is dangerous: BAL added Hendrickson, CIN reloaded defense, PIT in transition
 - OL was completely overhauled: Bitonio/Conklin/Teller/Pocic out → Johnson/Jenkins/Jenkins/Howard in
+
+📌 Media update (2026-03-14): Signed Elgton Jenkins (OL, 2yr/$24M). Versatile G/C/T addition. Injury recovery watch — failed physical with GB previously.

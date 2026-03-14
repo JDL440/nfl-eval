@@ -335,3 +335,5 @@ _Last updated: 2026-03-13_
 5. **Ashton Jeanty is the real deal:** R1 pick from 2025 draft. Franchise RB. Averaged leader in rushing attempts. Locked in on rookie deal through 2028.
 
 📌 Media update (2026-03-13): Maxx Crosby trade to BAL **VOIDED** (failed physical). Crosby remains on roster but trade market reopens. Signed Jalen Nailor (3yr/$35M WR), Connor Heyward (2yr TE/FB).
+
+📌 Media update (2026-03-14): Signed Tyler Linderbaum (C, 3yr/$81M) + Dareke Young (WR). Traded Geno Smith + Taron Johnson to NYJ. OL rebuild around expected #1 pick Mendoza.

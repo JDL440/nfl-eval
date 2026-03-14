@@ -370,3 +370,5 @@ _Last updated: 2026-03-12_
 - PFR is blocked (403) — do not attempt
 - Chargers beat KC twice in 2025 — division dynamics are shifting
 - McDaniel hiring is the most significant schematic change — expect dramatically different offense in 2026
+
+📌 Media update (2026-03-14): Signed Dalvin Tomlinson (DT, 1yr/$7.5M). Run-stuffing DL depth addition.

@@ -356,3 +356,7 @@ _Last updated: 2026-03-12_
 - **Defense is the Problem:** Pass rush has been anemic for years. Muhammad helps short-term but this team needs a homegrown edge rusher.
 - **Post-Evans Era:** Offense must evolve. Egbuka, McMillan, Tez Johnson are the future WR room. Robinson's scheme will determine if they can sustain production without Evans.
 - **Division Getting Harder:** CAR added Phillips + Lloyd; ATL has Stefanski; NO spending big. NFC South is no longer a cakewalk.
+
+## Learnings
+
+📌 Media update (2026-03-14): Signed Kenneth Gainwell (RB, 2yr/$14M). Gainwell replaces Rachaad White in the RB room. Update RB depth chart.

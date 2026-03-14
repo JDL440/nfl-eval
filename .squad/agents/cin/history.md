@@ -308,3 +308,5 @@ _Last updated: 2026-03-12 via overthecap.com + spotrac.com_
 5. 📊 Cap is manageable now but will get tight in 2027-28 as Burrow/Chase/Higgins all escalate. Window to build a contender is 2026-2027.
 6. 📊 All 3 division rivals changed head coaches this offseason — unprecedented. Creates uncertainty but also opportunity for CIN with coaching continuity.
 7. ⚠️ The Burrow trade speculation is noise for now but reflects real frustration with the franchise's inability to support their franchise QB with a complete roster.
+
+📌 Media update (2026-03-14): Signed Bryan Cook (S, 3yr/$40.25M). Secondary upgraded — Cook + existing pieces = significant defensive improvement.

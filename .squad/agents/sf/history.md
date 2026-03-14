@@ -346,3 +346,5 @@ _Items to investigate in follow-up research:_
 ## Learnings
 
 📌 Media update (2026-03-13): Signed Vederian Lowe (2yr/$12M OT). Bryce Huff retired. Joey Bosa reunion rumored but no deal. Jauan Jennings still unsigned, likely departing. EDGE room thinned by Huff retirement.
+
+📌 Media update (2026-03-14): Signed Nate Hobbs (CB) + Luke Gifford (LB). Joey Bosa still 🟢 Likely but no deal done — ESPN calls SF "obvious fit." Depth additions at secondary and LB.

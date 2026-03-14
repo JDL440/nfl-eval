@@ -311,3 +311,5 @@ _Last updated: 2026-03-12_
 6. 📊 Two 2nd-round picks give Bears flexibility to trade up in R1 or address two needs simultaneously.
 7. ⚠️ Maxx Crosby rumors are the splashiest storyline but cap constraints make a deal very difficult without corresponding moves.
 8. 📊 Division is brutal: DET is loaded, GB added Micah Parsons, MIN adding defensive veterans. Bears must nail 2026 draft.
+
+📌 Media update (2026-03-14): Signed Devin Bush (LB, 3yr/$30M) + Jedrick Wills (OT, 1yr). Released Edmunds (→ NYG). Bush replaces Edmunds at LB. Wills competes for LT.

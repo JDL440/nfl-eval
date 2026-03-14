@@ -336,3 +336,5 @@ _Last updated: 2026-03-12_
 - Tunsil trade cost R2 + R4 in 2026 draft — significant draft capital loss
 
 📌 Media update (2026-03-13): Re-signed Marcus Mariota (1yr/$7M backup QB). QB room secured behind Jayden Daniels.
+
+📌 Media update (2026-03-14): Signed Odafe Oweh (EDGE, 4yr/$100M) + Dyami Brown (WR, 1yr/$3M). Pass rush now elite (Oweh + Omenihu). Massive offseason overhaul continues.

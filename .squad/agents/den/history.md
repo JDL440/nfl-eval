@@ -280,3 +280,7 @@ _Last updated: 2026-03-12_
 3. Plan OT succession — Bolles/McGlinchey both on expensive declining deals
 4. Monitor Nix recovery — if healthy, extend before price skyrockets
 5. Watch McGlinchey as potential cap casualty in 2027 ($23.8M hit)
+
+## Learnings
+
+📌 Media update (2026-03-14): Re-signed J.K. Dobbins (RB, 2yr/$20M) + Jaleel McLaughlin (RB). RB room set: Dobbins + McLaughlin + RJ Harvey = three-headed backfield.

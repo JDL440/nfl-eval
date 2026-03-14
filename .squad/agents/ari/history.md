@@ -17,6 +17,8 @@
 
 📌 Media update (2026-03-13): Signed Gardner Minshew (1yr/$5.75M backup QB) and Jonah Williams (DE). #3 pick trade buzz cooling — consensus ARI uses pick (OT Mauigoa projected).
 
+📌 Media update (2026-03-14): ⬆️ #3 pick trade buzz UPGRADED back to 🟡 Active. ESPN mocks show ARI picking EDGE at #3, then trading back into R1 for QB Ty Simpson. Draft strategy recalibration needed.
+
 ## Knowledge Base
 
 ### Coaching Staff

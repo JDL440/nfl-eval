@@ -318,3 +318,5 @@ _Accumulated from research sessions_
 10. **Joe Brady's "Super Bowl or bust" mandate** — Ownership fired McDermott after 12-5 and a Divisional loss. Expectation is clear: Super Bowl or else.
 
 📌 Media update (2026-03-13): Signed Chauncey Gardner-Johnson (1yr/$6M S) and Kyle Allen (2yr backup QB).
+
+📌 Media update (2026-03-14): Dawson Knox extended (3yr). TE room stabilized, cap impact manageable.
