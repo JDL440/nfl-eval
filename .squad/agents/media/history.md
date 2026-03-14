@@ -10,6 +10,7 @@
 - **Dashboard Last Updated:** 2026-03-14
 - **Last Sweep:** 2026-03-14 — Comprehensive 48-hour news sweep (March 13-14 FA frenzy)
 - **Last Availability Audit:** 2026-03-14 — Full FA market check
+- **M1 Integration:** ✅ COMPLETE — JSON export generator implemented (2026-03-14)
 
 ---
 
