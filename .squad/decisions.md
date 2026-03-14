@@ -181,6 +181,37 @@ Haiku draft cost (~$0.0016) + Opus review cost (~$0.045) = ~$0.047 per article. 
 
 **Why:** M3 gates M4 deployment. Cannot launch production without proof that cost tracking is accurate, manual approval is enforced, and state machine is correct. Mock-first approach allows parallel work — Backend (M1) and Frontend (M2) build independently; tests integrate everything.
 
+### 2026-03-14: M1 BullMQ Architecture — Design Approved
+**By:** Lead (Team Lead Specialist) — Backend (Node.js Engineer)
+**Status:** ✅ APPROVED with 6 conditional notes
+**Affects:** M1 (Backend), M2 (Frontend), M3 (Tester), M4 (Deployment)
+
+**What:**
+M1 implementation plan approved. Architecture:
+- BullMQ job queue (local dev + Redis for Actions)
+- SQLite state persistence (committed to git)
+- GitHub Actions cron trigger (6 AM ET daily + manual dispatch)
+- Token cost tracking per job (Haiku/Opus pricing)
+- Significance threshold rules (2+ signings = trigger)
+- Manual approval gate (non-negotiable)
+
+**Conditional Notes (addressed during development):**
+1. ✅ Timezone comment fix (EDT/EST handling)
+2. ✅ Redis strategy documented (Docker service vs. in-process)
+3. ✅ Significance thresholds start hardcoded, tunable via config
+4. ✅ Token fallback: API first, tokenizer second, reconcile monthly
+5. ✅ Git commit retry-on-conflict added to workflow
+6. ✅ Merge to main + tag M1-Complete upon success
+
+**Blocker (Q#2):** Media API integration spec pending. Three options proposed:
+- **Option A (Recommended):** Regex parse `.squad/agents/media/history.md` — Ready now
+- **Option B:** JSON export from Media agent — Needs prep
+- **Option C (Approved Path):** A now, migrate to B in M4
+
+**Why:** Unblocks M2/M3/M4. Critical path for Phase 2 automation.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
