@@ -1,0 +1,408 @@
+{
+  "sweep_id": "sweep-2026-03-14",
+  "swept_at": "2026-03-14T11:00:00Z",
+  "period": {
+    "start": "2026-03-13",
+    "end": "2026-03-14"
+  },
+  "transactions": [
+    {
+      "id": "tx-001",
+      "type": "signing",
+      "player": "Jaelan Phillips",
+      "position": "EDGE",
+      "from_team": "MIA",
+      "to_team": "CAR",
+      "deal": {
+        "years": 4,
+        "total_million": 120,
+        "guaranteed_million": 80,
+        "aav_million": 30
+      },
+      "sources": ["ESPN", "Yahoo", "SI", "Spotrac"],
+      "confidence": "🟢 confirmed",
+      "notes": "Panthers anchor their defensive rebuild. Former MIA/PHI edge rusher now the highest-paid defender in CAR history."
+    },
+    {
+      "id": "tx-002",
+      "type": "signing",
+      "player": "Odafe Oweh",
+      "position": "EDGE",
+      "from_team": "LAC",
+      "to_team": "WSH",
+      "deal": {
+        "years": 4,
+        "total_million": 100,
+        "guaranteed_million": 68,
+        "aav_million": 25
+      },
+      "sources": ["NFL.com", "ESPN", "SI", "CBS"],
+      "confidence": "🟢 confirmed",
+      "notes": "Commanders land elite pass rusher. Front-loaded deal. WSH desperate for pass rush after poor 2025."
+    },
+    {
+      "id": "tx-003",
+      "type": "signing",
+      "player": "Tyler Linderbaum",
+      "position": "C",
+      "from_team": "BAL",
+      "to_team": "LV",
+      "deal": {
+        "years": 3,
+        "total_million": 81,
+        "guaranteed_million": 60,
+        "aav_million": 27
+      },
+      "sources": ["NFL.com", "CBS", "ESPN", "Spotrac"],
+      "confidence": "🟢 confirmed",
+      "notes": "Highest-paid center in NFL history. Raiders building OL around expected #1 pick QB Mendoza."
+    },
+    {
+      "id": "tx-004",
+      "type": "signing",
+      "player": "Romeo Doubs",
+      "position": "WR",
+      "from_team": "GB",
+      "to_team": "NE",
+      "deal": {
+        "years": 4,
+        "total_million": 74,
+        "guaranteed_million": null,
+        "aav_million": 18.5
+      },
+      "sources": ["ESPN", "USA Today", "CBS", "SI"],
+      "confidence": "🟢 confirmed",
+      "notes": "Patriots replace Diggs with former GB WR. Key target for Drake Maye. $68M base, $80M with incentives."
+    },
+    {
+      "id": "tx-005",
+      "type": "signing",
+      "player": "Bryan Cook",
+      "position": "S",
+      "from_team": "KC",
+      "to_team": "CIN",
+      "deal": {
+        "years": 3,
+        "total_million": 40.25,
+        "guaranteed_million": 14,
+        "aav_million": 13.4
+      },
+      "sources": ["Spotrac", "ESPN", "CBS", "SI"],
+      "confidence": "🟢 confirmed",
+      "notes": "Bengals land KC's former starting S. Heavily front-loaded ($18M Year 1). Cincinnati native returns home."
+    },
+    {
+      "id": "tx-006",
+      "type": "signing",
+      "player": "Rashan Gary",
+      "position": "DE",
+      "from_team": null,
+      "to_team": "DAL",
+      "deal": {
+        "years": 2,
+        "total_million": 32,
+        "guaranteed_million": null,
+        "aav_million": 16
+      },
+      "sources": ["Heavy", "Spotrac"],
+      "confidence": "🟡 likely",
+      "notes": "Cowboys add pass rush help. Restructured deal."
+    },
+    {
+      "id": "tx-007",
+      "type": "signing",
+      "player": "Devin Bush",
+      "position": "LB",
+      "from_team": "CLE",
+      "to_team": "CHI",
+      "deal": {
+        "years": 3,
+        "total_million": 30,
+        "guaranteed_million": 21,
+        "aav_million": 10
+      },
+      "sources": ["SI", "Sporting News", "Heavy"],
+      "confidence": "🟢 confirmed",
+      "notes": "Bears replace Edmunds with CLE's breakout LB (125 tackles, 3 INTs, 2 pick-sixes in 2025)."
+    },
+    {
+      "id": "tx-008",
+      "type": "signing",
+      "player": "Elgton Jenkins",
+      "position": "OL",
+      "from_team": "GB",
+      "to_team": "CLE",
+      "deal": {
+        "years": 2,
+        "total_million": 24,
+        "guaranteed_million": 20,
+        "aav_million": 12
+      },
+      "sources": ["ESPN", "Yahoo", "FOX Sports"],
+      "confidence": "🟢 confirmed",
+      "notes": "Versatile OL from GB. Released after injury but CLE believes he starts in 2026."
+    },
+    {
+      "id": "tx-009",
+      "type": "signing",
+      "player": "Javonte Williams",
+      "position": "RB",
+      "from_team": "DAL",
+      "to_team": "DAL",
+      "deal": {
+        "years": 3,
+        "total_million": 24,
+        "guaranteed_million": 16,
+        "aav_million": 8
+      },
+      "sources": ["ESPN", "SI", "Yahoo"],
+      "confidence": "🟢 confirmed",
+      "notes": "Cowboys re-sign their RB on a value deal. $6M signing bonus."
+    },
+    {
+      "id": "tx-010",
+      "type": "signing",
+      "player": "J.K. Dobbins",
+      "position": "RB",
+      "from_team": "DEN",
+      "to_team": "DEN",
+      "deal": {
+        "years": 2,
+        "total_million": 20,
+        "guaranteed_million": 8,
+        "aav_million": 10
+      },
+      "sources": ["ESPN", "CBS", "Heavy"],
+      "confidence": "🟢 confirmed",
+      "notes": "Broncos re-sign their efficient RB. Prove-it deal with incentives."
+    },
+    {
+      "id": "tx-011",
+      "type": "trade",
+      "player": "Geno Smith",
+      "position": "QB",
+      "from_team": "LV",
+      "to_team": "NYJ",
+      "deal": null,
+      "sources": ["ESPN", "NFL.com", "CBS", "USA Today"],
+      "confidence": "🟢 confirmed",
+      "notes": "Jets get R7 + Smith; LV gets R6. Full-circle return for 2013 Jets draftee. Likely NYJ starter. LV paying most of salary."
+    },
+    {
+      "id": "tx-012",
+      "type": "trade",
+      "player": "Minkah Fitzpatrick",
+      "position": "S",
+      "from_team": "MIA",
+      "to_team": "NYJ",
+      "deal": {
+        "years": 3,
+        "total_million": 40,
+        "guaranteed_million": null,
+        "aav_million": 13.3
+      },
+      "sources": ["ESPN", "NFL.com", "USA Today", "SI"],
+      "confidence": "🟢 confirmed",
+      "notes": "Jets send R7 (via LAC). Fitzpatrick signs 3yr/$40M extension with NYJ. 3x All-Pro fills massive secondary need."
+    },
+    {
+      "id": "tx-013",
+      "type": "signing",
+      "player": "Kenneth Gainwell",
+      "position": "RB",
+      "from_team": "PIT",
+      "to_team": "TB",
+      "deal": {
+        "years": 2,
+        "total_million": 14,
+        "guaranteed_million": 10,
+        "aav_million": 7
+      },
+      "sources": ["Steelers Depot", "Bucs Report"],
+      "confidence": "🟡 likely",
+      "notes": "Former PIT MVP RB replaces Rachaad White."
+    },
+    {
+      "id": "tx-014",
+      "type": "signing",
+      "player": "Dalvin Tomlinson",
+      "position": "DT",
+      "from_team": null,
+      "to_team": "LAC",
+      "deal": {
+        "years": 1,
+        "total_million": 7.5,
+        "guaranteed_million": null,
+        "aav_million": 7.5
+      },
+      "sources": ["Spotrac"],
+      "confidence": "🟡 likely",
+      "notes": "One-year deal for veteran defensive tackle."
+    },
+    {
+      "id": "tx-015",
+      "type": "signing",
+      "player": "Luke Gifford",
+      "position": "LB",
+      "from_team": null,
+      "to_team": "SF",
+      "deal": {
+        "years": 2,
+        "total_million": 5.3,
+        "guaranteed_million": null,
+        "aav_million": 2.65
+      },
+      "sources": ["Heavy", "Spotrac"],
+      "confidence": "🟡 likely",
+      "notes": "Depth linebacker signing for 49ers."
+    },
+    {
+      "id": "tx-016",
+      "type": "signing",
+      "player": "Jedrick Wills",
+      "position": "OT",
+      "from_team": "CLE",
+      "to_team": "CHI",
+      "deal": {
+        "years": 1,
+        "total_million": null,
+        "guaranteed_million": null,
+        "aav_million": null
+      },
+      "sources": ["Pro Football Rumors", "FOX Chicago", "USA Today"],
+      "confidence": "🟢 confirmed",
+      "notes": "Former CLE R1 pick recovering from knee injury. Compete for LT. Prove-it deal."
+    },
+    {
+      "id": "tx-017",
+      "type": "signing",
+      "player": "Dawson Knox",
+      "position": "TE",
+      "from_team": "BUF",
+      "to_team": "BUF",
+      "deal": {
+        "years": 3,
+        "total_million": null,
+        "guaranteed_million": null,
+        "aav_million": null
+      },
+      "sources": ["ESPN", "USA Today", "Bills.com"],
+      "confidence": "🟢 confirmed",
+      "notes": "Keeps Josh Allen's TE through 2028. Cap-friendly restructure/extension."
+    },
+    {
+      "id": "tx-018",
+      "type": "signing",
+      "player": "Dyami Brown",
+      "position": "WR",
+      "from_team": null,
+      "to_team": "WSH",
+      "deal": {
+        "years": 1,
+        "total_million": 3,
+        "guaranteed_million": null,
+        "aav_million": 3
+      },
+      "sources": ["Spotrac"],
+      "confidence": "🟡 likely",
+      "notes": "One-year depth WR signing."
+    },
+    {
+      "id": "tx-019",
+      "type": "signing",
+      "player": "Michael Carter II",
+      "position": "CB",
+      "from_team": "PHI",
+      "to_team": "PHI",
+      "deal": {
+        "years": 1,
+        "total_million": 2.765,
+        "guaranteed_million": null,
+        "aav_million": 2.765
+      },
+      "sources": ["Heavy"],
+      "confidence": "🟡 likely",
+      "notes": "Restructured one-year deal to stay with Eagles."
+    },
+    {
+      "id": "tx-020",
+      "type": "signing",
+      "player": "Tyler Conklin",
+      "position": "TE",
+      "from_team": null,
+      "to_team": "DET",
+      "deal": {
+        "years": 1,
+        "total_million": null,
+        "guaranteed_million": null,
+        "aav_million": null
+      },
+      "sources": ["Heavy", "Spotrac"],
+      "confidence": "🟡 likely",
+      "notes": "One-year depth TE signing for Lions."
+    }
+  ],
+  "article_triggers": [
+    {
+      "team": "CAR",
+      "trigger_type": "star_signing",
+      "transaction_ids": ["tx-001"],
+      "article_idea": "Panthers defensive rebuild with Jaelan Phillips mega-deal ($120M)",
+      "significance": "high"
+    },
+    {
+      "team": "WSH",
+      "trigger_type": "star_signing",
+      "transaction_ids": ["tx-002"],
+      "article_idea": "Commanders land Odafe Oweh on $100M deal to fix pass rush woes",
+      "significance": "high"
+    },
+    {
+      "team": "LV",
+      "trigger_type": "star_signing",
+      "transaction_ids": ["tx-003"],
+      "article_idea": "Raiders make Tyler Linderbaum highest-paid center in NFL history ($81M)",
+      "significance": "high"
+    },
+    {
+      "team": "NYJ",
+      "trigger_type": "multi_signings",
+      "transaction_ids": ["tx-011", "tx-012"],
+      "article_idea": "Jets acquire Geno Smith and Minkah Fitzpatrick in back-to-back trades",
+      "significance": "high"
+    },
+    {
+      "team": "CHI",
+      "trigger_type": "multi_signings",
+      "transaction_ids": ["tx-007", "tx-016"],
+      "article_idea": "Bears add Devin Bush and Jedrick Wills in defensive rebuild",
+      "significance": "medium"
+    },
+    {
+      "team": "DAL",
+      "trigger_type": "multi_signings",
+      "transaction_ids": ["tx-006", "tx-009"],
+      "article_idea": "Cowboys re-sign Javonte Williams, add Rashan Gary for pass rush",
+      "significance": "medium"
+    },
+    {
+      "team": "CLE",
+      "trigger_type": "multi_signings",
+      "transaction_ids": ["tx-008"],
+      "article_idea": "Browns sign Elgton Jenkins to bolster offensive line",
+      "significance": "low"
+    },
+    {
+      "team": "NE",
+      "trigger_type": "star_signing",
+      "transaction_ids": ["tx-004"],
+      "article_idea": "Patriots replace Diggs with Romeo Doubs on 4-year deal",
+      "significance": "medium"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "generated_by": "Media agent",
+    "next_sweep": "2026-03-15T11:00:00Z"
+  }
+}

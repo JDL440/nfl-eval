@@ -5,3 +5,23 @@
 .squad/sessions/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# Node.js / BullMQ
+node_modules/
+package-lock.json
+.env
+.env.local
+*.log
+coverage/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
