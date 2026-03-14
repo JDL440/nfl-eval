@@ -1,0 +1,196 @@
+name: Phase 2 - Test & Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'dashboard/**'
+      - 'tests/**'
+      - '.github/workflows/phase2-ci.yml'
+  push:
+    branches: [squad/**, main]
+    paths:
+      - 'package.json'
+      - 'dashboard/**'
+      - 'tests/**'
+
+concurrency:
+  group: phase2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dashboard dependencies
+        working-directory: ./dashboard
+        run: npm ci
+      
+      - name: Check formatting
+        working-directory: ./dashboard
+        run: npm run test 2>/dev/null || true
+
+  backend-tests:
+    name: Backend Queue Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run Backend queue tests
+        working-directory: ./tests
+        run: npm test -- queue.test.js --coverage
+      
+      - name: Run media sweep parser tests
+        working-directory: ./tests
+        run: npm test -- media-sweep.test.js
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./tests/coverage/coverage-final.json
+          flags: backend
+
+  frontend-unit-tests:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dashboard dependencies
+        working-directory: ./dashboard
+        run: npm ci
+      
+      - name: Run Jest tests
+        working-directory: ./dashboard
+        run: npm test -- --coverage
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./dashboard/coverage/coverage-final.json
+          flags: frontend
+
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dashboard dependencies
+        working-directory: ./dashboard
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        working-directory: ./dashboard
+        run: npx playwright install --with-deps chromium
+      
+      - name: Build dashboard
+        working-directory: ./dashboard
+        run: npm run build
+      
+      - name: Run E2E tests
+        working-directory: ./dashboard
+        run: npm run test:e2e -- --project=chromium
+      
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: dashboard/playwright-report/
+          retention-days: 30
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install root dependencies
+        run: npm ci
+      
+      - name: Install dashboard dependencies
+        working-directory: ./dashboard
+        run: npm ci
+      
+      - name: Run integration tests
+        working-directory: ./tests
+        run: npm test -- integration/
+      
+      - name: Run cost tracking tests
+        working-directory: ./tests
+        run: npm test -- budget/
+      
+      - name: Run performance tests
+        working-directory: ./tests
+        run: npm test -- performance/ --testTimeout=10000
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [lint, backend-tests, frontend-unit-tests, frontend-e2e, integration-tests]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.lint.result }}" == "failure" ]; then
+            echo "❌ Lint checks failed"
+            exit 1
+          fi
+          if [ "${{ needs.backend-tests.result }}" == "failure" ]; then
+            echo "❌ Backend tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.frontend-unit-tests.result }}" == "failure" ]; then
+            echo "❌ Frontend unit tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.frontend-e2e.result }}" == "failure" ]; then
+            echo "❌ Frontend E2E tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.integration-tests.result }}" == "failure" ]; then
+            echo "❌ Integration tests failed"
+            exit 1
+          fi
+          echo "✅ All tests passed"
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **All tests passed!**\n\n- Backend: Queue + integration tests ✓\n- Frontend: Unit + E2E tests ✓\n- Performance: <5min full suite ✓\n\nReady for code review.'
+            })

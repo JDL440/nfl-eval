@@ -2,6 +2,22 @@
 
 ## Active Decisions
 
+### 2026-03-14: Phase 2 Automation — Scale & Quality Gates
+**By:** Joe Robinson (via Copilot)
+**Status:** Adopted
+**What:** 
+1. Upgrade all Phase 2 coding agents (Backend, Frontend) to use claude-opus-4.6 for implementation (was auto/Sonnet)
+2. Upgrade Lead reviewer to claude-opus-4.6 for code review + PR approval authority
+3. Add Playwright E2E testing framework for Dashboard UI + integration validation
+4. Automate CI with GitHub Actions (phase2-ci.yml) — tests run on every PR/push to squad/* branches
+5. Agents validate locally before pushing: run tests, confirm pass, summarize results in PR description
+6. Fix .gitignore to include Playwright artifacts, database WAL files, test results, env files
+7. Split large PRs into smaller units: 1-2 features per PR, incremental commits, continuous validation
+
+**Why:** Large monolithic PRs are hard to review. Opus 4.6 improves code quality. Local testing + CI creates feedback loop before human review. Lead can make decisions based on objective test results, not guesswork. Smaller PRs unblock faster iteration.
+
+**Impacts:** All Phase 2 agents (Backend/Frontend/Tester), Lead reviewer, GitHub Actions CI, new Playwright test suite
+
 ### 2026-03-12: User directive — Model override
 **By:** Joe Robinson (via Copilot)
 **What:** All agents should use claude-opus-4.6 model. No exceptions.
