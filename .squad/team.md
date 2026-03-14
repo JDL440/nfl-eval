@@ -99,6 +99,14 @@
 | SF | San Francisco 49ers Expert | .squad/agents/sf/charter.md | Active |
 | SEA | Seattle Seahawks Expert | .squad/agents/sea/charter.md | Active |
 
+### Phase 2 Automation (New)
+
+| Name | Role | Charter | Status |
+|------|------|---------|--------|
+| Backend | Node.js + BullMQ Engineer | .squad/agents/backend/charter.md | Active |
+| Frontend | React Dashboard Engineer | .squad/agents/frontend/charter.md | Active |
+| Tester | E2E QA & Cost Validation | .squad/agents/tester/charter.md | Active |
+
 ### Support
 
 | Name | Role | Charter | Status |
