@@ -15,41 +15,15 @@
 
 ---
 
-## 🚀 LAUNCH CONTENT: The Meta Article (Flagship + Series)
+## 🚀 LAUNCH CONTENT — Strategy TBD
 
-> **This is the most important content for Substack growth.** The meta story — how we built this — is what makes the blog different. The football analysis proves the system works. The meta story gets people to subscribe.
-
-### Flagship Article (Publish First — This IS the Substack Launch)
-
-**Title options:**
-1. *"We Built a 47-Agent AI Expert Panel to Cover the Seahawks. Here's What Happened When They Started Arguing."*
-2. *"I Gave 47 AI Experts One Job: Tell Me Everything About the Seahawks. They Won't Stop Fighting."*
-3. *"The Seahawks Blog Written by 47 AI Experts Who Disagree About Everything"*
-
-**Target length:** ~4,000 words
-**Format:** Narrative + demonstration
-**Agents needed:** Meta/coordinator writes the narrative; embed examples from Cap, PlayerRep, SEA, Editor
-
-**Outline:**
-1. **The Hook** — "What if you could ask 47 NFL experts the same question at the same time? What if they each had perfect memory, access to every contract, every stat, every injury report? And what if they argued about the answer?"
-2. **The Setup** — Why I built this. Seahawks fan frustrated by hot takes. Wanted data-driven analysis at scale. Idea: one expert per team + specialists.
-3. **The Team** — Introduce the 47 agents. The 32 team experts. The specialists (Cap, PlayerRep, Injury, CollegeScout, etc.). The meta-agents (Editor, Writer, Media). How they work together.
-4. **The Demo: Cap vs PlayerRep** — Pull from the Witherspoon article. Show the actual disagreement ($27M vs $33M). Show how two experts with the same data reached opposite conclusions because they represent different sides of the table.
-5. **The Demo: Editor Saves the Day** — The Emmanwori story. We published an article with the wrong player name. Editor caught 6 errors in one review. This is why credibility requires a fact-checking layer.
-6. **The Demo: The Draft Pick Nobody Expected** — Jadarian Price. Show how CollegeScout, Injury, and Offense converged on a player that the casual fan has never heard of.
-7. **What's Next** — The content roadmap. Draft coverage with 47 agents reacting in real-time. Weekly game analysis. Trade deadline war rooms. "Subscribe and you'll never read a lazy Seahawks take again."
-8. **The Boilerplate** — What the blog is, how it works, subscribe CTA.
-
-### Deep-Dive Series: "Behind the Bot Blog" (Weekly After Launch)
-
-| Part | Title | Focus | Target Date |
-|------|-------|-------|-------------|
-| 1 | **"How Our Cap Expert and Player Rep Can't Agree on Anything (And Why That's the Point)"** | The Cap vs PlayerRep dynamic. How same data → opposite conclusions. Deep dive on the Witherspoon negotiation. | Week 2 |
-| 2 | **"We Published a Wrong Name. Here's How Our AI Editor Caught 6 Errors in One Article."** | Editor's first review. The Emmanwori mistake. Why AI-generated content needs AI fact-checking. Trust and credibility. | Week 3 |
-| 3 | **"47 Agents, 32 Teams, Zero Days Off: How Media Tracks Every NFL Rumor in Real Time"** | Media's daily sweeps. How rumors get confidence-rated. The 35% miss rate on the first FA target board. How availability checks became mandatory. | Week 4 |
-| 4 | **"The AI Doctor Will See You Now: How Our Injury Expert Evaluates a Torn Achilles"** | Injury's Price assessment. How medical literature gets synthesized. The "this is NOT Cam Akers" argument. Pre-draft physical requirements. | Week 5 |
+> **Status:** On hold pending strategic direction. Joe is evaluating whether to launch as a single-team Substack (SEA) or scale to a 32-team network first. The "how we built this" meta article is deferred — competitive risk outweighs growth benefit until the output proves the model.
+>
+> **Key decision:** Does the flagship reveal the AI infrastructure (growth play) or just publish great football content and let the quality speak for itself (stealth play)?
 
 ---
+
+## Article Pipeline — Organized by NFL Calendar
 
 ## Article Pipeline — Organized by NFL Calendar
 
