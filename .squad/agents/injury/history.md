@@ -304,3 +304,195 @@ _Last updated: 2026-03-12 via Essentially Sports, NFL, Sports Info Solutions_
 5. **Contract market is pricing injury risk more aggressively than ever in 2026** — shorter deals, incentive-laden structures are the norm for players with recent major surgery.
 6. **NFC West has concentrated injury risk** — 49ers (Bosa 2nd ACL, cap crisis), Cardinals (Williams Achilles, Conner age), Rams (aging core) all have significant injury-driven roster questions.
 7. **Jaelan Phillips to CAR at 4yr/$120M is the riskiest contract in 2026 FA** — back-to-back Achilles + ACL on same leg is unprecedented at that price point.
+8. **Pre-college Achilles tears with 3+ healthy seasons post-injury are a fundamentally different risk profile than active-career NFL Achilles tears** — Price case study (see Section 11).
+9. **Age at injury matters enormously for Achilles** — tissue healing at 18 is categorically superior to healing at 28+. Young athletes have better tendon regeneration, vascular supply, and collagen remodeling.
+
+---
+
+### 11. Draft Prospect Medical Assessment: Jadarian Price (RB, Notre Dame)
+_Requested by: Joe Robinson — 2026 Draft, Pick #64 (Seattle Seahawks)_
+_Assessment date: 2026-03-14_
+_Confidence: 🟡 MODERATE — based on publicly available data, not private medical records_
+
+#### A. THE INJURY — What We Know
+
+| Factor | Detail |
+|--------|--------|
+| **Injury** | Ruptured Achilles tendon (full rupture) |
+| **When** | June 2022, during offseason workouts at Notre Dame |
+| **Age at injury** | 18 years old (true freshman, early enrollee) |
+| **Which foot** | Not publicly specified — ⚠️ medical staff should confirm laterality |
+| **Surgery** | Surgical repair performed shortly after rupture (June/July 2022) |
+| **Missed time** | Entire 2022 season (redshirt freshman year) |
+| **Context** | Pre-freshman injury. Had impressed in Blue-Gold Spring Game (8 catches, 104 yds, 51-yd TD) before the tear |
+
+**What we DON'T know:** Specific surgical technique (open repair vs. percutaneous), exact foot (left vs. right), surgeon, post-op imaging, or whether there was any partial vs. full tendon involvement. Full rupture is the most commonly reported characterization.
+
+---
+
+#### B. ACHILLES TEAR RECOVERY FOR RBs — HISTORICAL DATA
+
+##### The Grim Historical Record
+
+| NFL RB | Year of Tear | Age | Outcome |
+|--------|-------------|-----|---------|
+| **Cam Akers** (LAR) | 2021 | 22 | Returned in ~5.5 months (remarkably fast). Never regained pre-injury efficiency. Bounced between teams. |
+| **Marlon Mack** (IND) | 2020 | 24 | Returned but never recaptured starting role. Out of league within 2 seasons. |
+| **D'Onta Foreman** (HOU) | 2017 | 21 | Returned, briefly productive with TEN in 2022, but journeyman career. Never elite. |
+| **Edgar Bennett** (GB) | 1996 | 27 | Missed full season. Returned for 611 rushing yards, then immediately retired. |
+| **Andre Brown** (NYG) | 2013 | 26 | Returned, then broke fibula. Career over shortly after. |
+| **Najee Harris** (LAC) | 2025 | 27 | Torn Achilles. Currently recovering. Prognosis: 🔴 HIGH risk. |
+
+##### The Numbers
+
+- **~78% production decline** for RBs over 3 years post-Achilles (SAGE Journals)
+- **~65% return-to-play rate** across all positions; RBs are at the LOW end
+- **No NFL RB has sustained elite production** after an Achilles rupture — this is the single most devastating lower-body injury for the position
+- **Re-rupture rate post-surgery:** 2–5% (meta-analyses); most re-ruptures occur within Year 1
+
+##### CRITICAL CAVEAT: All of these cases involve NFL veterans who tore their Achilles MID-CAREER while already absorbing NFL-level punishment. Price's case is fundamentally different — he tore his at 18, before ever playing a college snap.
+
+---
+
+#### C. AGE AT INJURY — THE PRICE ADVANTAGE
+
+This is the single most important mitigating factor in this entire assessment.
+
+| Factor | Young Athlete (Price, age 18) | Veteran NFL RB (typical, age 25-30) |
+|--------|-------------------------------|--------------------------------------|
+| Tissue healing capacity | Superior — faster collagen remodeling, better vascular supply | Declining — slower healing, thinner tendon quality |
+| Return-to-sport rate | ~80%+ return to prior activity level | ~65%, lower for RBs specifically |
+| Tendon regeneration | More robust — younger tendons heal with better structural integrity | Incomplete — scar tissue replaces healthy tendon |
+| Prior wear and tear | Zero NFL carries, zero accumulated damage | Hundreds/thousands of NFL carries compounding the injury |
+| Time available for rehab | Had 12+ months before first college season (2023) | NFL economic pressure forces early return (often 8-10 months) |
+| Compensatory movement risk | Had time to fully eliminate compensatory patterns before competitive play | Often returns with altered mechanics due to rushed timeline |
+
+**Key insight:** The medical literature on "Achilles tears for RBs" is almost entirely based on veterans whose tendons were already degraded from years of NFL contact. Price was an 18-year-old with pristine tissue outside the Achilles itself. His body had every biological advantage for recovery.
+
+---
+
+#### D. TIME SINCE INJURY — 4 YEARS POST-SURGERY
+
+##### The Evidence of Recovery
+
+Price has played **41 games over 3 full college seasons** (2023, 2024, 2025) with ZERO missed games due to the Achilles:
+
+| Season | Carries | Yards | YPC | TDs | Games |
+|--------|---------|-------|-----|-----|-------|
+| 2023 | 47 | 272 | 5.8 | 3 | ~13 |
+| 2024 | 120 | 746 | 6.2 | 7 | ~14 |
+| 2025 | 113 | 674 | 6.0 | 11 | 12 |
+| **Career** | **280** | **1,692** | **6.0** | **21** | **41** |
+
+Plus: 3 kickoff return TDs on 22 returns. All-American kick returner in 2025. 1,211 all-purpose yards in 2025 alone.
+
+##### Re-Injury Risk at 4 Years
+
+- **Re-rupture risk at 4 years post-surgery: ~1-2%** — most re-ruptures occur within Year 1. By Year 4, the tendon has fully remodeled.
+- **Structural risk:** At 4 years, the repaired tendon is as close to "fully healed" as it will ever be. Some persistent calf asymmetry or minor strength deficit may exist but is unlikely to be functionally significant given his on-field production.
+- **The 280 college carries ARE the stress test.** Three seasons of D1 football, including explosive kick returns, is the closest thing to a long-term durability proof we can get without NFL data.
+
+📊 **My assessment: At 4 years post-surgery with 41 games played and zero recurrence, the Achilles re-injury risk approaches baseline population risk. This is NOT the same as evaluating a player 10 months post-Achilles.**
+
+---
+
+#### E. IMPACT ON HIS GAME
+
+##### 40-Yard Dash: 4.49 seconds
+
+| Context | Time |
+|---------|------|
+| Price | 4.49 |
+| 2026 RB Combine average | ~mid 4.4s (fastest class since 2003) |
+| Jeremiyah Love (ND teammate, no Achilles history) | 4.36 |
+| Mike Washington Jr. (fastest RB) | 4.33 |
+| Historical RB Combine average | 4.49-4.53 |
+
+**Analysis:** Price's 4.49 is below-average for THIS historically fast class, but right at the historical RB Combine average. Could the Achilles explain 0.05-0.10 seconds of lost speed? Possibly — residual calf strength deficits are the most common long-term Achilles sequela. But 4.49 is not slow for a 203-lb back. His 10-yard split (1.61) and broad jump (10'4") are solid, suggesting his burst is functional.
+
+**Honest answer:** We cannot definitively attribute the 4.49 to the Achilles. His pre-injury 40 time is unknown. He may simply be a 4.45-4.50 runner naturally. The Achilles COULD account for a small deficit, but his game tape shows a player who consistently beats angles and houses kickoffs — that's not a player with compromised speed.
+
+##### "Lacks Elite Elusiveness" Criticism
+
+**Medical perspective:** Achilles tears CAN reduce lateral agility and cutting sharpness. However, Price's running style is described as "patient, north-south" — this may simply be who he is as a runner rather than a limitation imposed by the injury. His 6.0 career YPC and 3 kickoff return TDs argue against significant functional limitation. Elusiveness is also a technique/instinct trait, not purely physical.
+
+**My call:** More likely natural running style than Achilles residual. But can't rule out a small contribution. ⚠️ UNCERTAIN
+
+##### Tape Concerns (Favoring One Leg, Reduced Burst)
+
+Without private medical film review, I rely on scout reports. No public scouting report I found mentions visible favoring, limping, or asymmetric push-off. His kick return explosiveness (multiple 100-yard TDs) is evidence AGAINST meaningful burst reduction.
+
+---
+
+#### F. FUMBLE RATE (2.7%) AND THE ACHILLES
+
+**Is there a medical correlation between Achilles injuries and ball security?**
+
+**Short answer: No established medical link.**
+
+- Achilles injuries affect plantarflexion (pushing off) and calf function. They do not affect hand strength, grip, forearm mechanics, or the neuromuscular control involved in ball carrying.
+- Price's fumble issue emerged in 2025 — three years post-Achilles — making a causal connection implausible.
+- Multiple reports confirm this was a coaching concern Notre Dame actively addressed mid-season. Head coach Marcus Freeman publicly committed to drilling ball security.
+- Scouting reports attribute it to his "feast-or-famine" running style (seeking home runs through traffic) rather than any physical limitation.
+
+**My assessment: The 2.7% fumble rate is a SEPARATE concern entirely. It's a technique/decision-making issue, not an Achilles sequela. Evaluate it on its own merits — it's correctable with coaching, but it IS a real concern for a Day 2 pick.**
+
+---
+
+#### G. DRAFT VALUE IMPACT — MEDICAL RECOMMENDATION
+
+##### Overall Risk Tier: 🟡 MODERATE (not 🟠 Elevated, not 🟢 Low)
+
+**Why not 🟢 LOW:** He DID rupture his Achilles. Even 4 years out, there may be subtle structural differences in the repaired tendon. The medical history exists and can't be erased.
+
+**Why not 🟠 ELEVATED:** 4 years of healthy, high-level production. Zero missed games. Strong Combine testing. Age at injury (18) puts him in the best possible recovery category. The historical Achilles-RB data is based on a completely different patient population (NFL veterans mid-career).
+
+##### Pick #64 Value Assessment
+
+| Scenario | Assessment |
+|----------|-----------|
+| **If pre-draft physical is clean** | #64 is **FAIR VALUE to slight DISCOUNT**. The Achilles history is likely suppressing his draft stock by 15-30 picks. Without the injury history, a 6.0 YPC, All-American returner with 4.49 speed is arguably a late R1/early R2 talent. |
+| **If pre-draft physical shows ANY red flag** | #64 is an **OVERPAY**. Drop to R3-R4 range or pass entirely. |
+| **Without a pre-draft physical** | **DO NOT DRAFT.** Never spend a Day 2 pick on an Achilles history without medical verification. |
+
+##### Pre-Draft Physical: MANDATORY
+
+✅ **Seattle MUST demand a comprehensive medical review before committing pick #64.** This is non-negotiable for any player with a prior Achilles rupture. Specifically:
+
+**What "ALL CLEAR" looks like:**
+1. MRI showing complete tendon healing with no significant structural abnormality, thickening, or re-tear risk areas
+2. Bilateral calf circumference measurement within 5% of contralateral leg (rules out significant atrophy)
+3. Isokinetic strength testing: plantarflexion strength within 85%+ of the uninjured side
+4. Functional movement screen showing no compensatory gait patterns
+5. No tendinopathy or calcification at the repair site
+6. Surgeon's notes confirming uncomplicated repair and full rehabilitation completion
+
+**RED FLAGS that would make me say "PASS":**
+- ❌ MRI showing tendon thickening >50% vs. contralateral side (indicates poor remodeling)
+- ❌ Significant calf atrophy (>10% circumference difference)
+- ❌ Plantarflexion strength <80% of uninjured side
+- ❌ ANY signs of compensatory movement patterns on functional testing
+- ❌ Evidence of re-injury, partial re-tear, or tendinopathy at the surgical site
+- ❌ Chronic ankle stiffness or limited range of motion
+- ❌ If the tear was on the PLANT foot (higher biomechanical stress for a RB) — not disqualifying alone, but compounds risk
+
+---
+
+#### H. BOTTOM LINE
+
+**For Joe Robinson and the Seattle evaluation team:**
+
+Jadarian Price is the rarest kind of Achilles case — a teenage athlete who tore it BEFORE his career started, had elite medical care and unlimited rehab time, and then played 41 consecutive college games at a high level with zero recurrence. This is NOT Cam Akers. This is NOT Marlon Mack. This is NOT Najee Harris. Those were NFL veterans whose bodies had already taken years of punishment before the Achilles gave out.
+
+Price's case is more analogous to a high school athlete recovering from ACL surgery and going on to have a full college career — the injury happened so early that his body had time to fully heal and adapt before the real workload began.
+
+**My confidence-weighted assessment:**
+- **Re-rupture risk:** LOW (~1-2%, approaching baseline) — ✅ Confidence: HIGH
+- **Residual performance deficit from Achilles:** MINIMAL to NONE based on available evidence — 📊 Confidence: MODERATE (would need private medicals to confirm)
+- **4.49 forty attributable to Achilles:** UNCERTAIN — could be 0-0.05s impact, or could be his natural speed — 📊 Confidence: LOW
+- **Fumble rate linked to Achilles:** NO — separate issue entirely — ✅ Confidence: HIGH
+- **Draft value at #64:** FAIR VALUE if medicals are clean — 📊 Confidence: MODERATE
+
+**Recommendation: PROCEED with pre-draft physical. If medicals clear the thresholds above, Price at #64 is a sound pick with manageable medical risk. The Achilles history from 2022 should be treated as a footnote, not a dealbreaker — provided the physical confirms what 41 games of tape already suggest.**
+
+⚠️ **Disclaimer:** This is a risk assessment based on publicly available data. I am an analyst, not a physician. All conclusions should be verified against Seattle's private medical evaluation and the NFL Combine medical check results.
