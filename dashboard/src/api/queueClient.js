@@ -38,3 +38,9 @@ export async function unpublishJob(id) {
   const { data } = await api.post(`/jobs/${id}/unpublish`);
   return data;
 }
+
+export async function publishArticle(id) {
+  if (USE_MOCK) return mockQueue.publishArticle(id);
+  const { data } = await api.post('/articles/publish', { id });
+  return data;
+}

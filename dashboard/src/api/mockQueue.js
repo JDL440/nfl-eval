@@ -169,3 +169,27 @@ export async function unpublishJob(id) {
   });
   return { ...job };
 }
+
+let publishCallCount = 0;
+
+export async function publishArticle(id) {
+  await delay(800);
+  publishCallCount++;
+  const job = mockJobs.find((j) => j.id === id);
+  if (!job) throw new Error(`Job ${id} not found`);
+  if (job.status !== 'approved') {
+    throw new Error(`Cannot publish: article status is "${job.status}", must be "approved"`);
+  }
+  if (globalThis.__mockPublishFailure) {
+    throw new Error('Substack API error: publish failed');
+  }
+  const slug = job.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const substackUrl = `https://seahawksbotblog.substack.com/p/${slug}`;
+  job.status = 'published';
+  job.audit_log.push({
+    action: 'published',
+    actor: 'editor',
+    timestamp: new Date().toISOString(),
+  });
+  return { ...job, substackUrl };
+}

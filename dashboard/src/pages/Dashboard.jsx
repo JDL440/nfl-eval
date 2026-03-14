@@ -37,6 +37,12 @@ export default function Dashboard() {
     setSelectedJob(updated.find((j) => j.id === id) || null);
   }, [fetchJobs]);
 
+  const handlePublished = useCallback(async (result) => {
+    const updated = await fetchJobs();
+    const refreshed = updated.find((j) => j.id === result.id);
+    setSelectedJob(refreshed || null);
+  }, [fetchJobs]);
+
   if (loading && !jobs) {
     return (
       <div className="dashboard-container">
@@ -84,6 +90,7 @@ export default function Dashboard() {
             onApprove={handleApprove}
             onReject={handleReject}
             onUnpublish={handleUnpublish}
+            onPublished={handlePublished}
           />
           <div style={{ marginTop: '24px' }}>
             <TokenCostDisplay jobs={jobList} />

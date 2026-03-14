@@ -465,3 +465,16 @@ textarea:focus {
   .queue-item-meta { font-size: 0.75rem; gap: 6px; }
   .cost-amount { font-size: 1.25rem; }
 }
+
+/* Publish Modal */
+.publish-preview { text-align: center; }
+.publish-preview .text-muted { color: #6b7280; font-size: 0.9rem; margin-top: 8px; }
+.publish-loading { text-align: center; padding: 24px 0; }
+.publish-loading .loader { margin: 0 auto 16px; }
+.publish-success { text-align: center; padding: 16px 0; }
+.publish-success p { font-size: 1.1rem; margin-bottom: 12px; }
+.publish-url { display: block; color: #2563eb; word-break: break-all; font-size: 0.95rem; }
+.publish-url:hover { text-decoration: underline; }
+.publish-error { text-align: center; padding: 16px 0; }
+.publish-error p:first-child { color: #dc2626; font-size: 1.1rem; }
+.publish-error .text-muted { color: #6b7280; font-size: 0.9rem; margin-top: 8px; }
