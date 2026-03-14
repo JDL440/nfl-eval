@@ -5,6 +5,7 @@ export default {
   // Test match patterns
   testMatch: [
     '**/tests/**/*.test.js',
+    '**/tests/**/*.spec.js',
     '!**/node_modules/**'
   ],
 
