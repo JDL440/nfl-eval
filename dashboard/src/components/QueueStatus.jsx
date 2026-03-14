@@ -24,8 +24,19 @@ export function QueueStatus() {
     }
   };
 
+  const statusClassMap = {
+    pending_approval: 'pending',
+    ready_for_review: 'ready',
+    approved: 'approved',
+    published: 'published',
+    rejected: 'rejected',
+    archived: 'archived',
+    drafted: 'drafted'
+  };
+
   const getStatusBadgeClass = (status) => {
-    return `badge badge-${status}`;
+    const cssSuffix = statusClassMap[status] || status;
+    return `badge badge-${cssSuffix}`;
   };
 
   const statusColors = {

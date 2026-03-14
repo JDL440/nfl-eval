@@ -29,8 +29,12 @@ export function TokenCostDisplay({ jobs }) {
     setBreakdown({ haiku, opus });
   }, [jobs]);
 
-  const dailyBudget = 1.30; // GitHub Copilot Pro+ budget per day
-  const percentUsed = (totalCost / dailyBudget) * 100;
+  const rawDailyBudget =
+    (typeof process !== 'undefined' && process.env && (process.env.REACT_APP_DAILY_BUDGET || process.env.VITE_DAILY_BUDGET)) ||
+    '1.30';
+  const parsedDailyBudget = parseFloat(rawDailyBudget);
+  const dailyBudget = Number.isFinite(parsedDailyBudget) && parsedDailyBudget > 0 ? parsedDailyBudget : 1.30; // GitHub Copilot Pro+ budget per day
+  const percentUsed = totalCost > 0 && dailyBudget > 0 ? (totalCost / dailyBudget) * 100 : 0;
   const budgetWarning = percentUsed >= 70;
 
   return (
@@ -81,7 +85,7 @@ export function TokenCostDisplay({ jobs }) {
               <div style={{
                 height: '100%',
                 background: '#3b82f6',
-                width: `${Math.min((breakdown.haiku / totalCost) * 100, 100)}%`,
+                width: `${totalCost > 0 ? Math.min((breakdown.haiku / totalCost) * 100, 100) : 0}%`,
                 transition: 'width 0.3s ease'
               }} />
             </div>
@@ -101,7 +105,7 @@ export function TokenCostDisplay({ jobs }) {
               <div style={{
                 height: '100%',
                 background: '#10b981',
-                width: `${Math.min((breakdown.opus / totalCost) * 100, 100)}%`,
+                width: `${totalCost > 0 ? Math.min((breakdown.opus / totalCost) * 100, 100) : 0}%`,
                 transition: 'width 0.3s ease'
               }} />
             </div>
@@ -118,7 +122,7 @@ export function TokenCostDisplay({ jobs }) {
           color: '#10b981',
           marginBottom: '8px'
         }}>
-          ${(dailyBudget - totalCost).toFixed(4)}
+          {Math.max(0, dailyBudget - totalCost).toFixed(4)}
         </div>
         <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
           Budget resets daily at midnight EST
