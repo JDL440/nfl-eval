@@ -485,7 +485,7 @@ The daily media sweep generator converts NFL transaction data from `history.md` 
 
 **Collection Strategy:**
 1. **Source:** Parse `history.md` breaking news sections (headline moves, confirmed signings, confirmed trades)
-2. **Frequency:** Daily at 11 AM ET (aligned with M1 cron trigger)
+2. **Frequency:** Daily at 6 AM ET (11:00 UTC, aligned with M1 cron trigger)
 3. **Period:** 24-hour lookback window (previous day to current day)
 4. **Validation:** JSON schema validation before writing to disk
 
@@ -498,7 +498,7 @@ The daily media sweep generator converts NFL transaction data from `history.md` 
 - Narrative context in `notes` field
 
 **Confidence Level Assignment (Source-Based):**
-- 🟢 **Confirmed:** 2+ Tier 1 sources OR 1 Tier 1 + 1 Tier 2 OR multiple Tier 2
+- 🟢 **Confirmed:** 2+ Tier 1 sources OR 1 Tier 1 + 1 Tier 2
 - 🟡 **Likely:** Single Tier 1 source OR 2+ Tier 2 sources
 - 🔴 **Rumor:** Single Tier 2/3 source OR speculative reporting
 
