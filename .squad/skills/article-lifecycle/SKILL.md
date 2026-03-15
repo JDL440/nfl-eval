@@ -1,0 +1,485 @@
+---
+name: "article-lifecycle"
+description: "Canonical 8-stage process for producing articles from idea to Substack publish"
+domain: "content-production"
+confidence: "low"
+source: "manual — designed by Joe Robinson & Lead, not yet validated end-to-end"
+---
+
+# Article Lifecycle — Skill
+
+> **Confidence:** low — new skill, not yet validated end-to-end
+> **Created:** 2026-03-14
+> **Last validated:** n/a (stages 2–3 and 7 are new; stages 4–6 validated via substack-article skill)
+
+## Purpose
+
+The canonical process reference for how every article gets made — from first spark to live on Substack. Every agent (Lead, Writer, Editor, future Publisher) reads this skill and knows exactly where they fit, what they receive, and what they hand off.
+
+This is **coordinator-level guidance**. It tells Lead how to orchestrate the full lifecycle. For drafting/editorial detail, agents should read the [`substack-article` skill](../substack-article/SKILL.md), which remains the authoritative reference for Phases 5–6.
+
+## When to Use
+
+- Any time an article enters production (from idea approval through publish)
+- When Lead needs to decide what stage an article is in and who acts next
+- When a new agent (Writer, Editor, future Publisher) needs to understand the full pipeline
+- When Joe wants to manually shepherd an article through the Publisher pass
+
+## Lifecycle Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     ARTICLE LIFECYCLE — 8 STAGES                       │
+├──────┬──────────────────────┬────────────────┬─────────────────────────┤
+│ Stage│ Name                 │ Owner          │ Output                  │
+├──────┼──────────────────────┼────────────────┼─────────────────────────┤
+│  1   │ Idea Generation      │ Anyone         │ Entry in article-ideas  │
+│  2   │ Discussion Prompt    │ Lead           │ Structured brief        │
+│  3   │ Panel Composition    │ Lead           │ Named panel + rationale │
+│  4   │ Panel Discussion     │ Panel agents   │ Raw expert analysis     │
+│  5   │ Article Drafting     │ Writer         │ Draft in content/articles│
+│  6   │ Editor Pass          │ Editor         │ Verdict + corrections   │
+│  7   │ Publisher Pass       │ Joe (→ future  │ Formatted + metadata    │
+│      │                      │  Publisher)    │                         │
+│  8   │ Approval / Publish   │ Joe            │ Live on Substack        │
+└──────┴──────────────────────┴────────────────┴─────────────────────────┘
+```
+
+### Status Flow
+
+```
+💡 Proposed  →  ✅ Approved  →  🚀 In Production  →  ✅ Published
+                     │                                      │
+                     └──── 🗄️ Archived ◄───────────────────┘
+```
+
+An idea in `content/article-ideas.md` moves through these statuses. "In Production" spans stages 2–7. The status updates in `article-ideas.md` once an article is published or archived.
+
+---
+
+## Stage 1 — Idea Generation
+
+**Owner:** Anyone (Joe, Media, Lead, any team agent)
+**Output:** New entry in `content/article-ideas.md`
+**Status on entry:** 💡 Proposed
+
+### What triggers an idea
+
+| Source | Trigger | Example |
+|--------|---------|---------|
+| Joe | Any prompt or direction | "Write about the Witherspoon extension" |
+| Media agent | FA sweep flags a high-signal move | Significance score ≥ 4 from media-sweep skill |
+| Lead | NFL calendar milestone approaching | Draft week, schedule release, cut day |
+| Team agent | Roster event with article potential | Star player traded, major extension signed |
+
+### Idea format
+
+Every idea in `content/article-ideas.md` needs:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Title / headline idea | ✅ | Working title — can be refined later |
+| Angle / tension | ✅ | What makes this worth reading? The conflict or question. |
+| Team(s) | ✅ | Primary team + any secondary teams involved |
+| Urgency / timing | ✅ | Target publish date or window (e.g., "before draft") |
+| Agents needed | ✅ | Estimated panel (can change at Stage 3) |
+| Status | ✅ | 💡 Proposed (default for new ideas) |
+
+### Done when
+
+- [ ] Idea is written in `content/article-ideas.md` with all required fields
+- [ ] Status is 💡 Proposed
+- [ ] Joe has reviewed (ideas auto-advance to ✅ Approved only with Joe's explicit go-ahead)
+
+---
+
+## Stage 2 — Discussion Prompt
+
+**Owner:** Lead
+**Input:** An ✅ Approved idea from `article-ideas.md`
+**Output:** A structured brief (the Discussion Prompt artifact)
+**Status on entry:** ✅ Approved → 🚀 In Production
+
+This is the step that separates good articles from generic analysis. The tension and angle are defined **up front**, not discovered after the panel runs.
+
+### Discussion Prompt Template
+
+```markdown
+# Discussion Prompt: {Working Title}
+
+## Central Question
+{One sentence. What is this article trying to answer?}
+
+## The Tension
+{What's the conflict? Where do reasonable people disagree?
+This is the engine of the article — if there's no tension, there's no article.}
+
+## What Would Make This Worth Reading
+{Why should a fan click? What will they learn that they can't get from ESPN?
+Be specific — "insider analysis" is not enough.}
+
+## Scope & Constraints
+- **Team(s):** {primary and secondary}
+- **Time horizon:** {this offseason? next 3 years? career arc?}
+- **Data needed:** {cap numbers, draft comps, injury history, etc.}
+- **Recency cutoff:** {any events that must be included or excluded}
+
+## Panel (see Stage 3)
+| Agent | Role on Panel | Specific Question for This Agent |
+|-------|---------------|----------------------------------|
+| {agent} | {why they're here} | {their specific angle/question} |
+
+## Target
+- **Length:** {2,000–4,000 words}
+- **Publish window:** {date or range}
+- **Audience note:** {anything specific about who's reading this one}
+```
+
+### Done when
+
+- [ ] Discussion Prompt is fully filled out — no placeholder fields
+- [ ] Central Question is a single, clear sentence
+- [ ] Tension is identified and non-trivial (not "both sides have a point")
+- [ ] Panel section is drafted (finalized in Stage 3)
+
+---
+
+## Stage 3 — Panel Composition
+
+**Owner:** Lead
+**Input:** Discussion Prompt from Stage 2
+**Output:** Final panel (2–5 agents) with per-agent rationale and questions
+
+### Composition Rules
+
+1. **Always include the relevant team agent(s)** — they own the roster context
+2. **Always include at least one specialist** — Cap, Offense, Defense, etc.
+3. **2–4 agents is the sweet spot** — enough for tension, focused enough for coherence
+4. **5 agents maximum** — only for major pieces (draft report card, divisional rankings)
+5. **Never use all ~45 agents** — that's an anti-pattern, not thoroughness
+
+### Panel Selection Matrix
+
+| Article Type | Required | Recommended | Optional |
+|-------------|----------|-------------|----------|
+| Free agent signing | Team, Cap | PlayerRep, Offense or Defense | Media (market context) |
+| Contract extension | Cap, PlayerRep | Team | Offense or Defense (scheme fit) |
+| Trade evaluation | Both teams, Cap | Draft (if picks), PlayerRep | Analytics |
+| Draft prospect | CollegeScout, Team | Draft, Offense or Defense | Injury, Analytics |
+| Draft class review | Draft, CollegeScout, Team | Offense, Defense | Cap, Analytics |
+| Scheme analysis | Offense or Defense, Team | Analytics | CollegeScout (if prospects) |
+| Injury impact | Injury, Team | Cap | Offense or Defense |
+| Roster construction | Team, Cap, Offense or Defense | Analytics | SpecialTeams |
+| Divisional breakdown | All division teams | Cap, Analytics | Offense, Defense |
+| Season preview / recap | Team, Analytics | Offense, Defense | Media |
+
+### Anti-patterns
+
+- ❌ Picking agents because they're available, not because they add a distinct angle
+- ❌ Duplicating perspectives — if Cap and PlayerRep both cover money, give them different questions
+- ❌ Omitting the team agent — they're the connective tissue for any team-specific article
+- ❌ Panel of 1 — that's a report, not a panel discussion
+
+### Done when
+
+- [ ] 2–5 agents selected
+- [ ] Each agent has a named role and a specific question tailored to this article
+- [ ] At least one team agent and one specialist are on the panel
+- [ ] Discussion Prompt's Panel section is updated with final selections
+- [ ] Potential disagreements identified (e.g., "Cap and PlayerRep will likely disagree on extension value")
+
+---
+
+## Stage 4 — Panel Discussion
+
+**Owner:** Lead (orchestrates); Panel agents (execute)
+**Input:** Discussion Prompt with finalized panel
+**Output:** Raw expert analysis from each panelist
+
+### Execution
+
+Lead spawns all panel agents **in parallel**. Each agent receives:
+
+1. **The Discussion Prompt** (full document from Stage 2)
+2. **Their specific angle/question** (from the Panel table)
+3. **Article-mode instructions:**
+
+```
+Your analysis will be used in a Substack article for "Seahawks Bot Blog."
+Provide your expert assessment with:
+- Specific numbers and projections (not vague ranges)
+- A clear bottom-line recommendation
+- Quotable one-liner summary of your position
+- Areas where you DISAGREE with other experts (Cap vs PlayerRep, Team vs Scheme, etc.)
+- Flag any data you'd want verified before publish
+```
+
+4. **Instructions to read their own charter.md and history.md** for context
+
+### Output format
+
+Each panelist produces a raw analysis document. Lead collects all outputs and passes them to Writer in Stage 5.
+
+### Done when
+
+- [ ] All panelists have returned their analysis
+- [ ] Each analysis includes: numbers, recommendation, quotable summary, disagreement flags
+- [ ] Lead has reviewed outputs for obvious gaps (if a panelist missed their question, re-prompt)
+- [ ] All raw outputs are ready to hand to Writer
+
+> **Detail reference:** See [`substack-article` SKILL.md](../substack-article/SKILL.md), Phase 2 for prompt templates and expert-spawn mechanics. This skill supersedes that phase for orchestration; the substack-article skill remains authoritative for prompt wording.
+
+---
+
+## Stage 5 — Article Drafting (Writer)
+
+**Owner:** Writer
+**Input:** Discussion Prompt + all raw panel outputs
+**Output:** Draft article saved to `content/articles/{slug}.md`
+
+Writer takes all panel outputs and assembles a polished article following the house style: **The Ringer meets OverTheCap** — informed but accessible, data-heavy but narrative-driven.
+
+> **Full guidance:** See [`substack-article` SKILL.md](../substack-article/SKILL.md), Phase 3 (structure template), Phase 4 (headline craft), and Style Guide. This skill does not duplicate that material.
+
+### Key reminders
+
+- Writer does **not** fact-check — that's Editor's job in Stage 6
+- Disagreements between panelists are **content**, not problems to resolve
+- Draft goes to `content/articles/{slug}.md` — not directly to Substack
+- Target length: 2,000–4,000 words (8–15 min read)
+
+### Done when
+
+- [ ] Draft saved to `content/articles/{slug}.md`
+- [ ] Article follows the structure template from substack-article skill
+- [ ] All panelists' analysis is represented (none dropped)
+- [ ] Headline follows the formula options in substack-article skill
+- [ ] Boilerplate footer included (expert panel description + CTA + next article tease)
+
+---
+
+## Stage 6 — Editor Pass
+
+**Owner:** Editor
+**Input:** Draft article from `content/articles/{slug}.md`
+**Output:** Editorial verdict + categorized corrections
+
+Editor reviews the draft for factual accuracy, structural issues, and style compliance. This is **mandatory** — no article skips the Editor pass.
+
+> **Full guidance:** See [`substack-article` SKILL.md](../substack-article/SKILL.md), Phase 5. Editor's review protocol, error categories, and the Emmanwori founding example are documented there.
+
+### Output format
+
+| Category | Meaning | Action |
+|----------|---------|--------|
+| 🔴 ERRORS | Factual mistakes — wrong names, bad stats, stale info | Must fix before proceeding |
+| 🟡 SUGGESTIONS | Strong recommendations for style/structure | Should fix; Writer's judgment |
+| 🟢 NOTES | Minor polish items | Optional |
+
+**Verdict:** ✅ APPROVED / 🟡 REVISE / 🔴 REJECT
+
+### Revision loop
+
+- If 🔴 errors exist → Writer fixes → Editor re-reviews
+- If 🟡 REVISE → Writer addresses suggestions → Editor confirms
+- If 🔴 REJECT → back to Stage 4 or 5 depending on the issue (structural vs. factual)
+- Loop continues until verdict is ✅ APPROVED
+
+### Done when
+
+- [ ] Editor has issued a verdict
+- [ ] All 🔴 errors are resolved
+- [ ] Final verdict is ✅ APPROVED
+- [ ] Approved draft is committed to `content/articles/{slug}.md`
+
+---
+
+## Stage 7 — Publisher Pass
+
+**Owner:** Joe Robinson (manual today; future Publisher agent)
+**Input:** Editor-approved draft from `content/articles/{slug}.md`
+**Output:** Publish-ready article with all metadata and formatting confirmed
+
+This stage sits between Editor approval and actual Substack publish. Its purpose: final formatting, metadata, scheduling, and platform-specific prep.
+
+### Publisher Pass Checklist
+
+Copy this checklist for each article. Check off each item before moving to Stage 8.
+
+```markdown
+## Publisher Pass — {Article Title}
+
+### Content Final Check
+- [ ] Title: final headline (may differ from draft working title)
+- [ ] Subtitle: 1-line hook for Substack preview / email subject
+- [ ] Author line: "By: The Seahawks Bot Blog Expert Panel" (or variant)
+- [ ] Opening preview text: first ~150 chars that show in email/social (compelling?)
+- [ ] Article body: final read-through — no orphaned placeholders, no TODO markers
+
+### Substack Metadata
+- [ ] Section assignment: (e.g., "Free Agency," "Draft," "Game Recaps")
+- [ ] Tags: 3–5 tags (team name, topic, player names, "expert-panel")
+- [ ] URL slug: clean, lowercase, hyphenated (e.g., `witherspoon-extension-analysis`)
+- [ ] Cover image: placeholder or actual image selected
+- [ ] Paywall setting: free / paid-only / preview
+
+### Scheduling & Distribution
+- [ ] Publish date/time: per editorial calendar (Tues 10 AM PT default)
+- [ ] Email send: yes/no (most articles = yes)
+- [ ] Social preview: headline + subtitle render well in card format?
+- [ ] Cross-post plan: Reddit threads, Twitter/X, other channels
+
+### Pre-Publish Verification
+- [ ] All names spelled correctly (one last check)
+- [ ] All numbers current (cap figures, contract terms — things move fast)
+- [ ] No stale references to "upcoming" events that already happened
+- [ ] Disclosure: any AI-generated content disclaimers required?
+```
+
+### Design notes
+
+- This checklist is designed to be **manually usable today** — Joe copies it, checks items off
+- When a Publisher agent exists, it will programmatically verify each item and flag issues
+- The checklist format is intentionally granular so automation can parse it
+
+> **TODO (future):** Publisher agent + Substack MCP server integration. When built, this stage becomes automated: Publisher agent fills the checklist, calls Substack API for metadata/scheduling, and presents a final summary for Stage 8 approval. Substack has no public API today — workaround options: email-to-post, Puppeteer, or future API access.
+
+### Done when
+
+- [ ] All checklist items are checked
+- [ ] Article is formatted and ready for Substack paste/upload
+- [ ] Metadata (title, subtitle, tags, slug, section, cover image) is finalized
+- [ ] Publish date/time is confirmed
+
+---
+
+## Stage 8 — Approval / Publish
+
+**Owner:** Joe Robinson (human gate)
+**Input:** Publisher Pass output (completed checklist + publish-ready article)
+**Output:** Live article on Substack
+
+### Process
+
+1. **Joe reviews** the Publisher Pass checklist and the final article
+2. **Joe approves** — or sends back to Stage 6 (editorial issues) or Stage 7 (metadata issues)
+3. **Publish to Substack** — currently manual (paste into Substack editor, apply metadata, schedule or publish)
+4. **Post-publish cleanup:**
+
+| Task | How |
+|------|-----|
+| Update `content/article-ideas.md` | Change status to ✅ Published, add publish date |
+| Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`; insert `stage_transitions` row |
+| Git commit | `git add . && git commit -m "Published: {article title}"` |
+| Content pipeline | Ensure "Next from the panel" tease at article end points to a real upcoming idea |
+| Cross-post | Execute the cross-post plan from Stage 7 checklist (Reddit, social) |
+
+> **TODO (future):** Automate publish via Substack MCP server. Automate post-publish status updates and git commit. Optionally notify team agents that the article is live.
+
+### Done when
+
+- [ ] Article is live on Substack
+- [ ] `content/article-ideas.md` reflects ✅ Published with date
+- [ ] Git repo is committed and clean
+- [ ] Cross-post plan executed (if applicable)
+
+---
+
+## Stage Transition Summary
+
+| From → To | Gate (what must be true) | Who decides |
+|-----------|--------------------------|-------------|
+| 1 → 2 | Idea approved by Joe | Joe |
+| 2 → 3 | Discussion Prompt complete, tension identified | Lead |
+| 3 → 4 | Panel finalized (2–5 agents), each with specific question | Lead |
+| 4 → 5 | All panelists returned analysis, Lead reviewed for gaps | Lead |
+| 5 → 6 | Draft saved to `content/articles/{slug}.md` | Writer |
+| 6 → 7 | Editor verdict is ✅ APPROVED (all 🔴 resolved) | Editor |
+| 7 → 8 | Publisher Pass checklist fully completed | Joe (manual) / Publisher (future) |
+| 8 → Done | Article live on Substack, statuses updated, committed | Joe |
+
+## Recovery & Edge Cases
+
+| Situation | Recovery |
+|-----------|----------|
+| Editor rejects draft (🔴 REJECT) | Back to Stage 4 (re-gather analysis) or Stage 5 (rewrite) depending on issue |
+| Panelist misses their question | Lead re-prompts that specific agent (don't re-run entire panel) |
+| Breaking news makes article stale mid-production | Lead decides: update in place (if minor), restart from Stage 2 (if angle changed), or archive |
+| Joe rejects at Stage 8 | Back to Stage 6 or 7 depending on the issue type |
+| Article idea becomes irrelevant | Mark 🗄️ Archived in `article-ideas.md` with reason |
+
+## Anti-Patterns
+
+- ❌ Skipping the Discussion Prompt (Stage 2) — leads to unfocused panels and generic articles
+- ❌ Letting Writer fact-check — that's Editor's job; separation of concerns
+- ❌ Publishing without Editor pass — the Emmanwori error is the founding lesson
+- ❌ Using 5+ panelists for a focused single-player article — 2–3 is better
+- ❌ Treating the Publisher Pass as optional — even when manual, the checklist catches metadata gaps
+- ❌ Advancing past Stage 1 without Joe's explicit approval — ideas don't auto-approve
+
+## Pipeline Database
+
+Every article has a row in `content/pipeline.db`. Agents MUST update it at each stage transition. Use Python (always available) — no sqlite3 CLI required.
+
+### Agent Write Pattern
+
+```python
+import sqlite3, os
+conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), '../../content/pipeline.db'))
+# or from repo root:
+conn = sqlite3.connect('content/pipeline.db')
+```
+
+### Required DB writes by stage
+
+| Stage | Agent | Required write |
+|-------|-------|----------------|
+| 1 | Anyone | `INSERT INTO articles` with id, title, primary_team, teams, status='proposed', current_stage=1 |
+| 2 | Lead | `INSERT INTO discussion_prompts`; advance article to current_stage=2, status='approved' |
+| 3 | Lead | `INSERT INTO article_panels` (one row per panelist); advance to current_stage=3 |
+| 4 | Lead | Mark `analysis_complete=1` in article_panels as each panelist returns; advance to current_stage=4 |
+| 5 | Writer | Set article_path; advance to current_stage=5, status='in_production' |
+| 6 | Editor | `INSERT INTO editor_reviews` with verdict + counts; advance to current_stage=6 |
+| 7 | Joe / Publisher | `INSERT INTO publisher_pass`; advance to current_stage=7 |
+| 8 | Joe | Set published_at, substack_url, status='published', current_stage=8 |
+
+### Stage transition helper
+
+Every stage change also inserts a row in `stage_transitions`:
+
+```python
+conn.execute(
+    """INSERT INTO stage_transitions (article_id, from_stage, to_stage, agent, notes)
+       VALUES (?,?,?,?,?)""",
+    (article_id, from_stage, to_stage, agent_name, notes)
+)
+conn.execute(
+    "UPDATE articles SET current_stage=?, updated_at=datetime('now') WHERE id=?",
+    (to_stage, article_id)
+)
+conn.commit()
+```
+
+### Visualization
+
+```
+pip install datasette && datasette content/pipeline.db --open
+```
+
+Opens a web UI at `http://localhost:8001` — browse all tables and the `pipeline_board` view (sorted by active → proposed → published).
+
+### Schema reference
+
+Full schema: `content/schema.sql`
+Tables: `articles`, `stage_transitions`, `article_panels`, `discussion_prompts`, `editor_reviews`, `publisher_pass`
+View: `pipeline_board` (one row per article with stage name + sort by status)
+
+---
+
+## Relationship to Other Skills
+
+| Skill | Relationship |
+|-------|-------------|
+| [`substack-article`](../substack-article/SKILL.md) | **Child detail.** Covers drafting mechanics (structure template, headline formulas, style guide, editorial review protocol). This lifecycle skill is the higher-level wrapper. |
+| [`media-sweep-generation`](../media-sweep-generation/SKILL.md) | **Idea feeder.** Media sweeps can trigger Stage 1 ideas when significance score ≥ 4. |
+| [`knowledge-recording`](../knowledge-recording/SKILL.md) | **Post-publish.** After publish, agents update their history.md with learnings from the article production. |

@@ -3,3 +3,6 @@
 .squad/agents/*/history.md merge=union
 .squad/log/** merge=union
 .squad/orchestration-log/** merge=union
+
+# Article pipeline database — treat as binary to avoid text-diff noise
+content/pipeline.db binary

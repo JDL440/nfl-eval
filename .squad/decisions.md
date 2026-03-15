@@ -120,6 +120,52 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 
 **Why:** Day 3 FA sweep ensures all agents have accurate rosters. Rodgers downgrade is biggest strategic shift — PIT win-now plan at risk. EDGE market ($120M Phillips, $100M Oweh) resets benchmarks. NYJ becoming dark horse via trades. MIA in full rebuild.
 
+### 2026-03-14: Article Lifecycle Skill — Architectural Decisions
+
+**By:** Lead  
+**Status:** Proposed  
+**Affects:** Lead, Writer, Editor, future Publisher agent, all panel-eligible agents
+
+**Decision 1: Discussion Prompt as a Required Pre-Panel Artifact**
+- Every article must have a completed Discussion Prompt (Stage 2) before panel composition begins
+- The prompt defines the central question, the tension/conflict, and what makes the article worth reading
+- Forces the angle up front, cascading to better panel selection and stronger articles
+
+**Decision 2: Publisher Pass (Stage 7) as a Distinct Stage**
+- New stage between Editor approval and Substack publish
+- Covers final formatting, metadata (title, subtitle, tags, URL slug, section, cover image), scheduling, and distribution planning
+- Previously invisible work now codified as a checklist, manually usable today and parseable by future Publisher agent
+
+**Decision 3: Panel Composition Rules (2–5 Agents, Selection Matrix)**
+- Formalized panel composition: always include relevant team agent(s), always include at least one specialist, 2–4 is sweet spot, 5 is maximum
+- Selection matrix maps article types to recommended panels
+- RB article used 6 agents successfully, but that's near the upper limit
+
+**Decision 4: Lifecycle Skill Wraps (Does Not Replace) Substack-Article Skill**
+- Article-lifecycle skill is coordinator-level orchestration
+- Substack-article skill remains authoritative for drafting mechanics (template, formulas, style guide, editorial protocol)
+- Both skills maintained in parallel to avoid duplication
+
+**Decision 5: Confidence Level — Low (Needs End-to-End Validation)**
+- Skill starts at confidence `low` despite incorporating proven patterns
+- Stages 4–6 validated (two published articles)
+- Stages 2, 3, 7 are new and untested
+- Promote to `medium` after one article passes through all 8 stages, to `high` after 3+ articles
+
+### 2026-03-15: README.md Structure and Tone
+
+**By:** Writer  
+**Status:** Delivered
+
+**Structural Choices:**
+1. Agent roster as condensed table (14 rows) instead of listing all 47; full roster in `.squad/team.md`
+2. Pipeline section uses text flowchart (numbered steps, not Mermaid) — readable without dependencies
+3. "What's Next" is a checklist — Joe can tick off as capabilities ship
+4. No VISION.md content leaks — revenue projections stay there, README references it but doesn't quote
+5. Tone: Direct, energetic, zero fluff — internal engineering docs, not marketing copy
+
+**Rationale:** Joe needs a doc answering "what is this, how do I use it" in under 2 minutes. Everything else is noise.
+
 ---
 
 ## Governance

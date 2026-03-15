@@ -88,3 +88,17 @@
 - Current manual workflow: ~2-3 hours human involvement per article, 4 human touchpoints
 - 32-team scale bottlenecks: Editor single-threaded, dashboard UX overwhelmed, git state performance
 - Substack has no public API — need workaround (email-to-post or Puppeteer)
+
+### Article Lifecycle Skill Created (2026-03-14)
+
+**Deliverable:** `.squad/skills/article-lifecycle/SKILL.md`
+
+**What:** Codified the full 8-stage article production lifecycle as a formal skill — from idea generation through Substack publish. This is the canonical process reference that supersedes the Phase 2 state machine proposal's 6-state model with a more granular, human-usable 8-stage workflow.
+
+**Key design decisions:**
+1. **Discussion Prompt as required artifact (Stage 2)** — The single biggest process improvement. Forces tension/angle definition BEFORE panel composition, preventing unfocused panels and generic articles. This is what the substack-article skill was missing.
+2. **Publisher Pass (Stage 7) — new stage** — Inserted between Editor approval and publish. Designed as a manual checklist today (Joe uses it directly) with clear automation hooks for a future Publisher agent + Substack MCP server. Covers metadata, scheduling, formatting, and cross-post planning.
+3. **Panel composition codified (Stage 3)** — Formalized the 2–5 agent sweet spot with a selection matrix mapping article types to recommended panels. Extended the substack-article skill's existing table with more article types and explicit rules (always team agent + specialist, never all 45).
+4. **Wrapper, not replacement** — The article-lifecycle skill is coordinator-level orchestration. The existing substack-article skill remains authoritative for drafting mechanics, headline formulas, style guide, and editorial review protocol. No duplication.
+5. **Stage transitions are explicit gates** — Each stage has clear "done when" criteria and a transition gate. Recovery semantics defined for Editor rejection, stale-news mid-production, and panelist gaps.
+6. **Confidence: low** — New skill, not yet validated end-to-end. Stages 4–6 are proven via existing articles. Stages 2, 3, and 7 are new and need real-world validation.

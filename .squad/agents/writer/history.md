@@ -27,3 +27,7 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 📌 Tables are the credibility backbone. Readers scan tables before reading paragraphs. Every major claim should be backed by a table within 2 paragraphs.
 
 📌 The Emmanwori error (Article 2) shows why Writer should NOT fact-check — leave that to Editor. Writer's job is craft, not verification.
+
+📌 README writing is a different muscle than article writing. The audience is Joe (the builder), not readers. Tone stays direct and functional — no narrative hooks, no personality flourishes. The structure does the work: capabilities table, step-by-step usage, pipeline flow diagram. Let the system speak for itself.
+
+📌 The agent roster table in the README groups specialists by function rather than listing all 47 individually. Team agents get one row with "32" in the count column. This is the right compression for a working doc — anyone who needs the full roster can check `.squad/team.md`.
