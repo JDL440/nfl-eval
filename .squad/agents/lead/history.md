@@ -8,6 +8,44 @@
 
 ## Learnings
 
+### Article Discussion Workflow — First End-to-End Run (2026-03-15)
+
+**Article:** `jsn-extension-preview` — "Jaxon Smith-Njigba's Contract Is Coming. Here Are the 4 Paths Seattle Can Take."
+
+**Panel used:**
+- Cap (contract modeling + cap structure)
+- PlayerRep (player leverage + WA tax calculus)
+- SEA (roster construction priority)
+- Offense (WR scheme value / tier justification)
+
+**What worked:**
+- Parallel agent spawning (all 4 fired simultaneously, total wall time ~3 min)
+- Front-loading the discussion prompt with specific data anchors (cap hit tables, market comps, tax math) produced sharp, number-driven positions — no vague analysis
+- Panelist instructions with explicit "what you should focus on" + "what to avoid" (no talent eval for Cap, no cap analysis for Offense) kept positions clean and non-overlapping
+- The synthesis revealed a genuine strategic tension (AAV: $28M vs. $36M) that makes the article interesting — not a rubber-stamp panel
+
+**Key finding from this run:**
+The WA millionaires tax (SB 6346, effective 2028) is a *front-loading accelerant*, not just a player destination factor. Cap identified the mechanism: a $65M signing bonus paid in 2026 is pre-tax income. This creates a time-sensitive window that strengthens the "extend now" argument independent of the talent debate. Write this into the article.
+
+**The Shaheed signal:** PlayerRep's non-obvious point — the $51M Shaheed re-sign is JSN's best negotiating weapon. Seattle tipped its hand: you don't pay the WR2 $17M/yr and then claim you can't afford the WR1.
+
+**Panel disagreement zone (use this in the article):**
+- AAV target: $28M (Offense) vs. $31–32M (SEA) vs. $34M (Cap) vs. $36M (PlayerRep)
+- Synthesis recommendation: $31–33M range threads the needle
+- Tag war rejected unanimously — that's the headline consensus
+
+**Artifacts created:**
+- `content/articles/jsn-extension-preview/discussion-prompt.md`
+- `content/articles/jsn-extension-preview/cap-position.md`
+- `content/articles/jsn-extension-preview/playerrep-position.md`
+- `content/articles/jsn-extension-preview/sea-position.md`
+- `content/articles/jsn-extension-preview/offense-position.md`
+- `content/articles/jsn-extension-preview/discussion-summary.md`
+
+**DB updated:** `current_stage = 'panel_discussion'`
+**Decision filed:** `.squad/decisions/inbox/lead-discussion-path-field.md` — add `discussion_path` column to `articles` table
+**Skill created:** `.squad/skills/article-discussion/SKILL.md`
+
 ### Data Source Viability (Observed 2026-03-12)
 
 **What Works with web_fetch:**
@@ -102,3 +140,84 @@
 4. **Wrapper, not replacement** — The article-lifecycle skill is coordinator-level orchestration. The existing substack-article skill remains authoritative for drafting mechanics, headline formulas, style guide, and editorial review protocol. No duplication.
 5. **Stage transitions are explicit gates** — Each stage has clear "done when" criteria and a transition gate. Recovery semantics defined for Editor rejection, stale-news mid-production, and panelist gaps.
 6. **Confidence: low** — New skill, not yet validated end-to-end. Stages 4–6 are proven via existing articles. Stages 2, 3, and 7 are new and need real-world validation.
+
+### Intel Brief — 2026-03-15 Media Sweep
+
+**Source:** Media agent daily sweep (March 14-15). 50+ new confirmed transactions. 115+ total FA transactions tracked. 15 active rumors.
+
+#### LEAGUE-WIDE HIGHLIGHTS
+
+- **Tennessee's $270M+ spending spree is the offseason's defining bet.** Robinson ($78M WR), Franklin-Myers ($63M DL), Taylor ($58M CB), Flott ($45M CB), Bellinger ($24M TE) — all surrounding sophomore QB Cam Ward under Saleh/Daboll. This is either 2020 Bucs or 2022 Jags. Biggest single-team FA spend in the league.
+- **Las Vegas built a defense in one week.** Paye ($48M EDGE), Walker ($40.5M LB), Dean ($36M LB), Stokes ($30M CB) = $154M+ on defense, all mid-20s, wrapping around Mendoza (#1 pick) and Crosby. Full franchise pivot from offense-first to defense-first identity.
+- **NFC West arms race escalating.** LAR added Watson ($51M CB) + McDuffie (trade). SF restructured Nick Bosa to clear $17M — Joey Bosa signing appears imminent. ARI lost Thompson (S→DAL) but added Bourne (WR). Every team in the division made moves that affect SEA's competitive picture.
+
+#### SEAHAWKS SPECIFIC
+
+| Move | Type | Details | Cap Impact |
+|------|------|---------|------------|
+| ✅ Rashid Shaheed | RE-SIGN | 3yr/$51M ($34.7M gtd, $23M at sign). WR2/3 + return specialist. $17M AAV. | ~$17M/yr hit |
+| ✅ Josh Jobe | RE-SIGN | 3yr/$24M ($14.25M gtd, $9.5M at sign). CB2, 15/16 starts in 2025, 12 PDs. $8M AAV. | ~$8M/yr hit |
+| ❌ Coby Bryant | LOST to CHI | 3yr/$40M ($25.75M gtd). 4th significant departure (Walker III→KC, Mafe→CIN, DK→PIT trade, Bryant→CHI). | Safety now critical need |
+| ✅ Depth | RE-SIGN | Brady Russell (TE), Emanuel Wilson (RB) signed. Tyler Hall (DB) released. D'Anthony Bell (DB) re-signed. | Minimal |
+
+**Cap Situation:** $44.08M remaining (6th most in NFL). Room for 1-2 more significant signings.
+
+**Key FA targets still available (SEA-linked):**
+- Jauan Jennings (WR, 🟡 Possible — ESPN projects SEA, ~$12-16M AAV)
+- Najee Harris (RB, 🟡 Possible — post-Achilles, SEA named as landing spot)
+- Bobby Wagner (LB — leadership/mentorship, SEA/DEN/LAR projected)
+- Asante Samuel Jr. (CB — injury limiting market, significant upside)
+
+**Critical needs post-Bryant loss:** Safety (S), EDGE (Mafe replacement), RB (Walker III replacement). Draft intel has SEA mocked for Notre Dame RB at #32.
+
+#### RUMOR WATCH
+
+| Rumor | Confidence | Change | Key Detail |
+|-------|-----------|--------|------------|
+| **Aaron Rodgers → PIT** | 🟢 Likely | ⬆️ UPGRADED from 🟡 | Mark Kaboly (The Athletic, Tier 2): "near-certain" of return. Decision before draft. PIT not pursuing other QBs. Win-now roster assembled (Metcalf, Pittman, Dean, Dowdle, Brisker). |
+| **Joey Bosa → SF** | 🟢 Likely | STABLE | Nick Bosa restructure cleared $17.172M on 3/14. Multiple Tier 1-2 sources say signing imminent. NFC West EDGE arms race would escalate. |
+| **Stefon Diggs market** | 🟡 Possible | BAL emerges as frontrunner | KC, LAC, WSH also linked. No deal. 32 years old. |
+| **Jauan Jennings → SEA** | 🟡 Possible | STABLE | ESPN projects SEA. SF door closed (Evans signing). |
+| **Maxx Crosby trade** | 🟢 Likely (that LV moves him) | STABLE | BAL trade voided. Market depressed. No new suitor. LV deciding. |
+| **ARI #3 pick trade** | 🟡 Active | STABLE | ESPN mocks show EDGE at #3, possible trade back for Ty Simpson (QB). |
+
+⚠️ **Rodgers is the biggest domino.** If he returns, PIT is a Super Bowl contender with Metcalf + Pittman + Dean + Dowdle. If he retires, PIT falls to Mason Rudolph and the entire win-now build craters. Decision expected by end of March. This is a Tier 1 article candidate.
+
+#### ARTICLE PIPELINE IMPLICATIONS
+
+| Pipeline Item | Impact | Action |
+|---------------|--------|--------|
+| **Priority #1: "Seattle Won the Super Bowl and Lost Half Its Defense"** (Mar 17 target) | ⬆️ MORE URGENT — Bryant loss to CHI adds another departure. Safety now a glaring hole alongside Walker III, Mafe losses. Shaheed/Jobe re-signs give positive counterweight. | **Publish on schedule.** Update to include Bryant loss + Shaheed/Jobe re-signs. |
+| **Priority #2: "The Free Agent Nobody's Talking About"** (Mar 18 target) | ⬆️ MORE URGENT — Jennings still unsigned and ESPN projects SEA. Samuel Jr. (CB) could be the under-the-radar pick given Bryant departure. | **Publish on schedule.** Strong Jennings or Samuel Jr. angle. |
+| **Evergreen: "NFC West Power Rankings"** | ⬆️ MORE RELEVANT — Watson→LAR, Bosa restructure→SF, Thompson→DAL (ARI loss), Shaheed/Jobe→SEA. All 4 teams moved. | **Promote to March window.** Could publish as NFC West FA recap. |
+| **Priority #4: "Seahawks Draft Board at #32 — Every CB"** (Mar 25 target) | STABLE — Bryant departure makes CB draft need even more acute. | On schedule. |
+| **Priority #6: "EDGE Rushers Through Macdonald's Scheme"** (Apr 8 target) | STABLE — Mafe gone, EDGE still a need. Phillips ($120M) and Oweh ($100M) set market comps. | On schedule. |
+| **NEW: "Tennessee's $270M Spending Spree"** | 🆕 HIGH — Media scored this 5/5 significance. Non-SEA but massive audience potential. | **Add to pipeline — March 19-20 window.** |
+| **NEW: "The Rodgers Decision"** | 🆕 HIGH — Media scored 4/5. Biggest remaining domino. Time-sensitive (decision before draft). | **Add to pipeline — publish when decision drops, or preview piece Mar 21.** |
+| **NEW: "Seattle's Championship Window: Retention vs. Exodus"** | 🆕 HIGH — Media scored 4/5. Directly overlaps with Priority #1 but different angle (strategic analysis vs. fan reassurance). | **Consider merging with Priority #1 or publishing as follow-up.** |
+| **Priority #16: "WA Millionaires Tax"** (Jun 22 target) | STABLE — No new developments. 2028 effective date means no urgency. | On schedule. |
+
+#### AGENTS TO BRIEF
+
+| Agent | Why | Priority |
+|-------|-----|----------|
+| **SEA** | Bryant loss, Shaheed/Jobe re-signs, $44M cap, safety now critical need, Jennings/Harris rumors | 🔴 HIGH |
+| **Cap** | SEA at $44M post-signings, TEN at ~$75M despite $270M spend, SF cleared $17M via Bosa restructure, NFC West cap landscape shifted | 🔴 HIGH |
+| **Defense** | Bryant loss creates safety hole, NFC West secondary arms race (Watson→LAR, Bosa→SF imminent), EDGE market reset ($120M Phillips, $100M Oweh) | 🔴 HIGH |
+| **Draft** | SEA mocked for RB at #32, CB need escalated post-Bryant, ARI #3 pick trade buzz, NYJ two-first-rounder scenarios | 🟡 MEDIUM |
+| **Offense** | Shaheed re-sign locks WR corps (JSN/Shaheed/Lockett?), Jennings still available, TEN's offensive overhaul for scheme comps | 🟡 MEDIUM |
+| **Injury** | Crosby failed physical (market impact), Mahomes "ahead of schedule," Harris post-Achilles (SEA target), Samuel Jr. injury limiting market | 🟡 MEDIUM |
+| **Analytics** | TEN $270M spend — historical comp analysis needed (2020 Bucs vs 2022 Jags), PIT win-now build ROI modeling | 🟢 LOW |
+| **PlayerRep** | Shaheed $17M AAV valuation, Jobe $8M AAV valuation, Jennings projected $12-16M AAV if SEA pursues | 🟢 LOW |
+
+### ⚠️ CRITICAL: User Directive — No Political Topics (2026-03-15)
+
+**Note from Joe Robinson (via Copilot):** Avoid all politically divisive topics in content. Specifically: do NOT reference or analyze state/federal tax legislation (e.g., WA SB 6346), political bills, or anything construed as taking a political stance. Applies to all article ideas, discussion prompts, panel discussions, drafts, and analyses.
+
+**Impact on JSN panel:** WA tax mechanics were identified as a key finding in the discussion panel (completed before this directive). Discussion summary must be revised to remove tax references before Writer stage. This is non-blocking for decision/log merge but must be resolved before draft production.
+
+---
+
+**Session log merged:** 2026-03-15 13:09:08  
+**Decisions merged:** 6 inbox files (discussion_path field, intel brief, article candidates, league-wide intel, SEA intel, political topics directive)  
+**Inbox status:** Empty

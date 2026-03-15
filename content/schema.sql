@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS articles (
     teams           TEXT,                       -- JSON array, e.g. '["seahawks"]' or '["seahawks","chiefs"]'
     status          TEXT NOT NULL DEFAULT 'proposed',
     current_stage   INTEGER NOT NULL DEFAULT 1,
-    article_path    TEXT,                       -- relative path, e.g. content/articles/{slug}.md
+    discussion_path TEXT,                       -- relative path to discussion summary, e.g. content/articles/{slug}/discussion-summary.md
+    article_path    TEXT,                       -- relative path to final draft, e.g. content/articles/{slug}/draft.md
     substack_url    TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
@@ -129,6 +130,7 @@ SELECT
         WHEN 8 THEN 'Approval / Publish'
         ELSE 'Unknown'
     END AS stage_name,
+    a.discussion_path,
     a.article_path,
     a.depth_level,
     CASE a.depth_level

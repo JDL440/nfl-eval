@@ -2,13 +2,13 @@
 
 ## Core Context
 - **Project:** NFL Roster Evaluation — 2026 Offseason
-- **Role:** Full Editor — facts, style, and structural review for Seahawks Bot Blog
+- **Role:** Full Editor — facts, style, and structural review for NFL Lab
 - **User:** Joe Robinson
 - **Added:** 2026-03-14
 
 ## Knowledge Base
 
-### Seahawks Bot Blog — Published Articles
+### NFL Lab — Published Articles
 1. **"The Seahawks Have a Hole at RB"** — RB1A target board (Jadarian Price, Brian Robinson Jr.)
    - Published: 2026-03-14
    - Status: Published WITHOUT editorial review (pre-Editor)

@@ -6,99 +6,123 @@
 - **User:** Joe Robinson
 - **Role:** Intel desk — monitors NFL news, tracks rumors, pushes confirmed intel to team agents
 - **Model:** auto
-- **Current Phase:** Mid-March FA Wave 1 — Day 3 of free agency
-- **Dashboard Last Updated:** 2026-03-14
-- **Last Sweep:** 2026-03-14 — Comprehensive 48-hour news sweep (March 13-14 FA frenzy)
-- **Last Availability Audit:** 2026-03-14 — Full FA market check
+- **Current Phase:** Mid-March FA Wave 1 — Day 4 of free agency
+- **Dashboard Last Updated:** 2026-03-15
+- **Last Sweep:** 2026-03-15 — Day 3-4 sweep (50+ new transactions, highest volume yet)
+- **Last Availability Audit:** 2026-03-15 — Full FA market check via Spotrac/OTC/ESPN/NFL.com
 - **M1 Integration:** ✅ COMPLETE — JSON export generator implemented (2026-03-14)
 
 ---
 
-## 🚨 Breaking News (March 13-14, 2026)
+## 🚨 Breaking News (March 14-15, 2026)
 
-_Chronological feed of confirmed moves since last dashboard update (2026-03-13)_
+_Chronological feed of confirmed moves since last dashboard update (2026-03-14)_
 
-### 🔔 Headline Moves (NEW since last sweep)
+### 🔔 Headline Moves (NEW since last sweep — March 14-15)
 
-1. **✅ Jaelan Phillips → CAR** — 4yr/$120M ($80M gtd, $30M AAV). Panthers anchor their defensive rebuild. Former MIA/PHI edge rusher now the highest-paid defender in CAR history. Pairs with Derrick Brown and Nic Scourton. (ESPN, Yahoo, SI, Spotrac)
-2. **✅ Odafe Oweh → WSH** — 4yr/$100M ($68M gtd, $25M AAV). Commanders land elite pass rusher from LAC. Front-loaded deal. WSH desperate for pass rush after poor 2025. (NFL.com, ESPN, SI, CBS)
-3. **✅ Tyler Linderbaum → LV** — 3yr/$81M ($60M gtd, $27M AAV). Highest-paid center in NFL history. Raiders building OL around expected #1 pick QB Mendoza. Left BAL in free agency. (NFL.com, CBS, ESPN, Spotrac)
-4. **✅ Romeo Doubs → NE** — 4yr/$68M base ($80M w/incentives). Patriots replace Diggs with former GB WR. Key target for Drake Maye. (ESPN, USA Today, CBS, SI)
-5. **✅ Bryan Cook → CIN** — 3yr/$40.25M ($14M gtd). Bengals land KC's former starting S. Heavily front-loaded ($18M Year 1). Cincinnati native returns home. (Spotrac, ESPN, CBS, SI)
-6. **✅ Devin Bush → CHI** — 3yr/$30M ($21M gtd). Bears replace Edmunds with CLE's breakout LB (125 tackles, 3 INTs, 2 pick-sixes in 2025). (SI, Sporting News, Heavy)
-7. **✅ Elgton Jenkins → CLE** — 2yr/$24M ($20M gtd). Versatile OL from GB. Released after injury but CLE believes he starts in 2026. (ESPN, Yahoo, FOX Sports)
-8. **✅ Javonte Williams → DAL** — 3yr/$24M ($16M gtd, $6M signing bonus). Cowboys re-sign their RB on a value deal. (ESPN, SI, Yahoo)
-9. **✅ J.K. Dobbins → DEN** — 2yr/$20M ($8M gtd). Broncos re-sign their efficient RB. Prove-it deal with incentives. (ESPN, CBS, Heavy)
-10. **✅ Geno Smith → NYJ** (trade from LV) — Jets get R7 + Smith; LV gets R6. Full-circle return for 2013 Jets draftee. Likely NYJ starter. LV paying most of salary. (ESPN, NFL.com, CBS, USA Today)
-11. **✅ Minkah Fitzpatrick → NYJ** (trade from MIA) — Jets send R7 (via LAC). Fitzpatrick signs 3yr/$40M extension with NYJ. 3x All-Pro fills massive secondary need. (ESPN, NFL.com, USA Today, SI)
-12. **✅ Kenneth Gainwell → TB** — 2yr/$14M ($10M gtd). Former PIT MVP RB replaces Rachaad White. (Steelers Depot, Bucs Report)
-13. **✅ Dawson Knox → BUF** — 3yr extension. Keeps Josh Allen's TE through 2028. Cap-friendly restructure. (ESPN, USA Today, Bills.com)
-14. **✅ Rashan Gary → DAL** — 2yr/$32M restructured. Cowboys add pass rush help. (Heavy, Spotrac)
-15. **✅ Jedrick Wills → CHI** — 1yr prove-it deal. Former CLE R1 pick recovering from knee injury. Compete for LT. (Pro Football Rumors, FOX Chicago, USA Today)
+1. **✅ Wan'dale Robinson → TEN** — 4yr/$78M ($38M gtd). Titans' biggest FA signing. WR1 for Cam Ward, reunites with OC Brian Daboll. (ESPN, NFL.com, SI, Heavy)
+2. **✅ John Franklin-Myers → TEN** — 3yr/$63M ($42M gtd). DL from DEN, Saleh reunion. Titans spent $270M+ total in FA. (ESPN, NFL.com)
+3. **✅ David Edwards → NO** — 4yr/$61M ($45M gtd). OL from BUF. Saints building offensive line. (Spotrac)
+4. **✅ Alontae Taylor → TEN** — 3yr/$58M ($42M gtd). CB from NO. Titans secondary overhaul. (ESPN, NFL.com)
+5. **✅ Jaylen Watson → LAR** — 3yr/$51M ($34M gtd). CB from KC. Rams secondary upgrade — NFC West arms race. (Spotrac, ESPN)
+6. **✅ Rashid Shaheed → SEA** — 3yr/$51M ($34.735M gtd, $23M at sign). RE-SIGN. Explosive WR/returner locked in. $17M AAV. (Spotrac, ESPN, SI)
+7. **✅ Zion Johnson → CLE** — 3yr/$49.5M ($32.39M gtd). Guard from LAC. Browns OL rebuild. (Spotrac)
+8. **✅ Kwity Paye → LV** — 3yr/$48M ($31.238M gtd). EDGE from IND. Raiders defensive overhaul. (Spotrac)
+9. **✅ Devin Lloyd → CAR** — 3yr/$45M ($25M gtd). LB from JAX. Panthers defense continues build. (Spotrac)
+10. **✅ Cordale Flott → TEN** — 3yr/$45M ($32M gtd). CB from NYG. Fifth major TEN signing. (Spotrac)
+11. **✅ Alijah Vera-Tucker → NE** — 3yr/$42M ($21M gtd). OL from NYJ. Patriots protect Drake Maye. (Spotrac)
+12. **✅ Quay Walker → LV** — 3yr/$40.5M ($28M gtd). LB from GB. Raiders LB upgrade. (Spotrac)
+13. **✅ Coby Bryant → CHI** — 3yr/$40M ($25.75M gtd). S from SEA. Chicago lands Seattle's starting safety. (Spotrac)
+14. **✅ Isaiah Likely → NYG** — 3yr/$40M. TE from BAL. Harbaugh lands pass-catching TE. (Spotrac)
+15. **✅ Jermaine Eluemunor → NYG** — 3yr/$39M ($25.45M gtd). RT RE-SIGN. Giants protect their OL. (Spotrac)
+16. **✅ Dre'Mont Jones → NE** — 3yr/$36.5M ($23.1M gtd). EDGE from BAL. Patriots pass rush addition. (Spotrac)
+17. **✅ Nakobe Dean → LV** — 3yr/$36.03M ($23M gtd). LB from PHI. Third LV defensive signing. (Spotrac)
+18. **✅ Joseph Ossai → NYJ** — 3yr/$34.5M ($22.49M gtd). EDGE from CIN. Jets add pass rusher. (Spotrac)
+19. **✅ Jalen Thompson → DAL** — 3yr/$33M ($22M gtd). S from ARI. Cowboys add safety — NFC West impact. (Spotrac)
+20. **✅ Kaden Elliss → NO** — 3yr/$33M ($23M gtd). LB from ATL. Saints LB core. (Spotrac)
+21. **✅ Eric Stokes → LV** — 3yr/$30M ($20M gtd). CB from MIN. Fourth LV defensive signing. (Spotrac)
+22. **✅ Cade Otton → TB** — 3yr/$30M ($20M gtd). TE RE-SIGN. Bucs keep their TE. (Spotrac)
+23. **✅ Chig Okonkwo → WSH** — 3yr/$30M. TE from TEN. Commanders TE upgrade. (Spotrac)
+24. **✅ Tyler Biadasz → LAC** — 3yr/$30M ($20M gtd). C from WSH. Chargers OL. (Spotrac)
+25. **✅ John Simpson → BAL** — 3yr/$30M ($17.5M gtd). G from NYJ. Ravens OL. (Spotrac)
+26. **✅ Josh Jobe → SEA** — 3yr/$24M ($14.25M gtd). CB RE-SIGN. Seattle retains CB2. (Spotrac, ESPN, SI)
+27. **✅ Reed Blankenship → HOU** — 3yr/$24.75M ($16.5M gtd). S from PHI. Texans secondary. (Spotrac)
+28. **✅ David Montgomery → HOU** — RB, 2yr/$16.5M ($10M gtd). Trade from DET + new deal. (ESPN, PFR, Spotrac)
+29. **✅ Darnell Mooney → NYG** — WR, 1yr/$10M. Giants WR depth under Harbaugh. (NFL.com, Rapoport)
+30. **✅ Nick Bosa restructure (SF)** — cleared $17.172M cap space. Signals imminent Joey Bosa signing. (NFL.com, Pelissero)
 
-### 📝 New Confirmed Signings (March 13-14 additions)
+### 📝 Additional Confirmed Signings (March 14-15 additions)
 
 | Player | Pos | New Team | Deal | Source |
 |--------|-----|----------|------|--------|
-| ✅ Jaelan Phillips | EDGE | CAR | 4yr/$120M ($80M gtd) | ESPN/Yahoo/SI/Spotrac |
-| ✅ Odafe Oweh | EDGE | WSH | 4yr/$100M ($68M gtd) | NFL.com/ESPN/SI/CBS |
-| ✅ Tyler Linderbaum | C | LV | 3yr/$81M ($60M gtd) | NFL.com/CBS/ESPN/Spotrac |
-| ✅ Romeo Doubs | WR | NE | 4yr/$68-80M (w/incentives) | ESPN/USA Today/CBS |
-| ✅ Bryan Cook | S | CIN | 3yr/$40.25M ($14M gtd) | Spotrac/ESPN/CBS/SI |
-| ✅ Rashan Gary | DE | DAL | 2yr/$32M (restructured) | Heavy/Spotrac |
-| ✅ Devin Bush | LB | CHI | 3yr/$30M ($21M gtd) | SI/Sporting News/Heavy |
-| ✅ Elgton Jenkins | OL | CLE | 2yr/$24M ($20M gtd) | ESPN/Yahoo/FOX |
-| ✅ Javonte Williams | RB | DAL | 3yr/$24M ($16M gtd) | ESPN/SI/Yahoo |
-| ✅ J.K. Dobbins | RB | DEN | 2yr/$20M ($8M gtd) re-sign | ESPN/CBS/Heavy |
-| ✅ Kenneth Gainwell | RB | TB | 2yr/$14M ($10M gtd) | Steelers Depot/Bucs Report |
-| ✅ Dalvin Tomlinson | DT | LAC | 1yr/$7.5M | Spotrac |
-| ✅ Luke Gifford | LB | SF | 2yr/$5.3M | Heavy/Spotrac |
-| ✅ Jedrick Wills | OT | CHI | 1yr deal | PFR/FOX Chicago |
-| ✅ Dareke Young | WR | LV | signed | Heavy/Spotrac |
-| ✅ Jalen Tolbert | WR | MIA | 1yr deal | Spotrac |
-| ✅ Jamaree Salyer | OL | MIA | signed | Heavy |
-| ✅ Tyler Conklin | TE | DET | 1yr deal | Heavy/Spotrac |
-| ✅ Matt Hennessy | C | DAL | signed | Heavy |
-| ✅ Dyami Brown | WR | WSH | 1yr/$3M | Spotrac |
-| ✅ Jaleel McLaughlin | RB | DEN | 1yr (re-sign) | Spotrac |
-| ✅ Michael Carter II | CB | PHI | 1yr/$2.765M (restructured) | Heavy |
-| ✅ Elijah Campbell | S | NYG | 1yr deal | Heavy |
-| ✅ Dawson Knox | TE | BUF | 3yr extension | ESPN/USA Today/Bills.com |
+| ✅ Cade Mays | C | DET | 3yr/$25M ($14M gtd) | Spotrac |
+| ✅ Leo Chenal | LB | WSH | 3yr/$24.75M ($12.4M gtd) | Spotrac |
+| ✅ Alohi Gilman | S | KC | 3yr/$24.75M ($15M gtd) | Spotrac |
+| ✅ Charlie Kolar | TE | LAC | 3yr/$24.3M ($17M gtd) | Spotrac |
+| ✅ Daniel Bellinger | TE | TEN | 3yr/$24M ($14.01M gtd) | Spotrac |
+| ✅ Tim Settle | DL | WSH | 3yr/$23.49M ($12M gtd) re-sign | Spotrac |
+| ✅ Demario Davis | LB | NYJ | 2yr/$22M ($15M gtd) | Spotrac |
+| ✅ Khyiris Tonga | DL | KC | 3yr/$21M ($14M gtd) | Spotrac |
+| ✅ Braden Smith | RT/G | HOU | 2yr/$20M ($13.5M gtd) | OTC/Spotrac |
+| ✅ Arden Key | EDGE | IND | 2yr/$20M ($11M gtd) | Spotrac |
+| ✅ Julian Hill | TE | NE | 3yr/$18M | Spotrac |
+| ✅ Quincy Williams | LB | CLE | 2yr/$17M | Spotrac/OTC |
+| ✅ Micheal Clemons | EDGE | IND | 3yr/$17M ($6.99M gtd) | Spotrac |
+| ✅ Kendrick Bourne | WR | ARI | 2yr/$10M ($6.5M gtd) | OTC |
+| ✅ Greg Newsome II | CB | NYG | 1yr/$8M | OTC |
+| ✅ Braxton Jones | OL | CHI | 1yr/$5M ($3M gtd) re-sign | OTC |
+| ✅ Jake Hummel | LB | HOU | 2yr/$4.75M | OTC |
+| ✅ Evan Brown | G | HOU | 1yr/$3.5M | NFL.com |
+| ✅ Dominique Robinson | EDGE | HOU | 1yr/$3M ($1M gtd) | OTC |
+| ✅ Grant Calcaterra | TE | PHI | 1yr/$2M re-sign | OTC |
+| ✅ Kene Nwangwu | RB | NYJ | 1yr/$2M re-sign | NFL.com |
+| ✅ Isiah Pacheco | RB | DET | 1yr/$1.81M | OTC |
+| ✅ Mitch Wishnowsky | P | BUF | 1yr/$1.475M | OTC |
+| ✅ Trey Lance | QB | LAC | 1yr deal | NFL.com |
+| ✅ Josh Johnson | QB | CIN | 1yr | NFL.com |
+| ✅ Jerome Ford | RB | WSH | 1yr deal | NFL.com |
+| ✅ Corliss Waitman | P | SF | signed | NFL.com |
 
-### 📝 New Confirmed Trades (March 13-14 additions)
+### 📝 New Confirmed Trades (March 14-15 additions)
 
 | Trade | Details | Source |
 |-------|---------|--------|
-| ✅ Geno Smith | LV → NYJ | NYJ gets Smith + R7; LV gets R6. LV paying most salary. | ESPN/NFL.com/CBS/USA Today |
-| ✅ Minkah Fitzpatrick | MIA → NYJ | NYJ sends R7 (via LAC). Fitzpatrick signs 3yr/$40M ext. | ESPN/NFL.com/USA Today/SI |
+| ✅ David Montgomery | DET → HOU | HOU sends Juice Scruggs + 2026 R4 + 2027 R7. Montgomery gets new 2yr/$16.5M deal. | ESPN/PFR/Spotrac |
+
+### 📝 Restructures (March 14-15)
+
+| Player | Team | Details | Cap Impact | Source |
+|--------|------|---------|------------|--------|
+| ✅ Nick Bosa | SF | Contract restructured | Cleared $17.172M cap space | NFL.com/Pelissero |
+| ✅ Calvin Ridley | TEN | Restructured to stay | Keeps WR on roster for 2026 | NFL.com/Pelissero |
 
 ---
 
-## ⚠️ Active Rumors — 2026-03-14
+## ⚠️ Active Rumors — 2026-03-15
 
 ### 🟢 Likely (Multiple Tier 1/2 sources or specific details emerging)
 
 | Player | Rumored Destination | Source(s) | Tier | First Reported | Notes |
 |--------|-------------------|-----------|------|----------------|-------|
-| Draft: Fernando Mendoza (QB) | LV Raiders #1 overall | ESPN, PFF, multiple draft analysts | Tier 1-2 | 2026-03 | Near-consensus #1 QB to Vegas. Linderbaum signing reinforces OL-first strategy. |
-| Joey Bosa (EDGE) | SF 49ers | 49ersWebZone, ESPN, Sporting News, Heavy, NinerWire | Tier 2 | 2026-03 | SF strong favorite for Bosa reunion with brother Nick. ESPN calls it "obvious fit." No deal done yet. BAL, CHI also linked. Still 🟢. |
-| Maxx Crosby (EDGE) | Trade from LV — market cooled | ESPN, SI, NFL.com | Tier 1-2 | 2026-03-12 | BAL trade voided (failed physical — meniscus surgery). Agent says "ahead of schedule" but medical red flags limit market. NE, DAL, JAX had prior interest but value depressed. LV deciding whether to keep or seek new suitor. |
+| Draft: Fernando Mendoza (QB) | LV Raiders #1 overall | ESPN, PFF, multiple draft analysts | Tier 1-2 | 2026-03 | Near-consensus #1 QB to Vegas. Linderbaum + Paye + Walker + Dean all reinforce build-around-Mendoza strategy. |
+| Joey Bosa (EDGE) | SF 49ers | NBC Sports, ESPN, Heavy, Sporting News, Newsweek, CBS | Tier 1-2 | 2026-03 | **Nick Bosa restructure on 3/14 cleared $17.172M.** Multiple Tier 1-2 reporters say "keep an eye open." Bosa family supportive on social media. No deal done. Signing appears imminent. |
+| Aaron Rodgers (QB) | PIT Steelers | Heavy, CBS, The Athletic, Yardbarker, SI, ClutchPoints | Tier 1-2 | 2026-03-08 | **⬆️ UPGRADED from 🟡 back to 🟢.** Mark Kaboly (The Athletic) says return "near-certain." Decision expected before draft (end of March). Rodgers says undecided publicly but PIT insiders confident. PIT not pursuing other QBs. |
+| Maxx Crosby (EDGE) | Trade from LV — market cooled | ESPN, SI, NFL.com | Tier 1-2 | 2026-03-12 | BAL trade voided (failed physical). No new suitor has emerged. LV deciding whether to keep or seek trade at lower return. Market depressed. |
 
 ### 🟡 Possible (Single credible source or indirect signals)
 
 | Player | Rumored Destination | Source(s) | Tier | First Reported | Notes |
 |--------|-------------------|-----------|------|----------------|-------|
-| Aaron Rodgers (QB) | PIT Steelers | Heavy, CBS, Yardbarker, SteelerNation, FanSided, TotalProSports | Tier 1-2 | 2026-03-08 | **⬇️ DOWNGRADED from 🟢 to 🟡.** Insiders now say return "unlikely" and chances "minuscule." Retirement appears most probable path. No contract offer on table. Rodgers "on his own timeline." New HC McCarthy keeping door open. CB Dean expects him back (internal optimism). Decision expected before draft but could drag to June. PIT built win-now roster hoping he returns — huge gamble if he retires. |
-| Stefon Diggs (WR) | TEN, KC, BAL, DEN, PIT all linked | ESPN, CBS, FOX, SI, Athlon, Bleacher Report | Tier 2 | 2026-03-12 | Released by NE. 32 years old, 85/1,013/4 in 2025. Still no confirmed destination. TEN (WR-needy + Cam Ward), KC (Mahomes needs WR1), BAL (hometown), PIT (Metcalf complement) all logical. |
-| Jauan Jennings (WR) | NE, DEN, LAC, SEA | ESPN, NBC Sports Bay Area, CBS, Sporting News, RotoBaller | Tier 2 | 2026-03 | Still unsigned. Age (29) and deep veteran WR market slowing deal. SF closed door after Evans signing. ESPN projects SEA as landing spot. ~$12-16M AAV range. |
-| Russell Wilson (QB) | Market stalled | FOX Sports, Yahoo, Bleacher Report | Tier 2-3 | 2026-03 | Lost starting job to Jaxson Dart with NYG. Minimal interest. Bridge QB only if injury occurs. |
+| Stefon Diggs (WR) | BAL frontrunner, KC/LAC/WSH also linked | ESPN, CBS, Bleacher Report, FOX, Sportsnaut, SI | Tier 1-2 | 2026-03-12 | BAL now consensus frontrunner per odds (hometown, Lamar needs WR). KC (Mahomes), LAC, WSH also in mix. Still no confirmed deal. 32 years old, 85/1,013/4 in 2025. |
+| Jauan Jennings (WR) | NE, DEN, LAC, SEA | ESPN, NBC Sports Bay Area, CBS, Sporting News | Tier 2 | 2026-03 | Still unsigned. ESPN projects SEA as landing spot. ~$12-16M AAV range. SF door closed after Evans signing. |
+| Russell Wilson (QB) | Market stalled | FOX Sports, Yahoo, Bleacher Report | Tier 2-3 | 2026-03 | Lost starting job to Jaxson Dart with NYG. Minimal interest. Bridge QB only. |
 | Kirk Cousins (QB) | Market minimal | Yahoo, Bleacher Report | Tier 2-3 | 2026-03-13 | Released by ATL. Age 37, declining play. Ultra-limited interest. |
 | Jaylen Waddle (WR) | Unknown | ESPN | Tier 2 | 2025 midseason | MIA against dealing. No new info. |
-| Jakobi Meyers (WR) | NE | Sporting News | Tier 2 | 2026-03 | Requested trade from LV. PIT less likely after Pittman. NE now has Doubs — Meyers interest may cool. |
+| Jakobi Meyers (WR) | NE less likely | Sporting News | Tier 2 | 2026-03 | Requested trade from LV. NE now has Doubs + Vera-Tucker + Jones — Meyers interest likely cooled. |
 | Kyle Pitts (TE) | Unknown | Sportsnaut | Tier 2-3 | 2026-03 | "Change of scenery" candidate. No new developments. |
-| Draft: CHI trading up | CHI with extra picks | Pro Football Rumors | Tier 2 | 2026-03 | Bears have R1 + R2 (from BUF). Added Bush + Wills. EDGE or QB target if one slides. |
-| Draft: NYJ trading up | NYJ with 2 first-rounders | Pro Sports Transactions | Tier 2 | 2026-03 | Jets have own R1 (#2) + IND's R1. Now have Geno Smith + Fitzpatrick. Could still package for franchise QB. |
-| Draft: ARI #3 pick | ARI trade scenarios warming | ESPN, Sharp Football, Draft Network, ClutchPoints | Tier 2 | 2026-03 | **⬆️ UPGRADED from 🔴 Cooling to 🟡 Active.** ESPN mocks show ARI taking non-QB at #3 (EDGE Bailey) then trading BACK into R1 for QB Ty Simpson. Multiple trade scenarios being gamed. ARI at center of pre-draft buzz. |
+| Draft: CHI trading up | CHI with extra picks | Pro Football Rumors | Tier 2 | 2026-03 | Bears have R1 + R2 (from BUF). Added Bush + Wills + Bryant in FA. EDGE or QB target if one slides. |
+| Draft: NYJ trading up | NYJ with 2 first-rounders | Pro Sports Transactions | Tier 2 | 2026-03 | Jets have own R1 (#2) + IND's R1. Now have Geno Smith + Fitzpatrick + Ossai + Davis. Could still package for franchise QB. |
+| Draft: ARI #3 pick | ARI trade scenarios warming | ESPN, Sharp Football, Draft Network, ClutchPoints | Tier 2 | 2026-03 | Still 🟡 Active. ESPN mocks show ARI taking EDGE or trading back for QB. Charles Davis mock has ARI selecting Notre Dame RB. |
 
 ### 🔴 Speculative (Fan/media speculation, single unverified claims)
 
@@ -118,6 +142,7 @@ _Chronological feed of confirmed moves since last dashboard update (2026-03-13)_
 | Romeo Doubs (WR) | NE | 4yr/$68-80M | 2026-03-13 | Not previously tracked as rumor — surprise signing. |
 | Geno Smith (QB) | NYJ (trade) | R6/R7 swap | 2026-03-13 | Not tracked — LV rebuild move. |
 | Minkah Fitzpatrick (S) | NYJ (trade) | 3yr/$40M ext | 2026-03-13 | Not tracked — MIA rebuild fire sale. |
+| David Montgomery (RB) | HOU (trade) | 2yr/$16.5M new deal | 2026-03-15 | Not tracked — DET→HOU trade + upgraded contract. |
 
 ### ❌ Recently Debunked / Resolved
 
@@ -129,13 +154,13 @@ _Chronological feed of confirmed moves since last dashboard update (2026-03-13)_
 | ARI actively shopping #3 pick | 🔄 Revised — Not shopping outright, but exploring complex draft-day trade scenarios (pick at #3 then trade back in). Upgraded back to 🟡. | 2026-03-14 |
 | Maxx Crosby to BAL | ❌ Voided — Failed physical. | 2026-03-12 |
 | Mahomes backup = Minshew | ❌ Debunked — Minshew signed with ARI. | 2026-03-12 |
-| Rodgers → PIT (confirmed) | ❌ NOT confirmed — ⬇️ Downgraded. Retirement increasingly likely. | 2026-03-14 |
+| Rodgers → PIT (confirmed) | 🔄 **RE-UPGRADED to 🟢 Likely** — Steelers insiders now "near-certain" of return. Decision before draft. | 2026-03-15 |
 
 ---
 
 ## 🔒 Confirmed Transactions — Complete 2026 FA Tracker
 
-_Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sports, Yahoo, SI, Heavy_
+_Last updated: 2026-03-15 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sports, Yahoo, SI, Heavy, OTC_
 
 ### Major Signings (≥$20M total or significant impact)
 
@@ -147,34 +172,75 @@ _Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sport
 | ✅ Odafe Oweh | EDGE | WSH | 4yr/$100M ($68M gtd) | NFL.com/ESPN/SI/CBS |
 | ✅ Daniel Jones | QB | IND | 2yr/$88M | RotoBaller |
 | ✅ Tyler Linderbaum | C | LV | 3yr/$81M ($60M gtd) | NFL.com/CBS/ESPN/Spotrac |
+| ✅ Wan'dale Robinson | WR | TEN | 4yr/$78M ($38M gtd) | ESPN/NFL.com/SI |
 | ✅ Romeo Doubs | WR | NE | 4yr/$68-80M (w/incentives) | ESPN/USA Today/CBS |
 | ✅ Malik Willis | QB | MIA | 3yr/$67.5M ($45M gtd) | RotoBaller/NFL.com |
+| ✅ John Franklin-Myers | DL | TEN | 3yr/$63M ($42M gtd) | ESPN/NFL.com |
+| ✅ David Edwards | G/T | NO | 4yr/$61M ($45M gtd) | Spotrac |
 | ✅ Mike Evans | WR | SF | 3yr/$60.4M | NFL Trade Rumors |
 | ✅ Boye Mafe | DE | CIN | 3yr/$60M | FOX Sports |
 | ✅ Michael Pittman Jr. | WR | PIT | 3yr/$59M ext (trade from IND) | NFL.com/CBS/SI |
+| ✅ Alontae Taylor | CB | TEN | 3yr/$58M ($42M gtd) | ESPN/NFL.com |
 | ✅ Connor McGovern | C | BUF | 4yr/$52M ($32M gtd) | NFL.com |
 | ✅ Travis Etienne Jr. | RB | NO | 4yr/$52M | RotoBaller |
+| ✅ Rashid Shaheed | WR | SEA | 3yr/$51M ($34.735M gtd) re-sign | Spotrac/ESPN/SI |
+| ✅ Jaylen Watson | CB | LAR | 3yr/$51M ($34M gtd) | Spotrac/ESPN |
+| ✅ Zion Johnson | G | CLE | 3yr/$49.5M ($32.39M gtd) | Spotrac |
+| ✅ Kwity Paye | EDGE | LV | 3yr/$48M ($31.238M gtd) | Spotrac |
 | ✅ Kenneth Walker III | RB | KC | 3yr/$45M | RotoBaller |
+| ✅ Devin Lloyd | LB | CAR | 3yr/$45M ($25M gtd) | Spotrac |
+| ✅ Cordale Flott | CB | TEN | 3yr/$45M ($32M gtd) | Spotrac |
 | ✅ Bradley Chubb | LB | BUF | 3yr/$43.5M ($29M gtd) | NFL.com |
+| ✅ Alijah Vera-Tucker | T/G | NE | 3yr/$42M ($21M gtd) | Spotrac |
+| ✅ Quay Walker | LB | LV | 3yr/$40.5M ($28M gtd) | Spotrac |
 | ✅ Minkah Fitzpatrick | S | NYJ | 3yr/$40M ext (trade from MIA) | ESPN/NFL.com/USA Today |
 | ✅ Bryan Cook | S | CIN | 3yr/$40.25M ($14M gtd) | Spotrac/ESPN/CBS |
+| ✅ Coby Bryant | S | CHI | 3yr/$40M ($25.75M gtd) | Spotrac |
+| ✅ Isaiah Likely | TE | NYG | 3yr/$40M | Spotrac |
+| ✅ Jermaine Eluemunor | RT | NYG | 3yr/$39M ($25.45M gtd) re-sign | Spotrac |
 | ✅ Jamel Dean | CB | PIT | 3yr/$36.75M | ESPN/PFN |
+| ✅ Dre'Mont Jones | EDGE | NE | 3yr/$36.5M ($23.1M gtd) | Spotrac |
 | ✅ Tremaine Edmunds | LB | NYG | 3yr/$36M ($24M gtd) | NFLTradeRumors/Giants.com |
+| ✅ Nakobe Dean | LB | LV | 3yr/$36.03M ($23M gtd) | Spotrac |
 | ✅ Jalen Nailor | WR | LV | 3yr/$35M ($23M gtd) | PFR/Spotrac/SI |
+| ✅ Joseph Ossai | EDGE | NYJ | 3yr/$34.5M ($22.49M gtd) | Spotrac |
+| ✅ Jalen Thompson | S | DAL | 3yr/$33M ($22M gtd) | Spotrac |
+| ✅ Kaden Elliss | LB | NO | 3yr/$33M ($23M gtd) | Spotrac |
 | ✅ Orlando Brown Jr. | LT | CIN | 2yr/$32M extension | ESPN |
 | ✅ Rashan Gary | DE | DAL | 2yr/$32M (restructured) | Heavy/Spotrac |
 | ✅ Isaac Seumalo | OG | ARI | 3yr/$31.5M | NFL.com |
 | ✅ Devin Bush | LB | CHI | 3yr/$30M ($21M gtd) | SI/Sporting News/Heavy |
+| ✅ Cade Otton | TE | TB | 3yr/$30M ($20M gtd) re-sign | Spotrac |
+| ✅ Chig Okonkwo | TE | WSH | 3yr/$30M | Spotrac |
+| ✅ Tyler Biadasz | C | LAC | 3yr/$30M ($20M gtd) | Spotrac |
+| ✅ John Simpson | G | BAL | 3yr/$30M ($17.5M gtd) | Spotrac |
+| ✅ Eric Stokes | CB | LV | 3yr/$30M ($20M gtd) | Spotrac |
 | ✅ Jonathan Allen | DT | CIN | 2yr/$28M | Spotrac/ESPN |
+| ✅ Cade Mays | C | DET | 3yr/$25M ($14M gtd) | Spotrac |
+| ✅ Leo Chenal | LB | WSH | 3yr/$24.75M ($12.4M gtd) | Spotrac |
+| ✅ Reed Blankenship | S | HOU | 3yr/$24.75M ($16.5M gtd) | Spotrac |
+| ✅ Alohi Gilman | S | KC | 3yr/$24.75M ($15M gtd) | Spotrac |
+| ✅ Charlie Kolar | TE | LAC | 3yr/$24.3M ($17M gtd) | Spotrac |
+| ✅ Josh Jobe | CB | SEA | 3yr/$24M ($14.25M gtd) re-sign | Spotrac/ESPN/SI |
+| ✅ Daniel Bellinger | TE | TEN | 3yr/$24M ($14.01M gtd) | Spotrac |
 | ✅ Elgton Jenkins | OL | CLE | 2yr/$24M ($20M gtd) | ESPN/Yahoo/FOX |
 | ✅ Javonte Williams | RB | DAL | 3yr/$24M ($16M gtd) | ESPN/SI/Yahoo |
+| ✅ Tim Settle | DL | WSH | 3yr/$23.49M ($12M gtd) re-sign | Spotrac |
 | ✅ Javon Hargrave | DT | GB | 2yr/$23M | FOX Sports |
+| ✅ Demario Davis | LB | NYJ | 2yr/$22M ($15M gtd) | Spotrac |
+| ✅ Khyiris Tonga | DL | KC | 3yr/$21M ($14M gtd) | Spotrac |
 | ✅ J.K. Dobbins | RB | DEN | 2yr/$20M ($8M gtd) re-sign | ESPN/CBS |
+| ✅ Braden Smith | RT/G | HOU | 2yr/$20M ($13.5M gtd) | OTC/Spotrac |
+| ✅ Arden Key | EDGE | IND | 2yr/$20M ($11M gtd) | Spotrac |
 
 ### Mid-Tier Signings ($5M–$20M)
 
 | Player | Pos | New Team | Deal | Source |
 |--------|-----|----------|------|--------|
+| ✅ Julian Hill | TE | NE | 3yr/$18M | Spotrac |
+| ✅ Quincy Williams | LB | CLE | 2yr/$17M | Spotrac/OTC |
+| ✅ Micheal Clemons | EDGE | IND | 3yr/$17M ($6.99M gtd) | Spotrac |
+| ✅ David Montgomery | RB | HOU | 2yr/$16.5M ($10M gtd) trade+new deal | ESPN/PFR/Spotrac |
 | ✅ Kenneth Gainwell | RB | TB | 2yr/$14M ($10M gtd) | Steelers Depot/Bucs Report |
 | ✅ Braden Mann | P | PHI | 4yr/$14M | ESPN |
 | ✅ Nick Cross | S | WSH | 2yr/$14M | CBS Sports |
@@ -182,7 +248,10 @@ _Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sport
 | ✅ Tyler Allgeier | RB | ARI | 2yr/$12.25M | RotoBaller |
 | ✅ Vederian Lowe | OT | SF | 2yr/$12M | NFLTradeRumors |
 | ✅ Malcolm Koonce | EDGE | LV | 1yr/$11M (re-signed) | Raiders.com |
+| ✅ Darnell Mooney | WR | NYG | 1yr/$10M | NFL.com/Rapoport |
+| ✅ Kendrick Bourne | WR | ARI | 2yr/$10M ($6.5M gtd) | OTC |
 | ✅ Keaton Mitchell | RB | LAC | 2yr/$9.25M | FOX Sports |
+| ✅ Greg Newsome II | CB | NYG | 1yr/$8M | OTC |
 | ✅ Dre Greenlaw | LB | SF | 1yr/$7.5M | Sporting News |
 | ✅ Dalvin Tomlinson | DT | LAC | 1yr/$7.5M | Spotrac |
 | ✅ Kenny Pickett | QB | CAR | 1yr/$7.5M | PFF |
@@ -192,21 +261,31 @@ _Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sport
 | ✅ Chauncey Gardner-Johnson | S | BUF | 1yr/$6M | NFL.com/USA Today |
 | ✅ Gardner Minshew | QB | ARI | 1yr/$5.75M | RotoBaller/PFF |
 | ✅ Jaquan Brisker | S | PIT | 1yr/$5.5M | ESPN |
+| ✅ Connor Heyward | FB/TE | LV | 2yr/$5.5M | NFLTradeRumors |
 | ✅ Chidobe Awuzie | CB | BAL | 1yr/$5M | Ravens.com/ESPN |
 | ✅ Luke Gifford | LB | SF | 2yr/$5.3M | Heavy/Spotrac |
-| ✅ Connor Heyward | FB/TE | LV | 2yr/$5.5M | NFLTradeRumors |
+| ✅ Braxton Jones | OL | CHI | 1yr/$5M ($3M gtd) re-sign | OTC |
 
 ### Value Signings (<$5M or terms not fully reported)
 
 | Player | Pos | New Team | Deal | Source |
 |--------|-----|----------|------|--------|
 | ✅ Calvin Austin | WR | NYG | 1yr/$4.5M | NFL.com |
+| ✅ Jake Hummel | LB | HOU | 2yr/$4.75M | OTC |
+| ✅ Evan Brown | G | HOU | 1yr/$3.5M | NFL.com |
 | ✅ Dyami Brown | WR | WSH | 1yr/$3M | Spotrac |
+| ✅ Dominique Robinson | EDGE | HOU | 1yr/$3M ($1M gtd) | OTC |
 | ✅ Michael Carter II | CB | PHI | 1yr/$2.765M (restructured) | Heavy |
 | ✅ Rachaad White | RB | WSH | 1yr/$2M | CBS Sports |
+| ✅ Grant Calcaterra | TE | PHI | 1yr/$2M re-sign | OTC |
+| ✅ Kene Nwangwu | RB | NYJ | 1yr/$2M re-sign | NFL.com |
+| ✅ Isiah Pacheco | RB | DET | 1yr/$1.81M | OTC |
 | ✅ Tua Tagovailoa | QB | ATL | 1yr/$1.3M (vet min) | ESPN/NFL.com/CBS |
+| ✅ Mitch Wishnowsky | P | BUF | 1yr/$1.475M | OTC |
 | ✅ Kyler Murray | QB | MIN | 1yr/vet minimum | CBS/Bleacher Report |
 | ✅ Kyle Allen | QB | BUF | 2yr deal | NFL.com |
+| ✅ Trey Lance | QB | LAC | 1yr deal | NFL.com/Pelissero |
+| ✅ Josh Johnson | QB | CIN | 1yr | NFL.com |
 | ✅ Tutu Atwell | WR | MIA | 1yr deal | NFL.com |
 | ✅ Cobie Durant | CB | DAL | 1yr deal | ClutchPoints |
 | ✅ Jonathan Jones | CB | PHI | 1yr deal | NFL.com/PFF |
@@ -222,6 +301,8 @@ _Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sport
 | ✅ Elijah Campbell | S | NYG | 1yr deal | Heavy |
 | ✅ Emari Demercado | RB | KC | 1yr deal | NFL.com |
 | ✅ Dawson Knox | TE | BUF | 3yr extension | ESPN/USA Today/Bills.com |
+| ✅ Jerome Ford | RB | WSH | 1yr deal | NFL.com/Rapoport |
+| ✅ Corliss Waitman | P | SF | signed | NFL.com |
 
 ### Confirmed Trades
 
@@ -242,6 +323,7 @@ _Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sport
 | ✅ Taron Johnson | BUF → LV | Under contract thru 2027 | NFL.com/ESPN |
 | ✅ Geno Smith | LV → NYJ | NYJ gets Smith + R7; LV gets R6 | ESPN/NFL.com/CBS |
 | ✅ Minkah Fitzpatrick | MIA → NYJ | NYJ sends R7 (via LAC). 3yr/$40M ext. | ESPN/NFL.com/USA Today |
+| ✅ David Montgomery | DET → HOU | HOU sends Juice Scruggs + 2026 R4 + 2027 R7. New 2yr/$16.5M deal. | ESPN/PFR/Spotrac |
 | ❌ Maxx Crosby | LV → BAL | **VOIDED** — Failed physical. 2 R1s agreed. | ESPN/BR/SBNation |
 
 ### Notable Releases/Cuts/Retirements
@@ -262,18 +344,18 @@ _Last updated: 2026-03-14 via ESPN, NFL.com, CBS Sports, Spotrac, PFF, FOX Sport
 
 ## 🏷️ Top Unsigned Free Agents
 
-_Last updated: 2026-03-14 via ESPN, NFL.com, CBS, Sporting News, PFF, Heavy_
+_Last updated: 2026-03-15 via ESPN, NFL.com, CBS, Sporting News, PFF, Heavy, Bleacher Report_
 
 ### Tier 1 — Impact Starters (Still Available)
 
 | Player | Pos | Age | Former Team | Reported Interest | Notes |
 |--------|-----|-----|-------------|-------------------|-------|
-| Aaron Rodgers | QB | 42 | PIT (2025) | PIT (cooling), retirement likely | ⬇️ Return increasingly unlikely. No contract offer. Decision before draft. |
-| Stefon Diggs | WR | 32 | NE | TEN, KC, BAL, DEN, PIT | Elite route-runner. Market forming but no deal yet. |
-| Jauan Jennings | WR | 28 | SF | NE, DEN, LAC, SEA | Top remaining WR FA. Age + deep market slowing deal. |
-| Joey Bosa | EDGE | 31 | BUF (2025) | SF (strong favorite) | Bosa brothers reunion angle. ESPN calls it "obvious." No deal done. |
-| Deebo Samuel | WR | 30 | WSH (voided) | Unknown | Contract voided with WSH. Now UFA. ~$13-16M/yr. |
-| Kirk Cousins | QB | 37 | ATL | Minimal | Released by ATL. Declining play + age. |
+| Aaron Rodgers | QB | 42 | PIT (2025) | PIT (⬆️ likely) | **⬆️ UPGRADED.** Insiders now "near-certain" of return. Decision before draft. |
+| Stefon Diggs | WR | 32 | NE | BAL (frontrunner), KC, LAC, WSH | BAL now consensus favorite. Still no deal after Day 4. |
+| Jauan Jennings | WR | 28 | SF | NE, DEN, LAC, SEA | Top remaining WR FA. ESPN projects SEA. |
+| Joey Bosa | EDGE | 31 | BUF (2025) | SF (strong favorite) | Bosa restructure clears $17M. Signing appears imminent. |
+| Deebo Samuel | WR | 30 | WSH (voided) | Unknown | Contract voided with WSH. Now UFA. Quiet market so far. |
+| Kirk Cousins | QB | 37 | ATL | Minimal | Released by ATL. Ultra-limited interest. |
 
 ### Tier 2 — Quality Starters/Rotational
 
@@ -412,16 +494,18 @@ _Last updated: 2026-03-14 — No new coaching changes since last sweep._
 
 ## 📊 Key Storylines to Monitor
 
-1. **Rodgers decision ⬇️** — Insiders now say return to PIT is "unlikely" and chances are "minuscule." Retirement appears most probable. PIT's all-in gamble (Metcalf, Pittman, Dean, Dowdle) may backfire if Rodgers doesn't come back. Decision expected before draft but could drag to June.
-2. **Maxx Crosby limbo** — BAL trade voided. Market cooled due to medical concerns (meniscus). Agent insists recovery on track. LV must decide: keep or find new trade partner at lower return.
-3. **Mahomes recovery** — "Way ahead of schedule." Week 1 target looking realistic. KC added Walker III + Demercado but still needs vet backup QB.
-4. **WR carousel (Wave 2)** — Diggs, Samuel, Jennings, Allen, Lockett all still unsigned. Bidding wars expected as teams fill remaining needs.
-5. **ARI #3 pick revival** — Trade buzz warming again. ESPN mocks ARI taking EDGE at #3 then trading back into R1 for QB Ty Simpson. Complex draft-day scenarios being gamed.
-6. **NYJ mega-rebuild** — Added Geno Smith + Minkah Fitzpatrick via trade, have 2 first-rounders. Jets becoming dark horse playoff contender.
-7. **MIA fire sale** — Traded Fitzpatrick for R7. Already lost Tua (dead cap $99M over 2 years). Full rebuild mode under Hafley.
-8. **CHI/NYJ draft capital** — Both teams stockpiled picks. Trade-up candidates for franchise-altering moves.
-9. **EDGE market exploded** — Phillips ($30M AAV), Oweh ($25M AAV), Hendrickson at $28M. Market reset for pass rushers.
-10. **SF roster churn** — Evans signed, Huff retired, added Lowe + Greenlaw + Gifford + Hobbs + Odighizuwa (trade). Bosa reunion still pending.
+1. **Rodgers decision ⬆️** — **UPGRADED back to 🟢 Likely.** Mark Kaboly (The Athletic) says return "near-certain." Decision expected before draft (end of March). PIT assembled win-now roster (Metcalf, Pittman, Dean, Dowdle) and is NOT pursuing other QBs. Biggest remaining domino in the NFL.
+2. **Joey Bosa to SF imminent?** — Nick Bosa restructure cleared $17.172M cap space on 3/14. Multiple Tier 1-2 reporters: "keep an eye open." NFC West EDGE arms race would escalate massively.
+3. **TEN spending spree ($270M+)** — Titans building a contender around Cam Ward overnight. Robinson, Franklin-Myers, Taylor, Flott, Bellinger = franchise-defining bet. Article candidate.
+4. **LV defensive overhaul** — Paye ($48M), Walker ($40.5M), Dean ($36M), Stokes ($30M) = $154M+ on defense. Building around Mendoza (draft) + Crosby.
+5. **Maxx Crosby limbo** — BAL trade voided. No new suitor. LV must decide: keep or find new trade partner at lower return.
+6. **WR carousel (Wave 2)** — Diggs (BAL favored), Jennings (SEA projected), Samuel, Allen, Lockett all still unsigned. Market thinning but elite WRs remain.
+7. **SEA retention strategy** — Shaheed ($51M) and Jobe ($24M) re-signed, but lost Bryant to CHI ($40M). Safety now critical need. $44M cap space remains.
+8. **NFC West arms race intensifying** — LAR adds Watson, SF preps Joey Bosa, SEA retains Shaheed/Jobe, ARI loses Thompson but adds Bourne.
+9. **NYG Harbaugh build** — Likely, Eluemunor, Mooney, Newsome, Edmunds = serious upgrades. Fastest rebuild under a new HC.
+10. **MIA fire sale continues** — Willis ($67.5M) as new QB, but traded Fitzpatrick, lost Tua. $67M dead cap. Full rebuild.
+11. **Mahomes recovery** — "Way ahead of schedule." Week 1 target. KC added Gilman, Tonga, Walker III. Built to contend even during recovery.
+12. **ARI #3 pick + draft buzz** — Charles Davis mocks Notre Dame RB to ARI. Trade-back scenarios still active. SEA also mocked for Notre Dame RB at #32.
 
 ---
 

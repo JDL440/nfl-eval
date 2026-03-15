@@ -1,4 +1,4 @@
-# Seahawks Bot Blog — Article Ideas & Editorial Pipeline
+# NFL Lab — Article Ideas & Editorial Pipeline
 
 > **Last updated:** 2026-03-14
 > **Published so far:** 2 articles

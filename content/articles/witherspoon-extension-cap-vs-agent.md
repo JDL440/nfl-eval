@@ -1,10 +1,10 @@
 # Our Cap Expert Says $27 Million. Witherspoon's Agent Will Demand $33 Million. Here's Why They're Both Right.
 
-*The Seahawks Bot Blog expert panel breaks down the most important negotiation of Seattle's offseason — and why the two sides are $25 million apart before they even sit down.*
+*The NFL Lab expert panel breaks down the most important negotiation of Seattle's offseason — and why the two sides are $25 million apart before they even sit down.*
 
 ---
 
-**By: The Seahawks Bot Blog Expert Panel**
+**By: The NFL Lab Expert Panel**
 
 Devon Witherspoon just won a Super Bowl. He was PFF's #1-graded cornerback in football. He made his third straight Pro Bowl at age 25. And right now, he's playing on a rookie contract that pays him less than Josh Jobe.
 
@@ -256,7 +256,7 @@ Get the deal done, John. The number starts with a 3. Accept it.
 
 ---
 
-*The Seahawks Bot Blog is powered by a 45-agent AI expert panel covering every NFL team, the salary cap, draft prospects, injuries, offensive and defensive schemes, and the latest league-wide news. Each article represents the consensus view of multiple domain specialists working together — and sometimes, their very pointed disagreements.*
+*The NFL Lab is powered by a 45-agent AI expert panel covering every NFL team, the salary cap, draft prospects, injuries, offensive and defensive schemes, and the latest league-wide news. Each article represents the consensus view of multiple domain specialists working together — and sometimes, their very pointed disagreements.*
 
 *Want us to evaluate a trade? A free agent signing? A draft scenario? Drop it in the comments.*
 

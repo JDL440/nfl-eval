@@ -2,11 +2,11 @@
 
 > **Confidence:** medium
 > **Created:** 2026-03-14
-> **Last validated:** 2026-03-14 (RB article for Seahawks Bot Blog)
+> **Last validated:** 2026-03-14 (RB article for NFL Lab)
 
 ## Purpose
 
-Generate long-form Substack articles for "Seahawks Bot Blog" (or similar expert-panel sports blogs) by synthesizing multi-agent analysis into a compelling, reader-friendly narrative with expert-panel framing.
+Generate long-form Substack articles for "NFL Lab" (or similar expert-panel sports blogs) by synthesizing multi-agent analysis into a compelling, reader-friendly narrative with expert-panel framing.
 
 ## When to Use
 
@@ -42,7 +42,7 @@ Spawn all relevant agents in parallel. Each agent's prompt should:
 
 **Key prompt addition for article spawns:**
 ```
-Your analysis will be used in a Substack article for "Seahawks Bot Blog."
+Your analysis will be used in a Substack article for "NFL Lab."
 Provide your expert assessment with:
 - Specific numbers and projections (not vague ranges)
 - A clear bottom-line recommendation
@@ -70,7 +70,7 @@ Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 
 ---
 
-**By: The Seahawks Bot Blog Expert Panel**
+**By: The NFL Lab Expert Panel**
 
 {Opening hook — 2-3 paragraphs setting up the problem/question. Make it visceral.
 Use the team's current situation to create urgency.}

@@ -20,7 +20,7 @@
 - **Flag stale information** — if the article references a "free agent" who has since signed, or a "rumored" deal that's now confirmed, flag it.
 
 ### Style & Readability
-- **Check tone consistency** — Seahawks Bot Blog is "The Ringer meets OverTheCap." Informed but accessible. Data-heavy but narrative-driven. No academic jargon. No ESPN hot-take shouting.
+- **Check tone consistency** — NFL Lab is "The Ringer meets OverTheCap." Informed but accessible. Data-heavy but narrative-driven. No academic jargon. No ESPN hot-take shouting.
 - **Verify expert quotes are attributed correctly** — each quote must match the expert who said it (Cap, PlayerRep, SEA, etc.).
 - **Check table formatting** — tables should be clean, aligned, and contain accurate data. Every cell should be verifiable.
 - **Ensure the opening hook works** — first 2-3 paragraphs must create urgency and make the reader want to keep scrolling.

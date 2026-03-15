@@ -2,10 +2,10 @@
 
 ## Core Context
 - **Project:** NFL Roster Evaluation — 2026 Offseason
-- **Role:** Substack Content Writer for Seahawks Bot Blog
+- **Role:** Substack Content Writer for NFL Lab
 - **User:** Joe Robinson
 - **Added:** 2026-03-14
-- **Blog:** Seahawks Bot Blog (Substack) — expert panel format, data-driven, opinionated
+- **Blog:** NFL Lab (Substack) — expert panel format, data-driven, opinionated
 
 ## Knowledge Base
 
@@ -19,7 +19,7 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 ### Content Pipeline
 - See `content/article-ideas.md` for the full editorial calendar
 - See `content/articles/seahawks-bot-blog-editorial-calendar-2026.md` for NFL dates/timing
-- Next up: Meta flagship article ("How we built 46 agents") + deep-dive series
+- Next up: Meta flagship article ("How we built 46 agents") + deep-dive series (deferred)
 
 ## Learnings
 📌 The "expert disagreement" format is the product's differentiator. Cap vs PlayerRep on Witherspoon was the strongest section of Article 2. Lean into conflict between experts — it's what makes this blog different from every other Seahawks blog.
@@ -30,4 +30,4 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 📌 README writing is a different muscle than article writing. The audience is Joe (the builder), not readers. Tone stays direct and functional — no narrative hooks, no personality flourishes. The structure does the work: capabilities table, step-by-step usage, pipeline flow diagram. Let the system speak for itself.
 
-📌 The agent roster table in the README groups specialists by function rather than listing all 47 individually. Team agents get one row with "32" in the count column. This is the right compression for a working doc — anyone who needs the full roster can check `.squad/team.md`.
+

@@ -247,7 +247,7 @@ Lead spawns all panel agents **in parallel**. Each agent receives:
 3. **Article-mode instructions:**
 
 ```
-Your analysis will be used in a Substack article for "Seahawks Bot Blog."
+Your analysis will be used in a Substack article for "NFL Lab."
 Provide your expert assessment with:
 - Specific numbers and projections (not vague ranges)
 - A clear bottom-line recommendation
@@ -354,7 +354,7 @@ Copy this checklist for each article. Check off each item before moving to Stage
 ### Content Final Check
 - [ ] Title: final headline (may differ from draft working title)
 - [ ] Subtitle: 1-line hook for Substack preview / email subject
-- [ ] Author line: "By: The Seahawks Bot Blog Expert Panel" (or variant)
+- [ ] Author line: "By: The NFL Lab Expert Panel" (or variant)
 - [ ] Opening preview text: first ~150 chars that show in email/social (compelling?)
 - [ ] Article body: final read-through — no orphaned placeholders, no TODO markers
 

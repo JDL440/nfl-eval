@@ -486,7 +486,7 @@ async function recoverPipeline() {
 ### Explicit Constraints
 
 - **Single team (Seahawks)** — don't build 32-team infrastructure yet
-- **Single publication** — Seahawks Bot Blog only
+- **Single publication** — NFL Lab only
 - **No subscriber management** — Substack handles this
 - **No payment processing** — Substack handles this
 - **No custom domain** — use seahawksbotblog.substack.com
@@ -725,7 +725,7 @@ dashboard/
 - [ ] Monitor for 1 week: 3-5 articles through pipeline
 - [ ] Measure: time to approve, cost per article, error rate
 
-**Success Criteria:** Seahawks Bot Blog receives its first automated article. Human time < 1 hour/week.
+**Success Criteria:** NFL Lab receives its first automated article. Human time < 1 hour/week.
 
 ---
 

@@ -31,7 +31,7 @@ This repo is an AI-powered NFL analysis engine. It's not a codebase in the tradi
 | **Ralph** | 1 | Work monitor. Tracks what's in progress across agents. |
 
 **What they've produced so far:**
-- 2 published long-form articles (~3,500 words each) on the Seahawks Bot Blog
+- 2 published long-form articles (~3,500 words each) on the NFL Lab
 - An editorial calendar mapped through the 2026 NFL season
 - 19+ article ideas in the pipeline
 - ~20,000+ lines of accumulated NFL intelligence across agent history files
@@ -93,7 +93,7 @@ Every article follows the same path. No shortcuts.
    Joe reads the final draft. Approves, requests changes, or kills it.
 
 5. PUBLISH
-   Goes live on the Seahawks Bot Blog (Substack).
+   Goes live on the NFL Lab (Substack).
 ```
 
 The expert disagreement isn't a bug — it's the product. When Cap and PlayerRep argue about Devon Witherspoon's extension value, readers get two expert perspectives backed by real data. That's what makes this different from a single columnist's opinion.

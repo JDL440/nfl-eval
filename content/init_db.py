@@ -21,7 +21,7 @@ def main():
         (
             "witherspoon-extension-cap-vs-agent",
             "Our Cap Expert Says $27 Million. Witherspoon's Agent Will Demand $33 Million. Here's Why They're Both Right.",
-            "The Seahawks Bot Blog expert panel breaks down the most important negotiation of Seattle's offseason — and why the two sides are $25 million apart before they even sit down.",
+            "The NFL Lab expert panel breaks down the most important negotiation of Seattle's offseason — and why the two sides are $25 million apart before they even sit down.",
             "seahawks",
             '["seahawks"]',
             "published",
@@ -34,7 +34,7 @@ def main():
         (
             "seahawks-rb1a-target-board",
             "The Seahawks Have a Hole at RB. Here's Why Pick #64 Might Be the Smartest Play Seattle Makes All Draft.",
-            "A deep-dive from the Seahawks Bot Blog expert panel — our Cap Analyst, Injury Specialist, College Scout, Offensive Scheme Expert, and Media correspondent break down everything you need to know about Seattle's running back situation heading into the 2026 draft.",
+            "A deep-dive from the NFL Lab expert panel — our Cap Analyst, Injury Specialist, College Scout, Offensive Scheme Expert, and Media correspondent break down everything you need to know about Seattle's running back situation heading into the 2026 draft.",
             "seahawks",
             '["seahawks"]',
             "published",

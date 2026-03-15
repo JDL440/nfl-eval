@@ -152,6 +152,28 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 - Stages 2, 3, 7 are new and untested
 - Promote to `medium` after one article passes through all 8 stages, to `high` after 3+ articles
 
+### 2026-03-15: Media Daily Sweep — FA Day 4 (50+ new moves, Rodgers upgraded, TEN $270M spree)
+**By:** Media (NFL Media & Rumors Specialist)
+**Status:** Proposed
+**Priority:** HIGH
+**Affects:** SEA, TEN, LV, NYG, NE, WSH, HOU, CLE, LAR, CAR, CHI, LAC, DAL, IND, KC, NO, NYJ, BAL, DET, PHI, BUF, TB, SF, ARI, CIN team agents; Cap, Draft, Injury, Offense, Defense, Lead specialists
+
+**What:**
+Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed transactions, 1 trade, 2 restructures. Key moves:
+- TEN spending spree: Robinson ($78M), Franklin-Myers ($63M), Taylor ($58M), Flott ($45M), Bellinger ($24M) = $270M+ total. Biggest FA spender in the league.
+- SEA re-signed Shaheed ($51M WR) and Jobe ($24M CB) but lost Coby Bryant to CHI ($40M S). $44M cap remains.
+- LV defensive overhaul: Paye ($48M), Walker ($40.5M), Dean ($36M), Stokes ($30M) = $154M+ on defense around Mendoza (draft).
+- NYG building under Harbaugh: Likely ($40M TE), Eluemunor ($39M RT), Mooney ($10M WR), Newsome ($8M CB).
+- NE adds Vera-Tucker ($42M OL) + Dre'Mont Jones ($36.5M EDGE) to protect Maye.
+- LAR adds Watson ($51M CB) — NFC West secondary upgrade.
+- SF restructures Nick Bosa (cleared $17.172M) — signals imminent Joey Bosa signing.
+- David Montgomery traded DET→HOU with new 2yr/$16.5M deal.
+- Rodgers → PIT UPGRADED to 🟢 Likely (insiders "near-certain" of return, decision before draft).
+- Diggs market: BAL now consensus frontrunner. No deal.
+- Total confirmed FA transactions tracked: 115+. Active rumors: 15.
+
+**Why:** Day 4 FA sweep ensures all agents have accurate rosters. Rodgers upgrade is biggest strategic shift — PIT win-now plan back on track. TEN $270M spree creates new AFC contender. NFC West arms race intensifying (Watson→LAR, Bosa restructure→SF, Shaheed/Jobe→SEA). 3 article candidates identified (TEN spree, SEA window, Rodgers decision).
+
 ### 2026-03-15: README.md Structure and Tone
 
 **By:** Writer  
@@ -165,6 +187,164 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 5. Tone: Direct, energetic, zero fluff — internal engineering docs, not marketing copy
 
 **Rationale:** Joe needs a doc answering "what is this, how do I use it" in under 2 minutes. Everything else is noise.
+
+### 2026-03-15: Add `discussion_path` Field to Articles Table
+**By:** Lead  
+**Status:** Proposed  
+**Affects:** pipeline.db schema, article lifecycle tooling, Scribe, Writer, Lead
+
+**What:**
+Add a `discussion_path` field (TEXT, nullable) to the `articles` table in `pipeline.db`. After any article's panel discussion phase completes, populate this field with the relative path to the discussion directory (e.g., `'content/articles/jsn-extension-preview/'`). This enables:
+1. **Traceability** — Any agent can query the DB and immediately find discussion artifacts
+2. **Automation readiness** — Writer agent reads `discussion_path` to know where discussion summary and position statements live
+3. **Future flexibility** — Handles non-standard locations (e.g., imported external research)
+4. **Alignment with existing pattern** — Table already has `article_path` and `substack_url`; `discussion_path` is the logical companion
+
+**Schema change:**
+```sql
+ALTER TABLE articles ADD COLUMN discussion_path TEXT;
+UPDATE articles SET discussion_path = 'content/articles/jsn-extension-preview/' WHERE id = 'jsn-extension-preview';
+```
+
+Also update `content/schema.sql` to include this column in the `CREATE TABLE articles` definition for future `init_db.py` runs.
+
+**Why:** Needed before the next article reaches `panel_discussion` stage at scale. Currently manageable with path convention inference, but should be added before Phase 2 automation is built. Enables Writer agent to operate independently.
+
+**Priority:** Medium — non-blocking but foundational for automation.
+
+### 2026-03-15: Lead Intel Brief — Editorial Priority Changes
+**By:** Lead  
+**Status:** Proposed  
+**Priority:** HIGH  
+**Affects:** Writer, Editor, SEA, Cap, Defense, Draft, Media
+
+**What:**
+Based on the March 14-15 Media sweep (50+ new transactions, 115+ total tracked), the following editorial priority changes are proposed:
+
+1. **Priority #1 ("Seattle Lost Half Its Defense") — CONFIRMED ON SCHEDULE (Mar 17).** Bryant loss to CHI ($40M) is the 4th major departure. Shaheed ($51M) and Jobe ($24M) re-signs provide counterbalance. This article is now more urgent and richer with new data.
+
+2. **Priority #2 ("The Free Agent Nobody's Talking About") — CONFIRMED ON SCHEDULE (Mar 18).** Jennings (WR, ESPN projects SEA) and Asante Samuel Jr. (CB, injury discount) are the strongest candidates. Bryant departure makes the CB angle especially compelling.
+
+3. **NEW — "Tennessee's $270M Spending Spree" — ADD TO PIPELINE (Mar 19-20).** Media scored 5/5 significance. First non-SEA article. Massive audience potential. Panel: TEN, Cap, Offense, Defense, Draft.
+
+4. **NEW — "The Rodgers Decision" — ADD TO PIPELINE (preview Mar 21, or reactive publish when decision drops).** Media scored 4/5. Time-sensitive — decision expected before draft. Panel: PIT, Cap, Offense, Lead.
+
+5. **"NFC West Power Rankings" (Evergreen) — PROMOTE TO MARCH WINDOW.** All 4 NFC West teams made significant moves this week. Could publish as an NFC West FA recap. Panel: ARI, LAR, SF, SEA.
+
+6. **Media's "Seattle Championship Window" candidate — MERGE with Priority #1** rather than a separate article. The "retention vs. exodus" angle strengthens the defensive departures piece.
+
+**Why:** The news cycle is moving fast. Three new article candidates emerged from today's sweep alone. TEN and Rodgers pieces expand beyond SEA-only coverage (growth play). NFC West recap leverages our division expertise. All existing pipeline items remain on schedule — this is additive, not disruptive.
+
+**Decision requested:** Approve adding TEN spree + Rodgers decision to the pipeline, and promoting NFC West Power Rankings to March.
+
+---
+
+### 2026-03-15: Article Candidates from Daily News Sweep
+**By:** Media  
+**Status:** Proposed  
+**Affects:** Lead, Writer, Editor
+
+**What:**
+Five article candidates identified from March 14-15 news sweep, scored by significance:
+
+**Score 5 — Must-Write:**
+- "Tennessee's $270M Spending Spree: Are the Titans Instant AFC Contenders?" — TEN signed Robinson ($78M), Franklin-Myers ($63M), Taylor ($58M), Flott ($45M), Bellinger ($24M). Biggest FA spender in NFL. Panel: TEN, Cap, Offense, Defense, Draft.
+
+**Score 4 — Strong Candidates:**
+- "Seattle's Championship Window: Retention Strategy vs. Free Agent Exodus" — Re-signed Shaheed/Jobe while losing Walker III, Mafe, Bryant. $44M cap, pick #32. Panel: SEA, Cap, Defense, Draft.
+- "Las Vegas' Defensive Masterclass" — Paye, Walker, Dean, Stokes ($154M+ on D) around rookie Mendoza. Panel: LV, Cap, Defense, Draft.
+- "The Rodgers Decision" — Status upgraded to 🟢 Likely. Decision before draft. PIT's entire win-now plan depends on this. Panel: PIT, Cap, Offense, Lead.
+
+**Score 3 — Monitor:**
+- "Harbaugh's Giants" — Likely, Eluemunor, Mooney signings. Early patterns; monitor 1 more week.
+- "NFC West Arms Race Update" — All 4 teams moved (Watson→LAR, Bosa restructure→SF, Shaheed/Jobe→SEA). Best as section in broader FA recap.
+- "The Free Agent Dead Zone" — Elite FAs still unsigned (Diggs, Bosa, Jennings). Best at Day 7-10 when patterns clear.
+
+**Recommendation:** Articles #1 (Titans), #2 (Seahawks), and #4 (Rodgers) are strongest for immediate publication. #2 is highest priority given Seahawks focus.
+
+**Why:** Comprehensive news tracking ensures article pipeline reflects current, high-impact topics. Titans and Rodgers pieces expand beyond SEA-only coverage (audience growth). Timing critical — Rodgers decision expected within 2 weeks.
+
+---
+
+### 2026-03-15: Media Intel Drop — League-Wide (50+ New Transactions)
+**By:** Media  
+**Status:** Proposed  
+**Priority:** HIGH  
+**Affects:** All 32 team agents, all specialists
+
+**What:**
+Comprehensive Day 3-4 free agency sweep (March 14-15). 50+ new confirmed transactions documented in detail:
+
+**Headline Moves:**
+- **TEN:** Robinson ($78M WR), Franklin-Myers ($63M DL), Taylor ($58M CB), Flott ($45M CB), Bellinger ($24M TE) = $270M+ spree
+- **LV:** Paye ($48M EDGE), Walker ($40.5M LB), Dean ($36M LB), Stokes ($30M CB) = $154M+ defensive overhaul
+- **NYG:** Likely ($40M TE), Eluemunor ($39M RT), Mooney ($10M WR), Newsome ($8M CB) building under Harbaugh
+- **NE:** Vera-Tucker ($42M OL), Dre'Mont Jones ($36.5M EDGE) protecting Maye
+- **LAR:** Watson ($51M CB) — NFC West secondary upgrade
+- **SF:** Bosa restructure cleared $17.172M — signals Joey Bosa signing
+- **Rodgers → PIT:** UPGRADED to 🟢 Likely (insiders "near-certain")
+- Plus 40+ additional confirmed FA signings and depth moves
+
+**Database Update:**
+- Total confirmed FA transactions tracked: 115+
+- Active rumors: 15
+- All moves verified via Spotrac, OTC, ESPN, NFL.com
+
+**Why:** Comprehensive tracking ensures all agents have current roster data. Day 4 sweep reveals biggest strategic shifts: TEN building new contender, LV defensive pivot, Rodgers likely returns to PIT. Three article candidates identified (TEN spree, SEA retention, Rodgers decision). All team agents should update roster knowledge with current moves and cap impacts.
+
+---
+
+### 2026-03-15: Media Intel Drop — SEA (Priority)
+**By:** Media  
+**Status:** Proposed  
+**Priority:** HIGH  
+**Affects:** SEA team agent, Cap, Defense, Draft, Lead
+
+**What:**
+Seahawks-focused intel from Day 3-4 sweep (March 14-15):
+
+**Confirmed Moves:**
+- ✅ Rashid Shaheed RE-SIGNED — WR, 3yr/$51M ($34.735M gtd, $23M at signing). Explosive deep threat + return specialist locked in as WR2/3. $17M AAV.
+- ✅ Josh Jobe RE-SIGNED — CB, 3yr/$24M ($14.25M gtd, $9.5M at signing). Press-man specialist, 15/16 starts in 2025, 54 tackles, 12 PDs. CB2 alongside Witherspoon. $8M AAV.
+- ❌ Coby Bryant LOST to CHI — S, 3yr/$40M ($25.75M gtd). Fourth significant departure (Walker III→KC, Mafe→CIN, Bryant→CHI). Secondary now thin at safety.
+- ✅ Depth: Brady Russell (TE), Emanuel Wilson (RB) signed. Tyler Hall (DB) released. D'Anthony Bell (DB) re-signed.
+
+**NFC West Context:**
+- Nick Bosa restructure (SF) cleared $17.172M — signals imminent Joey Bosa signing, NFC West EDGE arms race escalates
+- Jaylen Watson → LAR ($51M CB). Rams adding McDuffie (trade) + Watson in secondary
+- Jalen Thompson → DAL ($33M S, from ARI). NFC West rival loses key safety
+
+**SEA Situation:**
+- **Cap Space:** $44.08M remaining — 6th most in NFL. Room for 1-2 more significant signings.
+- **Safety Need (CRITICAL):** Bryant loss leaves safety group thin. Draft intel has SEA mocked for Notre Dame RB at #32.
+- **FA Targets Still Available:** Jauan Jennings (WR, ESPN projects SEA, ~$12-16M AAV); Najee Harris (RB, post-Achilles); Bobby Wagner (LB); Asante Samuel Jr. (CB, injury discount).
+
+**Confidence:**
+- ✅ Shaheed re-sign — CONFIRMED (Spotrac verified, Tier 1-2 sources)
+- ✅ Jobe re-sign — CONFIRMED (Spotrac verified, Tier 1-2 sources)
+- ✅ Bryant departure — CONFIRMED (Spotrac, CHI announcement)
+- 🟢 Bosa → SF — Likely (restructure + Tier 1-2 reports)
+- 🟡 Jennings → SEA — Possible (ESPN projection)
+- 🟡 Harris → SEA — Possible (projected landing spot)
+
+**Why:** SEA-specific intel enables team agent to update roster knowledge and identify priority signings. Bryant loss creates urgent safety need alongside RB (post-Walker III). $44M cap space provides signing room. Jennings/Harris are high-value FA targets still available. Draft RB need aligns with #32 pick in current mocks.
+
+---
+
+### 2026-03-15: User directive — Avoid politically divisive topics
+**By:** Joe Robinson (via Copilot)  
+**Status:** Proposed  
+**Priority:** CRITICAL  
+**Affects:** All agents, all content tracks
+
+**What:** Avoid politically divisive topics in all content. Specifically: do NOT reference or analyze state/federal tax legislation (e.g., WA SB 6346 millionaires tax), political bills, or any content that could be construed as taking a political stance. This applies to all article ideas, discussion prompts, panel discussions, article drafts, and agent analyses.
+
+**Why:** User request — captured for team memory. The WA tax angle surfaced in the JSN contract panel discussion and was flagged as inappropriate for the platform.
+
+**Scope:** All agents — Lead, Media, Writer, Editor, Publisher, panel participants, and any future agents.
+
+**⚠️ BLOCKING NOTE (Scribe):**
+JSN panel discussion completed on 2026-03-15 before this directive was filed. Discussion summary and panelist positions reference WA SB 6346 tax mechanics as a key finding. **Action Required:** Lead or Editor must revise `content/articles/jsn-extension-preview/discussion-summary.md` and related position files to remove tax references before article proceeds to Writer stage (Stage 5). This should not block the log/decision merge, but must be resolved before draft production.
 
 ---
 

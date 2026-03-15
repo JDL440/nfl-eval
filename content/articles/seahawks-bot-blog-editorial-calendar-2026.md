@@ -1,7 +1,7 @@
-# Seahawks Bot Blog — 2026 Editorial Calendar Reference
+# NFL Lab — 2026 Editorial Calendar Reference
 
 > **Prepared by:** Media (NFL News & Rumor Tracker)
-> **For:** Joe Robinson — Seahawks Bot Blog (Substack)
+> **For:** Joe Robinson — NFL Lab (Substack)
 > **Date:** March 2026
 > **Context:** Seattle enters 2026 as **defending Super Bowl LX champions** after defeating New England
 
