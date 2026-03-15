@@ -35,6 +35,34 @@ function loadEnv() {
     return env;
 }
 
+// ─── Pipeline DB lookup ──────────────────────────────────────────────────────
+
+/**
+ * Given an article file path, look up primary_team from content/pipeline.db.
+ * Returns e.g. "seahawks" or null if not found / DB unavailable.
+ * Uses the built-in node:sqlite module (Node 22+).
+ */
+async function lookupTeamFromDb(filePath, cwd) {
+    const dbPath = resolve(cwd, "content", "pipeline.db");
+    if (!existsSync(dbPath)) return null;
+
+    // Normalize to a relative path matching what's stored in article_path
+    const normalizedPath = filePath.replace(/\\/g, "/").replace(/^.*?content\//, "content/");
+
+    try {
+        const { DatabaseSync } = await import("node:sqlite");
+        const db = new DatabaseSync(dbPath, { readOnly: true });
+        const stmt = db.prepare(
+            "SELECT primary_team FROM articles WHERE article_path = ? OR article_path = ?"
+        );
+        const row = stmt.get(normalizedPath, filePath.replace(/\\/g, "/"));
+        db.close();
+        return row?.primary_team || null;
+    } catch {
+        return null;
+    }
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 function makeHeaders(token) {
@@ -618,15 +646,26 @@ const session = await joinSession({
                     await session.log(`Connecting to ${subdomain}.substack.com…`, { ephemeral: true });
                     const authorId = await getAuthorId(subdomain, headers);
 
-                    // Resolve team section ID if provided
+                    // Resolve team: explicit arg → DB lookup → null (no section)
+                    let teamName = args.team || null;
+                    if (!teamName) {
+                        const dbTeam = await lookupTeamFromDb(args.file_path, process.cwd());
+                        if (dbTeam) {
+                            teamName = dbTeam;
+                            await session.log(`Auto-detected team from pipeline.db: "${dbTeam}"`, { ephemeral: true });
+                        }
+                    }
+
+                    // Resolve team section ID if we have a team name
                     let sectionId = null;
-                    if (args.team) {
-                        await session.log(`Looking up section for "${args.team}"…`, { ephemeral: true });
-                        sectionId = await getSectionId(subdomain, headers, args.team);
-                        if (!sectionId) {
+                    if (teamName) {
+                        await session.log(`Looking up section for "${teamName}"…`, { ephemeral: true });
+                        sectionId = await getSectionId(subdomain, headers, teamName);
+                        if (!sectionId && args.team) {
+                            // Only fail hard if team was explicitly specified — silently skip if auto-derived
                             return {
                                 textResultForLlm:
-                                    `Error: No Substack section found matching "${args.team}".\n\n` +
+                                    `Error: No Substack section found matching "${teamName}".\n\n` +
                                     `Check available sections at: https://${subdomain}.substack.com/publish/settings/sections`,
                                 resultType: "failure",
                             };
@@ -659,7 +698,7 @@ const session = await joinSession({
                         `**Title:** ${title}\n` +
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
                         `**Audience:** ${args.audience || "everyone"}\n` +
-                        (sectionId ? `**Section:** ${args.team} (id ${sectionId})\n` : "") +
+                        (sectionId ? `**Section:** ${teamName} (id ${sectionId})\n` : "") +
                         `**Draft ID:** ${draft.id}\n\n` +
                         `**Review & publish:** ${draftUrl}\n\n` +
                         `Open the URL above to review formatting, add a cover image, and publish.`

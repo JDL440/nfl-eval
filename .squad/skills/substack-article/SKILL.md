@@ -186,10 +186,11 @@ publish_to_substack(
   file_path: "content/articles/{slug}.md",
   title: "{Final headline — may refine from working title}",
   subtitle: "{1-line hook used for email preview}",
-  audience: "everyone",
-  team: "{Team Name}"              ← routes draft to the team's Substack section
+  audience: "everyone"
 )
 ```
+
+**Team section is auto-detected** from `primary_team` in `content/pipeline.db` — no need to pass `team` manually. The tool looks up the article by its path, finds the team, and routes to the correct section. Pass `team:` explicitly only if you need to override.
 
 The tool auto-creates a Substack draft and returns an editor URL. Hand the URL to Joe for final review and one-click publish.
 
