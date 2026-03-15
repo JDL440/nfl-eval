@@ -241,12 +241,12 @@ async function generateArticleImages(params) {
                 images = await generateWithGeminiFlash(prompt, apiKey, count_per_type);
                 modelUsed = GEMINI_IMAGE_MODEL;
             } else {
-                // Default: try Imagen 3 first, fall back to Gemini Flash
+                // Default: try Imagen 4 first, fall back to Gemini Flash
                 try {
                     images = await generateWithImagen3(prompt, apiKey, count_per_type, aspectRatio);
                     modelUsed = IMAGEN_MODEL;
                 } catch (imagenErr) {
-                    console.error(`Imagen 3 failed (${imagenErr.message}), falling back to Gemini Flash...`);
+                    console.error(`Imagen 4 failed (${imagenErr.message}), falling back to Gemini Flash...`);
                     images = await generateWithGeminiFlash(prompt, apiKey, count_per_type);
                     modelUsed = GEMINI_IMAGE_MODEL;
                 }
@@ -347,8 +347,8 @@ session.tool(
                 },
                 use_model: {
                     type: "string",
-                    enum: ["auto", "imagen-3", "gemini-flash"],
-                    description: "Image model to use. 'auto' tries Imagen 3 first, falls back to Gemini Flash. Default: 'auto'",
+                    enum: ["auto", "imagen-4", "gemini-flash"],
+                    description: "Image model to use. 'auto' tries Imagen 4 first, falls back to Gemini Flash. Default: 'auto'",
                     default: "auto",
                 },
             },

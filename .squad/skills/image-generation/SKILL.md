@@ -8,8 +8,9 @@ source: "designed 2026-03-15 — Gemini API docs + NFL Lab editorial standards"
 
 # Image Generation — Skill
 
-> **Confidence:** medium — API validated, NFL editorial prompting strategy designed but not yet batch-tested
+> **Confidence:** high — validated end-to-end 2026-03-15 (Imagen 4, cover + inline, seahawks-rb test article)
 > **Created:** 2026-03-15
+> **Last validated:** 2026-03-15 (Imagen 4 — 1.8MB cover + 1.2MB inline generated successfully)
 > **Owned by:** Writer (triggers generation after draft), Editor (reviews images), Joe (selects cover in Substack)
 
 ## Purpose
@@ -194,7 +195,13 @@ The tool tries Imagen 3 first and falls back automatically. Override with `use_m
 
 ---
 
-## Anti-Patterns
+## Validated On
+
+- ✅ `seahawks-rb-depth-chart-2026` — cover (16:9, 1.8MB) + inline (1:1, 1.2MB) generated 2026-03-15
+  - Model: `imagen-4.0-generate-001`
+  - Prompt style: stadium atmosphere / chess-on-field abstract
+  - Both images saved correctly to `content/images/{slug}/`
+  - Markdown references produced correctly
 
 - ❌ Don't generate images before the article draft exists — prompts need the article context
 - ❌ Don't expect photorealistic player portraits — use atmospheric/editorial prompts instead
