@@ -37,10 +37,11 @@ This is **coordinator-level guidance**. It tells Lead how to orchestrate the ful
 │  2   │ Discussion Prompt    │ Lead           │ Structured brief        │
 │  3   │ Panel Composition    │ Lead           │ Named panel + rationale │
 │  4   │ Panel Discussion     │ Panel agents   │ Raw expert analysis     │
-│  5   │ Article Drafting     │ Writer         │ Draft in content/articles│
-│  6   │ Editor Pass          │ Editor         │ Verdict + corrections   │
-│  7   │ Publisher Pass       │ Joe (→ future  │ Formatted + metadata    │
-│      │                      │  Publisher)    │                         │
+│  5   │ Article Drafting     │ Writer         │ Draft + images in content/  │
+│      │ + Image Generation   │                │ articles/ and images/       │
+│  6   │ Editor Pass          │ Editor         │ Verdict (text + images)     │
+│  7   │ Publisher Pass       │ Publisher agent│ Formatted + Substack draft  │
+│      │                      │ (or Lead)      │ URL                         │
 │  8   │ Approval / Publish   │ Joe            │ Live on Substack        │
 └──────┴──────────────────────┴────────────────┴─────────────────────────┘
 ```
@@ -297,14 +298,17 @@ Writer takes all panel outputs and assembles a polished article following the ho
 - [ ] All panelists' analysis is represented (none dropped)
 - [ ] Headline follows the formula options in substack-article skill
 - [ ] Boilerplate footer included (expert panel description + CTA + next article tease)
+- [ ] `generate_article_images` called — images saved to `content/images/{slug}/`
+- [ ] Cover image markdown reference pasted into article after the subtitle line
+- [ ] Inline image references placed at natural section breaks (0–2 images)
 
 ---
 
 ## Stage 6 — Editor Pass
 
 **Owner:** Editor
-**Input:** Draft article from `content/articles/{slug}.md`
-**Output:** Editorial verdict + categorized corrections
+**Input:** Draft article from `content/articles/{slug}.md` + images from `content/images/{slug}/`
+**Output:** Editorial verdict + categorized corrections (text AND images)
 
 Editor reviews the draft for factual accuracy, structural issues, and style compliance. This is **mandatory** — no article skips the Editor pass.
 
@@ -330,7 +334,7 @@ Editor reviews the draft for factual accuracy, structural issues, and style comp
 ### Done when
 
 - [ ] Editor has issued a verdict
-- [ ] All 🔴 errors are resolved
+- [ ] All 🔴 errors are resolved (text and images)
 - [ ] Final verdict is ✅ APPROVED
 - [ ] Approved draft is committed to `content/articles/{slug}.md`
 
@@ -338,70 +342,19 @@ Editor reviews the draft for factual accuracy, structural issues, and style comp
 
 ## Stage 7 — Publisher Pass
 
-**Owner:** Lead (calls `publish_to_substack` tool) → Joe reviews the draft URL
-**Input:** Editor-approved draft from `content/articles/{slug}.md`
+**Owner:** Publisher agent (or Lead standing in)
+**Input:** Editor-approved draft + images in `content/images/{slug}/`
 **Output:** Substack draft URL, ready for Joe to review and publish with one click
 
-This stage is **automated** via the `publish_to_substack` Copilot extension. Lead (or any agent) calls the tool; the extension converts the article to Substack's format and creates a draft. Joe receives the editor URL, checks a short final checklist, then publishes.
+> **Full guidance:** See [`publisher` SKILL.md](../publisher/SKILL.md) — it covers the full Publisher checklist, image placement verification, metadata preparation, and the `publish_to_substack` call.
 
-### How to Run Stage 7
-
-Lead calls the tool directly:
-
-```
-publish_to_substack(
-  file_path: "content/articles/{slug}.md",
-  title: "{Final headline}",
-  subtitle: "{1-line hook for Substack preview / email subject}",
-  audience: "everyone",
-  team: "{Team Name}"              ← routes draft to the team's Substack section
-)
-```
-
-The tool:
-1. Reads `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` from `.env`
-2. Converts the markdown article to Substack's ProseMirror format
-3. Creates a draft on Substack via the API
-4. Returns the draft editor URL
-
-Title and subtitle are auto-extracted from the markdown if not provided (first `# Heading` and first `*italic*` line).
-
-### Pre-Publish Checklist (Joe does at Stage 8)
-
-Copy this to the article thread before calling the tool. Lead confirms content items; Joe confirms metadata/schedule.
-
-```markdown
-## Publisher Pass — {Article Title}
-
-### Content (Lead confirms before calling tool)
-- [ ] Title: final headline (may differ from draft working title)
-- [ ] Subtitle: 1-line hook for Substack preview / email subject
-- [ ] Author line: "By: The NFL Lab Expert Panel" (or variant)
-- [ ] Opening preview text: first ~150 chars that show in email/social (compelling?)
-- [ ] Article body: final read-through — no orphaned placeholders, no TODO markers
-- [ ] All names spelled correctly (one last check)
-- [ ] All numbers current (cap figures, contract terms — things move fast)
-- [ ] No stale references to "upcoming" events that already happened
-- [ ] "Next from the panel" tease at end points to a real upcoming article
-
-### Substack Metadata (Joe sets in editor after draft is created)
-- [ ] Section assignment: (e.g., "Free Agency," "Draft," "Game Recaps")
-- [ ] Tags: 3–5 tags (team name, topic, player names, "expert-panel")
-- [ ] URL slug: clean, lowercase, hyphenated (e.g., `witherspoon-extension-analysis`)
-- [ ] Cover image: selected in Substack editor
-- [ ] Paywall setting: free / paid-only / preview
-
-### Scheduling & Distribution
-- [ ] Publish date/time: per editorial calendar (Tues 10 AM PT default)
-- [ ] Email send: yes/no (most articles = yes)
-- [ ] Social preview: headline + subtitle render well in card format?
-```
+The Publisher agent runs the full checklist from that skill and hands Joe a Substack draft URL plus a pre-publish metadata checklist.
 
 ### Done when
 
+- [ ] Publisher checklist from [`publisher` SKILL](../publisher/SKILL.md) completed
 - [ ] `publish_to_substack` called successfully — draft URL returned
-- [ ] Lead posts the draft URL for Joe
-- [ ] Content checklist items confirmed
+- [ ] Lead posts the draft URL and Stage 8 checklist for Joe
 - [ ] Joe has the URL and is ready to review/publish
 
 ---
@@ -445,9 +398,9 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 | 2 → 3 | Discussion Prompt complete, tension identified | Lead |
 | 3 → 4 | Panel finalized (2–5 agents), each with specific question | Lead |
 | 4 → 5 | All panelists returned analysis, Lead reviewed for gaps | Lead |
-| 5 → 6 | Draft saved to `content/articles/{slug}.md` | Writer |
-| 6 → 7 | Editor verdict is ✅ APPROVED (all 🔴 resolved) | Editor |
-| 7 → 8 | `publish_to_substack` called, draft URL returned, content checklist confirmed | Lead |
+| 5 → 6 | Draft + images saved (`content/articles/` and `content/images/`) | Writer |
+| 6 → 7 | Editor verdict is ✅ APPROVED (all 🔴 resolved, images approved) | Editor |
+| 7 → 8 | Publisher checklist done, `publish_to_substack` called, draft URL returned | Publisher / Lead |
 | 8 → Done | Article live on Substack, statuses updated, committed | Joe |
 
 ## Recovery & Edge Cases
@@ -490,9 +443,9 @@ conn = sqlite3.connect('content/pipeline.db')
 | 2 | Lead | `INSERT INTO discussion_prompts`; advance article to current_stage=2, status='approved' |
 | 3 | Lead | `INSERT INTO article_panels` (one row per panelist); advance to current_stage=3 |
 | 4 | Lead | Mark `analysis_complete=1` in article_panels as each panelist returns; advance to current_stage=4 |
-| 5 | Writer | Set article_path; advance to current_stage=5, status='in_production' |
-| 6 | Editor | `INSERT INTO editor_reviews` with verdict + counts; advance to current_stage=6 |
-| 7 | Joe / Publisher | `INSERT INTO publisher_pass`; advance to current_stage=7 |
+| 5 | Writer | Set article_path and image_dir; advance to current_stage=5, status='in_production' |
+| 6 | Editor | `INSERT INTO editor_reviews` with verdict + counts (including image_verdict); advance to current_stage=6 |
+| 7 | Publisher / Lead | `INSERT INTO publisher_pass`; advance to current_stage=7 |
 | 8 | Joe | Set published_at, substack_url, status='published', current_stage=8 |
 
 ### Stage transition helper
