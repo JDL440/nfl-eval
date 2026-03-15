@@ -1,0 +1,103 @@
+name: "📰 Article Idea"
+description: "Propose a new NFL Lab article — Lead will run the full pipeline automatically."
+title: "Article: [TITLE]"
+labels: ["squad", "article"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in the fields below. Once this issue is labeled **`squad`**, Lead picks it up and runs the full pipeline: discussion prompt → panel → draft → editor → Substack draft. You'll get progress comments as it runs.
+
+  - type: input
+    id: title
+    attributes:
+      label: "Working Title"
+      description: "Headline idea — can be refined later. Aim for clickbait-adjacent but honest."
+      placeholder: "e.g. Seattle Won the Super Bowl and Lost Half Its Defense. Here's Why That's Actually Fine."
+    validations:
+      required: true
+
+  - type: textarea
+    id: angle
+    attributes:
+      label: "Angle / Tension"
+      description: "What's the core question or conflict? Why would a fan click? One paragraph."
+      placeholder: "e.g. Walker, Mafe, Woolen, and Bryant are gone. The instinct is to panic. The case for staying calm is buried in the cap math and the scheme flexibility Macdonald built in Year 1."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: primary_team
+    attributes:
+      label: "Primary Team"
+      description: "Main team this article is about."
+      options:
+        - SEA - Seattle Seahawks
+        - SF - San Francisco 49ers
+        - LAR - Los Angeles Rams
+        - ARI - Arizona Cardinals
+        - KC - Kansas City Chiefs
+        - DEN - Denver Broncos
+        - LV - Las Vegas Raiders
+        - LAC - Los Angeles Chargers
+        - DAL - Dallas Cowboys
+        - PHI - Philadelphia Eagles
+        - NYG - New York Giants
+        - WSH - Washington Commanders
+        - CHI - Chicago Bears
+        - GB - Green Bay Packers
+        - MIN - Minnesota Vikings
+        - DET - Detroit Lions
+        - TB - Tampa Bay Buccaneers
+        - NO - New Orleans Saints
+        - ATL - Atlanta Falcons
+        - CAR - Carolina Panthers
+        - NE - New England Patriots
+        - BUF - Buffalo Bills
+        - NYJ - New York Jets
+        - MIA - Miami Dolphins
+        - BAL - Baltimore Ravens
+        - PIT - Pittsburgh Steelers
+        - CLE - Cleveland Browns
+        - CIN - Cincinnati Bengals
+        - HOU - Houston Texans
+        - TEN - Tennessee Titans
+        - IND - Indianapolis Colts
+        - JAX - Jacksonville Jaguars
+        - League-wide (no single team)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: depth_level
+    attributes:
+      label: "Depth Level"
+      description: "Who's the target reader? Controls panel size and model selection."
+      options:
+        - "1 — Casual Fan (narrative-first, 1200–2000 words, 2 panel agents)"
+        - "2 — The Beat (balanced data + story, 2000–3500 words, 3–4 agents) [DEFAULT]"
+        - "3 — Deep Dive (full cap/scheme/draft analysis, 3000–5000 words, 4–5 agents)"
+      default: 1
+    validations:
+      required: true
+
+  - type: input
+    id: agents
+    attributes:
+      label: "Suggested Agents (optional)"
+      description: "Which specialists should be on the panel? Lead will finalize, but this is a starting point."
+      placeholder: "e.g. SEA, Cap, Defense, Media"
+
+  - type: input
+    id: target_date
+    attributes:
+      label: "Target Publish Date / Window"
+      description: "When should this go out? Ties to NFL calendar urgency."
+      placeholder: "e.g. Mar 17 (before free agency quiets), Draft Week, ASAP"
+
+  - type: textarea
+    id: data_context
+    attributes:
+      label: "Key Data / Context (optional)"
+      description: "Any specific numbers, recent news, or context Lead should know going in."
+      placeholder: "e.g. Woolen signed with TB (2yr/$28M). Mafe unsigned as of today. SEA has $18M cap space after top 51."
