@@ -186,8 +186,9 @@ If images are rejected (🔴), Writer calls `generate_article_images` again with
 
 | Model | Quality | Speed | Use case |
 |-------|---------|-------|----------|
-| `imagen-3.0-generate-002` | ⭐⭐⭐⭐⭐ | Medium | Default — best quality for editorial headers |
-| `gemini-2.0-flash-preview-image-generation` | ⭐⭐⭐ | Fast | Fallback when Imagen 3 unavailable; or quick drafts |
+| `imagen-4.0-generate-001` | ⭐⭐⭐⭐⭐ | Medium | Default — best quality for editorial headers (requires billing) |
+| `gemini-3.1-flash-image-preview` | ⭐⭐⭐⭐ | Fast | Fallback / fast drafts (also requires billing) |
+| `gemini-3-pro-image-preview` | ⭐⭐⭐⭐ | Medium | Alternative — "Nano Banana Pro" (the model Joe used manually) |
 
 The tool tries Imagen 3 first and falls back automatically. Override with `use_model: "gemini-flash"` for speed.
 

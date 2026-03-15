@@ -45,10 +45,10 @@ function loadEnv() {
 
 // ─── Gemini API ──────────────────────────────────────────────────────────────
 
-// Model priority: Imagen 3 for highest quality editorial images.
-// Falls back to gemini-2.0-flash-preview-image-generation if Imagen 3 unavailable.
-const IMAGEN_MODEL = "imagen-3.0-generate-002";
-const GEMINI_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation";
+// Model priority: Imagen 4 for highest quality editorial images.
+// Falls back to Nano Banana Pro 2 (gemini-3.1-flash-image-preview) if Imagen unavailable.
+const IMAGEN_MODEL = "imagen-4.0-generate-001";
+const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 async function generateWithImagen3(prompt, apiKey, count, aspectRatio) {
