@@ -32,22 +32,22 @@
 - **Teasers:** Every article ends with a "Next from the panel" hook for the next piece in the pipeline.
 
 ### Image Placeholders
-Every article must include image placeholders at natural visual break points (cover image, section dividers, key data moments). Format each placeholder as a comment block so the image generation step can find and replace them:
+Every article must include **exactly 2 inline image placeholders** — no cover/banner image. Images exist to break up text and look good on mobile. Format each as a comment block so the image generation step can find and replace them:
 
 ```
 <!-- IMAGE: {description of image to generate}
-     Placement: {cover | section-header | inline | pull-quote}
+     Placement: inline
      Tone: {e.g., "dramatic stadium shot", "analytical infographic", "player action photo style"}
      Key elements: {specific players, logos, stats, colors to include}
 -->
 ```
 
 **Placement rules:**
-- **Cover image** — always required, immediately after the headline/subtitle. Cinematic, high-impact. Sets the emotional tone.
-- **Section headers** — one image per major section (2–4 per article). Illustrates the section's key point.
-- **Inline / pull-quote** — optional; use when a single data point or quote deserves visual emphasis.
-- Never place two image placeholders within the same paragraph block.
-- Write descriptions as if briefing a graphic artist — specific enough to generate, not "picture of football."
+- **Exactly 2 inline images per article.** No more, no less.
+- **No cover/banner image.** The Substack cover is set manually in the Substack editor by Joe — do not embed a cover in the article body.
+- Place images at the two best natural text breaks — after a major insight, before a section pivot, or where a wall of text would tire the reader on mobile.
+- Never place two image placeholders within the same paragraph block or back-to-back.
+- Write descriptions as if briefing a photographer — specific enough to generate something meaningful, not "picture of football."
 
 ### Headlines
 - Clickbait-adjacent but honest. Create curiosity without misleading.
@@ -95,7 +95,7 @@ Writer sits between the experts and the editor. Experts provide the substance. W
 - Tables: left-align text columns, right-align number columns
 - Expert quotes as blockquotes: `> *"Quote here."* — **Expert Name**`
 - Risk/confidence ratings: 🟢 🟡 🔴 (sparingly, not decoration)
-- Image placeholders: `<!-- IMAGE: ... -->` blocks (see Image Placeholders section above) — required at cover + section breaks
+- Image placeholders: `<!-- IMAGE: ... -->` blocks (see Image Placeholders section above) — exactly 2 inline per article, no cover
 
 ### Language
 - "The Seahawks" not "Seattle" (except for variety in the same paragraph)

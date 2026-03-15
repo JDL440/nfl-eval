@@ -60,3 +60,27 @@
 
 📌 Article milestone (2026-03-15T21:45:00Z): JSN Extension Preview article approved for publication. All 4 yellow-item fixes applied. Ready for Publisher pass. Recorded by: Editor
 
+📌 Fifth pass: JSN Extension Preview — IMAGE REVIEW (2026-03-15T22:00:00Z)
+- **5 images examined:** cover + 4 inline images across article sections
+- **Relevance check:** All images placed in correct sections, directly supporting panel arguments (market comps, injury timeline, cap structure, deal closure)
+- **Alt text audit:** All 5 alt text entries accurately describe image contents. No mismatches.
+- **Tone alignment:** All images consistent with NFL Lab's "analytical, premium" brand. Cover field visualization (risk/opportunity zones) is sophisticated, not generic promo. Inline images are purposeful data-forward visuals, not decorative filler.
+- **Technical flags:** 
+  - Cover image contains intentional embedded text labels ("RISK WINDOWS", "OPPORTUNITY ZONES") — this is purposeful diagram labeling, not AI hallucination artifact. Appropriate for analytical tone.
+  - No aspect ratio issues.
+  - No quality issues detected.
+  - No duplicate/near-identical images.
+- **Verdict: ✅ APPROVED** — All 5 images are publication-ready. No replacements or revisions needed.
+
+📌 Sixth pass: JSN Extension Preview — COMPREHENSIVE IMAGE REVIEW including surplus files (2025-01-22)
+- **Scope expansion:** Complete inventory of 7 images (5 active + 2 surplus) evaluated against charter criteria
+- **Surplus file assessment:**
+  - **cover-2.png:** Duplicate detection completed. Visually identical/near-identical to cover-1 (same Seahawks player #11, stadium setting, pose, lighting). Indicates rejected variant rather than intentional design choice. Verdict: 🔴 Archive (redundant; do not publish)
+  - **jsn-extension-preview-inline.png:** Fresh candidate image (action shot: JSN mid-catch, full stadium background). Technical evaluation: No embedded text, proper aspect ratio, high rendering quality. Tone alignment: Strong—action shot consistent with NFL Lab analytical/premium voice, purposeful not decorative. Relevance: Content relevant to JSN article subject matter, but all 5 active images already approved and optimally placed; no placement need in current article structure. Verdict: 🟡 Archive as alternative candidate (high-quality backup; retain for future JSN-related content or revisions)
+- **Learnings:**
+  - Duplicate detection methodology: Compare cover variants visually for composition, subject pose, lighting, framing—identical/near-identical covers indicate rejected alternates or unnecessary variants
+  - Surplus candidate evaluation framework: Assess technical quality + relevance + tone alignment independently, then cross-reference against current article placement needs. High-quality images without placement are not publication blockers but good candidates for project library/future reuse
+  - Charter compliance: All 7 images evaluated against charter criteria (Relevance, Tone alignment, Technical flags). Verdict system applied: 5 ✅ Keep (active), 1 🟡 Archive (alternative candidate), 1 🔴 Archive (duplicate)
+- **Final verdict: ✅ ARTICLE APPROVED FOR PUBLICATION** — All active images cleared. Surplus files assessed and archived with clear disposition. Article ready for publisher pass.
+- **Recorded by:** Editor (2025-01-22)
+

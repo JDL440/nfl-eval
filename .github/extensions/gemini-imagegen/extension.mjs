@@ -46,7 +46,9 @@ function loadEnv() {
 // ─── Gemini API ──────────────────────────────────────────────────────────────
 
 // Model priority: Imagen 4 for highest quality editorial images.
-// Falls back to Nano Banana Pro 2 (gemini-3.1-flash-image-preview) if Imagen unavailable.
+// Falls back to Gemini Flash if Imagen unavailable.
+// Note: Gemini Flash tends to produce better athlete likenesses; Imagen 4 is
+// higher quality for abstract/atmospheric shots. Both produce people fine.
 const IMAGEN_MODEL = "imagen-4.0-generate-001";
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -58,9 +60,6 @@ async function generateWithImagen3(prompt, apiKey, count, aspectRatio) {
         parameters: {
             sampleCount: count,
             aspectRatio,
-            // Disable person generation for editorial sports images
-            // (focus on action, atmosphere, visual metaphor)
-            personGeneration: "dont_allow",
         },
     };
 
@@ -288,122 +287,120 @@ async function generateArticleImages(params) {
 
 // ─── Extension Entrypoint ────────────────────────────────────────────────────
 
-const session = joinSession();
-
-session.tool(
-    "generate_article_images",
-    {
-        description: [
-            "Generate editorial images for an NFL Lab article using Google Imagen 3.",
-            "Saves images to content/images/{slug}/ and returns markdown references",
-            "ready to insert into the article. Call this after the Writer produces",
-            "a draft and before the Editor pass so Editor can review both text and images.",
-        ].join(" "),
-        inputSchema: {
-            type: "object",
-            required: ["article_slug", "article_title"],
-            properties: {
-                article_slug: {
-                    type: "string",
-                    description: "Article slug matching the filename in content/articles/ (e.g. 'witherspoon-extension-analysis')",
-                },
-                article_title: {
-                    type: "string",
-                    description: "Full article headline — used to craft image generation prompts",
-                },
-                article_summary: {
-                    type: "string",
-                    description: "1-3 sentence summary of the article's core argument — improves image prompt quality",
-                },
-                team: {
-                    type: "string",
-                    description: "Primary NFL team name (e.g. 'Seattle Seahawks') — informs visual style",
-                },
-                players: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Player names to reference in image prompts. Note: Imagen 3 generates atmospheric/editorial images, not literal player likenesses.",
-                },
-                image_types: {
-                    type: "array",
-                    items: {
+await joinSession({
+    onPermissionRequest: approveAll,
+    tools: [
+        {
+            name: "generate_article_images",
+            description: [
+                "Generate editorial images for an NFL Lab article using Google Imagen 4.",
+                "Saves images to content/images/{slug}/ and returns markdown references",
+                "ready to insert into the article. Call this after the Writer produces",
+                "a draft and before the Editor pass so Editor can review both text and images.",
+            ].join(" "),
+            parameters: {
+                type: "object",
+                required: ["article_slug", "article_title"],
+                properties: {
+                    article_slug: {
                         type: "string",
-                        enum: ["cover", "inline"],
+                        description: "Article slug matching the filename in content/articles/ (e.g. 'witherspoon-extension-analysis')",
                     },
-                    description: "Types of images to generate. 'cover' = 16:9 hero image. 'inline' = 1:1 body image. Default: ['cover']",
-                    default: ["cover"],
-                },
-                count_per_type: {
-                    type: "integer",
-                    minimum: 1,
-                    maximum: 4,
-                    description: "Number of images to generate per type. Generate 2-3 to give Joe options. Default: 1",
-                    default: 1,
-                },
-                custom_prompts: {
-                    type: "object",
-                    description: "Override the auto-generated prompt for a specific image type. Keys: 'cover' or 'inline'. Values: full prompt string.",
-                    additionalProperties: { type: "string" },
-                },
-                use_model: {
-                    type: "string",
-                    enum: ["auto", "imagen-4", "gemini-flash"],
-                    description: "Image model to use. 'auto' tries Imagen 4 first, falls back to Gemini Flash. Default: 'auto'",
-                    default: "auto",
+                    article_title: {
+                        type: "string",
+                        description: "Full article headline — used to craft image generation prompts",
+                    },
+                    article_summary: {
+                        type: "string",
+                        description: "1-3 sentence summary of the article's core argument — improves image prompt quality",
+                    },
+                    team: {
+                        type: "string",
+                        description: "Primary NFL team name (e.g. 'Seattle Seahawks') — informs visual style",
+                    },
+                    players: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Player names to reference in image prompts. Both Imagen 4 and Gemini Flash can generate athlete likenesses in editorial sports contexts.",
+                    },
+                    image_types: {
+                        type: "array",
+                        items: {
+                            type: "string",
+                            enum: ["cover", "inline"],
+                        },
+                        description: "Types of images to generate. 'cover' = 16:9 hero image. 'inline' = 1:1 body image. Default: ['cover']",
+                        default: ["cover"],
+                    },
+                    count_per_type: {
+                        type: "integer",
+                        minimum: 1,
+                        maximum: 4,
+                        description: "Number of images to generate per type. Default: 1",
+                        default: 1,
+                    },
+                    custom_prompts: {
+                        type: "object",
+                        description: "Override the auto-generated prompt for a specific image type. Keys: 'cover' or 'inline'. Values: full prompt string.",
+                        additionalProperties: { type: "string" },
+                    },
+                    use_model: {
+                        type: "string",
+                        enum: ["auto", "imagen-4", "gemini-flash"],
+                        description: "Image model to use. 'auto' tries Imagen 4 first, falls back to Gemini Flash. Default: 'auto'",
+                        default: "auto",
+                    },
                 },
             },
+            handler: async (params) => {
+                const { results, errors, outputDir } = await generateArticleImages(params);
+
+                const lines = [];
+
+                if (results.length > 0) {
+                    lines.push(`✅ Generated ${results.length} image(s) → ${outputDir}`);
+                    lines.push("");
+                    lines.push("## Generated Images");
+                    lines.push("");
+
+                    for (const r of results) {
+                        lines.push(`### ${r.type.charAt(0).toUpperCase() + r.type.slice(1)} Image`);
+                        lines.push(`- **File:** \`${r.filename}\``);
+                        lines.push(`- **Model:** \`${r.model}\``);
+                        lines.push(`- **Prompt used:** ${r.prompt}`);
+                        lines.push("");
+                        lines.push("**Markdown reference to paste into article:**");
+                        lines.push("```markdown");
+                        lines.push(r.markdownRef);
+                        lines.push("```");
+                        lines.push("");
+                    }
+
+                    lines.push("## Next Steps");
+                    lines.push("");
+                    lines.push("1. Review the saved images in `" + outputDir + "`");
+                    lines.push("2. Paste the markdown references above into the article at the right positions:");
+                    lines.push("   - Cover image: directly after the subtitle line (`*subtitle*`)");
+                    lines.push("   - Inline images: at natural section breaks or to illustrate specific points");
+                    lines.push("3. The cover image will also be set in the Substack editor (Stage 8)");
+                    lines.push("4. Proceed to the Editor pass — Editor can review images alongside the text");
+
+                    if (errors.length > 0) {
+                        lines.push("");
+                        lines.push("## ⚠️ Errors");
+                        for (const e of errors) lines.push(`- ${e}`);
+                    }
+                } else {
+                    lines.push("❌ No images were generated.");
+                    lines.push("");
+                    if (errors.length > 0) {
+                        lines.push("**Errors:**");
+                        for (const e of errors) lines.push(`- ${e}`);
+                    }
+                }
+
+                return lines.join("\n");
+            },
         },
-    },
-    async (params) => {
-        await approveAll();
-        const { results, errors, outputDir } = await generateArticleImages(params);
-
-        const lines = [];
-
-        if (results.length > 0) {
-            lines.push(`✅ Generated ${results.length} image(s) → ${outputDir}`);
-            lines.push("");
-            lines.push("## Generated Images");
-            lines.push("");
-
-            for (const r of results) {
-                lines.push(`### ${r.type.charAt(0).toUpperCase() + r.type.slice(1)} Image`);
-                lines.push(`- **File:** \`${r.filename}\``);
-                lines.push(`- **Model:** \`${r.model}\``);
-                lines.push(`- **Prompt used:** ${r.prompt}`);
-                lines.push("");
-                lines.push("**Markdown reference to paste into article:**");
-                lines.push("```markdown");
-                lines.push(r.markdownRef);
-                lines.push("```");
-                lines.push("");
-            }
-
-            lines.push("## Next Steps");
-            lines.push("");
-            lines.push("1. Review the saved images in `" + outputDir + "`");
-            lines.push("2. Paste the markdown references above into the article at the right positions:");
-            lines.push("   - Cover image: directly after the subtitle line (`*subtitle*`)");
-            lines.push("   - Inline images: at natural section breaks or to illustrate specific points");
-            lines.push("3. The cover image will also be set in the Substack editor (Stage 8)");
-            lines.push("4. Proceed to the Editor pass — Editor can review images alongside the text");
-
-            if (errors.length > 0) {
-                lines.push("");
-                lines.push("## ⚠️ Errors");
-                for (const e of errors) lines.push(`- ${e}`);
-            }
-        } else {
-            lines.push("❌ No images were generated.");
-            lines.push("");
-            if (errors.length > 0) {
-                lines.push("**Errors:**");
-                for (const e of errors) lines.push(`- ${e}`);
-            }
-        }
-
-        return lines.join("\n");
-    }
-);
-
-session.start();
+    ],
+});

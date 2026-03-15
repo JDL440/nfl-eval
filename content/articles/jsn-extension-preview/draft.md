@@ -7,12 +7,7 @@
 **By: The NFL Lab Expert Panel**  
 *Cap · PlayerRep · SEA · Offense*
 
-<!-- IMAGE: Jaxon Smith-Njigba mid-route against NFL secondary, jersey stretched, full intensity
-     Placement: cover
-     Tone: Dynamic, action-focused, championship energy
-     Key elements: JSN in Seahawks uniform, route precision visible, defender trailing -->
-
-The Seattle Seahawks have a decision to make, and the clock is ticking louder than most people realize. Jaxon Smith-Njigba — 23 years old, coming off a 1,800-yard breakout season, the undisputed WR1 in an offense that traded DK Metcalf and rebuilt around him — is currently earning $3.4 million. That's a 90% discount on his market value. Every snap he plays at that number is a snap where one non-contact knee injury can cost him $50 million in career earnings and cost Seattle its entire offensive identity. The only question is whether the Seahawks extend him now, exercise his fifth-year option and negotiate later, let him play it out, or try a franchise tag. Our expert panel reviewed all four paths. They don't agree on the price. But they agree on one thing: the injury clock is already running.
+The Seattle Seahawkshave a decision to make, and the clock is ticking louder than most people realize. Jaxon Smith-Njigba — 23 years old, coming off a 1,800-yard breakout season, the undisputed WR1 in an offense that traded DK Metcalf and rebuilt around him — is currently earning $3.4 million. That's a 90% discount on his market value. Every snap he plays at that number is a snap where one non-contact knee injury can cost him $50 million in career earnings and cost Seattle its entire offensive identity. The only question is whether the Seahawks extend him now, exercise his fifth-year option and negotiate later, let him play it out, or try a franchise tag. Our expert panel reviewed all four paths. They don't agree on the price. But they agree on one thing: the injury clock is already running.
 
 Here's what four domain experts — a salary cap analyst, a player advocate, the Seahawks team analyst, and an offensive scheme specialist — told us about what JSN should cost, what Seattle can afford, and which path keeps the championship window open.
 
@@ -36,10 +31,7 @@ The panel's positions:
 | **SEA** | Path 2 hybrid — Option + negotiate | $30–32M | $75–90M fully gtd | EDGE/safety come first; use option savings to fix the defense |
 | **Offense** | Path 1 at the right price | $28–32M | $75–85M fully gtd | Top-5-to-8 WR, not top-3; scheme-amplified but not scheme-dependent |
 
-<!-- IMAGE: Split-screen comparison — JSN making precision cut vs. Justin Jefferson/CeeDee Lamb highlight
-     Placement: section-header
-     Tone: Analytical, comparison-focused
-     Key elements: Route precision visible, metrics overlays, "tier question" visual -->
+![JSN — Four Paths to an Extension](../../images/jsn-extension-preview/jsn-extension-preview-inline-1.png)
 
 ---
 
@@ -95,10 +87,7 @@ Why does waiting cost $33 million more? Because the WR market inflates 8–12% a
 
 > *"Guaranteed cash today is the only real money in the NFL. Future base salaries can be restructured or voided. A $65 million signing bonus wired to your account cannot be taken back."* — **PlayerRep**
 
-<!-- IMAGE: Calendar visual showing injury timeline risk — 2026 games vs. guaranteed money milestones
-     Placement: inline
-     Tone: Infographic-style, urgency-focused
-     Key elements: Timeline, injury risk windows highlighted, cash security vs. exposure -->
+![JSN — Every Snap Without a Contract Is a Financial Risk](../../images/jsn-extension-preview/jsn-extension-preview-inline-2.png)
 
 **SEA's defense:** The option-then-negotiate hybrid works if Seattle moves fast. Exercise the option *and* open extension talks simultaneously. Use the option as a bridge, not a delay tactic. Structure the extension as a 5-year deal where the option year converts to Year 1. The ~$12–14M saved over 2026–2027 funds a starting safety (Coby Bryant just left for Chicago at $13.3M/yr) and depth at EDGE. That's not "saving money for its own sake" — it's sequencing investments to keep a championship window open.
 
@@ -156,11 +145,6 @@ All four panelists agree: any JSN deal must be heavily front-loaded. Here's Cap'
 
 > *"A $65 million signing bonus paid in 2026 and prorated over five years is the single most cap-efficient structure available. It delivers security to the player immediately and lets cap inflation shrink the hit as a percentage every year. Waiting only makes the eventual deal more expensive."* — **Cap**
 
-<!-- IMAGE: Cap structure visualization — bar chart showing JSN's cap hit as % of cap ceiling, 2026–2030
-     Placement: inline
-     Tone: Data-focused, business-clean
-     Key elements: Declining percentage trend, cap ceiling growth annotated -->
-
 ---
 
 ## The Paths Seattle Should Reject
@@ -199,11 +183,6 @@ Here's why the panel synthesis lands here:
 - **No void years** — Seattle's cap discipline is a competitive advantage
 
 This structure gives JSN generational security, gives Seattle cost certainty at a number that shrinks against the cap ceiling every year, and leaves room to fix the defense. It's the outcome that keeps the championship window open.
-
-<!-- IMAGE: Handshake visual — stylized "deal done" imagery with Seahawks branding, championship urgency
-     Placement: section-header
-     Tone: Conclusive, championship-focused
-     Key elements: Agreement symbolism, Seattle Super Bowl trophy in background -->
 
 ---
 

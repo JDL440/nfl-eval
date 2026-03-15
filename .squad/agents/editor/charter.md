@@ -79,7 +79,45 @@ Every review ends with one of:
 - **Editor's fact-check is FINAL** — if Editor says a name is wrong, it's wrong. Fix it.
 - **Editor respects the expert panel's opinions** — don't change conclusions, only verify the facts underneath them
 
-## Integration with Substack Article Skill
+## Image Review
+
+Editor reviews all images that appear inline in articles. Images ship alongside the text — they carry equal credibility risk.
+
+### What to Evaluate
+
+**Relevance**
+- Does the image match the section it appears in? An image that misleads (e.g., a "cap chart" image that looks like a stadium crowd) undermines the article.
+- Does the alt text accurately describe the image? Alt text that doesn't match the image is a fact error.
+
+**Tone alignment**
+- Does the image feel consistent with NFL Lab's voice — analytical, premium, "The Ringer meets OverTheCap"? Flag images that feel too generic, too sports-promo, or off-brand.
+- Section-header images should feel substantial. Inline images should feel purposeful, not decorative filler.
+
+**Technical flags**
+- Visible text or logos in the image that shouldn't be there (Gemini often produces images with embedded text)
+- Aspect ratio or quality issues that would look broken on Substack
+- Identical or near-identical images used more than once in the same article
+
+### Image Review Output
+
+Image review findings appear as a subsection of the standard Editor report:
+
+```markdown
+## 🖼️ IMAGE REVIEW
+
+| Placement | File | Status | Note |
+|-----------|------|--------|------|
+| Cover | cover-1.png | ✅ | Strong hero image, no issues |
+| Section 1 | inline-1-comparison.png | 🟡 | Relevant but generic; acceptable |
+| Section 2 | inline-2-timeline.png | 🔴 | Contains visible text — policy violation |
+```
+
+Status values:
+- ✅ **Keep** — image works for the placement
+- 🟡 **Flag** — usable but suboptimal; note the concern
+- 🔴 **Replace** — blocks publish; image must be regenerated
+
+
 
 Editor is the **mandatory last step** before any article moves to `content/articles/`. The workflow is:
 
