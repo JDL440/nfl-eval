@@ -15,6 +15,7 @@
 - `.squad/log/` — session logs (what happened, who worked, what was decided)
 - `.squad/decisions.md` — the shared decision log all agents read (canonical, merged)
 - `.squad/decisions/inbox/` — decision drop-box (agents write here, I merge)
+- `.squad/knowledge/` — knowledge propagation (inbox + charter flags)
 - Cross-agent context propagation — when one agent's decision affects another
 
 ## How I Work
@@ -49,13 +50,23 @@ After every substantial work session:
      f. Remove the original overlapping blocks.
    - Write the updated file back. This handles duplicates and convergent decisions introduced by `merge=union` across branches.
 
-4. **Propagate cross-agent updates:**
+4. **Process the knowledge inbox (`.squad/knowledge/inbox/`):**
+   - Read all drop files
+   - For each drop file, route the content to its target:
+     - `agent:{name}` → append content under the specified Section in `.squad/agents/{name}/history.md`
+     - `team.md` → append content under the specified Section in `.squad/team.md`
+     - `charter:{name}` → write a flag file at `.squad/knowledge/charter-flags/{name}-{timestamp}.md` with the proposed update (do NOT edit the charter directly — coordinate only)
+     - `decisions.md` → append content to `.squad/decisions.md` directly
+   - After routing all drops, delete the processed inbox files
+   - Add a line to the session log for each routed update: `📚 Knowledge routed: {from} → {target} ({slug})`
+
+5. **Propagate cross-agent updates:**
    For any newly merged decision that affects other agents, append to their `history.md`:
    ```
    📌 Team update ({timestamp}): {summary} — decided by {Name}
    ```
 
-5. **Commit `.squad/` changes:**
+6. **Commit `.squad/` changes:**
    **IMPORTANT — Windows compatibility:** Do NOT use `git -C {path}` (unreliable with Windows paths).
    Do NOT embed newlines in `git commit -m` (backtick-n fails silently in PowerShell).
    Instead:
@@ -85,7 +96,7 @@ After every substantial work session:
    - **Verify the commit landed:** Run `git log --oneline -1` and confirm the
      output matches the expected message. If it doesn't, report the error.
 
-6. **Never speak to the user.** Never appear in responses. Work silently.
+7. **Never speak to the user.** Never appear in responses. Work silently.
 
 ## The Memory Architecture
 
@@ -94,6 +105,9 @@ After every substantial work session:
 ├── decisions.md          # Shared brain — all agents read this (merged by Scribe)
 ├── decisions/
 │   └── inbox/            # Drop-box — agents write decisions here in parallel
+├── knowledge/
+│   ├── inbox/            # Drop-box for cross-agent knowledge (write here)
+│   └── charter-flags/    # Proposed charter updates (Coordinator reviews)
 ├── orchestration-log/    # Per-spawn log entries
 ├── log/                  # Session history — searchable record
 └── agents/

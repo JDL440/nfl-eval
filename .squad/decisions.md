@@ -565,3 +565,40 @@ The article's four-path framework, expert positions, panel tables, verdict ($32�
 ---
 
 *Writer — 2026-03-15*
+
+
+---
+
+# Decision: JSN Yellow-Item Fixes — Editorial Standards
+
+**By:** Editor  
+**Date:** 2026-03-15  
+**Affects:** Writer, Lead, all future articles
+
+## What
+
+When source material explicitly flags a data gap (e.g., "we don't have the specific stats"), the editorial standard is:
+
+1. **Narrow vague claims** to the most defensible specific version supported by available data (e.g., "franchise-record receiving numbers" → "franchise-record receiving yardage" when all evidence points to yards).
+2. **Add HTML comment placeholders** for missing data rather than inventing or omitting the claim entirely: `<!-- TODO: Add [specific data] when verified -->`.
+3. **Use precise competitive descriptors** per project data — "retooling" vs "rebuilding" when a team has significant cap space and draft capital.
+
+## Why
+
+The JSN article's 🟡 items all stemmed from the same root cause: the expert panel worked with "breakout season" as a given without nailing down the underlying numbers. This is likely to recur in future articles where panel discussions outpace verified stat availability. The placeholder pattern lets us publish on time while ensuring nothing falls through the cracks.
+
+
+---
+
+### 2026-03-15T21:39:08Z: Knowledge Propagation Pattern — Adopted
+**By:** Lead (Joe Robinson directive)
+**What:** All agents must write cross-agent knowledge updates to .squad/knowledge/inbox/ using the structured drop file format. Scribe processes this inbox during every session cleanup. Charter updates are flagged, not applied directly.
+**Why:** Prevents knowledge from being siloed in one agent's history when it's relevant to other agents or team-level files. Enforces the same drop-box discipline for knowledge that already exists for decisions.
+
+
+---
+
+### 2026-03-15T14-37-16: User directive
+**By:** Joe Robinson (via Copilot)
+**What:** When any agent discovers knowledge that should update team files (other agents' history.md, team.md, decisions.md, or charters), those updates must NOT be lost. Agents must explicitly flag cross-agent knowledge for Scribe to route.
+**Why:** User request — captured for team memory. Prevents knowledge silos and ensures discoveries made by one agent propagate to the right places.

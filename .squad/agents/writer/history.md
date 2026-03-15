@@ -49,3 +49,7 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 
 📌 **Team update (2026-03-15T21:17:13Z)**: Editor approval on JSN Extension article. All 3 red errors fixed. Article is publish-ready — decided by Editor
+
+
+📌 Team update (2026-03-15T21:45:00Z): Editorial standards established for yellow-item resolution pattern — narrow vague claims, add placeholders for gaps, use precise competitive descriptors. Decided by: Editor
+

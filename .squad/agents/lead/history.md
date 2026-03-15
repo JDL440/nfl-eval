@@ -149,3 +149,42 @@ The WA millionaires tax (SB 6346, effective 2028) is a *front-loading accelerant
 CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-limits. This includes all tax legislation references (WA SB 6346, millionaires tax, state income tax), political bills, and any political angles. Remove from existing content, never add to future content. This was flagged during JSN panel synthesis.
 
 **Action taken:** Revised all 4 JSN panel position files (cap, playerrep, sea, offense) and rewrote the discussion-summary.md to replace tax/political arguments with legitimate football and business arguments (injury protection, front-loading for cash-flow, cap efficiency, standard big-market signing bonus structures). Offense file was already clean — no changes needed.
+
+---
+
+### Knowledge Propagation Pattern — Implemented (2026-03-15)
+
+**Task:** Per Joe Robinson directive, designed and implemented the knowledge propagation pattern for cross-agent knowledge updates.
+
+**What was built:**
+
+1. **`.squad/skills/knowledge-propagation/SKILL.md`** — Mandatory read skill defining:
+   - Knowledge inbox pattern (`.squad/knowledge/inbox/`)
+   - Drop file format (From/Target/Section/Content/Why)
+   - Routing rules for agent:{name}, team.md, charter:{name}, decisions.md
+   - Clear distinction between knowledge inbox (factual updates) vs decisions inbox (team-level decisions)
+
+2. **Scribe charter updated** — Added new step 4 (process knowledge inbox):
+   - Routes drops to target files (appends to specified sections)
+   - Charter updates are flagged (`.squad/knowledge/charter-flags/`) not applied directly
+   - Deletes processed inbox files
+   - Logs each routed update
+   - Updated memory architecture diagram to show knowledge/ directory structure
+
+3. **Directory structure created:**
+   - `.squad/knowledge/inbox/` (drop-box for cross-agent knowledge)
+   - `.squad/knowledge/charter-flags/` (proposed charter updates)
+
+4. **Decision filed:** `.squad/decisions/inbox/lead-knowledge-propagation.md` — Pattern adoption decision
+
+**Why this matters:** Previously, agents had no structured way to propagate knowledge OUTSIDE their domain. Discoveries stayed siloed in their own history.md or got lost. This pattern enforces the same drop-box discipline for knowledge that already exists for decisions, with proper routing and audit trails.
+
+**Pattern distinction:**
+- **Decisions inbox** = team-level decisions (architecture, process, scope, constraints)
+- **Knowledge inbox** = factual updates to specific files (content appended to specific sections)
+
+**Next dependency:** All agents must read the knowledge-propagation skill before starting work to understand when and how to use the inbox.
+
+
+📌 Team update (2026-03-15T21:45:00Z): Knowledge Propagation Pattern adopted — all agents route cross-team knowledge to .squad/knowledge/inbox/ for Scribe processing. Prevents silos. Decided by: Lead (Joe Robinson directive)
+

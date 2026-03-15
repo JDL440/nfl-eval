@@ -47,7 +47,8 @@ The panel's positions:
 
 Here's the first tension the panel couldn't resolve: is Jaxon Smith-Njigba a Justin Jefferson-tier receiver, or is he the best receiver a Shanahan-tree offense has ever produced? The difference is $6 million per year and whether Seattle mortgages its defense to pay him.
 
-**Cap's position:** The market sets the floor, and the floor is CeeDee Lamb's 4yr/$136M deal ($34M AAV, $102M fully guaranteed). JSN is four years younger than Lamb at signing. He just put up franchise-record receiving numbers as the primary option in Year 3. Comp-based negotiation says $34M is the starting point, not the ceiling. Jefferson's $35M AAV is in range. Anything below $32M and JSN's agent laughs you out of the room.
+**Cap's position:** The market sets the floor, and the floor is CeeDee Lamb's 4yr/$136M deal ($34M AAV, $102M fully guaranteed). JSN is four years younger than Lamb at signing. He just put up franchise-record receiving yardage as the primary option in Year 3.
+<!-- TODO: Add JSN 2025 specific stats when verified: catches, TDs, target share, YAC --> Comp-based negotiation says $34M is the starting point, not the ceiling. Jefferson's $35M AAV is in range. Anything below $32M and JSN's agent laughs you out of the room.
 
 > *"The comps are clean: Lamb at $34M, Jefferson at $35M. JSN is younger than both at signing and just as productive."* — **Cap**
 
@@ -117,7 +118,7 @@ PlayerRep's read: JSN's agent noticed. When you commit $51 million to your secon
 
 Cap's model confirms it. Seattle has $44 million in effective 2026 cap space. A JSN extension at $34M AAV only costs $16.4M against the 2026 cap (rookie deal year + signing bonus proration). That leaves ~$31 million for EDGE, safety, and other needs. The cap isn't actually the constraint — the question is how Seattle prioritizes those dollars across a roster with real defensive holes.
 
-**The competitive context:** Seattle just won the Super Bowl. Mike Macdonald is entering Year 3. Sam Darnold is locked in but aging. The NFC West is wide open — Arizona is rebuilding, San Francisco is cap-strapped and aging, the Rams just lost Rob Havenstein. This is a 2–3 year window. Every dollar matters, and *how* you spend $44 million matters more than whether you spend it.
+**The competitive context:** Seattle just won the Super Bowl. Mike Macdonald is entering Year 3. Sam Darnold is locked in but aging. The NFC West is wide open — Arizona is retooling, San Francisco is cap-strapped and aging, the Rams just lost Rob Havenstein. This is a 2–3 year window. Every dollar matters, and *how* you spend $44 million matters more than whether you spend it.
 
 SEA's hierarchy:
 1. **EDGE** — Mafe walked to Cincinnati. DeMarcus Lawrence turns 34. The pass rush is duct tape and prayers.
@@ -140,6 +141,8 @@ All four panelists agree: any JSN deal must be heavily front-loaded. Here's Cap'
 | **2028** | $17.0M | $13.0M | — | **$30.0M** | 8.5% of $352M |
 | **2029** | $20.6M | $13.0M | — | **$33.6M** | 9.0% of ~$375M |
 | **2030** | $20.0M | $13.0M | — | **$33.0M** | 8.3% of ~$400M |
+
+*2027 cap hit of $35.0M includes $8M Day 1 roster bonus; base cap hit excluding roster bonus is $27.0M.*
 
 **Key structure elements:**
 - **$65M signing bonus** — paid summer 2026, prorated over 5 years, immediate generational security for JSN

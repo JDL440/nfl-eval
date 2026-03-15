@@ -49,3 +49,14 @@
 - **Verdict: ✅ APPROVED** — article is publish-ready.
 
 📌 **Decision finalized (2026-03-15T21:17:13Z)**: JSN Extension Preview article approved for publication. All 3 red errors fixed, full 8-quote attribution audit clean, no new factual errors. Article is publish-ready.
+
+📌 Fourth pass: JSN Extension Preview — 4 🟡 yellow-item fixes applied:
+- "franchise-record receiving numbers" → "franchise-record receiving yardage" (defensible narrowing; discussion-summary supports yards as the metric).
+- Added HTML placeholder for JSN 2025 specific stats (catches, TDs, target share, YAC) — source material explicitly flags these as unavailable (Open Question #1 in discussion-summary.md).
+- Added cap table footnote clarifying $35.0M includes $8M Day 1 roster bonus vs. $27.0M base.
+- "Arizona is rebuilding" → "Arizona is retooling" per decisions.md ($41.7M cap space, pick #3).
+- **Lesson:** When source data explicitly flags a stat gap, use HTML comment placeholders rather than inventing specifics. Narrowing vague claims ("numbers" → "yardage") is preferable to leaving them vague when the supporting data points one direction.
+
+
+📌 Article milestone (2026-03-15T21:45:00Z): JSN Extension Preview article approved for publication. All 4 yellow-item fixes applied. Ready for Publisher pass. Recorded by: Editor
+
