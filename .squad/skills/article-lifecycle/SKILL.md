@@ -353,16 +353,18 @@ publish_to_substack(
   file_path: "content/articles/{slug}.md",
   title: "{Final headline}",
   subtitle: "{1-line hook for Substack preview / email subject}",
-  audience: "everyone",
-  team: "{Team Name}"              ← routes draft to the team's Substack section
+  audience: "everyone"
 )
 ```
 
+**Team routing is automatic.** The tool reads `primary_team` from `content/pipeline.db` via the article path and routes the draft to the correct NFL team section. You can override by passing `team: "{Team Name}"` explicitly, but this is rarely needed.
+
 The tool:
 1. Reads `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` from `.env`
-2. Converts the markdown article to Substack's ProseMirror format
-3. Creates a draft on Substack via the API
-4. Returns the draft editor URL
+2. Looks up `primary_team` from `content/pipeline.db` (matched by `article_path`)
+3. Converts the markdown article to Substack's ProseMirror format
+4. Creates a draft on Substack, assigned to the team's section
+5. Returns the draft editor URL
 
 Title and subtitle are auto-extracted from the markdown if not provided (first `# Heading` and first `*italic*` line).
 
