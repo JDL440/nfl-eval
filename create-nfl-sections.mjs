@@ -5,9 +5,10 @@
  * applying each team's official primary and secondary colors via custom_config.
  *
  * Usage:
- *   node create-nfl-sections.mjs           # dry run (shows what would be created)
- *   node create-nfl-sections.mjs --run     # actually create sections
- *   node create-nfl-sections.mjs --delete  # delete all existing sections (reset)
+ *   node create-nfl-sections.mjs                        # dry run against nfllab
+ *   node create-nfl-sections.mjs --run                  # create sections on nfllab
+ *   node create-nfl-sections.mjs --pub nfllabstage --run # target a different publication
+ *   node create-nfl-sections.mjs --delete               # delete all existing sections (reset)
  */
 
 import { readFileSync } from "fs";
@@ -22,8 +23,9 @@ for (const line of readFileSync(".env", "utf-8").split("\n")) {
 const decoded = JSON.parse(Buffer.from(env.SUBSTACK_TOKEN, "base64").toString());
 const cookie = "substack.sid=" + decoded.substack_sid;
 
-// Target: production publication
-const PUB = "nfllab";
+// Target: publication (override with --pub <subdomain>)
+const pubArg = process.argv.indexOf("--pub");
+const PUB = pubArg !== -1 ? process.argv[pubArg + 1] : "nfllab";
 const BASE = `https://${PUB}.substack.com`;
 const HEADERS = {
     Cookie: cookie,
