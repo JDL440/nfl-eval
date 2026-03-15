@@ -48,6 +48,21 @@ This is an interactive system. You talk to the agents through GitHub Copilot CLI
 2. Make sure **GitHub Copilot CLI** is installed with the `squad` agent extension
 3. Open the Copilot chat panel
 
+### Publishing Setup (one-time)
+
+To enable automated Substack publishing:
+
+1. Log in to Substack in Chrome
+2. Open DevTools → Application → Cookies → `https://substack.com`
+3. Copy the values of `substack.sid` and `connect.sid`
+4. Generate your token:
+   ```
+   node -e "console.log(Buffer.from(JSON.stringify({ substack_sid: 'YOUR_SID', connect_sid: 'YOUR_CONNECT_SID' })).toString('base64'))"
+   ```
+5. Create a `.env` file from `.env.example` and fill in `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL`
+
+Once configured, agents can call `publish_to_substack` to push any article to Substack as a draft.
+
 ### Talking to Agents
 
 Address any agent by name in the chat. Examples:
@@ -121,8 +136,8 @@ All agent knowledge comes from public sources:
 Planned but not yet built:
 
 - [ ] **Image creation** — Article header images, player graphics, data visualizations
-- [ ] **Automated publishing** — Direct Substack API integration (no more copy-paste)
-- [ ] **MCP servers / extensions** — Image generation (DALL-E, Midjourney integration), publishing automation
+- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files
+- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing
 - [ ] **New agent roles** — Growth/Distribution agent (audience strategy, SEO, social), Graphic Designer agent
 - [ ] **Automated pipeline** — Cron-triggered Media sweeps → auto-draft → Editor review → publish queue
 - [ ] **Multi-team activation** — Currently Seahawks-focused; 31 more teams ready to light up

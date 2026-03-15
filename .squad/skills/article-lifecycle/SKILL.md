@@ -338,75 +338,86 @@ Editor reviews the draft for factual accuracy, structural issues, and style comp
 
 ## Stage 7 — Publisher Pass
 
-**Owner:** Joe Robinson (manual today; future Publisher agent)
+**Owner:** Lead (calls `publish_to_substack` tool) → Joe reviews the draft URL
 **Input:** Editor-approved draft from `content/articles/{slug}.md`
-**Output:** Publish-ready article with all metadata and formatting confirmed
+**Output:** Substack draft URL, ready for Joe to review and publish with one click
 
-This stage sits between Editor approval and actual Substack publish. Its purpose: final formatting, metadata, scheduling, and platform-specific prep.
+This stage is **automated** via the `publish_to_substack` Copilot extension. Lead (or any agent) calls the tool; the extension converts the article to Substack's format and creates a draft. Joe receives the editor URL, checks a short final checklist, then publishes.
 
-### Publisher Pass Checklist
+### How to Run Stage 7
 
-Copy this checklist for each article. Check off each item before moving to Stage 8.
+Lead calls the tool directly:
+
+```
+publish_to_substack(
+  file_path: "content/articles/{slug}.md",
+  title: "{Final headline}",
+  subtitle: "{1-line hook for Substack preview / email subject}",
+  audience: "everyone"
+)
+```
+
+The tool:
+1. Reads `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` from `.env`
+2. Converts the markdown article to Substack's ProseMirror format
+3. Creates a draft on Substack via the API
+4. Returns the draft editor URL
+
+Title and subtitle are auto-extracted from the markdown if not provided (first `# Heading` and first `*italic*` line).
+
+### Pre-Publish Checklist (Joe does at Stage 8)
+
+Copy this to the article thread before calling the tool. Lead confirms content items; Joe confirms metadata/schedule.
 
 ```markdown
 ## Publisher Pass — {Article Title}
 
-### Content Final Check
+### Content (Lead confirms before calling tool)
 - [ ] Title: final headline (may differ from draft working title)
 - [ ] Subtitle: 1-line hook for Substack preview / email subject
 - [ ] Author line: "By: The NFL Lab Expert Panel" (or variant)
 - [ ] Opening preview text: first ~150 chars that show in email/social (compelling?)
 - [ ] Article body: final read-through — no orphaned placeholders, no TODO markers
+- [ ] All names spelled correctly (one last check)
+- [ ] All numbers current (cap figures, contract terms — things move fast)
+- [ ] No stale references to "upcoming" events that already happened
+- [ ] "Next from the panel" tease at end points to a real upcoming article
 
-### Substack Metadata
+### Substack Metadata (Joe sets in editor after draft is created)
 - [ ] Section assignment: (e.g., "Free Agency," "Draft," "Game Recaps")
 - [ ] Tags: 3–5 tags (team name, topic, player names, "expert-panel")
 - [ ] URL slug: clean, lowercase, hyphenated (e.g., `witherspoon-extension-analysis`)
-- [ ] Cover image: placeholder or actual image selected
+- [ ] Cover image: selected in Substack editor
 - [ ] Paywall setting: free / paid-only / preview
 
 ### Scheduling & Distribution
 - [ ] Publish date/time: per editorial calendar (Tues 10 AM PT default)
 - [ ] Email send: yes/no (most articles = yes)
 - [ ] Social preview: headline + subtitle render well in card format?
-- [ ] Cross-post plan: Reddit threads, Twitter/X, other channels
-
-### Pre-Publish Verification
-- [ ] All names spelled correctly (one last check)
-- [ ] All numbers current (cap figures, contract terms — things move fast)
-- [ ] No stale references to "upcoming" events that already happened
-- [ ] Disclosure: any AI-generated content disclaimers required?
 ```
-
-### Design notes
-
-- This checklist is designed to be **manually usable today** — Joe copies it, checks items off
-- When a Publisher agent exists, it will programmatically verify each item and flag issues
-- The checklist format is intentionally granular so automation can parse it
-
-> **TODO (future):** Publisher agent + Substack MCP server integration. When built, this stage becomes automated: Publisher agent fills the checklist, calls Substack API for metadata/scheduling, and presents a final summary for Stage 8 approval. Substack has no public API today — workaround options: email-to-post, Puppeteer, or future API access.
 
 ### Done when
 
-- [ ] All checklist items are checked
-- [ ] Article is formatted and ready for Substack paste/upload
-- [ ] Metadata (title, subtitle, tags, slug, section, cover image) is finalized
-- [ ] Publish date/time is confirmed
+- [ ] `publish_to_substack` called successfully — draft URL returned
+- [ ] Lead posts the draft URL for Joe
+- [ ] Content checklist items confirmed
+- [ ] Joe has the URL and is ready to review/publish
 
 ---
 
 ## Stage 8 — Approval / Publish
 
 **Owner:** Joe Robinson (human gate)
-**Input:** Publisher Pass output (completed checklist + publish-ready article)
+**Input:** Draft URL from Stage 7 + completed Publisher Pass checklist
 **Output:** Live article on Substack
 
 ### Process
 
-1. **Joe reviews** the Publisher Pass checklist and the final article
-2. **Joe approves** — or sends back to Stage 6 (editorial issues) or Stage 7 (metadata issues)
-3. **Publish to Substack** — currently manual (paste into Substack editor, apply metadata, schedule or publish)
-4. **Post-publish cleanup:**
+1. **Joe opens the draft URL** returned by `publish_to_substack`
+2. **Joe reviews** in the Substack editor: formatting, cover image, metadata (tags, slug, section), schedule
+3. **Joe approves** — or sends back to Stage 6 (editorial issues) or Stage 7 (re-run the tool)
+4. **Joe clicks Publish** (or schedules) in the Substack editor
+5. **Post-publish cleanup:**
 
 | Task | How |
 |------|-----|
@@ -414,14 +425,12 @@ Copy this checklist for each article. Check off each item before moving to Stage
 | Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`; insert `stage_transitions` row |
 | Git commit | `git add . && git commit -m "Published: {article title}"` |
 | Content pipeline | Ensure "Next from the panel" tease at article end points to a real upcoming idea |
-| Cross-post | Execute the cross-post plan from Stage 7 checklist (Reddit, social) |
-
-> **TODO (future):** Automate publish via Substack MCP server. Automate post-publish status updates and git commit. Optionally notify team agents that the article is live.
+| Cross-post | Reddit threads, Twitter/X, other channels |
 
 ### Done when
 
 - [ ] Article is live on Substack
-- [ ] `content/article-ideas.md` reflects ✅ Published with date
+- [ ] `content/article-ideas.md` reflects ✅ Published with date and Substack URL
 - [ ] Git repo is committed and clean
 - [ ] Cross-post plan executed (if applicable)
 
@@ -437,7 +446,7 @@ Copy this checklist for each article. Check off each item before moving to Stage
 | 4 → 5 | All panelists returned analysis, Lead reviewed for gaps | Lead |
 | 5 → 6 | Draft saved to `content/articles/{slug}.md` | Writer |
 | 6 → 7 | Editor verdict is ✅ APPROVED (all 🔴 resolved) | Editor |
-| 7 → 8 | Publisher Pass checklist fully completed | Joe (manual) / Publisher (future) |
+| 7 → 8 | `publish_to_substack` called, draft URL returned, content checklist confirmed | Lead |
 | 8 → Done | Article live on Substack, statuses updated, committed | Joe |
 
 ## Recovery & Edge Cases

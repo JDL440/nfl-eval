@@ -1,0 +1,251 @@
+---
+name: "substack-publishing"
+description: "How to prepare and publish articles to Substack using the publish_to_substack tool"
+domain: "content-production"
+confidence: "high"
+source: "validated via API exploration on 2026-03-15"
+---
+
+# Substack Publishing — Skill
+
+> **Confidence:** high — validated end-to-end against nfllabstage.substack.com
+> **Created:** 2026-03-15
+> **Owned by:** Writer (formatting), Lead (triggers publish), Joe (final review + publish click)
+
+## Purpose
+
+How to prepare a markdown article file so it publishes cleanly to Substack — including images, tables, YouTube embeds, and all formatting. This is the reference for Writer, Editor, and Lead when preparing articles for Stage 7.
+
+---
+
+## How Publishing Works
+
+```
+content/articles/{slug}.md   →   publish_to_substack tool   →   Substack draft
+                                                                        ↓
+                                                               Joe reviews in editor
+                                                                        ↓
+                                                               Joe clicks Publish
+```
+
+The `publish_to_substack` Copilot extension converts the article markdown to Substack's native format (ProseMirror JSON) and creates a draft. Joe gets a direct editor URL — no copy-paste required.
+
+**Requires:** `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` in `.env` (see `.env.example` for one-time setup).
+
+---
+
+## Calling the Tool
+
+```
+publish_to_substack(
+  file_path: "content/articles/{slug}.md",
+  title: "Final headline",           ← optional: auto-extracted from first # heading
+  subtitle: "One-line hook",         ← optional: auto-extracted from first *italic* line
+  audience: "everyone"               ← "everyone" (default) or "only_paid"
+)
+```
+
+Title and subtitle are auto-extracted from the markdown if not provided:
+- **Title** → first `# Heading` line
+- **Subtitle** → first line that is `*wrapped in single asterisks*` (the standard subheadline format)
+
+---
+
+## Supported Markdown Syntax
+
+Everything here converts cleanly to Substack format.
+
+### Text & Structure
+
+| Markdown | Substack output |
+|----------|----------------|
+| `# Title` | H1 heading |
+| `## Section` | H2 heading |
+| `### Subsection` | H3 heading |
+| `---` | Horizontal divider |
+| `**bold**` | Bold text |
+| `*italic*` or `_italic_` | Italic text |
+| `***bold italic***` | Bold + italic |
+| `[text](url)` | Hyperlink |
+| `> blockquote text` | Indented quote block |
+| `- item` or `* item` | Unordered (bullet) list |
+| `1. item` | Ordered (numbered) list |
+
+### Tables
+
+Standard markdown tables render as native Substack tables (first row becomes column headers):
+
+```markdown
+| Player | Position | Cap Hit | Contract |
+|--------|----------|---------|----------|
+| Devon Witherspoon | CB | $27-33M/yr | 4 years |
+| Tariq Woolen | CB | $18M/yr | 3 years |
+```
+
+### Images
+
+Use standard markdown image syntax. Both **local files** and **remote URLs** are supported:
+
+```markdown
+![Alt text](./images/my-chart.png)
+![Alt text](https://example.com/image.jpg)
+```
+
+With a caption (two options — both work for local and remote):
+
+```markdown
+![Alt text|This caption appears below the image](./images/my-chart.png)
+
+![Alt text](https://example.com/image.jpg "This caption appears below the image")
+```
+
+**Local images are automatically uploaded.** If the path doesn't start with `http://` or `https://`, the extension uploads the file to Substack's CDN (S3) before creating the draft. The image is replaced with a permanent `substack-post-media.s3.amazonaws.com` URL in the draft. Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`.
+
+Paths are resolved relative to the article file, so `./images/chart.png` means the `images/` folder next to the article.
+
+**Remote URLs** are passed through as-is — no upload needed. Any publicly accessible URL works.
+
+**Cover image:** Set in the Substack editor during Stage 8 — not set via the publishing tool.
+
+### YouTube Embeds
+
+Use the `::youtube` custom syntax (not standard markdown — Substack has a native embed):
+
+```markdown
+::youtube dQw4w9WgXcQ
+
+::youtube https://youtu.be/dQw4w9WgXcQ
+
+::youtube https://www.youtube.com/watch?v=dQw4w9WgXcQ
+```
+
+All three formats resolve to the same embed. The video appears as a native player in Substack, not a link.
+
+---
+
+## What Gets Handled Manually (in Substack Editor)
+
+A few things are best done by Joe during Stage 8 review — they don't need to be in the markdown:
+
+| Element | How to handle |
+|---------|--------------|
+| **Cover image** | Upload/select in Substack editor |
+| **URL slug** | Edit in Substack editor (default: auto-generated from title) |
+| **Section/tags** | Set in Substack editor |
+| **Scheduled publish time** | Set in Substack editor |
+| **Paywall placement** | Set in Substack editor |
+| **Twitter/X embeds** | Paste tweet URL in Substack editor |
+| **Spotify/SoundCloud embeds** | Paste URL in Substack editor |
+
+---
+
+## Article File Conventions (for Writer)
+
+Follow these conventions so the tool extracts metadata correctly and the article looks great in Substack:
+
+```markdown
+# Article Headline Here
+
+*Subheadline: one-line hook for the email preview*
+
+---
+
+**By: The NFL Lab Expert Panel**
+
+[opening paragraphs...]
+
+---
+
+## Section Heading
+
+Content...
+
+> *"Expert quote goes here." — Expert Name*
+
+| Col 1 | Col 2 | Col 3 |
+|-------|-------|-------|
+| data  | data  | data  |
+
+---
+
+## Another Section
+
+![Descriptive alt text|Caption shown below image](./images/cap-chart.png)
+
+::youtube VIDEO_ID_HERE
+
+---
+
+*About the NFL Lab Expert Panel: [boilerplate...]*
+
+*Want us to evaluate a scenario? Drop it in the comments.*
+
+---
+
+**Next from the panel:** [tease next article]
+```
+
+**Key rules:**
+- First line must be `# The Headline` (no blank lines before it)
+- Second non-blank line should be `*The subtitle in single asterisks*`
+- Every `---` becomes a visual divider (good for separating major sections)
+- Image URLs must be publicly accessible — test by opening in a browser first
+- YouTube: use `::youtube` syntax, not markdown links
+
+---
+
+## What Substack Supports (Full Node Type Reference)
+
+Discovered by inspecting real Substack drafts via the API:
+
+| Node Type | How to create | Notes |
+|-----------|--------------|-------|
+| `heading` | `# ## ###` | Levels 1–3 |
+| `paragraph` | Normal text | |
+| `horizontal_rule` | `---` | |
+| `blockquote` | `> text` | |
+| `table` + cells | `\| col \| col \|` | First row = headers |
+| `bullet_list` / `list_item` | `- item` | |
+| `ordered_list` / `list_item` | `1. item` | |
+| `captionedImage` + `image2` | `![alt](./local.jpg)` or `![alt](https://url)` | Local files auto-uploaded to S3 |
+| `youtube2` | `::youtube ID` | Native player embed |
+| `twitter2` | Manual in editor | Paste tweet URL |
+| `vimeo` | Manual in editor | Paste Vimeo URL |
+| `spotify2` | Manual in editor | Paste Spotify URL |
+| `soundcloud` | Manual in editor | Paste SoundCloud URL |
+
+**Bold** uses `strong` mark; **italic** uses `em` mark internally (both render correctly).
+
+---
+
+## Quick Reference for Each Role
+
+### Writer
+- Use `# Title` as the very first line
+- Use `*Subtitle*` as the second line (single asterisks)
+- Use `![alt|caption](./images/file.jpg)` for local images — just drop the file next to the article or in an `images/` subfolder
+- Use `![alt|caption](https://url)` for remote images — any public URL works
+- Use `::youtube VIDEO_ID` for video embeds
+- Use standard markdown tables for all data
+- Don't worry about cover image — Joe handles that in the editor
+
+### Editor
+- Check that the first line is `# Title` with no leading blank line
+- Check that image URLs actually load (open in browser to verify)
+- Check `::youtube` IDs are valid (11-character IDs or full YouTube URLs)
+- Flag any images that need to be sourced before publishing
+
+### Lead
+- After Editor approval, call `publish_to_substack(file_path: "content/articles/{slug}.md")`
+- Pass explicit `title` and `subtitle` if you want to override the auto-extracted values
+- Give Joe the returned draft URL — that's all that's needed for Stage 8
+- Post the Publisher Pass checklist from `article-lifecycle` SKILL alongside the URL
+
+---
+
+## Validated On
+
+- ✅ Full article draft: `witherspoon-extension-cap-vs-agent.md` → Draft ID 191061865 (2026-03-15)
+- ✅ Local image auto-upload: `./test-local.jpg` → `substack-post-media.s3.amazonaws.com` S3 URL (2026-03-15)
+- ✅ Auth: cookie-based via `SUBSTACK_TOKEN` (base64 encoded `substack_sid`+`connect_sid`)
+- ✅ Author ID resolution: `GET /api/v1/user/profile/self` on publication subdomain

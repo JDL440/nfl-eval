@@ -151,6 +151,23 @@ If 🔴 errors exist, fix them and re-submit. The Emmanwori name error (mixing N
 2. Commit with descriptive message
 3. Tease the next article at the end (creates a content pipeline)
 
+### Phase 7: Publish to Substack
+
+Call `publish_to_substack` to push the article to Substack as a draft:
+
+```
+publish_to_substack(
+  file_path: "content/articles/{slug}.md",
+  title: "{Final headline — may refine from working title}",
+  subtitle: "{1-line hook used for email preview}",
+  audience: "everyone"
+)
+```
+
+The tool auto-creates a Substack draft and returns an editor URL. Hand the URL to Joe for final review and one-click publish.
+
+**Requirements:** `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` must be set in `.env`. See `.env.example` for setup instructions (one-time Chrome cookie grab).
+
 ## Style Guide
 
 - **Tone:** Informed but accessible. Data-heavy but narrative-driven. Like The Ringer meets OverTheCap.
@@ -188,5 +205,7 @@ If 🔴 errors exist, fix them and re-submit. The Emmanwori name error (mixing N
 3. Writer assembles draft from expert output (Phase 3)
 4. Editor reviews draft — fact-check + style + structure (Phase 5)
 5. Fixes applied if needed → re-review if 🔴 errors
-6. Published to content/articles/ and committed (Phase 6)
+6. Saved to content/articles/ and committed (Phase 6)
+7. publish_to_substack called → draft URL returned to Joe (Phase 7)
+8. Joe reviews in Substack editor → clicks Publish
 ```
