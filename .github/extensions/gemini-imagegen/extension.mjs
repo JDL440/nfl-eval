@@ -162,7 +162,7 @@ function buildImagePrompt(imageType, context) {
             `Context: ${articleSummary || articleTitle}.`,
             `Subject: ${teamStr} ${playerStr}.`,
             styleGuide,
-            "Square or 4:3 aspect ratio suitable for inline placement within body text.",
+            "Wide 16:9 landscape format. Banner-style image that breaks up body text without overwhelming it on mobile.",
         ].filter(Boolean).join(" ");
     }
 
@@ -204,7 +204,7 @@ async function generateArticleImages(params) {
         article_summary,
         team,
         players = [],
-        image_types = ["cover"],
+        image_types = ["inline"],
         count_per_type = 1,
         custom_prompts = {},
         use_model = "auto",
@@ -221,8 +221,15 @@ async function generateArticleImages(params) {
     const results = [];
     const errors = [];
 
+    // Pre-count total images per type so filenames are always unique when a type appears multiple times
+    const typeTotal = {};
     for (const imageType of image_types) {
-        const aspectRatio = imageType === "cover" ? "16:9" : "1:1";
+        typeTotal[imageType] = (typeTotal[imageType] || 0) + count_per_type;
+    }
+    const typeIndex = {};
+
+    for (const imageType of image_types) {
+        const aspectRatio = "16:9";
         const context = {
             articleTitle: article_title,
             articleSummary: article_summary,
@@ -255,8 +262,13 @@ async function generateArticleImages(params) {
             continue;
         }
 
+        typeIndex[imageType] = typeIndex[imageType] || 0;
+
         for (let i = 0; i < images.length; i++) {
-            const suffix = images.length > 1 ? `-${i + 1}` : "";
+            typeIndex[imageType]++;
+            // Add suffix whenever more than one image of this type will exist (across type repeats or count_per_type > 1)
+            const needsSuffix = typeTotal[imageType] > 1;
+            const suffix = needsSuffix ? `-${typeIndex[imageType]}` : "";
             const filename = `${article_slug}-${imageType}${suffix}`;
             const { absPath, filename: savedName } = saveImage(
                 images[i].base64,
@@ -268,7 +280,7 @@ async function generateArticleImages(params) {
             const relativePath = `./images/${article_slug}/${savedName}`;
             const altText = imageType === "cover"
                 ? `Cover image: ${article_title}`
-                : `${article_title} — ${imageType} image ${i + 1}`;
+                : `${article_title} — ${imageType} image ${typeIndex[imageType]}`;
 
             results.push({
                 type: imageType,
@@ -329,8 +341,8 @@ await joinSession({
                             type: "string",
                             enum: ["cover", "inline"],
                         },
-                        description: "Types of images to generate. 'cover' = 16:9 hero image. 'inline' = 1:1 body image. Default: ['cover']",
-                        default: ["cover"],
+                        description: "Types of images to generate. 'cover' = 16:9 hero image (set manually in Substack editor). 'inline' = 16:9 wide banner image embedded in the article body. Default: ['inline']. For 2 inline images use ['inline', 'inline'] — they will be named -inline-1.png and -inline-2.png.",
+                        default: ["inline"],
                     },
                     count_per_type: {
                         type: "integer",

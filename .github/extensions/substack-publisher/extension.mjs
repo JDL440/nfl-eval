@@ -196,7 +196,7 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
         draft_bylines: [{ id: authorId, is_guest: false }],
-        ...(sectionId ? { section_id: sectionId } : {}),
+        ...(sectionId ? { section_id: sectionId, draft_section_id: sectionId } : {}),
     };
 
     const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts`, {
@@ -318,7 +318,10 @@ async function markdownToProseMirror(markdown, uploadImage) {
                 i++;
             }
             const table = parseTable(tableLines);
-            if (table) content.push(table);
+            if (table) {
+                if (Array.isArray(table)) content.push(...table);
+                else content.push(table);
+            }
             continue;
         }
 
@@ -395,7 +398,7 @@ function buildCaptionedImage(src, alt, caption) {
             title: caption || null,
             srcNoWatermark: null,
             fullscreen: null,
-            imageSize: "large",
+            imageSize: "normal",
             height: null,
             width: null,
             resizeWidth: null,
@@ -477,6 +480,10 @@ function parseInline(text) {
     return parts.length > 0 ? parts : [{ type: "text", text: text || " " }];
 }
 
+// Substack's ProseMirror schema has no table node types at all.
+// We convert markdown tables to structured paragraphs:
+//   Header row → bold "Col1 · Col2 · Col3 ..."
+//   Each data row → "Col1Value — Col2Label: Col2Value | Col3Label: Col3Value ..."
 function parseTable(lines) {
     // Filter out separator rows (|---|---|)
     const dataRows = lines.filter((l) => !l.match(/^\|[\s\-:|]+\|$/));
@@ -486,33 +493,39 @@ function parseTable(lines) {
         row
             .split("|")
             .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
-            .map((c) => c.trim())
+            .map((c) => c.trim().replace(/\*\*/g, ""))
     );
 
     const [headerRow, ...bodyRows] = cells;
-    const tableRows = [];
+    const nodes = [];
 
+    // Header row as bold labels separated by " · "
     if (headerRow) {
-        tableRows.push({
-            type: "table_row",
-            content: headerRow.map((cell) => ({
-                type: "table_header",
-                content: [{ type: "paragraph", content: parseInline(cell) }],
-            })),
+        nodes.push({
+            type: "paragraph",
+            content: [{ type: "text", text: headerRow.join(" · "), marks: [{ type: "bold" }] }],
         });
     }
 
+    // Each data row: first column bold, remaining as "Label: Value" pairs
     for (const row of bodyRows) {
-        tableRows.push({
-            type: "table_row",
-            content: row.map((cell) => ({
-                type: "table_cell",
-                content: [{ type: "paragraph", content: parseInline(cell) }],
-            })),
+        const parts = [];
+        row.forEach((cell, i) => {
+            if (i === 0) {
+                parts.push({ type: "text", text: cell, marks: [{ type: "bold" }] });
+                if (row.length > 1) parts.push({ type: "text", text: " — " });
+            } else {
+                const label = headerRow && headerRow[i] ? headerRow[i] : null;
+                const value = label ? `${label}: ${cell}` : cell;
+                if (i > 1) parts.push({ type: "text", text: "  |  " });
+                parts.push({ type: "text", text: value });
+            }
         });
+        nodes.push({ type: "paragraph", content: parts });
     }
 
-    return { type: "table", content: tableRows };
+    // Wrap in a blockquote-style separator for visual grouping
+    return nodes;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
