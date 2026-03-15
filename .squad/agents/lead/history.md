@@ -143,3 +143,9 @@ The WA millionaires tax (SB 6346, effective 2028) is a *front-loading accelerant
 **Session log merged:** 2026-03-15 13:09:08  
 **Decisions merged:** 6 inbox files (discussion_path field, intel brief, article candidates, league-wide intel, SEA intel, political topics directive)  
 **Inbox status:** Empty
+
+### CONTENT CONSTRAINT (2026-03-15)
+
+CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-limits. This includes all tax legislation references (WA SB 6346, millionaires tax, state income tax), political bills, and any political angles. Remove from existing content, never add to future content. This was flagged during JSN panel synthesis.
+
+**Action taken:** Revised all 4 JSN panel position files (cap, playerrep, sea, offense) and rewrote the discussion-summary.md to replace tax/political arguments with legitimate football and business arguments (injury protection, front-loading for cash-flow, cap efficiency, standard big-market signing bonus structures). Offense file was already clean — no changes needed.

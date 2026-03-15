@@ -14,27 +14,27 @@ Jaxon Smith-Njigba is 22 years old, a former first-round pick entering his prime
 
 3. **Pick 20 doesn't discount the second contract.** The rookie wage scale suppresses first-contract earnings based on draft slot — it says nothing about the second deal. JSN's agent will point to Ja'Marr Chase (pick 5) and Lamb (pick 17) as proof that draft slot is irrelevant once you've produced. Production sets the market, not where you were picked.
 
-**The demand: 4 years, $136–140M, $95–105M fully guaranteed at signing, $60M+ in Year 1 cash.** Front-loaded to maximize pre-2028 earnings before the WA tax bites.
+**The demand: 4 years, $136–140M, $95–105M fully guaranteed at signing, $60M+ in Year 1 cash.** Front-loaded to maximize injury protection and lock in generational wealth before a single snap of the new deal.
 
 ---
 
-## The Washington Tax Changes Everything
+## The Front-Loading Argument Is About Injury Protection, Not Generosity
 
-Let's run the real numbers. On a $34M/yr deal:
+Let's run the real numbers on risk. On a $34M/yr deal:
 
-| Scenario | Annual WA Tax (2028+) | 4-Year Tax Cost (2027–2030) | Net Loss vs. TX/FL |
-|----------|----------------------|----------------------------|---------------------|
-| **Stay in Seattle** | ~$3.27M/yr starting 2028 | ~$9.81M over final 3 yrs | **$9.81M** |
-| **Sign in Dallas/Houston** | $0 | $0 | — |
-| **Sign in Miami/Jacksonville** | $0 | $0 | — |
+| Scenario | Cash in First 12 Months | Injury Exposure | Net Risk |
+|----------|------------------------|-----------------|----------|
+| **Front-loaded extension (2026)** | $60M+ (bonus + salary + roster bonus) | **Minimal** — $90M+ already guaranteed | Player secured |
+| **5th-year option, then negotiate** | ~$3.4M (2026) + $21–23M (2027) | **16+ games at full risk** | One injury craters market |
+| **Wait for UFA (2028)** | $3.4M (2026) + $21–23M (2027) | **32+ games at full risk** | Catastrophic downside |
 
-That $9.81M isn't theoretical. It's a house. It's generational wealth. And it's money JSN keeps simply by changing his employer's address to a state that doesn't tax income.
+That risk isn't theoretical. Odell Beckham Jr. tore his ACL and never got another top-of-market deal. Michael Thomas's ankle cost him $50M+ in career earnings. DK Metcalf played hurt in 2024 and was traded at a discount. The NFL is a body-destruction business, and every game JSN plays without generational money locked in is a gamble with his family's financial future.
 
-The old Seattle pitch — *"sign here, keep more than you would in New York or LA"* — is dead for contracts extending past 2027. Washington's 9.9% rate is now comparable to Minnesota (9.85%) and approaching New York (10.9%). The only honest pitch Seattle can make is: *"We'll pay you enough to offset the tax."* That means Seattle needs to offer $2–3M/yr MORE than a tax-free state to deliver the same after-tax value.
+The case for front-loading is simple: **guaranteed cash today is the only real money in the NFL.** Future base salaries can be restructured, reduced via injury settlement, or voided entirely if a player can't pass a physical. A $65M signing bonus wired to JSN's account in June 2026 cannot be taken back under any circumstance. That's the number that matters.
 
-**JSN's agent will weaponize this.** Even if JSN loves Seattle, the tax delta gives his camp a concrete, non-emotional argument for a premium. "We'd happily stay — just make us whole on the tax." That's an additional $10M in guarantees over the life of the deal, minimum.
+**JSN's agent will demand maximum early cash.** Not as a negotiating tactic — as the rational, actuarially sound position. Every major WR extension in the last two years has been front-loaded: Jefferson ($54M at signing), Lamb ($46M at signing), Brown ($45M at signing). The precedent is set. Any structure that back-loads cash disproportionately is a below-market offer in disguise.
 
-And there's a kicker: the constitutional challenge (40–60% chance the law is struck down) actually helps the player's negotiating position. If the tax survives, JSN needs a premium. If it's struck down, JSN got a premium anyway and now keeps even more. Heads he wins, tails he wins bigger.
+Seattle can pitch the front-loaded deal as mutual protection: JSN gets his security, and Seattle gets a lower cap hit in the early years while the salary cap grows 8–10% annually. This isn't charity — it's smart business for both sides.
 
 ---
 
@@ -45,11 +45,11 @@ And there's a kicker: the constitutional challenge (40–60% chance the law is s
 Here's why:
 
 - **$90–105M guaranteed at age 22–23 is generational security.** No injury, no market crash, no coaching change can take that away. The bird in hand is worth two franchise tags.
-- **Front-loading beats waiting.** If JSN signs a 4-year deal in summer 2026, he can structure Years 1–2 (2026–2027) as the heaviest cash years — before the WA tax takes effect in 2028. A $40M signing bonus + $20M Year 1 roster bonus puts $60M in JSN's pocket at a 0% state tax rate. That's the kind of structuring that makes the WA tax largely irrelevant for the first half of the deal.
-- **The 5th-year option is a trap for the player.** Yes, JSN earns $21–23M in 2027 under the option. But he loses a year of earning power, enters a contract negotiation at 24 instead of 23, and — critically — his 2028+ earnings on any subsequent deal now fall entirely under the new WA tax regime. The option delays the payday AND worsens the tax math.
+- **Front-loading beats waiting.** If JSN signs a 4-year deal in summer 2026, he can structure Years 1–2 (2026–2027) as the heaviest cash years — maximizing guaranteed money before he takes a single snap under the new deal. A $40M signing bonus + $20M Year 1 roster bonus puts $60M in JSN's pocket immediately. That's generational security that no future injury can undo.
+- **The 5th-year option is a trap for the player.** Yes, JSN earns $21–23M in 2027 under the option. But he loses a year of earning power, enters a contract negotiation at 24 instead of 23, and — critically — plays an entire additional season where one bad hit can crater his market value. The option delays the payday AND increases the injury risk window.
 - **Playing it out is financial malpractice.** Earning $3.4M in 2026 when you could lock in $90M+ guaranteed is only defensible if the extension offer is genuinely insulting (sub-$80M guaranteed). The injury risk alone — one ACL tear and JSN's market drops 40% — makes this a reckless gamble.
 
-**The ideal outcome:** Extension signed by July 2026. 4 years, $136M, $100M fully guaranteed at signing. $55M in the first 12 months. Front-loaded to shelter income from the 2028 tax.
+**The ideal outcome:** Extension signed by July 2026. 4 years, $136M, $100M fully guaranteed at signing. $55M in the first 12 months. Front-loaded to maximize guaranteed cash and eliminate injury exposure.
 
 ---
 
@@ -59,7 +59,7 @@ If Seattle comes in below $30M AAV or under $85M guaranteed, here's the playbook
 
 1. **Decline and let the 5th-year option play out.** JSN earns $21–23M in 2027 — not great, but not catastrophic. Meanwhile, the WR market continues to inflate. The next Jefferson/Lamb comp will be $38M+ AAV by March 2027.
 2. **Bet on a monster 2026 season.** If JSN puts up 1,300+ yards and 10+ TDs as the undisputed WR1 (no more DK to split targets), his comp set jumps to the very top of the market.
-3. **Hit unrestricted free agency in March 2027.** Now JSN picks his destination. Dallas, Houston, Miami — all tax-free, all WR-needy. The bidding war starts at $36M AAV. Seattle can match, but they're now paying a premium *and* competing against the tax-free states.
+3. **Hit unrestricted free agency in March 2027.** Now JSN picks his destination. Dallas, Houston, Miami — all warm-weather, WR-needy markets with big-money ownership groups. The bidding war starts at $36M AAV. Seattle can match, but they're now paying a premium *and* competing against multiple suitors for a player who has no reason to give them a discount.
 4. **If Seattle franchise-tags, demand a trade.** The non-exclusive tag lets JSN negotiate with other teams. If someone offers, Seattle either matches (at the player's preferred terms) or takes two first-round picks. Either outcome is acceptable for JSN — he either gets his deal or forces Seattle to pay the market price to keep him.
 
 The leverage is simple: **JSN is 23 and ascending. Seattle can pay him now at a discount to what free agency will cost, or pay more later with worse terms.** There is no path where lowballing saves Seattle money. It only changes who writes the check.

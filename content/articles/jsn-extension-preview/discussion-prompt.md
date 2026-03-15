@@ -5,7 +5,7 @@
 
 ## The Core Question
 
-**When, and at what cost, should the Seattle Seahawks lock up Jaxon Smith-Njigba — and does the answer still hold after Washington state's new millionaires tax changes the calculus for both sides?**
+**When, and at what cost, should the Seattle Seahawks lock up Jaxon Smith-Njigba — and does the answer change if the market and roster circumstances shift before a deal gets done?**
 
 ---
 
@@ -15,7 +15,7 @@
 
 - **WR market volatility cuts both ways:** The CeeDee Lamb ($34M) and Justin Jefferson ($35M) deals reset the position. JSN's agent will use those as a floor in 2026 — but JSN has not yet put up a full WR1 contract year. Seattle must decide: pay now at $32–36M AAV before JSN fully earns it, or wait until his value peaks (and demand with it)?
 
-- **Tax calculus has flipped:** Seattle's zero-tax advantage has historically been worth ~$1.5M/yr on large contracts. WA SB 6346 (signed March 12, 2026) imposes a 9.9% income tax on income above $1M/yr, effective January 1, 2028. JSN's current rookie contract runs through 2026. Any multi-year extension kicks in for the 2028 tax regime. Seattle can no longer pitch "sign here and keep more of your money."
+- **Front-loading and deferral matter more:** With JSN's rookie deal ending after 2026, any multi-year extension can be structured to front-load guaranteed money or defer cap hits. Early years at full market rate protect both sides from further market inflation. Seattle must decide if it's worth absorbing the guaranteed risk now, or staging payouts to preserve cap flexibility for future needs.
 
 - **The 5th-year option creates a false sense of security:** SEA has until after Year 3 to exercise the 5th-year option (pick 20 = transition-tag level, ~$21–23M for 2027). That buys one extra year, not a deal. It delays — but does not solve — the confrontation with JSN's agent. And every month of delay brings JSN closer to full unrestricted free agency leverage.
 
@@ -54,7 +54,7 @@
 - **Spring 2026:** Must decide on 5th-year option exercise (yes/no)
 - **2026 offseason:** Ideal extension window — JSN has leverage but team does too
 - **2027 offseason:** 5th-year option year plays out; JSN hits UFA in March 2027 if no deal
-- **January 1, 2028:** WA millionaires tax kicks in — changes effective value of any contract with 2028+ pay years
+- **Cap flexibility point:** Front-loaded deals 2026–2027 preserve 2028+ cap space to address aging secondary and pass rush
 
 ---
 
@@ -77,10 +77,10 @@ If extension talks stall entering 2027, Seattle can hit JSN with the non-exclusi
 ## Panel Instructions
 
 ### Cap (Salary Cap Expert)
-Focus on: What is the actual cost of each path? Model the cap implications of a 2026 extension vs. 5th-year option vs. tag scenarios. Use CeeDee Lamb and Justin Jefferson as comp anchors. Factor in how the WA millionaires tax changes the effective cost of the contract to both the player and the team's ability to compete on value vs. no-tax states. What contract structure gives Seattle the best balance of guaranteed security for JSN and cap flexibility?
+Focus on: What is the actual cost of each path? Model the cap implications of a 2026 extension vs. 5th-year option vs. tag scenarios. Use CeeDee Lamb and Justin Jefferson as comp anchors. Front-load structure to lock in current market rates before rates climb. What contract structure gives Seattle the best balance of guaranteed security for JSN and cap flexibility in years 3–4 to address safety and EDGE?
 
 ### PlayerRep (Player Advocate & CBA Expert)
-Focus on: What does JSN and his agent actually want? Given his pick slot (20), production trajectory, and the current WR market, what's his leverage in each path? How does the WA tax change affect his destination calculus — is he now incentivized to leave for Texas or Florida? What's the minimum JSN's agent will accept, and what happens if Seattle lowballs? Argue from the player's corner — make the case for the path that maximizes JSN's outcome.
+Focus on: What does JSN and his agent actually want? Given his pick slot (20), production trajectory, and the current WR market, what's his leverage in each path? As a potential UFA in 2027, how do front-loaded deals with injury protections compare to waiting for an open market? What's the minimum JSN's agent will accept, and what happens if Seattle lowballs? Argue from the player's corner — make the case for the path that maximizes JSN's outcome.
 
 ### SEA (Seattle Seahawks Team Analyst)
 Focus on: What does Seattle's roster construction actually need? JSN is the WR1 post-DK, but the team lost Walker III, Mafe, and Bryant in one offseason. With $44M in cap space, where does JSN fit in the priority stack? Is paying $32–36M/yr to a WR the right roster decision when safety and EDGE are still gaping holes? Advocate for what's best for the Seahawks as a competitive franchise, not just what keeps JSN happy.

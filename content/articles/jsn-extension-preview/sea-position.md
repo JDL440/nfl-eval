@@ -22,17 +22,17 @@ Seattle won the Super Bowl five months ago. Mike Macdonald is entering Year 3. D
 
 This is a 2–3 year window. Every dollar counts, and **how** you spend $44M matters more than spending it on the shiniest name.
 
-## The WA Tax Changes Everything About Timing
+## The Injury Clock Makes "Now" the Optimal Window
 
-Here's what nobody in JSN's camp wants to hear: SB 6346's 9.9% millionaires tax, effective January 2028, turns every dollar after Year 2 of any new deal into a tax event. The old pitch — "$32M in Seattle is $37M in California" — has an expiration date. By 2028, a $34M AAV deal in Seattle costs JSN roughly $3.2M/yr in state tax. The gap between us and San Francisco shrinks from ~$3M/yr to ~$800K/yr.
+Here's what the urgency argument comes down to: JSN is a 23-year-old franchise receiver playing on a $3.4M deal. Every game he plays at that number, Seattle gets elite production at a 90% discount — and JSN absorbs 100% of the career risk with zero financial protection. One torn ACL, one high ankle sprain that lingers, and JSN's comp set drops from Jefferson/Lamb to "talented but injury-prone" — a $10–15M/yr difference.
 
-That means **if you're going to use the tax advantage as a discount lever, it only works for contracts signed now with heavy front-loading in 2026–2027.** After that, Texas, Florida, and Tennessee hold the real tax edge, not us.
+The front-loading case is strongest when you structure the deal so that **60–65% of the total cash lands in Years 1–2.** This isn't about giving JSN a premium — it's standard big-market practice for young franchise players. Jefferson, Lamb, and Brown all had front-loaded structures. The team benefits too: early cash converts to prorated cap charges that shrink as a percentage of the ceiling every year. Delayed deals are always more expensive in real dollars.
 
 ## My Recommendation: Exercise the 5th-Year Option, Negotiate Simultaneously
 
 Path 2 — modified.
 
-Exercise the 5th-year option at ~$21–23M for 2027. **But** — and this is critical — open extension talks immediately with a clear framework: 4 years, $30–32M AAV, heavily front-loaded so the guaranteed money lands in the tax-free window (2026–2027). Structure it as a de facto 5-year deal where the option year converts into Year 1 of the extension.
+Exercise the 5th-year option at ~$21–23M for 2027. **But** — and this is critical — open extension talks immediately with a clear framework: 4 years, $30–32M AAV, heavily front-loaded so the guaranteed money lands early and both sides minimize injury risk. Structure it as a de facto 5-year deal where the option year converts into Year 1 of the extension.
 
 Why not extend right now at $34–36M? Because committing $34M+ to a wideout leaves approximately $10M to fix EDGE and safety. That's one mid-tier starter, not two. And this defense — the defense that *won a Super Bowl* — cannot survive losing Mafe, Bryant, and Woolen without real investment.
 

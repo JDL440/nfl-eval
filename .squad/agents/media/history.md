@@ -750,3 +750,4 @@ node generate-sweep.js --help
 - **Source-based confidence scoring is accurate** — Tier 1+2 sources produce 🟢 confirmed, single Tier 2/3 sources produce 🟡 likely. Zero 🔴 rumors in confirmed sweep data validates tier reliability.
 - **Transaction ID referencing enables Backend automation** — Article triggers reference tx-IDs, Backend can fetch full transaction details without re-parsing history.md.
 - **JSON export eliminates parsing brittleness** — Backend M1 no longer needs regex to parse Markdown. Structured data = reliable automation.
+- **CONTENT CONSTRAINT (2026-03-15):** All content — including news analysis, intel drops, and article inputs — must avoid politically divisive topics. No references to WA SB 6346, millionaires tax, state/federal tax legislation, or political bills. When reporting on contract signings, focus on football/business factors only.

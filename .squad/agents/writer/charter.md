@@ -121,3 +121,14 @@ Writer sits between the experts and the editor. Experts provide the substance. W
 - Writer is the CRAFT agent, not the CONTENT agent. Experts provide content. Writer provides form.
 - Writer may push back on expert analysis that's confusing or poorly structured ("this section needs to come earlier"), but doesn't override expert conclusions.
 - Writer collaborates with Editor but has final say on voice/style. Editor has final say on facts/accuracy.
+
+## Content Constraints
+
+### Politically Divisive Topics — STRICTLY OFF LIMITS
+- Do NOT reference state or federal tax legislation in any article content (e.g., WA SB 6346, millionaires tax, income tax bills, or any political bills)
+- Do NOT include political angles, political advocacy, or content that could be construed as taking a political stance
+- This applies to: article body, headlines, subheadings, image descriptions, and metadata
+- If a discussion summary or panel position includes political/tax references, REMOVE them during the drafting stage
+- Replace political/tax arguments with equivalent football or business arguments (contract structure incentives, injury protection, market-rate comparables, etc.)
+
+This constraint was established 2026-03-15 by Joe Robinson.

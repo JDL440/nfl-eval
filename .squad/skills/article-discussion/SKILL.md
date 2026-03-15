@@ -162,8 +162,9 @@ Save to: content/articles/{article-id}/{agent-name}-position.md
 
 - **Uses specific numbers** — exact dollar amounts, percentages, cap hits. Not "a large contract."
 - **Takes a clear stance** — recommends a path, not "it depends"
-- **Addresses the WA tax / any article-specific nuance** from the prompt — shows the agent read the brief
+- **Addresses article-specific nuances** from the prompt — shows the agent read the brief
 - **Has at least one non-obvious insight** — something the writer wouldn't have known without the panel
+- **⚠️ CONTENT CONSTRAINT: No politically divisive topics.** No tax legislation (WA SB 6346, millionaires tax, state income tax bills), no political bills, no political angles. Replace with football/business arguments (injury protection, front-loading for cash flow, cap efficiency, market comps). Applies to all stages.
 
 ---
 
