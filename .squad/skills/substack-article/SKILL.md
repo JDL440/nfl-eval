@@ -58,6 +58,8 @@ Spawn Writer with:
 - The topic brief
 - All raw expert analysis (pasted into the prompt)
 - The structure template below
+- **Model:** `claude-opus-4.6` (always — see `.squad/config/models.json` → `models.writer`)
+- **Output budget:** 5,000 tokens max. If content is dense, tighten narrative connective tissue first; never drop expert analysis. (See `.squad/config/models.json` → `max_output_tokens.writer`)
 
 Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 

@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "_note": "Authoritative model assignments for the NFL Lab pipeline. Edit here — do not hardcode models in individual charters or skill docs.",
+  "models": {
+    "writer": "claude-opus-4.6",
+    "editor": "claude-opus-4.6",
+    "lead": "claude-opus-4.6",
+    "panel_deep_dive": "claude-opus-4.6",
+    "panel_beat": "claude-opus-4.6",
+    "panel_casual": "claude-sonnet-4.5",
+    "lightweight": "gpt-5-mini"
+  },
+  "max_output_tokens": {
+    "panel_agent": 1500,
+    "writer": 5000,
+    "editor": 2500,
+    "lead_discussion_prompt": 2000,
+    "lead_synthesis": 2500,
+    "lightweight": 800
+  },
+  "panel_size_limits": {
+    "casual_fan": { "min": 2, "max": 2 },
+    "the_beat": { "min": 3, "max": 4 },
+    "deep_dive": { "min": 4, "max": 5 }
+  },
+  "depth_level_map": {
+    "1": "casual_fan",
+    "2": "the_beat",
+    "3": "deep_dive"
+  }
+}

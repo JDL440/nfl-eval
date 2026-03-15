@@ -196,8 +196,15 @@ Be specific — "insider analysis" is not enough.}
 
 1. **Always include the relevant team agent(s)** — they own the roster context
 2. **Always include at least one specialist** — Cap, Offense, Defense, etc.
-3. **2–4 agents is the sweet spot** — enough for tension, focused enough for coherence
-4. **5 agents maximum** — only for major pieces (draft report card, divisional rankings)
+3. **Panel size is gated by depth level** (source of truth: `.squad/config/models.json` → `panel_size_limits`):
+
+   | Depth Level | Min | Max |
+   |-------------|-----|-----|
+   | 1 — Casual Fan | 2 | **2** |
+   | 2 — The Beat | 3 | **4** |
+   | 3 — Deep Dive | 4 | **5** |
+
+4. **Use gpt-5-mini for panel composition recommendation** — see [Lightweight Tasks](#lightweight-tasks-gpt-5-mini) below. Lead reviews and approves before spawning agents.
 5. **Never use all ~45 agents** — that's an anti-pattern, not thoroughness
 
 ### Panel Selection Matrix
@@ -428,6 +435,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 | Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`; insert `stage_transitions` row |
 | Git commit | `git add . && git commit -m "Published: {article title}"` |
 | Content pipeline | Ensure "Next from the panel" tease at article end points to a real upcoming idea |
+| **History maintenance** | Run history summarization for all agents that participated (see [history-maintenance skill](../history-maintenance/SKILL.md)) |
 | Cross-post | Reddit threads, Twitter/X, other channels |
 
 ### Done when
@@ -436,6 +444,43 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 - [ ] `content/article-ideas.md` reflects ✅ Published with date and Substack URL
 - [ ] Git repo is committed and clean
 - [ ] Cross-post plan executed (if applicable)
+
+---
+
+## Lightweight Tasks (gpt-5-mini)
+
+> **Model:** `gpt-5-mini` — use for classification, slot-filling, and structured compression. Does not require deep football reasoning. See `.squad/config/models.json` → `models.lightweight`.
+> **Max tokens:** 800 per call.
+
+These tasks do not need a heavy model. Using gpt-5-mini here costs near-zero and keeps Opus/Sonnet budget for the content that matters.
+
+| Stage | Task | Prompt Pattern | Expected Output |
+|-------|------|----------------|-----------------|
+| **Stage 1** | Idea viability triage | "Given this article idea and the current NFL calendar, is this worth producing now? Answer: YES/NO with a 1-sentence rationale." | YES or NO + 1 sentence |
+| **Stage 3** | Panel composition recommendation | "Given this article type ({type}), depth level ({level}), and available agents ({list}), recommend the optimal {N} agents to include. For each agent, give a 1-sentence rationale." | JSON array of agent names + rationale |
+| **Stage 7** | Article metadata extraction | "Extract from this article: primary_team, secondary_teams (array), topic_tags (3–5), Substack section name (e.g. 'Free Agency', 'Draft', 'Analysis'). Return as JSON." | JSON object |
+| **Stage 8** | History entry draft | "Summarize this article's key facts in 3–5 bullets for an agent's history file. Include: topic, key numbers, recommendation, any notable disagreement. Max 200 words." | Bullet list |
+| **Ongoing** | History summarization | See [history-maintenance skill](../history-maintenance/SKILL.md) | Compressed history block |
+
+### Panel Composition via gpt-5-mini (Stage 3 detail)
+
+```
+You are helping compose a panel of NFL analysts for an article.
+
+Article type: {e.g., "contract extension"}
+Depth level: {1 / 2 / 3}
+Panel size limit: {from models.json panel_size_limits}
+Article description: {1–2 sentence idea summary}
+
+Available agents:
+Specialists: Cap, PlayerRep, Draft, Offense, Defense, Analytics, Injury, SpecialTeams, CollegeScout, Media
+Team Agents: SEA, SF, LAR, ARI, KC, DEN, LV, LAC, DAL, PHI, NYG, WSH, CHI, GB, MIN, DET, TB, NO, ATL, CAR, NE, BUF, NYJ, MIA, BAL, PIT, CLE, CIN, HOU, TEN, IND, JAX
+
+Select exactly {N} agents. For each, give a 1-sentence rationale for why they add a distinct perspective.
+Return as JSON: [{"agent": "SEA", "rationale": "..."}, ...]
+```
+
+Lead reviews the recommendation and can override before spawning.
 
 ---
 

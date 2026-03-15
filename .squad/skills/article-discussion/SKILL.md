@@ -53,8 +53,14 @@ Every discussion prompt must have all five:
 
 ### Template
 
+> Use the **Level 2/3 template** (full) for Beat and Deep Dive articles. Use the **Level 1 template** (short-form) for Casual Fan articles — it injects fewer tokens into every panel agent spawn.
+
+#### Level 2 / Level 3 Template (full)
+
 ```markdown
 # Discussion Prompt: [Article Title]
+
+**Depth Level:** [1 — Casual Fan | 2 — The Beat | 3 — Deep Dive]
 
 ## The Core Question
 [One sentence — sharp, specific, contentious]
@@ -79,6 +85,33 @@ Every discussion prompt must have all five:
 [Specific focus]
 ```
 
+#### Level 1 Template (short-form — Casual Fan only)
+
+Omit data anchor tables entirely. Level 1 articles are narrative-first; agents should bring the storytelling angle, not cap mechanics. Each agent receives ~200 words of context instead of ~600.
+
+```markdown
+# Discussion Prompt: [Article Title]
+
+**Depth Level:** 1 — Casual Fan
+
+## The Core Question
+[One sentence — accessible, fan-facing tension]
+
+## Key Tensions
+- [Tension 1 — written for a fan, not a GM]
+- [Tension 2]
+
+## The Paths
+[2–3 plausible paths in plain English — no jargon]
+
+## Panel Instructions
+### [Panelist 1 Name] — [Role]
+[One short paragraph — what angle they own, plain language output expected]
+
+### [Panelist 2 Name] — [Role]
+[One short paragraph]
+```
+
 ---
 
 ## Phase 2 — Assembling the Panel
@@ -89,8 +122,20 @@ Every discussion prompt must have all five:
 |------|-----------|
 | **Always include the relevant team agent** | Roster/competitive context grounds the discussion in reality |
 | **Always include at least one specialist** | Pure team-agent panels produce fan-level analysis |
-| **2–4 panelists is the sweet spot** | 2 is too thin; 5+ produces diminishing returns and synthesis overhead |
+| **Panel size is gated by depth level** | See limits below — the biggest single lever on token cost |
 | **Each panelist should have a distinct lane** | Overlap between Cap and PlayerRep is fine (negotiation counterpoints); overlap between two team agents is wasteful |
+
+### Panel Size Limits by Depth Level
+
+> **Source of truth:** `.squad/config/models.json` → `panel_size_limits`
+
+| Depth Level | Min | Max | Rationale |
+|-------------|-----|-----|-----------|
+| 1 — Casual Fan | 2 | **2** | Narrative-first; 2 agents produce enough tension without cap-nerd detail |
+| 2 — The Beat | 3 | **4** | Default; balance of depth and cost |
+| 3 — Deep Dive | 4 | **5** | Full scheme/cap/draft analysis; 5 agents justified only here |
+
+**Do not exceed these limits.** A Level 1 article with 4 agents costs the same as a Level 3 article but delivers a worse reader experience (too many expert voices for a casual piece).
 
 ### Panel Composition Matrix
 
@@ -118,15 +163,27 @@ Every discussion prompt must have all five:
 
 ### Execution Protocol
 
-1. **Spawn all panelists simultaneously** — use `task` tool in parallel, all as `background` agents with `claude-opus-4.6` model (per team decision)
-2. **Each panelist prompt must include:**
+> **Model config source of truth:** `.squad/config/models.json` → `models` and `max_output_tokens`
+
+1. **Spawn all panelists simultaneously** — use `task` tool in parallel, all as `background` agents
+2. **Model selection is depth-level-driven:**
+
+   | Depth Level | Panel Agent Model | Source |
+   |-------------|-------------------|--------|
+   | 1 — Casual Fan | `claude-sonnet-4.5` | `models.panel_casual` |
+   | 2 — The Beat | `claude-opus-4.6` | `models.panel_beat` |
+   | 3 — Deep Dive | `claude-opus-4.6` | `models.panel_deep_dive` |
+
+   Writer and Editor always use `claude-opus-4.6` (`models.writer`, `models.editor`) regardless of depth level.
+
+3. **Each panelist prompt must include:**
    - Their identity and role (brief)
    - The core question and their specific focus lane
    - Full data anchors (copy from discussion prompt — agents are stateless)
    - The 4 paths (brief framing)
-   - Word count target (300–500 words works well)
+   - Word count target and **output token budget** (see Panelist Prompt Template below)
    - Save-to path: `content/articles/{article-id}/{panelist-name}-position.md`
-3. **Wait for all agents to complete before synthesizing** — use `read_agent` with `wait: true`
+4. **Wait for all agents to complete before synthesizing** — use `read_agent` with `wait: true`
 
 ### Panelist Prompt Template
 
@@ -154,6 +211,11 @@ Write a position statement of 300–500 words. Include:
 - [Specific deliverable 1]
 - [Specific deliverable 2]
 - [One non-obvious point the other panelists will miss]
+
+## Output Budget
+Target 300–500 words. Hard cap: 1,500 tokens. Write tight — every sentence must add
+information or perspective not already in the data anchors. Cut qualifications, hedge
+phrases, and recap. Lead will synthesize; you don't need to summarize the question back.
 
 Save to: content/articles/{article-id}/{agent-name}-position.md
 ```
