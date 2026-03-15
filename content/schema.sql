@@ -20,7 +20,11 @@ CREATE TABLE IF NOT EXISTS articles (
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
     published_at    TEXT,
-    depth_level     INTEGER NOT NULL DEFAULT 2  -- 1=Casual Fan, 2=The Beat, 3=Deep Dive
+    depth_level     INTEGER NOT NULL DEFAULT 2,  -- 1=Casual Fan, 2=The Beat, 3=Deep Dive
+    target_publish_date TEXT,                    -- specific target date e.g. '2026-03-17'
+    publish_window  TEXT,                        -- calendar window: 'fa-wave-1','pre-draft','draft-week','may','camp-preview','preseason','regular-season','evergreen','backlog'
+    time_sensitive  INTEGER NOT NULL DEFAULT 0,  -- 1 = has a hard expiry (draft week content, deadline coverage, etc.)
+    expires_at      TEXT                         -- date after which the idea is stale / no longer publishable
 );
 
 -- ─────────────────────────────────────────────
@@ -133,6 +137,10 @@ SELECT
         WHEN 3 THEN 'Deep Dive'
         ELSE 'Unknown'
     END AS depth_name,
+    a.target_publish_date,
+    a.publish_window,
+    a.time_sensitive,
+    a.expires_at,
     a.published_at,
     a.updated_at
 FROM articles a
@@ -145,4 +153,5 @@ ORDER BY
         WHEN 'archived'      THEN 5
         ELSE 6
     END,
-    a.current_stage DESC;
+    a.time_sensitive DESC,
+    a.target_publish_date ASC NULLS LAST;
