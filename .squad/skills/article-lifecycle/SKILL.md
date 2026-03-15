@@ -84,12 +84,52 @@ Every idea in `content/article-ideas.md` needs:
 | Urgency / timing | ✅ | Target publish date or window (e.g., "before draft") |
 | Agents needed | ✅ | Estimated panel (can change at Stage 3) |
 | Status | ✅ | 💡 Proposed (default for new ideas) |
+| Depth level | ✅ | Default: **2 — The Beat** (see Depth Levels below) |
 
 ### Done when
 
-- [ ] Idea is written in `content/article-ideas.md` with all required fields
+- [ ] Idea is written in `content/article-ideas.md` with all required fields including depth level
 - [ ] Status is 💡 Proposed
 - [ ] Joe has reviewed (ideas auto-advance to ✅ Approved only with Joe's explicit go-ahead)
+
+---
+
+## Depth Levels
+
+Every article has a depth level. Set it at Stage 1, adjust at Stage 2 or Stage 5 if needed. Default is **2 — The Beat**.
+
+| Level | Name | Reader | What it means |
+|-------|------|--------|---------------|
+| 1 | **Casual Fan** | Watches games, knows the stars | Narrative-first. Minimal jargon. Cap numbers in plain English. One clear takeaway. ~1,200–2,000 words. |
+| 2 | **The Beat** | Follows the team, reads the coverage | Balance of story and data. Assumes roster knowledge, explains mechanics. ~2,000–3,500 words. **Default.** |
+| 3 | **Deep Dive** | Cap nerd, film watcher, scheme analyst | Full data. Contract breakdowns, comp picks, scheme fits, injury history. Assumes expert fluency. ~3,000–5,000 words. |
+
+### How depth level affects each stage
+
+**Stage 2 (Discussion Prompt):** Lead notes depth level in the prompt header. Determines how much jargon/data the brief expects panelists to produce.
+
+**Stage 4 (Panel Discussion):** Agent spawn instructions include the depth level as a tone signal:
+- Level 1: *"Write for someone who just watched the game highlights. No jargon. One clear takeaway."*
+- Level 2: *"Write for a knowledgeable fan who follows the team closely. Data OK, but explain what it means."*
+- Level 3: *"Full analysis. Assume cap fluency, scheme knowledge, draft comp familiarity. Don't simplify."*
+
+**Stage 5 (Article Drafting):** Writer tunes headline style, data density, and explanation depth to the level. Level 1 headlines lean narrative; Level 3 headlines can lead with numbers.
+
+**Stage 7 (Publisher Pass):** Depth level informs Substack section assignment and tag choices.
+
+### Adjusting depth level
+
+Depth is set on the idea but can change:
+- **Before Discussion Prompt (Stage 2):** Lead adjusts based on story complexity
+- **Before Article Drafting (Stage 5):** Writer flags if panel outputs don't match the target level — Lead decides whether to re-level or re-prompt
+
+When adjusted, update `content/pipeline.db`:
+```python
+conn.execute("UPDATE articles SET depth_level=?, updated_at=datetime('now') WHERE id=?", (new_level, article_id))
+conn.execute("INSERT INTO stage_transitions (article_id, from_stage, to_stage, agent, notes) VALUES (?,?,?,?,?)",
+             (article_id, current_stage, current_stage, agent_name, f"Depth level adjusted to {new_level}"))
+conn.commit()
+```
 
 ---
 
@@ -106,6 +146,8 @@ This is the step that separates good articles from generic analysis. The tension
 
 ```markdown
 # Discussion Prompt: {Working Title}
+
+**Depth Level:** {1 — Casual Fan | 2 — The Beat | 3 — Deep Dive}
 
 ## Central Question
 {One sentence. What is this article trying to answer?}

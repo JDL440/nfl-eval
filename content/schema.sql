@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS articles (
     substack_url    TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
-    published_at    TEXT
+    published_at    TEXT,
+    depth_level     INTEGER NOT NULL DEFAULT 2  -- 1=Casual Fan, 2=The Beat, 3=Deep Dive
 );
 
 -- ─────────────────────────────────────────────
@@ -125,6 +126,13 @@ SELECT
         ELSE 'Unknown'
     END AS stage_name,
     a.article_path,
+    a.depth_level,
+    CASE a.depth_level
+        WHEN 1 THEN 'Casual Fan'
+        WHEN 2 THEN 'The Beat'
+        WHEN 3 THEN 'Deep Dive'
+        ELSE 'Unknown'
+    END AS depth_name,
     a.published_at,
     a.updated_at
 FROM articles a
