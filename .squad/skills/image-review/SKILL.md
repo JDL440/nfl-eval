@@ -48,7 +48,7 @@ Per the NFL Lab standard (directive 2026-03-15), articles contain **exactly 2 in
 **Technical flags**
 - Visible text, numbers, or watermarks embedded in the image (Gemini sometimes generates these)
 - Aspect ratio issues that would look broken on Substack (inline should be 1:1)
-- Near-duplicate images used more than once in the same article
+- Duplicate check: Are all inline images visually distinct from each other? If two images look the same or nearly the same, reject both and require regeneration. (See also: Uniqueness Check in image-generation skill.)
 
 ---
 
@@ -86,16 +86,49 @@ Status values:
 
 ---
 
+## Known AI Failure Patterns — Always 🔴 REPLACE
+
+These are not style issues. These are **credibility failures** that must block publish:
+
+### 1. Fabricated data visualizations
+AI-generated "charts" and "graphs" frequently contain:
+- Numbers that are impossible or internally inconsistent (e.g., cap percentages that sum to 180%)
+- Axis labels that don't match the data being shown
+- Team stats, player stats, or contract figures that are made up and contradict the article
+- Bar charts, line graphs, or tables rendered as image text that cannot be verified
+
+**🔴 REPLACE any image that contains a chart, graph, or numeric data visualization.** The data in the image can't be verified and is likely fabricated.
+
+### 2. Fake player identity (jersey numbers and names)
+When AI generates images of players in uniform, it often invents:
+- Player numbers that don't belong to any real player on the team
+- Player names on the back of jerseys that are misspelled or entirely fabricated
+- The wrong team colors on what appears to be a real player
+
+**🔴 REPLACE any image that shows an NFL jersey with a visible player name or number.** If the number or name can't be verified against the actual team roster, it's a fact error embedded in the image.
+
+### 3. Embedded text that contradicts the article
+AI images sometimes contain paragraph-length captions, headlines, or stats overlaid as text:
+- Contract figures that differ from the article's figures
+- Player names spelled wrong
+- Dates or team names that are wrong
+
+**🔴 REPLACE any image that contains text overlay with specific facts (names, numbers, dates) unless every word and figure has been verified.**
+
+---
+
 ## When to Flag for Regeneration
 
 Always flag 🔴 if:
-- Visible text/watermarks in the image
+- Visible text/watermarks in the image (unless fully verified)
+- Image contains any chart, graph, or numeric data visualization
+- Image shows an NFL jersey with a player name or number visible
 - Image is obviously off-topic (wrong sport, wrong context)
 - Image is blurry or broken
 
 Flag 🟡 if:
 - Image is generic but not misleading (acceptable, note it)
-- Player likeness is recognizable but slightly off
+- Player likeness is recognizable but slightly off (no jersey numbers/names visible)
 - Good image but slightly wrong placement in the article
 
 ---

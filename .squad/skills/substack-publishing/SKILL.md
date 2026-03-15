@@ -248,9 +248,45 @@ Discovered by inspecting real Substack drafts via the API:
 
 ---
 
+## Auth Failure Recovery
+
+If `publish_to_substack` returns `"Invalid SUBSTACK_TOKEN"` or an auth error:
+
+1. **Generate a fresh token.** The `substack.sid` cookie expires or changes when you log out.
+2. Open Edge → DevTools (F12) → Application → Cookies → `nfllabstage.substack.com` (or your publication domain)
+3. Copy the value of `substack.sid`
+4. Run in the repo root:
+   ```
+   node -e "console.log(Buffer.from(JSON.stringify({substack_sid:'PASTE_VALUE_HERE'})).toString('base64'))"
+   ```
+5. Paste the output into `.env` as `SUBSTACK_TOKEN=...`
+
+**Only `substack_sid` is required.** `connect_sid` is NOT needed — the extension falls back to `substack_sid` automatically.
+
+### Can Copilot fetch the cookie automatically?
+
+**Short answer: no, not reliably on Windows with Edge running.**
+
+Attempts made (2026-03-15):
+
+| Method | Result |
+|--------|--------|
+| `browser_cookie3.edge()` (Python) | Fails — requires admin for Windows shadow copy |
+| `Copy-Item` on Edge cookie SQLite file | Fails — Edge holds an exclusive lock while running |
+| `CreateFileW` with `FILE_SHARE_READ\|WRITE\|DELETE` flags (ctypes) | Fails — handle returns -1, access denied |
+
+**Root cause:** Edge on Windows 10/11 holds an exclusive lock on `%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Network\Cookies` while running. The lock cannot be bypassed without either (a) admin/shadow copy privileges, or (b) closing Edge first.
+
+**If Edge is closed:** `browser_cookie3.edge()` would work. But Edge is typically running when Copilot is in use.
+
+**Workaround:** Ask the user to paste `substack.sid` directly (as was done on 2026-03-15). This is the fastest path. Add fetching from user input as the first step in auth recovery.
+
+---
+
 ## Validated On
 
+- ✅ Full article draft: `jsn-extension-preview/draft.md` → Draft ID 191073429 (2026-03-15)
 - ✅ Full article draft: `witherspoon-extension-cap-vs-agent.md` → Draft ID 191061865 (2026-03-15)
 - ✅ Local image auto-upload: `./test-local.jpg` → `substack-post-media.s3.amazonaws.com` S3 URL (2026-03-15)
-- ✅ Auth: cookie-based via `SUBSTACK_TOKEN` (base64 encoded `substack_sid`+`connect_sid`)
+- ✅ Auth: cookie-based via `SUBSTACK_TOKEN` (base64 encoded `substack_sid` only — `connect_sid` not needed)
 - ✅ Author ID resolution: `GET /api/v1/user/profile/self` on publication subdomain

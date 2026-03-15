@@ -98,6 +98,11 @@ Editor reviews all images that appear inline in articles. Images ship alongside 
 - Aspect ratio or quality issues that would look broken on Substack
 - Identical or near-identical images used more than once in the same article
 
+**Known AI failure patterns — always 🔴 REPLACE:**
+- **Fabricated charts/graphs** — AI generates plausible-looking data visualizations with invented numbers. Any chart, bar graph, line graph, or stats table in an AI-generated image is assumed to contain fabricated data. Cannot be verified. Always reject.
+- **Fake player jersey numbers/names** — AI generates NFL player images with invented names or jersey numbers that don't match real players on the team. A wrong number is a fact error baked into the image. Always reject if a jersey number or player name is visible and unverified.
+- **Embedded text with specific claims** — any AI image containing readable text with player names, dollar amounts, dates, or team names must be verified. If any value differs from the article, reject it.
+
 ### Image Review Output
 
 Image review findings appear as a subsection of the standard Editor report:

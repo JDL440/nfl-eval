@@ -84,3 +84,77 @@
 - **Final verdict: ✅ ARTICLE APPROVED FOR PUBLICATION** — All active images cleared. Surplus files assessed and archived with clear disposition. Article ready for publisher pass.
 - **Recorded by:** Editor (2025-01-22)
 
+📌 Seventh pass: JSN Extension Preview — IMAGE REVIEW (vision-model pass)
+- **Scope:** 2 inline images reviewed with vision-capable model
+- **Date:** 2025-01-22
+- **Model:** claude-sonnet-4.6 (vision-capable)
+
+## 🖼️ IMAGE REVIEW — JSN Extension Preview (Vision Pass)
+
+| # | File | Status | Note |
+|---|------|--------|------|
+| 1 | `jsn-extension-preview-inline.png` | 🔴 REPLACE | **Hits ALL 3 known AI failure patterns.** Contains fabricated charts (5 graph panels with invented numbers and nonsensical axes), embedded text with unverifiable contract claims ("3-YEAR EXTENSION: $60M", "5-YEAR EXTENSION: $95M", "$20M", "$96M" — inconsistent with each other and with article), and garbled text ("ULT TRACT EXTENSION"). Hex color codes #002244 and #69BE28 rendered as visible text labels — AI treated Seahawks brand color metadata as content. NFL shield logo visible. Catastrophic credibility failure. |
+| 2 | `jsn-extension-preview-inline-2.png` | 🔴 REPLACE | **Failure pattern #2: Fake player identity.** Jersey shows **#38** with fabricated nameplate (reads "ABRAMS" or similar). JSN wears **#11** — wrong number is a fact error baked into the image. The editorial concept (money floating + clock = contract deadline pressure) is strong and the Seahawks colors are correct, but the fake jersey is a non-negotiable reject. |
+
+### Failure Analysis
+
+**Image 1 — Every failure pattern in one image:**
+1. ❌ Fabricated data visualizations — 5 chart panels with invented line graphs, nonsensical axis labels
+2. ❌ Embedded text with specific claims — Multiple conflicting dollar amounts ($60M, $25M, $95M, $20M, $96M)
+3. ❌ Garbled text — "ULT TRACT EXTENSION", hex codes displayed as values ("5-YEAR EXTENSION: #69BE28")
+4. ❌ NFL shield logo embedded in image
+
+**Image 2 — Fake player identity:**
+1. ❌ Jersey number #38 — JSN is #11
+2. ❌ Fabricated nameplate — does not read "SMITH-NJIGBA"
+3. ✅ Seahawks colors correct (navy/green)
+4. ✅ Editorial concept is strong (money + clock = contract pressure)
+5. 🟡 Blurred text visible on stadium signage (minor, secondary to jersey issue)
+
+### Replacement Prompts (Safe Patterns)
+
+**Inline 1 replacement** — use `custom_prompts` override:
+```
+"inline": "Abstract data analytics concept on dark navy (#002244) background with glowing green (#69BE28) data streams and geometric shapes. No readable text, no numbers, no charts, no graphs. Flowing lines suggesting financial analysis and negotiation. Premium editorial sports aesthetic. Square format."
+```
+
+**Inline 2 replacement** — use `custom_prompts` override:
+```
+"inline": "Atmospheric shot of an empty NFL stadium end zone at golden hour, Seahawks navy and neon green color palette, dollar bills scattered on the turf, dramatic cinematic lighting. No players, no jerseys, no visible text or scoreboards. Abstract editorial image suggesting contract negotiation. Square format."
+```
+
+### Overall Image Verdict: 🔴 REPLACE BOTH — Blocks publish
+
+Both images must be regenerated before the article can go live. Image 1 is the worst AI image failure case encountered in this project — it demonstrates why the Known AI Failure Patterns section exists. Image 2 has a strong concept but the fake jersey number is a hard reject.
+
+### Lesson Learned
+The previous review (Fifth/Sixth pass) was performed by a non-vision model and rated these images ✅/🟡 based on filename and metadata only. **This validates the skill's critical requirement: image review MUST use a vision-capable model.** Non-vision models literally cannot see fabricated charts, fake jersey numbers, or garbled text. This near-miss reinforces that `claude-opus-4.5` (or equivalent vision model) is mandatory for any image review pass.
+
+- **Recorded by:** Editor (vision pass, 2025-01-22)
+
+📌 Eighth pass: JSN Extension Preview — NEW INLINE IMAGE REVIEW (2025-01-22)
+- **File:** `jsn-extension-preview-inline.png`
+- **Prompt used:** "Close-up of NFL contract paperwork and a fountain pen on a polished dark wood desk, with a blurred green football field visible through a window in the background. Rich executive office atmosphere. No text visible. Cinematic lighting. No people."
+- **Vision review findings:**
+  - ❌ "CONTRACT" label visible at bottom of document (contradicts "no text" prompt)
+  - ❌ Fake NFL-style logo visible on document header
+  - ❌ AI-generated garbled body text simulating contract language — classic hallucination pattern
+  - ❌ Blurred text visible on football field (yard markers, end zone)
+- **Verdict: 🔴 REJECTED** — Hits criteria #1 (garbled/hallucinated/unverifiable text). Despite "no text visible" in prompt, AI generated multiple text elements including a CONTRACT header and nonsense body text.
+- **Replacement prompt suggested:** Use "blank white papers" instead of "contract paperwork" and explicitly reinforce "absolutely no text, no logos, no writing of any kind visible."
+- **Recorded by:** Editor (2025-01-22)
+
+📌 Ninth pass: JSN Extension Preview — INLINE IMAGE RE-REVIEW (attempt 2, 2025-01-22)
+- **File:** `jsn-extension-preview-inline.png`
+- **Prompt used:** "Close-up of a fountain pen resting on a stack of blank white papers on a polished dark wood executive desk. Blurred green football field visible through large office window in background. Absolutely no text, no logos, no writing of any kind visible. Premium editorial sports aesthetic."
+- **Vision review findings:**
+  - ✅ Papers completely blank — no writing, labels, or text of any kind
+  - ✅ No fake logos or NFL shield
+  - ✅ No garbled AI text attempting to simulate contract language
+  - ✅ Fountain pen elegant (silver/gold), premium editorial quality
+  - ✅ Dark polished wood desk, executive office atmosphere
+  - ✅ Blurred football field visible through window (yard markers 40/45 appropriately blurred — real-world field markings, not AI hallucination)
+- **Verdict: ✅ APPROVED** — Regeneration successful. The "blank white papers" prompt strategy eliminated all text hallucination. Image is publication-ready.
+- **Lesson:** When AI repeatedly generates unwanted text on "contract" or "document" subjects, switching to "blank papers" while keeping the same visual concept (pen + papers + desk) is an effective workaround.
+- **Recorded by:** Editor (2025-01-22)
+

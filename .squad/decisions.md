@@ -602,3 +602,85 @@ The JSN article's 🟡 items all stemmed from the same root cause: the expert pa
 **By:** Joe Robinson (via Copilot)
 **What:** When any agent discovers knowledge that should update team files (other agents' history.md, team.md, decisions.md, or charters), those updates must NOT be lost. Agents must explicitly flag cross-agent knowledge for Scribe to route.
 **Why:** User request — captured for team memory. Prevents knowledge silos and ensures discoveries made by one agent propagate to the right places.
+
+---
+
+### 20260315-234500: User directive — Image sizing
+
+**By:** Joe (via Copilot)
+
+**What:** Images in Substack articles must use imageSize normal (text column width), not large (full-bleed). Images should follow the same left/right borders as the article text.
+
+**Why:** User request — full-width images looked inconsistent with the centered text column
+
+---
+
+### 20260315-234500-inline-default: User directive — Inline-only default
+
+**By:** Joe (via Copilot)
+
+**What:** Default image generation should produce inline images only (no cover images). Use image_types: ['inline', 'inline'] for 2 images. Cover images are NOT generated automatically — they are set manually in the Substack editor if needed.
+
+**Why:** User request — cover images should not be auto-generated or embedded in article markdown
+
+---
+
+### 2026-03-15T22:28:58Z: User directive — Inline image limit
+
+**By:** Joe Robinson (via Copilot)
+
+**What:** Limit articles to 2 inline images only — no cover/banner image. Images should break up text and look good on mobile. This change also saves tokens.
+
+**Why:** User request — captured for team memory
+
+---
+
+### 2026-03-15T23:41:37Z: Image hallucinatio pattern — "contract paperwork" trigger (EDITOR CHARTER UPDATE)
+
+**By:** Editor (vision review)
+
+**What:** AI hallucinates CONTRACT labels, fake NFL logos, and garbled body text when prompted with "contract paperwork" image concepts. This is a consistent failure pattern requiring prompt engineering mitigation.
+
+**Pattern:** Contract/document prompts trigger unwanted text generation (labels, logos, fake document text) that cannot be caught by visual inspection alone.
+
+**Mitigation:** Replace "contract paperwork" with "blank white papers" + explicit "no text, no logos, no writing of any kind" constraint in generation prompts.
+
+**Charter flag:** Editor's knowledge base should be updated with: AI hallucinates CONTRACT labels on document-themed images — avoid "contract" + "document" + "paperwork" in generation prompts.
+
+**Why:** Prevents repeated rejection cycles on document-themed images. Prompt engineering is more efficient than repeated regenerations.
+
+---
+
+### 2026-03-15T23:41:37Z: Image uniqueness enforcement — Hash verification required (MANDATORY PRE-PUBLISH RULE)
+
+**By:** Lead & Joe (directive consolidation)
+
+**What:** Always verify image hashes are unique before publishing any article with multiple images. Two images with identical hashes are duplicates regardless of filename — visual inspection cannot catch this. MD5/SHA256 hash check is mandatory pre-publish step.
+
+**Implementation:**
+1. Before publishing, run hash verification on all generated images: Get-FileHash content/images/{slug}/*.png -Algorithm MD5
+2. If duplicate hashes found: reject both, regenerate, verify again
+3. Log hashes in Editor's image review report for audit trail
+
+**Updated:**
+- image-generation/SKILL.md — Added "Uniqueness Check (Required Before Publishing)" section
+- image-review/SKILL.md — Added duplicate hash detection to review checklist
+
+**Applies to:** All articles with 2+ images
+
+**Why:** First published article had identical inline images with different filenames (550CFD87 = 18CBD39A). Only hash verification catches this. Hash check is only reliable deduplication method.
+
+---
+
+### 2026-03-15T23:41:37Z: JSN article — Duplicate inline images resolved
+
+**By:** Coordinator & Editor
+
+**What:** jsn-extension-preview article had duplicate inline images. Regenerated jsn-extension-preview-inline.png (Attempt 1 rejected for AI text hallucination; Attempt 2 approved with improved prompt). Final hashes verified unique: 550CFD87 ≠ 18CBD39A. Republished to Substack draft 191077419.
+
+**Images:**
+- inline.png (fountain pen + blank papers + football field): 550CFD87 ✅ 
+- inline-2.png (data stream/circuit theme): 18CBD39A ✅
+- Status: Not duplicates
+
+**Why:** Ensures JSN article publishes with verified unique assets. Duplicate image issue now resolved with hash verification and prompt engineering fixes applied.

@@ -46,25 +46,21 @@ Open `content/articles/{slug}.md` and verify:
 
 ### Step 2 — Image Placement Verification
 
-- [ ] At least one cover image is placed directly after the subtitle line
-- [ ] Cover image uses the correct markdown syntax: `![alt|caption](./images/{slug}/filename.ext)`
-- [ ] All inline images have descriptive alt text and captions
-- [ ] All image file paths exist: verify `content/images/{slug}/` contains the referenced files
+**Image policy: exactly 2 inline images per article body. NO cover image in the article markdown — cover is set manually in the Substack editor (Stage 8). Images are rendered at `imageSize: "normal"` (text column width) — NOT full-bleed.**
+
+- [ ] **No cover image** in the article markdown body — covers are not rendered inline
+- [ ] **Exactly 2 inline images** present in the article body (per `copilot-directive-20260315-images.md`)
+- [ ] Both inline images use correct syntax: `![alt text](../../images/{slug}/filename.png)`
+- [ ] Both inline images are named `{slug}-inline-1.png` and `{slug}-inline-2.png`
+- [ ] Both inline images have descriptive alt text (no empty `![]()`)
+- [ ] Both image files exist: verify `content/images/{slug}/` contains the referenced filenames
 - [ ] No broken image references (paths with typos, wrong extensions, missing files)
+- [ ] **No cover image files** need to be in `content/images/{slug}/` — cover is optional and set manually
 
-**Cover image placement template:**
-
-```markdown
-# Article Headline Here
-
-*Subheadline: one-line hook*
-
-![Cover image: Article Headline Here|Cover image description](./images/{slug}/{slug}-cover-1.png)
-
----
-
-**By: The NFL Lab Expert Panel**
-```
+**Inline image placement guidelines:**
+- Place first inline image after the first major data table or argument (~line 35–40)
+- Place second inline image at a natural tension point in the middle section (~line 85–95)
+- Do NOT place images in the closing section or after the verdict
 
 ### Step 3 — Final Content Read-Through
 

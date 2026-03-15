@@ -102,6 +102,22 @@ The tool auto-builds prompts, but you can override with `custom_prompts` for spe
 
 Both Imagen 4 and Gemini Flash can generate athlete likenesses in editorial sports contexts. Use `players` to pass player names — this improves both scene accuracy and likeness quality. **Gemini Flash tends to produce better player likenesses** (as seen with JSN cover); use `use_model: "gemini-flash"` when player likeness matters.
 
+**⚠️ Known failure patterns — avoid these prompts:**
+
+| Prompt element | What AI generates | Why it fails |
+|---|---|---|
+| "salary cap chart" / "bar graph" / "data visualization" | A chart with plausible-but-invented numbers | Fabricated stats embedded in image = fact error |
+| "player in uniform" / "jersey" / "wide receiver catching" | A jersey with a made-up name or number | Fake player identity = credibility failure |
+| "contract comparison table" / "stats table" | A table with wrong figures | Can't verify data in an image |
+| "scoreboard" / "box score" | Invented game scores | Fabricated results in image |
+
+**Safe prompt patterns:**
+- Abstract analytics: dark navy background, glowing data streams, no readable text or numbers
+- Color palette work: Seahawks navy (#002244) and green (#69BE28), abstract geometric shapes
+- Atmospheric stadium scenes with no scoreboard/signage visible
+- Silhouette-style action shots where no jersey numbers are readable
+- Abstract money/contract imagery: briefcases, handshakes — no dollar amounts shown as text
+
 ### Custom prompt override example
 
 When you need something specific that the auto-prompt won't capture:
@@ -139,6 +155,27 @@ The tool returns markdown references for each image:
 ```markdown
 ![Cover image: Our Cap Expert Says $27M...|Cover image: Our Cap Expert Says $27M...](./images/witherspoon-extension-analysis/witherspoon-extension-analysis-cover-1.png)
 ```
+
+---
+
+## Uniqueness Check (Required Before Publishing)
+
+**All generated images must pass a uniqueness check before publication.**
+
+After generating multiple images for the same article:
+
+1. **Verify all image hashes are unique** using PowerShell:
+   ```powershell
+   Get-FileHash content/images/{slug}/*.png -Algorithm MD5 | Select-Object Hash, Path
+   ```
+
+2. **Any two images with identical hashes are bit-for-bit identical** — reject both and regenerate immediately. Different filenames do not guarantee different content.
+
+3. **Log the hashes** in the article's image generation history for traceability:
+   - Include hash + filename in the Editor's image review report
+   - This creates an audit trail if duplicates are discovered post-publication
+
+**Why this matters:** Accidentally publishing two identical images wastes article real estate and looks like an editorial error. The tool can cache results and save the same file under a new name, bypassing human review. Hash verification is the only way to catch this.
 
 ---
 

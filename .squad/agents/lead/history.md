@@ -188,3 +188,21 @@ CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-li
 
 📌 Team update (2026-03-15T21:45:00Z): Knowledge Propagation Pattern adopted — all agents route cross-team knowledge to .squad/knowledge/inbox/ for Scribe processing. Prevents silos. Decided by: Lead (Joe Robinson directive)
 
+### Image Generation Quality Control — Duplicate Detection (2026-03-15)
+
+**Finding:** First published article had two inline images that were bit-for-bit identical (same MD5 hash). The image generator cached a result and saved it twice under different filenames. Neither Writer nor Editor caught this — both were focused on visual inspection, and two different filenames appeared to mean two different images.
+
+**Root cause:** AI image generation tools (Imagen, Gemini) sometimes cache results. If the prompt or random seed is sufficiently similar, the exact same image bytes are returned. Saving to a new filename masks the duplication.
+
+**Prevention implemented:**
+- New section in `image-generation/SKILL.md`: "Uniqueness Check (Required Before Publishing)" — mandates PowerShell hash verification before publication
+- Command: `Get-FileHash content/images/{slug}/*.png -Algorithm MD5 | Select-Object Hash, Path`
+- Rule: Any two images with identical hashes must be rejected and regenerated immediately
+- Audit requirement: Log hashes in Editor's image review report for traceability
+
+**Updated skills:**
+- `.squad/skills/image-generation/SKILL.md` — Added Uniqueness Check section with hash verification process
+- `.squad/skills/image-review/SKILL.md` — Added duplicate check to review checklist ("Are all inline images visually distinct?")
+
+**Decision filed:** `.squad/decisions/inbox/lead-image-uniqueness.md`
+
