@@ -144,6 +144,22 @@ jobs:
 
             // If not routed to @copilot, use keyword-based routing
             if (!assignedMember) {
+              // Article pipeline: issues with 'article' label or title starting with "Article:"
+              // always go to Lead — explicit path for the automated article pipeline
+              const hasArticleLabel = context.payload.issue.labels &&
+                context.payload.issue.labels.some(l => l.name === 'article');
+              const isArticleTitle = issue.title.trim().toLowerCase().startsWith('article:');
+              const hasArticleKeywords = issueText.includes('article') || issueText.includes('draft') ||
+                issueText.includes('publish') || issueText.includes('substack') ||
+                issueText.includes('angle') || issueText.includes('depth level');
+
+              if (hasArticleLabel || isArticleTitle || hasArticleKeywords) {
+                assignedMember = lead;
+                triageReason = 'Article pipeline issue — routed directly to Lead for automated article creation';
+              }
+            }
+
+            if (!assignedMember) {
               for (const member of members) {
                 const role = member.role.toLowerCase();
                 if ((role.includes('frontend') || role.includes('ui')) &&

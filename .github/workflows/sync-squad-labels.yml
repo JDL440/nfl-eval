@@ -91,6 +91,15 @@ jobs:
               { name: 'type:epic', color: 'CC4455', description: 'Parent issue that decomposes into sub-issues' }
             ];
 
+            // Article pipeline labels — drive automated article creation via Lead
+            const ARTICLE_LABELS = [
+              { name: 'article', color: 'E8B24D', description: 'Article idea — Lead runs the full pipeline automatically' },
+              { name: 'article:casual', color: 'F5D08A', description: 'Depth Level 1 — Casual Fan article (1200-2000 words)' },
+              { name: 'article:beat', color: 'E8B24D', description: 'Depth Level 2 — The Beat article (2000-3500 words)' },
+              { name: 'article:deep-dive', color: 'C8862A', description: 'Depth Level 3 — Deep Dive article (3000-5000 words)' },
+              { name: 'article:draft-ready', color: '0E8A16', description: 'Substack draft posted — ready for Joe to review and publish' },
+            ];
+
             // High-signal labels — these MUST visually dominate all others
             const SIGNAL_LABELS = [
               { name: 'bug', color: 'FF0422', description: 'Something isn\'t working' },
@@ -125,10 +134,11 @@ jobs:
               });
             }
 
-            // Add go:, release:, type:, priority:, and high-signal labels
+            // Add go:, release:, type:, priority:, article:, and high-signal labels
             labels.push(...GO_LABELS);
             labels.push(...RELEASE_LABELS);
             labels.push(...TYPE_LABELS);
+            labels.push(...ARTICLE_LABELS);
             labels.push(...PRIORITY_LABELS);
             labels.push(...SIGNAL_LABELS);
 
