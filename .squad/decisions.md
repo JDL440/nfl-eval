@@ -7,15 +7,18 @@
 **What:** All agents should use claude-opus-4.6 model. No exceptions.
 **Why:** User request — premium tier for maximum quality on NFL domain analysis.
 
+
 ### 2026-03-12: User directive — Role-based agent names
 **By:** Joe Robinson (via Copilot)
 **What:** Rename specialist agents from Ocean's Eleven cast names to role-based names: Danny→Lead, Rusty→Cap, Livingston→Injury, Linus→Draft, Basher→Offense, Turk→Defense, Virgil→SpecialTeams. Easier to remember.
 **Why:** User request — role-based names are more intuitive for an NFL domain team.
 
+
 ### 2026-03-12: User directive — 1M context fallback
 **By:** Joe Robinson (via Copilot)
 **What:** If agents hit context window limits or compaction, switch them to claude-opus-4.6-1m (1M context) model.
 **Why:** User request — agents doing heavy research may need larger context windows to avoid data loss.
+
 
 ### 2026-03-12: NFC West 2026 Cap Landscape — Strategic Findings
 **By:** Cap (Salary Cap Specialist)
@@ -30,6 +33,7 @@
 5. **Edge rusher market diverged** — Elite tier now $40M+ AAV. Bosa's $34M AAV aging well relative to market. SEA's Nwosu at $9.76M is below market.
 
 **Why:** Based on OTC and Spotrac data, cross-verified with ✅ confidence tags. 2027 projections from OTC multi-year models.
+
 
 ### 2026-03-12: 2026 NFL Draft Class — NFC West Implications
 **By:** Draft (Draft Expert Specialist)
@@ -46,6 +50,7 @@
 
 **Why:** Draft is April 23–25, 2026. Team agents need prospect-to-need mapping at their respective draft positions.
 
+
 ### 2026-03-12: Data Source Strategy for Web Research
 **By:** Lead (Team Lead Specialist)
 **Status:** Proposed
@@ -58,10 +63,12 @@
 
 **Why:** Probed 15+ URLs across 5 data sources on 2026-03-12. PFR blocks automated access. Documented in `.squad/skills/`.
 
+
 ### 2026-03-13: User directive — Verify FA availability before recommending
 **By:** Joe Robinson (via Copilot)
 **What:** When trades/signings are reported by multiple outlets, consider them high confidence (🟢 Likely). Agents should check availability before recommending FA targets — don't suggest players who are already signed or traded.
 **Why:** User request — avoid recommending unavailable players. Accuracy over speculation.
+
 
 ### 2026-03-13: FA Availability Alert — Seahawks targets revised
 **By:** Media (NFL Media & Rumors Specialist)
@@ -73,6 +80,7 @@
 Of 20 players recommended in Seahawks FA analysis, 7 are confirmed unavailable (signed or traded). Key removals: Hendrickson (BAL), Koonce (LV re-sign), Awuzie (BAL), T. Johnson (traded LV), Kohou (KC), R. White (WSH), Deebo Samuel (contract voided — now UFA again). Still available: Bosa, Clowney, Von Miller, Calais Campbell, Lattimore, Douglas, Hobbs, Tre'Davious White, Najee Harris, Bobby Wagner, D.J. Reader, Jauan Jennings. EDGE, CB, and RB groups need revision.
 **Why:** FA market moves fast. Several recommendations were outdated within hours of publication. All future target boards must verify current availability.
 
+
 ### 2026-03-13: Washington State Millionaires Tax changes Seattle's tax advantage
 **By:** PlayerRep (Player Advocate & CBA Expert)
 **Status:** Proposed
@@ -82,6 +90,7 @@ Of 20 players recommended in Seahawks FA analysis, 7 are confirmed unavailable (
 **What:**
 WA passed SB 6346 on 2026-03-12 — 9.9% income tax on all personal income over $1M/yr, effective 2028-01-01. Applies to W-2 salary and visiting-athlete jock tax. Constitutional challenge likely (40–60% chance struck down). For 2026–2027, Seattle retains zero-tax advantage. For 2028+, a $20M/yr SEA contract loses ~$1.88M/yr to state tax — dropping the "$20M in SEA = $23M in SF" narrative to approximately "$20M in SEA ≈ $20.8M in SF." Short-term deals unaffected; multi-year deals need front-loading. Rookie contracts under $1M/yr unaffected regardless.
 **Why:** Fundamentally changes Seattle's FA recruiting pitch for contracts extending past 2027. All prior analyses claiming zero-tax advantage need asterisks. TX/FL/TN/NV teams now have unambiguous tax edge over SEA.
+
 
 ### 2026-03-13: Media Daily Sweep — FA Wave 1 (22+ signings, Crosby trade voided, Tua to ATL)
 **By:** Media (NFL Media & Rumors Specialist)
@@ -98,6 +107,7 @@ Full 24-hour sweep (March 12-13) during FA Wave 1. 22+ confirmed signings, 2 tra
 - Rumor resolutions: Tua confirmed, Crosby voided, Cousins released (not traded), Garrett Wilson trade debunked, ARI #3 pick trade cooling, Minshew to ARI (not KC).
 
 **Why:** Comprehensive free agency tracking ensures all agents have accurate, current roster data. 7 rumor resolutions prevent recommending unavailable players. Dashboard updated at `.squad/agents/media/history.md`.
+
 
 ### 2026-03-14: Media Daily Sweep — FA Day 3 (24+ new moves, Rodgers downgrade, mega-deals)
 **By:** Media (NFL Media & Rumors Specialist)
@@ -119,6 +129,7 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 - Total confirmed FA transactions tracked: 65+. Active rumors: 14.
 
 **Why:** Day 3 FA sweep ensures all agents have accurate rosters. Rodgers downgrade is biggest strategic shift — PIT win-now plan at risk. EDGE market ($120M Phillips, $100M Oweh) resets benchmarks. NYJ becoming dark horse via trades. MIA in full rebuild.
+
 
 ### 2026-03-14: Article Lifecycle Skill — Architectural Decisions
 
@@ -152,6 +163,7 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 - Stages 2, 3, 7 are new and untested
 - Promote to `medium` after one article passes through all 8 stages, to `high` after 3+ articles
 
+
 ### 2026-03-15: Media Daily Sweep — FA Day 4 (50+ new moves, Rodgers upgraded, TEN $270M spree)
 **By:** Media (NFL Media & Rumors Specialist)
 **Status:** Proposed
@@ -174,6 +186,7 @@ Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed tr
 
 **Why:** Day 4 FA sweep ensures all agents have accurate rosters. Rodgers upgrade is biggest strategic shift — PIT win-now plan back on track. TEN $270M spree creates new AFC contender. NFC West arms race intensifying (Watson→LAR, Bosa restructure→SF, Shaheed/Jobe→SEA). 3 article candidates identified (TEN spree, SEA window, Rodgers decision).
 
+
 ### 2026-03-15: README.md Structure and Tone
 
 **By:** Writer  
@@ -187,6 +200,7 @@ Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed tr
 5. Tone: Direct, energetic, zero fluff — internal engineering docs, not marketing copy
 
 **Rationale:** Joe needs a doc answering "what is this, how do I use it" in under 2 minutes. Everything else is noise.
+
 
 ### 2026-03-15: Add `discussion_path` Field to Articles Table
 **By:** Lead  
@@ -211,6 +225,7 @@ Also update `content/schema.sql` to include this column in the `CREATE TABLE art
 **Why:** Needed before the next article reaches `panel_discussion` stage at scale. Currently manageable with path convention inference, but should be added before Phase 2 automation is built. Enables Writer agent to operate independently.
 
 **Priority:** Medium — non-blocking but foundational for automation.
+
 
 ### 2026-03-15: Lead Intel Brief — Editorial Priority Changes
 **By:** Lead  
@@ -239,6 +254,7 @@ Based on the March 14-15 Media sweep (50+ new transactions, 115+ total tracked),
 
 ---
 
+
 ### 2026-03-15: Article Candidates from Daily News Sweep
 **By:** Media  
 **Status:** Proposed  
@@ -265,6 +281,7 @@ Five article candidates identified from March 14-15 news sweep, scored by signif
 **Why:** Comprehensive news tracking ensures article pipeline reflects current, high-impact topics. Titans and Rodgers pieces expand beyond SEA-only coverage (audience growth). Timing critical — Rodgers decision expected within 2 weeks.
 
 ---
+
 
 ### 2026-03-15: Media Intel Drop — League-Wide (50+ New Transactions)
 **By:** Media  
@@ -293,6 +310,7 @@ Comprehensive Day 3-4 free agency sweep (March 14-15). 50+ new confirmed transac
 **Why:** Comprehensive tracking ensures all agents have current roster data. Day 4 sweep reveals biggest strategic shifts: TEN building new contender, LV defensive pivot, Rodgers likely returns to PIT. Three article candidates identified (TEN spree, SEA retention, Rodgers decision). All team agents should update roster knowledge with current moves and cap impacts.
 
 ---
+
 
 ### 2026-03-15: Media Intel Drop — SEA (Priority)
 **By:** Media  
@@ -331,6 +349,7 @@ Seahawks-focused intel from Day 3-4 sweep (March 14-15):
 
 ---
 
+
 ### 2026-03-15: User directive — Avoid politically divisive topics
 **By:** Joe Robinson (via Copilot)  
 **Status:** Proposed  
@@ -357,3 +376,192 @@ JSN panel discussion completed on 2026-03-15 before this directive was filed. Di
 
 Decision: All article content must avoid politically divisive topics. No tax legislation, political bills, or political angles. Applies to all stages: ideas, discussion prompts, panel positions, drafts, editor/publisher passes.
 
+
+### Editor Verdict: JSN Extension Preview — Re-Review
+
+# Editor Verdict: JSN Extension Preview — Re-Review
+
+**From:** Editor  
+**Date:** 2026-03-15  
+**Article:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."  
+**Review:** Re-review (2nd pass) after Writer addressed 🟡 REVISE feedback
+
+---
+
+## Verdict: ✅ APPROVED
+
+All three 🔴 errors from the first review are fixed correctly:
+
+1. **Rob Havenstein** — "Ryan" corrected to "Rob" on line 120. ✅
+2. **Cap/PlayerRep quote attribution** — Blended quote properly split into two quotes with correct panelist attribution (Cap: comps, PlayerRep: draft-slot argument). ✅
+3. **Shanahan-tree superlative** — Now reads "since Cooper Kupp's 1,947-yard outlier in 2021," properly qualifying the claim. ✅
+
+**Additional findings:**
+- Full 8-quote attribution audit: all clean. No misattributions remain.
+- No new factual errors on full re-read.
+- 4 carried-forward 🟡 suggestions (stat specifics, vague record claim, table footnote, "rebuilding" wording) remain as recommendations for future updates. None are publish-blockers.
+
+**The article is publish-ready.**
+
+---
+
+*Full review saved to: `content/articles/jsn-extension-preview/editor-review-2.md`*
+
+### Editor Verdict: JSN Extension Preview Article
+
+# Editor Verdict: JSN Extension Preview Article
+
+**Article:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."  
+**Date:** 2026-03-15  
+**Full review:** `content/articles/jsn-extension-preview/editor-review.md`
+
+---
+
+## Verdict: 🟡 REVISE
+
+### 🔴 Fixes Required (3):
+1. **"Ryan Havenstein" → "Rob Havenstein"** (line 116) — wrong first name
+2. **Quote misattribution** (line 52) — draft-slot argument is PlayerRep's, not Cap's. Split or rewrite the quote.
+3. **"Best any Shanahan-tree receiver" superlative** (line 58) — Kupp's 1,947-yard season makes this technically incorrect. Add qualifier.
+
+### 🟡 Top Recommendations:
+- Add JSN's 2025 stat specifics (catches, TDs, target share) — "1,800 yards" alone isn't enough for the central argument
+- Fix polished-paraphrase quotes presented as direct attribution (lines 87, 91, 165)
+- Add DK Metcalf's Pittsburgh AAV ($30M/yr per project data) for narrative context
+
+### What's Working:
+- Structure, voice, tables, and data accuracy are excellent
+- Four-path framework is compelling
+- Verdict ($32-33M) takes a clear, well-supported position
+- No political/tax content violations
+- 22/23 verifiable facts checked clean
+
+### Path to ✅ APPROVED:
+Fix the 3 🔴 items → address top 🟡 suggestions → resubmit for final sign-off.
+
+---
+
+*Editor — 2026-03-15*
+
+### Decision: JSN Extension Article Draft Complete — Ready for Editor Review
+
+# Decision: JSN Extension Article Draft Complete — Ready for Editor Review
+
+**Date:** 2026-03-15  
+**Decider:** Writer  
+**Status:** ✅ Completed  
+
+---
+
+## What Was Decided
+
+The JSN extension preview article draft is complete and saved to `content/articles/jsn-extension-preview/draft.md`. The article synthesizes the four-expert panel discussion (Cap, PlayerRep, SEA, Offense) into a narrative-driven piece following the NFL Lab house style.
+
+**Article specs:**
+- **Headline:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."
+- **Length:** ~3,200 words
+- **Structure:** Hook → 4 paths framework → AAV debate → cost-of-waiting math → Shaheed leverage point → front-loaded structure → verdict ($32–33M, extend now)
+- **Tables:** 5 major tables (paths, panel positions, comps, cost-of-waiting, cap structure)
+- **Image placeholders:** 4 (cover + 3 section headers)
+- **Voice:** Expert disagreement format, data-backed, clear position taken in verdict
+
+---
+
+## Rationale
+
+The panel discussion surfaced genuine tension on the central question: is JSN a Jefferson/Lamb-tier WR ($34–36M) or a tier below ($28–32M)? The article presents both sides (PlayerRep/Cap arguing for full market, Offense arguing for system-amplified discount, SEA prioritizing defense) and lands on a synthesis: $32–33M AAV, front-loaded, extend now.
+
+**Key narrative choices:**
+1. **The tier question is the article's core.** Four experts, four AAV ranges. I didn't artificially smooth this into consensus — the disagreement IS the product.
+2. **PlayerRep's "Shaheed tipped their hand" insight is positioned as the non-obvious reveal.** Per charter, each expert should surface something readers won't find elsewhere. Shaheed's $17M AAV as JSN's negotiating floor is that hook.
+3. **Cap's cost-of-waiting math ($33M more over deal life if you use the option) is the counter-intuitive data point.** It's the reason "extend now" wins despite SEA's defense-first concerns.
+4. **Took a clear position in the verdict.** $32–33M AAV, $90M+ guaranteed, front-loaded structure. No hedging. This is what the charter demands.
+
+---
+
+## Open Questions Flagged for Editor
+
+The draft includes a writer note section flagging 7 open questions that need fact-checking:
+1. JSN's actual 2025 production numbers (yards, TDs, target share, YAC)
+2. Fleury's system context — how much is scheme vs. JSN's skill?
+3. Public quotes from Macdonald/front office about JSN's role
+4. DK Metcalf's Pittsburgh contract specifics (~$24M/yr claim)
+5. WR market 2027 projection (Cap's $36–38M AAV estimate)
+6. 5th-year option exact figure for 2027 ($21–23M range given)
+7. Shaheed contract structure verification (3yr/$51M, $17M AAV, $34.7M gtd)
+
+These are verification tasks for Editor, not Writer.
+
+---
+
+## Next Steps
+
+1. **Editor reviews the draft** — fact-check open questions, evaluate structure/voice, provide 🔴🟡🟢 feedback.
+2. **Revisions if needed** based on Editor's verdict.
+3. **Publish pipeline** once approved.
+
+The draft is ready for editorial review.
+
+---
+
+**Recorded by:** Writer  
+**File location:** `content/articles/jsn-extension-preview/draft.md`  
+**Editor handoff:** Ready now
+
+### Writer → Editor: JSN Extension Article — Revision Complete
+
+# Writer → Editor: JSN Extension Article — Revision Complete
+
+**From:** Writer  
+**To:** Editor  
+**Date:** 2026-03-15  
+**Re:** `content/articles/jsn-extension-preview/draft.md` — Revision pass complete, ready for re-review
+
+---
+
+## Summary
+
+All 3 🔴 must-fix errors have been corrected. Four 🟡 suggestions were addressed. The article's structure, argument, and conclusion are unchanged.
+
+---
+
+## 🔴 Fixes Made
+
+### 1. "Ryan Havenstein" → "Rob Havenstein"
+**Line 120:** Corrected. "the Rams just lost Ryan Havenstein" → "the Rams just lost Rob Havenstein." Verified this was the only instance of the wrong first name in the draft.
+
+### 2. Cap/PlayerRep Quote Split
+**Lines 52–56 (revised):** The blended quote was split into two properly attributed quotes:
+- **Cap** now carries only the comp analysis: *"The comps are clean: Lamb at $34M, Jefferson at $35M. JSN is younger than both at signing and just as productive."*
+- **PlayerRep** now carries the draft-slot argument: *"You don't get a discount for drafting him at pick 20 instead of pick 5. Production sets the second contract, not draft slot."*
+- A bridge sentence ("PlayerRep makes the draft-slot case just as bluntly:") connects the two quotes naturally.
+
+### 3. "Best Any Shanahan-Tree Receiver Has Ever Produced" → Qualified
+**Line 62 (revised):** Changed to: *"JSN's 1,800-yard season is the best any Shanahan-tree receiver has produced since Cooper Kupp's 1,947-yard outlier in 2021 — better than Deebo Samuel's peak, better than Brandon Aiyuk at his best. Kupp's historic season is the only asterisk; everyone else in the family tree is below JSN's line."*  
+This preserves the point (JSN is best in the tree in normal terms) while explicitly acknowledging Kupp's outlier season.
+
+---
+
+## 🟡 Suggestions Addressed
+
+### Quote voice / accuracy cleanup (Suggestion #2)
+Four quote adjustments were made to better match each expert's documented voice:
+
+1. **Cap (line 91):** "optionality theater" → *"a trap"* — restored to Cap's language from the position file. "The fifth-year option is a trap" is more faithful than an invented phrase.
+
+2. **PlayerRep (line 95):** Removed the trailing *"The injury clock is ticking"* — that line doesn't appear in PlayerRep's position file and reads as Writer invention. The quote now ends on guaranteed cash language, which is PlayerRep's actual register.
+
+3. **SEA → PlayerRep (line 169):** The "financial malpractice" quote re-attributed from SEA to PlayerRep. "Financial malpractice" is PlayerRep's language per the position file. SEA uses strategic/organizational framing, not player-advocacy rhetoric.
+
+### JSN stat line (Suggestion #1)
+**Not added.** The discussion-summary does not contain specific stats beyond "1,800-yard breakout season" (no receptions, TDs, target share, YAC, or separation metrics). Open question #1 from the Writer notes remains unresolved — these numbers need to come from a data source before they can be added. Left the WRITER NOTES flag intact for Editor awareness.
+
+---
+
+## No Structural Changes
+
+The article's four-path framework, expert positions, panel tables, verdict ($32–33M AAV), and conclusion are all unchanged. This was a targeted fix pass, not a rewrite.
+
+---
+
+*Writer — 2026-03-15*

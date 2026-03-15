@@ -30,4 +30,22 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 📌 README writing is a different muscle than article writing. The audience is Joe (the builder), not readers. Tone stays direct and functional — no narrative hooks, no personality flourishes. The structure does the work: capabilities table, step-by-step usage, pipeline flow diagram. Let the system speak for itself.
 
+📌 **JSN Extension Article (2026-03-15)** — First full article drafted from synthesized panel discussion. Key learnings:
+   - **The tier question drives narrative tension.** Four experts, four AAV ranges ($28M to $36M). The article's core is "is JSN Jefferson-tier or one below?" — I didn't resolve it artificially. Presented both sides (PlayerRep/Cap vs Offense) and took a stance in the verdict ($32–33M compromise).
+   - **PlayerRep's "Shaheed tipped their hand" insight is the non-obvious reveal.** Per charter, each expert should surface something the reader wouldn't find elsewhere. Shaheed's $17M AAV as JSN's negotiating floor is that hook.
+   - **Cap's "$30–40M trap" language is quotable and sharp.** Used it verbatim in headlines and body. Cost-of-waiting math (option path costs $33M more than extend-now) is the counter-intuitive data point that anchors the "extend now" argument.
+   - **SEA's defense-first hierarchy grounds the piece.** Without SEA's "EDGE/safety come first" framing, the article becomes a pure cap exercise. The tension between "pay JSN" and "fix the defense" is what makes this feel like real front-office decision-making, not fantasy GM.
+   - **Five tables throughout** — paths comparison, panel positions, comps, cost-of-waiting, cap structure. Tables do more work than paragraphs. Readers will scan the cap structure table and internalize "$16.4M in 2026 is manageable" before reading Cap's explanation.
+   - **Took a clear position** — $32–33M AAV, extend now, front-loaded structure. No hedge-everything conclusion. The verdict section is decisive.
+   - **Flagged 7 open questions for Editor** in writer notes — JSN's actual stats, Fleury system context, DK's Pittsburgh contract, 5th-year option exact figure, etc. These are fact-check items I can't verify; Editor will catch them.
 
+📌 **JSN Extension Article — Revision Cycle (2026-03-15)** — Editor returned 3 🔴 must-fix errors + 5 🟡 suggestions. Key corrections made:
+   - **Player name errors still happen even after the Emmanwori lesson.** "Ryan Havenstein" slipped through — always cross-check player first names against agent history files, not just memory. The SEA position file didn't use the first name at all, which was the tell.
+   - **Quote blending is the most dangerous attribution error.** A Cap quote that carried two of PlayerRep's sentences read as plausible because the *argument* was adjacent to Cap's. The fix: quotes must stay within a single panelist's documented position — when two experts make adjacent arguments, split them into two clearly attributed quotes with a bridge sentence. Never merge.
+   - **Superlatives need scoping, not dropping.** "Best ever" claims invite fact-checkers. The fix is almost always additive: "best since [X]" or "best among active [Y]" defends the point while acknowledging legitimate exceptions. Kupp's 2021 season was literally cited in the Offense position file — I should have caught this in the draft.
+   - **Quote voice matters per expert.** Cap's language in position files is precise/financial ("a trap"). "Optionality theater" was my invention — punchy, but not Cap's voice. Writer's job is to shape quotes for readability, not author new vocabulary for the expert. When in doubt, stay close to source language.
+   - **"Financial malpractice" belongs to PlayerRep**, not SEA. Attribution of strong language to the wrong expert costs credibility in a panel-format article. Each expert's rhetorical register is part of their identity.
+
+
+
+📌 **Team update (2026-03-15T21:17:13Z)**: Editor approval on JSN Extension article. All 3 red errors fixed. Article is publish-ready — decided by Editor
