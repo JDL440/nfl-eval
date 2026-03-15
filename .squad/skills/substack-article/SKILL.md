@@ -160,7 +160,8 @@ publish_to_substack(
   file_path: "content/articles/{slug}.md",
   title: "{Final headline — may refine from working title}",
   subtitle: "{1-line hook used for email preview}",
-  audience: "everyone"
+  audience: "everyone",
+  team: "{Team Name}"              ← routes draft to the team's Substack section
 )
 ```
 
