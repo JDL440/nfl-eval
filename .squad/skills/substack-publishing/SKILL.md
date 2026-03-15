@@ -42,12 +42,15 @@ publish_to_substack(
   title: "Final headline",           ← optional: auto-extracted from first # heading
   subtitle: "One-line hook",         ← optional: auto-extracted from first *italic* line
   audience: "everyone"               ← "everyone" (default) or "only_paid"
+  team: "Seattle Seahawks"           ← optional: routes draft to the team's section
 )
 ```
 
 Title and subtitle are auto-extracted from the markdown if not provided:
 - **Title** → first `# Heading` line
 - **Subtitle** → first line that is `*wrapped in single asterisks*` (the standard subheadline format)
+
+The `team` parameter accepts full or partial team names — `"Seahawks"` matches `"Seattle Seahawks"`. If omitted, the draft is created without a section assignment (appears in the general feed).
 
 ---
 
@@ -236,7 +239,8 @@ Discovered by inspecting real Substack drafts via the API:
 - Flag any images that need to be sourced before publishing
 
 ### Lead
-- After Editor approval, call `publish_to_substack(file_path: "content/articles/{slug}.md")`
+- After Editor approval, call `publish_to_substack(file_path: "content/articles/{slug}.md", team: "{Team Name}")`
+- `team` accepts full or partial name — `"Seahawks"` works, `"Seattle Seahawks"` works
 - Pass explicit `title` and `subtitle` if you want to override the auto-extracted values
 - Give Joe the returned draft URL — that's all that's needed for Stage 8
 - Post the Publisher Pass checklist from `article-lifecycle` SKILL alongside the URL

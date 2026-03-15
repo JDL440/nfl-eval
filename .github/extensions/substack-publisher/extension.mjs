@@ -139,7 +139,22 @@ async function uploadImageToSubstack(subdomain, headers, imagePath, articleDir) 
     return data.url;
 }
 
-async function createSubstackDraft({ subdomain, headers, title, subtitle, body, authorId, audience }) {
+async function getSectionId(subdomain, headers, teamName) {
+    const res = await fetch(
+        `https://${subdomain}.substack.com/api/v1/publication/sections`,
+        { headers }
+    );
+    if (!res.ok) return null;
+    const sections = await res.json();
+    // Case-insensitive match on full name or partial (e.g. "Seahawks" matches "Seattle Seahawks")
+    const lower = teamName.toLowerCase();
+    const match =
+        sections.find((s) => s.name.toLowerCase() === lower) ||
+        sections.find((s) => s.name.toLowerCase().includes(lower));
+    return match ? match.id : null;
+}
+
+async function createSubstackDraft({ subdomain, headers, title, subtitle, body, authorId, audience, sectionId }) {
     if (!authorId) {
         throw new Error(
             "Could not resolve author ID from Substack. " +
@@ -153,6 +168,7 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
         draft_bylines: [{ id: authorId, is_guest: false }],
+        ...(sectionId ? { section_id: sectionId } : {}),
     };
 
     const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts`, {
@@ -535,6 +551,13 @@ const session = await joinSession({
                             'Audience: "everyone" (free, default) or "only_paid" (paid subscribers only).',
                         enum: ["everyone", "only_paid"],
                     },
+                    team: {
+                        type: "string",
+                        description:
+                            "NFL team name to route this article to the correct Substack section. " +
+                            'Full name (e.g. "Seattle Seahawks") or partial (e.g. "Seahawks"). ' +
+                            "If omitted, the draft is created without a section assignment.",
+                    },
                 },
                 required: ["file_path"],
             },
@@ -595,6 +618,21 @@ const session = await joinSession({
                     await session.log(`Connecting to ${subdomain}.substack.com…`, { ephemeral: true });
                     const authorId = await getAuthorId(subdomain, headers);
 
+                    // Resolve team section ID if provided
+                    let sectionId = null;
+                    if (args.team) {
+                        await session.log(`Looking up section for "${args.team}"…`, { ephemeral: true });
+                        sectionId = await getSectionId(subdomain, headers, args.team);
+                        if (!sectionId) {
+                            return {
+                                textResultForLlm:
+                                    `Error: No Substack section found matching "${args.team}".\n\n` +
+                                    `Check available sections at: https://${subdomain}.substack.com/publish/settings/sections`,
+                                resultType: "failure",
+                            };
+                        }
+                    }
+
                     // Convert markdown → ProseMirror (local images auto-uploaded)
                     await session.log("Converting article to Substack format…", { ephemeral: true });
                     const articleDir = dirname(filePath);
@@ -612,6 +650,7 @@ const session = await joinSession({
                         body,
                         authorId,
                         audience: args.audience || "everyone",
+                        sectionId,
                     });
 
                     const draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
@@ -620,6 +659,7 @@ const session = await joinSession({
                         `**Title:** ${title}\n` +
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
                         `**Audience:** ${args.audience || "everyone"}\n` +
+                        (sectionId ? `**Section:** ${args.team} (id ${sectionId})\n` : "") +
                         `**Draft ID:** ${draft.id}\n\n` +
                         `**Review & publish:** ${draftUrl}\n\n` +
                         `Open the URL above to review formatting, add a cover image, and publish.`
