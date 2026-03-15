@@ -1,0 +1,167 @@
+---
+name: "publisher"
+description: "Stage 7 Publisher agent role — final article prep, metadata, image placement verification, and Substack upload"
+domain: "content-production"
+confidence: "medium"
+source: "designed 2026-03-15 — based on validated substack-publishing skill and article-lifecycle Stage 7"
+---
+
+# Publisher — Skill
+
+> **Confidence:** medium — role designed 2026-03-15; individual components (publish_to_substack, image upload) are validated
+> **Created:** 2026-03-15
+> **Owned by:** Publisher agent (or Lead standing in) at Stage 7
+
+## Purpose
+
+The Publisher agent takes an Editor-approved article with images and prepares it for Substack publication. This is **not** editorial review (that's Stage 6 — Editor's job). The Publisher focuses on formatting, metadata, image placement, and calling the publishing tool to produce a Substack draft URL for Joe's final approval.
+
+---
+
+## When to Run
+
+Stage 7 — after Editor issues a ✅ APPROVED verdict and all 🔴 errors are resolved.
+
+```
+Editor: ✅ APPROVED → Publisher: prep + publish → Joe: draft URL review + one-click publish
+```
+
+---
+
+## Publisher Checklist
+
+Run this in order. Each step is a gate before the next.
+
+### Step 1 — Article File Verification
+
+Open `content/articles/{slug}.md` and verify:
+
+- [ ] **First line** is `# The Headline` — no blank lines before it
+- [ ] **Second non-blank line** is `*The subtitle in italics*` (single asterisks)
+- [ ] No `TODO`, `[PLACEHOLDER]`, `{FIXME}`, or `...fill in...` markers remain
+- [ ] No stale date references (e.g., "upcoming Draft" when it already happened)
+- [ ] Author line present: `**By: The NFL Lab Expert Panel**`
+- [ ] Boilerplate footer present: expert panel description + CTA + next article tease
+- [ ] "Next from the panel" tease references a real upcoming article idea
+
+### Step 2 — Image Placement Verification
+
+- [ ] At least one cover image is placed directly after the subtitle line
+- [ ] Cover image uses the correct markdown syntax: `![alt|caption](./images/{slug}/filename.ext)`
+- [ ] All inline images have descriptive alt text and captions
+- [ ] All image file paths exist: verify `content/images/{slug}/` contains the referenced files
+- [ ] No broken image references (paths with typos, wrong extensions, missing files)
+
+**Cover image placement template:**
+
+```markdown
+# Article Headline Here
+
+*Subheadline: one-line hook*
+
+![Cover image: Article Headline Here|Cover image description](./images/{slug}/{slug}-cover-1.png)
+
+---
+
+**By: The NFL Lab Expert Panel**
+```
+
+### Step 3 — Final Content Read-Through
+
+A fast pass — Editor already did the deep review. Publisher checks for issues that slip through:
+
+- [ ] All player names spelled correctly (one last check — these are brand reputation items)
+- [ ] All cap figures and contract numbers are current (these move fast)
+- [ ] No orphaned section headings with no content below them
+- [ ] Tables are properly formatted (pipes aligned, header row separator present)
+- [ ] All `> blockquote` expert quotes have attribution (`— Expert Name`)
+- [ ] All `::youtube VIDEO_ID` embeds use valid 11-character IDs (if present)
+
+### Step 4 — Metadata Preparation
+
+Prepare the Substack metadata before calling the tool:
+
+| Field | Source | Example |
+|-------|--------|---------|
+| **title** | First `# heading` in article (may refine) | "Our Cap Expert Says $27M. His Agent Wants $33M." |
+| **subtitle** | First `*italic*` line (may refine) | "Devon Witherspoon's extension: inside the gap" |
+| **audience** | Per editorial calendar | `"everyone"` (default) or `"only_paid"` |
+
+**Title refinement:** The working title is set by Writer, but Publisher can suggest a final refinement for email open rate. Keep it substantive — don't clickbait.
+
+### Step 5 — Call publish_to_substack
+
+```
+publish_to_substack(
+  file_path: "content/articles/{slug}.md",
+  title: "{final headline}",
+  subtitle: "{1-line hook for email preview}",
+  audience: "everyone"
+)
+```
+
+The tool returns a direct Substack editor URL.
+
+### Step 6 — Hand Off to Joe
+
+Post the following to the article thread:
+
+```markdown
+## 🚀 Publisher Pass Complete — {Article Title}
+
+**Substack Draft URL:** {URL returned by tool}
+
+**Pre-publish checklist for Joe (Stage 8):**
+- [ ] Cover image: select in Substack editor (generated image is in article body; also set as post thumbnail)
+- [ ] URL slug: verify it's clean and SEO-friendly
+- [ ] Section/tags: assign section + 3–5 tags (team, topic, player names, "expert-panel")
+- [ ] Paywall setting: free / paid-only / preview paywall
+- [ ] Publish date/time: per editorial calendar (default: Tuesday 10 AM PT)
+- [ ] Email send: yes/no (default: yes)
+
+**Images generated:**
+{list image filenames and types from content/images/{slug}/}
+
+**Article stats:**
+- Word count: ~{N} words
+- Sections: {N}
+- Expert quotes: {N}
+- Tables: {N}
+- Images: {N} (cover: {N}, inline: {N})
+```
+
+---
+
+## Common Issues and Fixes
+
+| Issue | Fix |
+|-------|-----|
+| Image file missing | Re-run `generate_article_images` for that image type |
+| Broken image path | Fix path in article markdown — check `./images/{slug}/` directory |
+| Title too long for email | Shorten to ~60 characters for email subject preview |
+| `publish_to_substack` returns auth error | `SUBSTACK_TOKEN` expired — see `.env.example` for refresh instructions |
+| Article body contains raw HTML | Convert to markdown equivalent |
+| Table formatting broken | Verify pipe-separated format with `---` separator row |
+
+---
+
+## Publisher vs. Editor — Role Distinction
+
+| | Editor (Stage 6) | Publisher (Stage 7) |
+|---|---|---|
+| **Focus** | Accuracy + editorial quality | Formatting + publish readiness |
+| **Checks** | Facts, stats, structure, style | Images, metadata, syntax, file paths |
+| **Output** | Verdict (APPROVED/REVISE/REJECT) | Draft URL + handoff checklist |
+| **Can reject?** | Yes — sends back to Writer | No — escalates to Joe or back to Editor |
+| **Mindset** | "Is this article good?" | "Is this article ready to ship?" |
+
+Publisher does **not** re-evaluate editorial quality. If Publisher finds a new factual error, they flag it to Editor (not fix it themselves).
+
+---
+
+## Relationship to Other Skills
+
+- **Before Publisher:** [`article-lifecycle`](../article-lifecycle/SKILL.md) Stage 6 (Editor must be ✅ APPROVED)
+- **Image source:** [`image-generation`](../image-generation/SKILL.md) — images should already exist from Stage 5
+- **Publishing mechanics:** [`substack-publishing`](../substack-publishing/SKILL.md) — full syntax reference
+- **After Publisher:** Joe runs Stage 8 (Approval / Publish)

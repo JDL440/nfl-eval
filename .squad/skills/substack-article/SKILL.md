@@ -132,6 +132,30 @@ Headlines should be:
 - `We Asked {N} Experts About {Topic}. They Can't Agree — and That's the Point.`
 - `{Bold Claim}. Our Expert Panel Explains Why.`
 
+### Phase 4b: Image Generation (after Writer saves draft)
+
+**Immediately after the draft is saved**, generate editorial images using the `generate_article_images` extension. Images are generated at this stage so the Editor can review them alongside the article text.
+
+```
+generate_article_images(
+  article_slug: "{slug}",
+  article_title: "{Final headline}",
+  article_summary: "{1-3 sentence summary of the article's core argument}",
+  team: "{Primary NFL team, e.g. 'Seattle Seahawks'}",
+  players: ["{Key players mentioned}"],
+  image_types: ["cover", "inline"],
+  count_per_type: 2
+)
+```
+
+The tool saves images to `content/images/{slug}/` and returns markdown references to paste into the article.
+
+**Image placement:**
+- **Cover image:** Paste directly after the subtitle line (`*subtitle*`), before the `---` divider
+- **Inline images:** Place at natural section breaks — one per major section if relevant
+
+**Full guidance:** See [`image-generation` SKILL.md](../image-generation/SKILL.md) for prompting strategy, custom prompts, and Editor review format.
+
 ### Phase 5: Editorial Review (MANDATORY)
 
 **Editor reviews every article before it goes to `content/articles/`.** This is non-negotiable.
@@ -147,11 +171,13 @@ If 🔴 errors exist, fix them and re-submit. The Emmanwori name error (mixing N
 
 ### Phase 6: Polish & Store
 
-1. Save article to `content/articles/{slug}.md`
-2. Commit with descriptive message
+1. Save article to `content/articles/{slug}.md` (with image references inserted)
+2. Commit with descriptive message (include images: `content/images/{slug}/`)
 3. Tease the next article at the end (creates a content pipeline)
 
-### Phase 7: Publish to Substack
+### Phase 7: Publisher Pass + Publish to Substack
+
+Run the Publisher pass using the [`publisher` SKILL](../publisher/SKILL.md) — it handles final formatting verification, image placement checks, and calls `publish_to_substack`:
 
 Call `publish_to_substack` to push the article to Substack as a draft:
 
@@ -203,9 +229,10 @@ The tool auto-creates a Substack draft and returns an editor URL. Hand the URL t
 1. Topic selected from content/article-ideas.md
 2. Expert agents spawned in parallel (Phase 2)
 3. Writer assembles draft from expert output (Phase 3)
-4. Editor reviews draft — fact-check + style + structure (Phase 5)
-5. Fixes applied if needed → re-review if 🔴 errors
-6. Saved to content/articles/ and committed (Phase 6)
-7. publish_to_substack called → draft URL returned to Joe (Phase 7)
-8. Joe reviews in Substack editor → clicks Publish
+4. Writer calls generate_article_images → images saved to content/images/{slug}/ (Phase 4b)
+5. Editor reviews draft + images — fact-check + style + structure + image review (Phase 5)
+6. Fixes applied if needed → re-review if 🔴 errors
+7. Saved to content/articles/ and committed, including images/ (Phase 6)
+8. Publisher pass → publish_to_substack called → draft URL returned to Joe (Phase 7)
+9. Joe reviews in Substack editor → clicks Publish
 ```
