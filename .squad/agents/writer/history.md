@@ -53,3 +53,10 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 📌 Team update (2026-03-15T21:45:00Z): Editorial standards established for yellow-item resolution pattern — narrow vague claims, add placeholders for gaps, use precise competitive descriptors. Decided by: Editor
 
+📌 **Arizona Cardinals Draft (2026-03-16)** — First non-Seahawks article drafted from a full 4-agent panel (ARI, Draft, Cap, Offense). Key learnings:
+   - **The disagreement axis defines the structure.** Four experts agreed on "don't take QB at #3" but fractured on *when* the QB arrives. That fracture — Cap's patience vs. Offense's urgency, with Draft bridging and ARI dissenting — IS the article. Organized sections around each expert's strongest contribution, then brought them into collision in the disagreement section.
+   - **Panel quote selection matters more than volume.** Each expert had 3-5 quotable lines. Used one per expert maximum in the body, saved the rest for the disagreement table. Over-quoting dilutes impact — one killer line per voice, placed at the moment of maximum tension.
+   - **Non-Seahawks articles work the same way.** The expert-panel format is team-agnostic. The ARI team expert was as strong a voice as SEA was in prior articles. The structure (situation → expert angles → disagreement → verdict) travels.
+   - **Cap's "dead cap as receipt" framing anchored the financial narrative.** The reframe from "Arizona is crippled" to "Arizona paid upfront for 2027 freedom" was the non-obvious insight that makes the article more than a doom piece. Always look for the counterintuitive cap angle — it's what separates NFL Lab from fan blogs.
+   - **8 fact-check items flagged for Editor** — player stats, coaching titles, draft eligibility, trade chart math. Maintaining the JSN article lesson: Writer does not fact-check.
+
