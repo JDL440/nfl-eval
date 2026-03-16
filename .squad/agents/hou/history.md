@@ -342,3 +342,40 @@ _Last updated: 2026-03-12_
 4. **TEN is rebuilding aggressively.** Saleh + Daboll + Bradley coaching staff with Cam Ward at QB. Could be competitive by 2027.
 5. **OL was the biggest weakness in 2025.** Howard trade left a hole. Smith (RT) and Ingram (RG) extensions address it. Ersery at LT is the long-term answer. Need depth.
 6. **Interior DL is the most critical draft need.** Lost Settle, Fatukasi, Hinish. Rankins (31) can't carry the load. Must address in R1-R2.
+
+---
+
+### Session Log
+
+#### 2026-03-16 — Issue #50: Article Idea Generation
+
+**Task:** Generated angle for Houston Texans 2026 offseason article (Issue #50).
+
+**Research conducted:**
+- Fresh web search on Stroud/Anderson extension timelines (ProFootballRumors, Yahoo Sports, Heavy.com, ClutchPoints, WolfSports)
+- Updated FA tracker via ESPN, houstontexans.com, SI, Yahoo, Ourlads
+- Draft needs analysis via Bleacher Report, DraftTek, DraftCountdown, TWSN
+
+**New data points (beyond 2026-03-12 baseline):**
+- ✅ Anderson extension projected at ~4yr/$176M ($44M AAV) — near Micah Parsons tier
+- ✅ Stroud extension projected at ~4yr/$224M ($56M AAV) base case; up to 5yr/$300M+ if he rebounds
+- ✅ Stroud 5th-year option (~$26.5M) will be exercised; full extension likely post-2026 season
+- ✅ David Montgomery traded from DET (not just signed) — for OL Juice Scruggs + picks
+- ✅ Jake Hummel (LB, from BAL) added for depth
+- ✅ Kai Kroeger (P) acquired via trade from NO
+- ✅ Christian Harris (LB) signed with ATL — confirmed departure
+- ✅ DT draft targets refined: Christen Miller (UGA), LT Overton (ALA), Peter Woods (CLEM), A'Mauri Washington (ORE), Caleb Banks (FLA)
+
+**Angle chosen:** "Houston's $100 Million Countdown" — the Stroud/Anderson extension cliff as the defining lens through which every Texans offseason decision must be understood. Scored 12/12 on idea-generation rubric.
+
+**Stages completed:**
+- ✅ Stage 1 — Idea Generation (angle selected, posted to issue)
+- ✅ Stage 2 — Discussion Prompt (structured brief with panel questions posted)
+
+**Next step:** Stage 3 — Panel Composition confirmation → Stage 4 — Panel Discussion (spawn HOU + Cap + Draft + Defense)
+
+**Learnings:**
+- The extension cliff angle is the strongest framing because it touches EVERY other decision (draft, FA, cap moves, division competition)
+- Stroud's 4-game absence in 2025 adds genuine uncertainty to extension timing — not just a cap math exercise
+- Montgomery was a trade acquisition from DET, not an FA signing — important for cap/draft pick accounting
+- DT draft class for HOU picks is deep: Miller, Overton, Woods, Washington, Banks all realistic at 28-69 range

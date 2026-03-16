@@ -339,3 +339,28 @@ _Last updated: 2026-03-12_
 - ⚠️ CB depth behind Hunter is very thin
 - ⚠️ Dead money ($53M) limits flexibility in 2026
 - ⚠️ Tennessee's aggressive rebuild could close the division gap faster than expected
+
+---
+
+## Article Work Log
+
+### 2026-03-16: Issue #52 — JAX 2026 Offseason Article
+_Stage reached: Stage 3 (Panel Ready)_
+
+**Angle chosen:** "The Travis Hunter Paradox" — How Jacksonville's all-in bet on the NFL's only two-way WR/CB starter created a roster construction paradox that threatens their 2026 contention window.
+
+**Research findings (new since last update):**
+- ✅ Travis Hunter's 2025 rookie stats: 7 games, 28 rec/298 yds/1 TD (WR) + 15 tkl/3 PD (CB); 67% off snaps, 36% def snaps; LCL injury ended season
+- ✅ BTJ sophomore slump confirmed: 87/1282/10 → 48/707/2 in 2025; GM called trade rumors "fraudulent"
+- ✅ Cap restructures completed: Jourdan Lewis, Eric Murray, Patrick Mekari, Robert Hainsey, Jakobi Meyers — created ~$10M+ in space from initial -$15.9M deficit
+- ✅ Draft mock targets linked to JAX: CB (Chandler Rivers, Keith Abney II, Domani Jackson), IOL (Gennings Dunker), S (AJ Haulcy), DT (Christen Miller)
+
+**Panel composition:** JAX + Cap + Defense + Offense (4 agents)
+**Scoring:** 12/12 on idea-generation rubric
+**Next step:** Stage 4 — spawn panel agents in parallel with discussion prompt
+
+**Learnings:**
+- The Hunter two-way experiment is THE unique angle for JAX — no other team has this story
+- Hunter's LCL injury makes the workload question more urgent than pure production analysis
+- BTJ's slump creates a secondary tension that enriches the article (WR allocation)
+- Cap restructures have moved since history.md's last update — always re-verify OTC data before writing
