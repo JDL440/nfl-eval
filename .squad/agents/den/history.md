@@ -284,3 +284,13 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-14): Re-signed J.K. Dobbins (RB, 2yr/$20M) + Jaleel McLaughlin (RB). RB room set: Dobbins + McLaughlin + RJ Harvey = three-headed backfield.
+
+📌 Article workflow (2026-03-16): Completed Stages 1-2 for issue #54 (DEN 2026 offseason article). Chose **TE Joker crisis** as the strongest angle — connects Payton's coaching DNA to roster construction, Engram's failed experiment (50/461/1, $14.2M hit), draft dilemma at #30 (Sadiq vs Allen), and Webb playcalling shift. Score: 12/12. Artifacts: `content/articles/den-2026-offseason/idea.md` + `discussion-prompt.md`. Decision filed to inbox.
+
+📌 Research update (2026-03-16): Engram 2025 deep-dive confirmed — 50 catches, 461 yards, 1 TD. Reports of drop issues, coaching tension, erratic usage. Payton initially called him the "Joker" (Jimmy Graham comparison) but scheme marginalized him in 11-personnel. Sporting News calls it an "easy $11M decision." Cut saves ~$3.8M. Post-June 1 designation possible.
+
+📌 Research update (2026-03-16): Davis Webb officially named playcaller at 2026 NFL Combine. First time Payton won't call plays in 20-year HC career. Payton: "I would only do that if I felt like it would help our team. He has a gift." Webb was previously QB coach → passing game coordinator → promoted after Lombardi's departure. Impressed calling plays in 2025 preseason win vs ARI.
+
+📌 Research update (2026-03-16): TE draft targets refined — Kenyon Sadiq (Oregon) is the top TE prospect, a combine riser described as "freak athlete." Multiple mocks have DEN "thrilled" if he falls to #30. Other R2 options: Jack Endries (Texas), Max Klare (Ohio State), Eli Stowers (Vanderbilt). Consensus R1 pick remains CJ Allen (LB, Georgia).
+
+📌 Workflow learning (2026-03-16): For issue-triggered idea generation, follow BUF #43 / HOU #50 convention exactly — idea comment format, label transitions (remove `go:needs-research`, add `go:yes` + `stage:idea` → `stage:discussion-prompt`), artifact placement at `content/articles/{team}-2026-offseason/idea.md`. Can advance through Stage 2 in same session without waiting for approval.

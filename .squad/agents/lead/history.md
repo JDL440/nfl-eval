@@ -507,3 +507,63 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 - PlayerRep's non-obvious insight (5th-year option strengthens the player's hand) is a stronger argument than v1's tax angle
 
 **Learning:** Pre-pipeline articles (Articles 1-2) have no structured artifacts. When refreshing them, the published article itself IS the source material. The pipeline structure (discussion-prompt → positions → synthesis → draft) can be reconstructed retroactively.
+
+---
+
+### AFC North Batch — Issues #46-#49 (2026-03-16)
+
+**Batch:** BAL (#46), CIN (#47), CLE (#48), PIT (#49)
+**All four issues** entered as template-state "IDEA GENERATION REQUIRED" with `go:needs-research` label.
+
+#### Research Findings (all four teams)
+
+| Team | Key Storyline | Score |
+|------|--------------|-------|
+| **BAL** | Traded 2026+2027 1st-round picks for Maxx Crosby ($106.5M). New HC Jesse Minter after Harbaugh firing. Only 30 sacks in 2025 (league-worst). Linderbaum + Likely hitting FA. | 11/12 |
+| **PIT** | Built $59M WR room (Pittman + Metcalf) for Rodgers — who might retire. McCarthy replaced Tomlin. 10-6 AFC North champs in 2025. Only Rudolph + Howard under contract at QB. | 11/12 |
+| **CIN** | Let Hendrickson (4x Pro Bowl, 17.5-sack seasons) walk. Burrow's 3rd straight playoff miss at 6-11. Signed Cook/Mafe/Allen as volume defense replacements. $48M Burrow cap hit. | 10/12 |
+| **CLE** | Monken hired from BAL. Three-QB competition (Watson/Sanders/Gabriel). $93M+ O-line spending. Two 1st-round picks (#6 + #24). Watson returning from Achilles. | 10/12 |
+
+#### Actions Taken
+
+1. **All four issues:** Generated ideas with current 2026 offseason data, posted structured idea comments (matching #40/#45 format), created `content/articles/{team}-2026-offseason/idea.md` folders, updated labels from `go:needs-research` → `go:yes` + `stage:idea`
+
+2. **BAL #46 pushed to Stage 2:** Wrote full discussion prompt (`content/articles/bal-2026-offseason/discussion-prompt.md`) with three cap scenarios, Crosby trade math as central question, and BAL + Cap + Defense panel. Updated label to `stage:discussion-prompt`.
+
+3. **Pipeline priority:** BAL #46 recommended as next to advance (richest data, clearest tension engine, most analytically interesting for The Beat depth level)
+
+#### Learnings
+
+- **Batch workflow efficiency:** Researching all 4 teams in parallel via web_search, then writing all ideas simultaneously, then posting all comments — significantly faster than sequential processing. ~15 min for 4 ideas vs. prior single-issue sessions.
+- **AFC North has two 11/12 ideas (BAL, PIT):** Both have time-sensitive hooks (Crosby trade just happened; Rodgers decision pending). CIN and CLE are strong but slightly less urgent.
+- **Crosby trade creates cross-division angle:** The same trade appears in both BAL #46 (buyer side) and LV #57 (seller side — "Crosby Paradox" angle already generated). Could cross-reference.
+- **Rodgers will-he-won't-he is perishable:** PIT #49's angle expires when Rodgers decides. If he announces retirement or signs, the article framing must shift. Flag for priority if decision appears imminent.
+
+---
+
+## Session: Retarget Ralph Loop for NFL Article Pipeline
+
+**Date:** 2026-03-15
+**Task:** Retarget the github-copilot-ralph-loop repo from .NET Hello World demo to drive nfl-eval's team-article backlog.
+
+**What changed (in github-copilot-ralph-loop):**
+- **ralph.ps1** — Added `-TargetRepo` param (defaults to sibling `../nfl-eval`). Script now `Set-Location` into nfl-eval so Copilot CLI sees .squad/, content/, etc. Changed default model to `claude-sonnet-4.5`. Timeout raised to 900s. Progress file fields renamed from stories to items.
+- **ralph/prompt.md** — Complete rewrite. Instructs Copilot CLI to act as Lead, pick the next team article issue (#40-#69), advance it one pipeline stage (8-stage lifecycle), commit, and exit. Includes backlog priority rules, stage-by-stage guidance, and all critical file references.
+- **ralph/prd.json** — Replaced Hello World user stories with NFL article pipeline definition: 8 stages, done criteria per stage, issue label mappings, and completion criteria (all 30 issues at stage 7+).
+- **ralph/AGENTS.md** — Replaced .NET project context with nfl-eval agent roster, pipeline overview, content structure, conventions, and error handling guidance.
+- **readme.md** — Full rewrite documenting the NFL article pipeline driver, quick start, parameters, prerequisites, and 8-stage table.
+
+**Backlog selection logic (assumption made):**
+1. Finish mid-pipeline articles first (avoid half-done work)
+2. `go:yes` issues next (already approved: #40 ARI, #43 BUF, #44 MIA, #45 NYJ)
+3. `go:needs-research` issues last (26 teams needing idea generation)
+4. Tie-break by issue number ascending
+
+**Validation performed:**
+- PowerShell syntax check: zero parse errors
+- JSON validation: prd.json is valid
+- Residual scan: no Hello World / .NET / C# references remain
+- Script logic verified: Set-Location targets TargetRepo, model and banner updated
+- No live execution against nfl-eval (constraint honored)
+
+**Learning:** The Ralph loop pattern is repo-agnostic by design — the key is that Set-Location puts Copilot CLI inside the target repo so it sees the right context files. The prompt.md is the real "controller" that determines what Copilot does each iteration.
