@@ -45,8 +45,9 @@ function loadEnv() {
 
 // ─── Gemini API ──────────────────────────────────────────────────────────────
 
-// Model priority: Imagen 4 Ultra for highest quality editorial images.
-// Falls back to Gemini 3 Pro Image if Imagen unavailable.
+// Model priority: Gemini 3 Pro Image for highest quality editorial images.
+// Imagen 4 Ultra available as explicit opt-in via use_model="imagen-4".
+// Gemini produces better editorial/atmospheric images for this workflow (validated 2026-03-17).
 // Available Imagen tiers: ultra (best quality), standard, fast.
 // Available Gemini image models: gemini-3-pro-image-preview (best),
 //   gemini-3.1-flash-image-preview, gemini-2.5-flash-image.
@@ -211,7 +212,7 @@ async function generateArticleImages(params) {
         image_types = ["inline"],
         count_per_type = 1,
         custom_prompts = {},
-        use_model = "auto",
+        use_model = "gemini",
     } = params;
 
     if (!article_slug) throw new Error("article_slug is required");
@@ -247,19 +248,23 @@ async function generateArticleImages(params) {
         let modelUsed = "";
 
         try {
-            if (use_model === "gemini-flash") {
-                images = await generateWithGeminiFlash(prompt, apiKey, count_per_type);
-                modelUsed = GEMINI_IMAGE_MODEL;
-            } else {
-                // Default: try Imagen 4 first, fall back to Gemini Flash
+            if (use_model === "imagen-4") {
+                images = await generateWithImagen3(prompt, apiKey, count_per_type, aspectRatio);
+                modelUsed = IMAGEN_MODEL;
+            } else if (use_model === "auto") {
+                // Auto: try Gemini first, fall back to Imagen 4
                 try {
-                    images = await generateWithImagen3(prompt, apiKey, count_per_type, aspectRatio);
-                    modelUsed = IMAGEN_MODEL;
-                } catch (imagenErr) {
-                    console.error(`Imagen 4 failed (${imagenErr.message}), falling back to Gemini Flash...`);
                     images = await generateWithGeminiFlash(prompt, apiKey, count_per_type);
                     modelUsed = GEMINI_IMAGE_MODEL;
+                } catch (geminiErr) {
+                    console.error(`Gemini failed (${geminiErr.message}), falling back to Imagen 4...`);
+                    images = await generateWithImagen3(prompt, apiKey, count_per_type, aspectRatio);
+                    modelUsed = IMAGEN_MODEL;
                 }
+            } else {
+                // Default ("gemini"): use Gemini directly
+                images = await generateWithGeminiFlash(prompt, apiKey, count_per_type);
+                modelUsed = GEMINI_IMAGE_MODEL;
             }
         } catch (err) {
             errors.push(`${imageType}: ${err.message}`);
@@ -362,9 +367,9 @@ await joinSession({
                     },
                     use_model: {
                         type: "string",
-                        enum: ["auto", "imagen-4", "gemini-flash"],
-                        description: "Image model to use. 'auto' tries Imagen 4 first, falls back to Gemini Flash. Default: 'auto'",
-                        default: "auto",
+                        enum: ["gemini", "auto", "imagen-4"],
+                        description: "Image model to use. 'gemini' (default) uses Gemini 3 Pro Image. 'auto' tries Gemini first, falls back to Imagen 4. 'imagen-4' uses Imagen 4 Ultra directly.",
+                        default: "gemini",
                     },
                 },
             },

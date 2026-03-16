@@ -471,6 +471,28 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 
 **Action:** Created GitHub issue **#70** — *"Improve social link image generation for Substack articles"*
 - **URL:** https://github.com/JDL440/nfl-eval/issues/70
+
+### Substack Notes Research — Issue Filed (2025-07-25)
+
+**Request:** Joe asked Lead to file a research issue for incorporating Substack Notes into the article workflow, focused on timing Notes for maximum viewership and subscriber conversion.
+
+**Context check:** No existing issues on Substack Notes. Current pipeline (8 stages, article-lifecycle skill) covers article drafting → Substack draft → Joe publishes. Notes are not part of the workflow at all.
+
+**Action:** Created GitHub issue **#72** — *"Research: Incorporate Substack Notes into article workflow for maximum discovery & subscriber conversion"*
+- **URL:** https://github.com/JDL440/nfl-eval/issues/72
+- **Labels:** `enhancement`, `squad`, `squad:lead`
+- **Decision filed:** `.squad/decisions/inbox/lead-substack-notes-research.md`
+
+**Key research angles proposed:**
+1. Pre-publish teaser Notes (1–2 days before) — drives discovery/anticipation
+2. Launch-day Notes (same day as article) — direct subscriber conversion
+3. Post-publish discussion Notes (1–2 days after) — extends article lifecycle, paid conversion
+4. Compound strategy (all three) — maximum touchpoints, best for initial testing
+5. Standalone Notes (not tied to articles) — long-term follower growth between publishes
+
+**Experiment plan:** 4-article compound campaign with metrics (impressions, click-through, new subs, paid conversion rate). A/B test teaser vs. no-teaser across matched pairs.
+
+**Open question:** Whether Substack Notes has an API or is manual-only — determines if this can be automated via the pipeline or needs a checklist/template approach.
 - **Label:** `enhancement` (no `squad` labels — avoids auto-routing/assignment)
 - **Assignee:** none (backlog only, per user request)
 - **Style reference:** Witherspoon article social link preview flagged as the target aesthetic
@@ -659,3 +681,20 @@ Both recommendations complement Lead's URL persistence fix (#1 priority) — tog
 
 **Next steps:** Approve URL persistence as immediate priority; implement upstream table audit to prevent repeated friction on future articles.
 
+
+
+### Gemini Image Default + Substack Draft Update (2026-03-17)
+
+**Task:** Make Gemini 3 Pro Image the default for editorial image generation; promote approved Gemini variants for MIA and DEN articles; update live Substack drafts in-place.
+
+**What worked:**
+- Mock SDK pattern (stub joinSession in node_modules) allows running the publisher extension standalone for batch draft updates
+- Promoting images to canonical filenames (-inline-1/2.png) means no markdown changes needed
+- The publisher extension draft_url parameter + updateSubstackDraft path works cleanly for in-place updates without creating duplicate drafts
+
+**Key finding:**
+- Gemini 3 Pro Image produces better editorial/atmospheric images than Imagen 4 Ultra for this workflow abstract, no-faces style guide. Made permanent as the default (use_model: gemini).
+- The use_model enum was expanded: gemini (default), auto (Gemini then Imagen 4 fallback), imagen-4 (explicit Imagen 4).
+
+**Cleanup pattern for image variants:**
+When running A/B image tests, always name variants with a suffix (e.g., -v2-gemini). Once a winner is chosen, overwrite the canonical file and delete all variant files. This avoids markdown churn.
