@@ -1,23 +1,23 @@
+# Decisions
+
+> Active decisions for the NFL 2026 Offseason project. Entries are organized by date (newest first). Older entries (30+ days) are archived in decisions-archive.md.
+
+---
+
 ### 2026-03-12: User directive — Model override
 **By:** Joe Robinson (via Copilot)
 **What:** All agents should use claude-opus-4.6 model. No exceptions.
 **Why:** User request — premium tier for maximum quality on NFL domain analysis.
-
-
 
 ### 2026-03-12: User directive — Role-based agent names
 **By:** Joe Robinson (via Copilot)
 **What:** Rename specialist agents from Ocean's Eleven cast names to role-based names: Danny→Lead, Rusty→Cap, Livingston→Injury, Linus→Draft, Basher→Offense, Turk→Defense, Virgil→SpecialTeams. Easier to remember.
 **Why:** User request — role-based names are more intuitive for an NFL domain team.
 
-
-
 ### 2026-03-12: User directive — 1M context fallback
 **By:** Joe Robinson (via Copilot)
 **What:** If agents hit context window limits or compaction, switch them to claude-opus-4.6-1m (1M context) model.
 **Why:** User request — agents doing heavy research may need larger context windows to avoid data loss.
-
-
 
 ### 2026-03-12: NFC West 2026 Cap Landscape — Strategic Findings
 **By:** Cap (Salary Cap Specialist)
@@ -32,8 +32,6 @@
 5. **Edge rusher market diverged** — Elite tier now $40M+ AAV. Bosa's $34M AAV aging well relative to market. SEA's Nwosu at $9.76M is below market.
 
 **Why:** Based on OTC and Spotrac data, cross-verified with ✅ confidence tags. 2027 projections from OTC multi-year models.
-
-
 
 ### 2026-03-12: 2026 NFL Draft Class — NFC West Implications
 **By:** Draft (Draft Expert Specialist)
@@ -50,8 +48,6 @@
 
 **Why:** Draft is April 23–25, 2026. Team agents need prospect-to-need mapping at their respective draft positions.
 
-
-
 ### 2026-03-12: Data Source Strategy for Web Research
 **By:** Lead (Team Lead Specialist)
 **Status:** Proposed
@@ -64,14 +60,10 @@
 
 **Why:** Probed 15+ URLs across 5 data sources on 2026-03-12. PFR blocks automated access. Documented in `.squad/skills/`.
 
-
-
 ### 2026-03-13: User directive — Verify FA availability before recommending
 **By:** Joe Robinson (via Copilot)
 **What:** When trades/signings are reported by multiple outlets, consider them high confidence (🟢 Likely). Agents should check availability before recommending FA targets — don't suggest players who are already signed or traded.
 **Why:** User request — avoid recommending unavailable players. Accuracy over speculation.
-
-
 
 ### 2026-03-13: FA Availability Alert — Seahawks targets revised
 **By:** Media (NFL Media & Rumors Specialist)
@@ -83,8 +75,6 @@
 Of 20 players recommended in Seahawks FA analysis, 7 are confirmed unavailable (signed or traded). Key removals: Hendrickson (BAL), Koonce (LV re-sign), Awuzie (BAL), T. Johnson (traded LV), Kohou (KC), R. White (WSH), Deebo Samuel (contract voided — now UFA again). Still available: Bosa, Clowney, Von Miller, Calais Campbell, Lattimore, Douglas, Hobbs, Tre'Davious White, Najee Harris, Bobby Wagner, D.J. Reader, Jauan Jennings. EDGE, CB, and RB groups need revision.
 **Why:** FA market moves fast. Several recommendations were outdated within hours of publication. All future target boards must verify current availability.
 
-
-
 ### 2026-03-13: Washington State Millionaires Tax changes Seattle's tax advantage
 **By:** PlayerRep (Player Advocate & CBA Expert)
 **Status:** Proposed
@@ -94,8 +84,6 @@ Of 20 players recommended in Seahawks FA analysis, 7 are confirmed unavailable (
 **What:**
 WA passed SB 6346 on 2026-03-12 — 9.9% income tax on all personal income over $1M/yr, effective 2028-01-01. Applies to W-2 salary and visiting-athlete jock tax. Constitutional challenge likely (40–60% chance struck down). For 2026–2027, Seattle retains zero-tax advantage. For 2028+, a $20M/yr SEA contract loses ~$1.88M/yr to state tax — dropping the "$20M in SEA = $23M in SF" narrative to approximately "$20M in SEA ≈ $20.8M in SF." Short-term deals unaffected; multi-year deals need front-loading. Rookie contracts under $1M/yr unaffected regardless.
 **Why:** Fundamentally changes Seattle's FA recruiting pitch for contracts extending past 2027. All prior analyses claiming zero-tax advantage need asterisks. TX/FL/TN/NV teams now have unambiguous tax edge over SEA.
-
-
 
 ### 2026-03-13: Media Daily Sweep — FA Wave 1 (22+ signings, Crosby trade voided, Tua to ATL)
 **By:** Media (NFL Media & Rumors Specialist)
@@ -112,8 +100,6 @@ Full 24-hour sweep (March 12-13) during FA Wave 1. 22+ confirmed signings, 2 tra
 - Rumor resolutions: Tua confirmed, Crosby voided, Cousins released (not traded), Garrett Wilson trade debunked, ARI #3 pick trade cooling, Minshew to ARI (not KC).
 
 **Why:** Comprehensive free agency tracking ensures all agents have accurate, current roster data. 7 rumor resolutions prevent recommending unavailable players. Dashboard updated at `.squad/agents/media/history.md`.
-
-
 
 ### 2026-03-14: Media Daily Sweep — FA Day 3 (24+ new moves, Rodgers downgrade, mega-deals)
 **By:** Media (NFL Media & Rumors Specialist)
@@ -135,8 +121,6 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 - Total confirmed FA transactions tracked: 65+. Active rumors: 14.
 
 **Why:** Day 3 FA sweep ensures all agents have accurate rosters. Rodgers downgrade is biggest strategic shift — PIT win-now plan at risk. EDGE market ($120M Phillips, $100M Oweh) resets benchmarks. NYJ becoming dark horse via trades. MIA in full rebuild.
-
-
 
 ### 2026-03-14: Article Lifecycle Skill — Architectural Decisions
 
@@ -170,8 +154,6 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 - Stages 2, 3, 7 are new and untested
 - Promote to `medium` after one article passes through all 8 stages, to `high` after 3+ articles
 
-
-
 ### 2026-03-15: Media Daily Sweep — FA Day 4 (50+ new moves, Rodgers upgraded, TEN $270M spree)
 **By:** Media (NFL Media & Rumors Specialist)
 **Status:** Proposed
@@ -194,8 +176,6 @@ Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed tr
 
 **Why:** Day 4 FA sweep ensures all agents have accurate rosters. Rodgers upgrade is biggest strategic shift — PIT win-now plan back on track. TEN $270M spree creates new AFC contender. NFC West arms race intensifying (Watson→LAR, Bosa restructure→SF, Shaheed/Jobe→SEA). 3 article candidates identified (TEN spree, SEA window, Rodgers decision).
 
-
-
 ### 2026-03-15: README.md Structure and Tone
 
 **By:** Writer  
@@ -209,8 +189,6 @@ Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed tr
 5. Tone: Direct, energetic, zero fluff — internal engineering docs, not marketing copy
 
 **Rationale:** Joe needs a doc answering "what is this, how do I use it" in under 2 minutes. Everything else is noise.
-
-
 
 ### 2026-03-15: Add `discussion_path` Field to Articles Table
 **By:** Lead  
@@ -235,8 +213,6 @@ Also update `content/schema.sql` to include this column in the `CREATE TABLE art
 **Why:** Needed before the next article reaches `panel_discussion` stage at scale. Currently manageable with path convention inference, but should be added before Phase 2 automation is built. Enables Writer agent to operate independently.
 
 **Priority:** Medium — non-blocking but foundational for automation.
-
-
 
 ### 2026-03-15: Lead Intel Brief — Editorial Priority Changes
 **By:** Lead  
@@ -265,8 +241,6 @@ Based on the March 14-15 Media sweep (50+ new transactions, 115+ total tracked),
 
 ---
 
-
-
 ### 2026-03-15: Article Candidates from Daily News Sweep
 **By:** Media  
 **Status:** Proposed  
@@ -293,8 +267,6 @@ Five article candidates identified from March 14-15 news sweep, scored by signif
 **Why:** Comprehensive news tracking ensures article pipeline reflects current, high-impact topics. Titans and Rodgers pieces expand beyond SEA-only coverage (audience growth). Timing critical — Rodgers decision expected within 2 weeks.
 
 ---
-
-
 
 ### 2026-03-15: Media Intel Drop — League-Wide (50+ New Transactions)
 **By:** Media  
@@ -323,8 +295,6 @@ Comprehensive Day 3-4 free agency sweep (March 14-15). 50+ new confirmed transac
 **Why:** Comprehensive tracking ensures all agents have current roster data. Day 4 sweep reveals biggest strategic shifts: TEN building new contender, LV defensive pivot, Rodgers likely returns to PIT. Three article candidates identified (TEN spree, SEA retention, Rodgers decision). All team agents should update roster knowledge with current moves and cap impacts.
 
 ---
-
-
 
 ### 2026-03-15: Media Intel Drop — SEA (Priority)
 **By:** Media  
@@ -362,8 +332,6 @@ Seahawks-focused intel from Day 3-4 sweep (March 14-15):
 **Why:** SEA-specific intel enables team agent to update roster knowledge and identify priority signings. Bryant loss creates urgent safety need alongside RB (post-Walker III). $44M cap space provides signing room. Jennings/Harris are high-value FA targets still available. Draft RB need aligns with #32 pick in current mocks.
 
 ---
-
-
 
 ### 2026-03-15: User directive — Avoid politically divisive topics
 **By:** Joe Robinson (via Copilot)  
@@ -605,95 +573,6 @@ The JSN article's 🟡 items all stemmed from the same root cause: the expert pa
 
 ---
 
-### 2026-03-15T21:39:08Z: Knowledge Propagation Pattern — Adopted
-**By:** Lead (Joe Robinson directive)
-**What:** All agents must write cross-agent knowledge updates to .squad/knowledge/inbox/ using the structured drop file format. Scribe processes this inbox during every session cleanup. Charter updates are flagged, not applied directly.
-**Why:** Prevents knowledge from being siloed in one agent's history when it's relevant to other agents or team-level files. Enforces the same drop-box discipline for knowledge that already exists for decisions.
-
-
----
-
-### 2026-03-15T14-37-16: User directive
-**By:** Joe Robinson (via Copilot)
-**What:** When any agent discovers knowledge that should update team files (other agents' history.md, team.md, decisions.md, or charters), those updates must NOT be lost. Agents must explicitly flag cross-agent knowledge for Scribe to route.
-**Why:** User request — captured for team memory. Prevents knowledge silos and ensures discoveries made by one agent propagate to the right places.
-
----
-
-### 20260315-234500: User directive — Image sizing
-
-**By:** Joe (via Copilot)
-
-**What:** Images in Substack articles must use imageSize normal (text column width), not large (full-bleed). Images should follow the same left/right borders as the article text.
-
-**Why:** User request — full-width images looked inconsistent with the centered text column
-
----
-
-### 20260315-234500-inline-default: User directive — Inline-only default
-
-**By:** Joe (via Copilot)
-
-**What:** Default image generation should produce inline images only (no cover images). Use image_types: ['inline', 'inline'] for 2 images. Cover images are NOT generated automatically — they are set manually in the Substack editor if needed.
-
-**Why:** User request — cover images should not be auto-generated or embedded in article markdown
-
----
-
-### 2026-03-15T22:28:58Z: User directive — Inline image limit
-
-**By:** Joe Robinson (via Copilot)
-
-**What:** Limit articles to 2 inline images only — no cover/banner image. Images should break up text and look good on mobile. This change also saves tokens.
-
-**Why:** User request — captured for team memory
-
----
-
-### 2026-03-15T23:41:37Z: Image hallucinatio pattern — "contract paperwork" trigger (EDITOR CHARTER UPDATE)
-
-**By:** Editor (vision review)
-
-**What:** AI hallucinates CONTRACT labels, fake NFL logos, and garbled body text when prompted with "contract paperwork" image concepts. This is a consistent failure pattern requiring prompt engineering mitigation.
-
-**Pattern:** Contract/document prompts trigger unwanted text generation (labels, logos, fake document text) that cannot be caught by visual inspection alone.
-
-**Mitigation:** Replace "contract paperwork" with "blank white papers" + explicit "no text, no logos, no writing of any kind" constraint in generation prompts.
-
-**Charter flag:** Editor's knowledge base should be updated with: AI hallucinates CONTRACT labels on document-themed images — avoid "contract" + "document" + "paperwork" in generation prompts.
-
-**Why:** Prevents repeated rejection cycles on document-themed images. Prompt engineering is more efficient than repeated regenerations.
-
----
-
-### 2026-03-15T23:41:37Z: Image uniqueness enforcement — Hash verification required (MANDATORY PRE-PUBLISH RULE)
-
-**By:** Lead & Joe (directive consolidation)
-
-**What:** Always verify image hashes are unique before publishing any article with multiple images. Two images with identical hashes are duplicates regardless of filename — visual inspection cannot catch this. MD5/SHA256 hash check is mandatory pre-publish step.
-
-**Implementation:**
-1. Before publishing, run hash verification on all generated images: Get-FileHash content/images/{slug}/*.png -Algorithm MD5
-2. If duplicate hashes found: reject both, regenerate, verify again
-3. Log hashes in Editor's image review report for audit trail
-
-**Updated:**
-- image-generation/SKILL.md — Added "Uniqueness Check (Required Before Publishing)" section
-- image-review/SKILL.md — Added duplicate hash detection to review checklist
-
-**Applies to:** All articles with 2+ images
-
-**Why:** First published article had identical inline images with different filenames (550CFD87 = 18CBD39A). Only hash verification catches this. Hash check is only reliable deduplication method.
-
----
-
-### 2026-03-15T23:41:37Z: JSN article — Duplicate inline images resolved
-
-**By:** Coordinator & Editor
-
----
-
-
 ### 2026-03-16: Batch-Create Generic Article Issues for Remaining Divisions
 **By:** Lead (GM/Lead Specialist)
 **Status:** Completed
@@ -724,7 +603,6 @@ Batch issue creation works cleanly for 28+ teams. Generic template enforces idea
 
 ---
 
-
 ### 2026-03-16: NFC West Parallel Panel Execution Pattern
 **By:** Lead
 **Status:** Approved
@@ -752,7 +630,6 @@ When multiple articles in the same division are at the same pipeline stage, batc
 Parallel execution is cost-neutral (no token discount) but saves wall-clock time significantly. Division-specific batching leverages shared domain context (all agents understand NFC West landscape). No context window pressure — agents are stateless and independent.
 
 ---
-
 
 ### 2026-03-16: Idea Generation Must Use Top Model + Current Data
 **By:** Lead
@@ -785,7 +662,6 @@ Issues must be generic triggers. Idea generation must happen as the FIRST STEP o
 **Idea generation is NOT a bulk batch task.** It's a research-intensive, current-data-dependent task that must happen just-in-time before each article starts. Never: "Generate 30 team ideas up front". Always: "Trigger 30 issues with 'IDEA GENERATION REQUIRED' and let Lead research each individually as Step 1 of pipeline".
 
 ---
-
 
 ### 2026-03-16: Article Process Guards — Temporal Accuracy + TLDR Requirement
 **By:** Lead (Joe Robinson directive)
@@ -832,7 +708,6 @@ Temporal accuracy is non-negotiable. Readers who follow NFL closely will catch "
 
 ---
 
-
 ### 2026-03-16: Substack Section Routing Fix — `section_chosen: true`
 **By:** Lead (debugging task from Joe Robinson)
 **Status:** Implemented
@@ -854,7 +729,6 @@ Substack's draft editor checks `section_chosen === true` before displaying secti
 Test draft 191082679 (NE Patriots, section 355520) confirmed via GET: `draft_section_id: 355520, section_chosen: true`.
 
 ---
-
 
 ### 2026-03-16: Drake Maye Article Fact Corrections — Year 3 Reframe
 **By:** NE (New England Patriots Expert)
@@ -903,7 +777,6 @@ Article title remains accurate. Slug (`ne-maye-year2-offseason`) unchanged per i
 
 ---
 
-
 ### 2026-03-16: Cardinals Article Draft Structure
 **By:** Writer
 **Article:** Arizona Cardinals 2026 Offseason (#40)
@@ -922,27 +795,6 @@ Structured the Cardinals article around the QB timing disagreement as central te
 LaFleur's title chain (OC → HC), Simpson's start count, 2027 QB class eligibility, Harrison Jr. CBA extension timeline. Eight items flagged in writer notes.
 
 ---
-
-### 2026-03-16T03:25:56Z: User Directive — Pipeline Progress Comments
-**By:** Joe Robinson (via Copilot)
-**What:** Pipeline progress comments should be more frequent — post to GitHub issue after each individual panel agent completes, not just after full panel batch. The 45-minute pipeline felt opaque with too few check-ins.
-**Why:** User request — captured for team memory
-
-**What:** jsn-extension-preview article had duplicate inline images. Regenerated jsn-extension-preview-inline.png (Attempt 1 rejected for AI text hallucination; Attempt 2 approved with improved prompt). Final hashes verified unique: 550CFD87 ≠ 18CBD39A. Republished to Substack draft 191077419.
-
-**Images:**
-- inline.png (fountain pen + blank papers + football field): 550CFD87 ✅ 
-- inline-2.png (data stream/circuit theme): 18CBD39A ✅
-- Status: Not duplicates
-
-**Why:** Ensures JSN article publishes with verified unique assets. Duplicate image issue now resolved with hash verification and prompt engineering fixes applied.
-
-### 2026-03-16T03:42:21Z: User directive — Publish with tags, not sections/bylines
-**By:** Joe Robinson (via Copilot)
-**What:** Stop assigning Substack sections during publish, clear bylines because they break, and use tags instead — always tag the team and also tag any specialist agents who participated.
-**Why:** User request — captured for team memory
-
-
 
 ### 2026-03-16: Substack publishing — sections removed, tags adopted
 
@@ -971,8 +823,6 @@ LaFleur's title chain (OC → HC), Simpson's start count, 2027 QB class eligibil
 - All related skill docs updated
 
 **Affects:** Publisher extension, substack-publishing skill, publisher skill, substack-article skill, article-lifecycle skill
-
-
 
 ### 2026-03-17: README.md Documentation Update — Publishing Behavior
 
@@ -1023,28 +873,16 @@ New language (L139–L141):
 **Decision:**
 ✅ **APPROVED** — Update README to reflect current tag-based publishing behavior. Minimal, surgical change with high accuracy impact.
 
-
-### 2026-03-16T04:18:50Z: User directive — Social link image preference
-**By:** Joe Robinson (via Copilot)
-**What:** The preferred Witherspoon visual reference is the social link image, not the cover image. Track a future backlog item to update social image handling, and leave it unassigned.
-**Why:** User request — captured for team memory.
-
-
-
 ### 2026-03-16: AFC East Batch Progress — Issues #43, #44, #45
 **By:** Lead (Danny)
 **Status:** In-progress
 **What:** Processed the AFC East batch (BUF, MIA, NYJ) using the idea-generation-first workflow. Advanced MIA (#44) as the strongest article (12/12 score) through to panel-ready stage. BUF (#43) and NYJ (#45) remain at `stage:idea`. Added `stage:idea`, `stage:discussion-prompt`, `stage:panel-ready` labels to the repo.
 **Why:** MIA's $99.2M dead cap story is a historic NFL event — unprecedented financial constraints, new regime, full roster teardown. It has natural tension and broad appeal. BUF and NYJ are strong but more conventional; they benefit from waiting for MIA to validate the pipeline. 3-agent panel (Cap + MIA + Draft) is tight and non-overlapping.
 
-
-
 ### 2026-03-17: Fix draft_bylines in Substack publisher extension
 **By:** Lead (Danny)
 **What:** Add `draft_bylines: []` to the POST payload in `createSubstackDraft()` in `.github/extensions/substack-publisher/extension.mjs`. The API requires this field to be present — omitting it entirely triggers an HTTP 400 validation error.
 **Why:** Discovered during republishing of NE Patriots / Drake Maye article. No functional change to draft behavior (empty bylines = Substack uses account default).
-
-
 
 ### 2026-03-17: Social Link Image — Backlog Tracking (Issue #70)
 **By:** Lead (Danny)
@@ -1053,1049 +891,11 @@ New language (L139–L141):
 **What:** Created GitHub issue #70 to track future work on social link image (Open Graph / `og:image`) generation and consistency across Substack articles. No `squad` labels — backlog only, unassigned. Joe identified the Witherspoon v2 social link preview image as the preferred style reference.
 **Why:** Social link previews (Twitter/X cards, LinkedIn, iMessage, Slack) are the first visual impression for shared articles. Consistent, high-quality social image style improves click-through and brand consistency. Future work — no immediate action required.
 
-
-
 ### 2026-03-17: Witherspoon Article Refresh — Process & Artifact Structure
 **By:** Lead (Danny)
 **Status:** Informational
 **What:** Regenerated the Witherspoon extension article (Article #2, originally published 2026-03-14) using the full current pipeline. Reconstructed discussion prompt from original article, spawned 3-agent panel (Cap, PlayerRep, SEA) with fresh positions, produced complete v2 draft. All 6 artifacts saved to `content/articles/witherspoon-extension-v2/`. Original article preserved as archive. Removed all WA tax legislation references per post-v1 content constraint; replaced with football/business arguments. Panel convergence tighter than v1 ($30.5–32.5M range vs. original $27–33M).
 **Why:** Pre-pipeline articles can be retroactively structured. The published article serves as the source artifact when no pipeline files exist. Pattern established for future retroactive pipeline runs.
-
-
-
-### 2026-03-16T04:32:24Z: User directive
-**By:** Joe Robinson (via Copilot)
-**What:** Max out parallel throughput for Ralph across all issues right now. Do not use artificial caps; only block on real dependencies.
-**Why:** User request — captured for team memory
-
-
----
-type: "idea"
-agent: "DEN"
-issue: 54
-idea_id: "den-missing-joker-te-championship-window"
-score: 12
-status: "pending"
----
-
-# Article Idea: The Missing Joker — Sean Payton's Tight End Problem Could Define Denver's Championship Window
-
-**Issue:** #54 — Article: DEN - Denver Broncos — 2026 Offseason
-**Generated by:** DEN (Denver Broncos Expert)
-**Date:** 2026-03-16
-
-## Decision
-
-DEN selected the **Tight End "Joker" crisis in Payton's system** as the single strongest angle for the Broncos' 2026 offseason article. This was chosen over:
-
-1. ~~Bo Nix ankle recovery~~ — Important but binary (he's expected back by May OTAs); lacks sustained tension
-2. ~~Aging OT bookends (Bolles/McGlinchey)~~ — Real concern but more of a 2027 story; less immediate
-3. ~~Davis Webb as first-time playcaller~~ — Interesting but works better as context within the TE angle
-4. ~~AFC West window opportunity (KC declining)~~ — Broad divisional overview; less specific than a single-position deep dive
-5. ~~Draft BPA vs. need at #30~~ — Subsumed into the TE angle as a key tension point
-
-## Why This Angle
-
-- **Connects coaching identity to roster construction:** Payton's entire offensive DNA revolves around the TE Joker — this isn't just a positional need, it's an identity crisis
-- **Multi-layered tension:** Engram's failed experiment + draft dilemma (Sadiq vs. Allen at #30) + Webb playcalling shift + championship window urgency
-- **Data-rich:** Engram's 50/461/1 stat line, $14.2M cap hit, Payton's historical TE production in NO, draft prospect comparisons
-- **Time-sensitive:** Draft April 23-25; Engram decision looming; Webb playcalling just announced at Combine
-- **12/12 rubric score** — maximum on all four dimensions
-
-## Stages Completed
-
-- ✅ Stage 1 — Idea Generation (angle + data posted to issue #54)
-- ✅ Stage 2 — Discussion Prompt (structured brief with 3-agent panel posted to issue #54)
-
-## Recommended Next Step
-
-Lead should confirm the panel (DEN + Cap + Offense) and advance to Stage 3 → Stage 4 — Panel Discussion. All three agent questions are defined in the Stage 2 discussion prompt artifact.
-
----
-
-## Evaluation Checklist
-- [x] Trigger is clear (AFCCG loss + Engram failure + draft approaching + Webb playcalling shift)
-- [x] Angle is unique (Payton TE history as framing device — not covered in this specific combination)
-- [x] DEN relevance is explicit (franchise-defining offseason question)
-- [x] Reader value is defensible at depth level 2
-- [x] Window/date alignment is sound (pre-draft, ASAP)
-- [x] Time-sensitive flag: YES (draft April 23-25, Engram decision pending)
-
-
-# Decision: Witherspoon v2 Draft — Editor Approved
-
-**Date:** 2026 Offseason
-**Author:** Editor
-**Article:** Witherspoon Extension v2 (`content/articles/witherspoon-extension-v2/draft.md`)
-
-## Decision
-
-The regenerated Witherspoon extension article (v2) is **editor-approved** after 3 corrections.
-
-## Context
-
-Lead regenerated the Witherspoon article from scratch because the original (v1) predated the current editorial pipeline. The v2 draft was built from fresh position files (Cap, PlayerRep, SEA) and a new discussion summary, then reviewed against all source material.
-
-## Changes Made
-
-1. **Temporal fix (🔴):** "Six months after Super Bowl LIX" → "A month after Super Bowl LIX" — the article is set in March 2026; the Super Bowl was February 2026.
-2. **Arizona descriptor (🟡):** "Arizona is still building" → "Arizona is retooling" — per decisions.md competitive descriptor convention.
-3. **Missing credential (🟢):** Added All-Pro (2nd Team, 2025) to Witherspoon's stats table — present in discussion prompt but missing from draft.
-
-## What This Means for the Team
-
-- The draft is ready for the next pipeline step (images, publisher pass, or publication).
-- The v2 article supersedes the old `witherspoon-extension-cap-vs-agent.md` — Lead should decide whether to archive or remove v1.
-- Cap's position is now correctly modeled at $30.5M AAV (not the old $27M), reflecting the post-McDuffie market. This is a permanent framing shift for all future Witherspoon references.
-
-## Pattern to Watch
-
-Temporal claims in regenerated articles are high-risk. When an article is rewritten months after the original concept, time references ("six months after," "this offseason") can drift from the article's own internal calendar. Always verify time references against season context during editorial review.
-
-
----
-type: "idea"
-agent: "HOU"
-issue: 50
-idea_id: "hou-100m-countdown-stroud-anderson"
-score: 12
-status: "pending"
----
-
-# Article Idea: Houston's $100 Million Countdown
-
-**Issue:** #50 — Article: HOU - Houston Texans — 2026 Offseason
-**Generated by:** HOU (Houston Texans Expert)
-**Date:** 2026-03-16
-
-## Decision
-
-HOU selected the **Stroud/Anderson extension cliff** as the single strongest angle for the Texans' 2026 offseason article. This was chosen over:
-
-1. ~~Interior DL crisis~~ — Important but narrower; works better as a section within the extension article
-2. ~~Dead money drag~~ — Symptomatic of past decisions; less forward-looking
-3. ~~Division arms race (JAX)~~ — Good but better as secondary context within a larger piece
-4. ~~Post-Mixon RB room~~ — Lower stakes; RB is a lower-priority need
-
-## Why This Angle
-
-- **Affects everything:** Every roster decision (draft, FA, restructures, cuts) flows through the extension math
-- **Time-sensitive:** Anderson extension expected this spring; Stroud 5th-year option decision imminent
-- **Reader demand:** "Can we afford both?" is the #1 question Texans fans are asking
-- **Data-rich:** Cap projections, extension comparables, draft prospect mapping all available
-- **12/12 rubric score** — maximum on all four dimensions
-
-## Stages Completed
-
-- ✅ Stage 1 — Idea Generation (angle + data posted to issue #50)
-- ✅ Stage 2 — Discussion Prompt (structured brief with 4-agent panel posted to issue #50)
-
-## Recommended Next Step
-
-Lead should confirm the panel (HOU + Cap + Draft + Defense) and advance to Stage 4 — Panel Discussion. All four agent questions are defined in the Stage 2 comment.
-
----
-
-## Evaluation Checklist
-- [x] Trigger is clear (extension timeline + draft approaching + FA spending underway)
-- [x] Angle is unique (no existing "cap countdown" framing for HOU in project)
-- [x] HOU relevance is explicit (franchise-defining decision)
-- [x] Reader value is defensible at depth level 2
-- [x] Window/date alignment is sound (pre-draft, ASAP)
-- [x] Time-sensitive flag: YES (Anderson extension imminent)
-
-
----
-type: "article-angle"
-agent: "IND"
-issue: 51
-status: "approved-by-agent"
-date: "2026-03-16"
----
-
-# Decision: IND Issue #51 — Article Angle Selection
-
-## What
-Selected **"The Colts Bet Two First-Round Picks on a 7-2 Start. They Finished 8-9. Now What?"** as the article angle for the Indianapolis Colts 2026 offseason piece.
-
-## Why This Angle Over Alternatives
-
-**Considered and rejected:**
-1. *"Alec Pierce $114M Bet"* — Interesting but narrow. Pierce extension is one piece, not the defining story.
-2. *"QB Purgatory (Jones/Richardson/Leonard)"* — Strong but well-covered by beat reporters. Less unique framing.
-3. *"8-2 to 8-9 Collapse"* — Symptom, not cause. The Sauce trade IS the cause.
-4. *"AFC South Arms Race"* — Division-level story doesn't center IND strongly enough.
-
-**Why the Sauce Gardner gamble wins:**
-- It's the single decision that explains EVERYTHING else about this offseason
-- Creates cascading analysis: trade cost → draft capital loss → roster gaps → division positioning
-- Unique "cap-rich, draft-poor" framing that no beat writer has used
-- Scores 12/12 on idea generation rubric
-- Broad appeal: cautionary tale for all NFL fans + deep IND-specific analysis
-
-## Impact
-- Article artifacts created: `content/articles/ind-sauce-gardner-gamble/`
-- Issue #51 advanced to `stage:panel-ready`
-- Panel: Cap + IND + Defense (3 agents)
-
-## For Lead
-No action needed unless Lead wants to adjust the panel or angle. Ready for panel discussion spawn.
-
-
----
-type: "article-angle"
-agent: "JAX"
-issue: 52
-status: "pending"
----
-
-# Article Angle Decision: JAX 2026 Offseason — Issue #52
-
-## Decision
-Selected **"The Travis Hunter Paradox"** as the article angle for the Jacksonville Jaguars 2026 offseason piece.
-
-## Angle Summary
-Did Jacksonville's all-in bet on Travis Hunter — the NFL's only two-way WR/CB starter — create a roster construction paradox that threatens their 2026 contention window? The trade cost (2026 1st-round pick), the LCL injury, the cap crunch ($53M dead money), and the position depth it strains (CB, WR allocation, RB, LB) all flow from the Hunter decision.
-
-## Why This Angle Over Alternatives
-| Angle Considered | Score | Why Not Selected |
-|-----------------|-------|-----------------|
-| **Travis Hunter Paradox** | 12/12 | ✅ SELECTED — only applies to JAX, unprecedented in NFL |
-| Cap Hell + Contending | 9/12 | Good but generic — many teams face cap crunches. Less unique. |
-| Brian Thomas Jr. Trade Rumors | 8/12 | Interesting but GM shut it down publicly. Less tension remaining. |
-| Post-Etienne RB Room | 7/12 | Valid need but narrow scope; less reader appeal outside JAX fans. |
-| No 1st-Round Pick Strategy | 8/12 | Good angle but better as a sub-theme within the Hunter story. |
-
-The Hunter angle is the umbrella that **connects all the other sub-stories** — the trade cost created the cap/draft constraints; the two-way usage affects BTJ's role and CB depth; the injury raises workload questions. One angle, five threads.
-
-## Panel
-JAX + Cap + Defense + Offense (4 agents, max for Depth Level 2)
-
-## Impact
-- Issue #52 advanced from Stage 1 → Stage 3 (Panel Ready)
-- Labels updated: removed `go:needs-research`, added `stage:panel-ready`, `squad:jax`, `squad:cap`, `squad:offense`, `squad:defense`
-- Two detailed comments posted to issue with research, angle, discussion prompt, and panel composition
-
-## Next Action
-Lead (or any coordinator) spawns Stage 4 panel discussion with the 4 named agents.
-
-
----
-type: "article-angle"
-agent: "kc"
-issue: 55
-status: "pending"
-created: "2026-03-16"
----
-
-# KC Issue #55 — Article Angle Decision
-
-## Decision
-Selected "Mahomes Is Racing Back — But to What?" as the article angle for the KC 2026 offseason piece.
-
-## Rationale
-Scored 12/12 on the idea-generation rubric. The "what does Mahomes return to?" framing is the strongest single angle because it:
-1. Ties together every major KC storyline (ACL recovery, roster overhaul, cap gymnastics, Rice suspension risk, division arms race) into one coherent narrative
-2. Has national appeal — Mahomes is a league-wide story, not just a KC story
-3. Creates genuine tension — reasonable people disagree on reload vs. rebuild vs. twilight
-4. Is time-sensitive — best published pre-draft while the roster picture is still forming
-
-## What Was Rejected
-- "Chris Jones' $44.85M Gamble" — too narrow (cap story only, not enough narrative breadth)
-- "Kelce's Last Ride" — emotionally compelling but speculative and thin on data
-- "AFC West Power Shift" — dilutes KC focus across 4 teams
-- "Rashee Rice: The Chiefs' Impossible Decision" — too dependent on external ruling; could age poorly
-
-## Panel
-KC + Cap + Offense (3 agents, Level 2 — The Beat)
-
-## Stage Reached
-panel-ready (Stages 1-3 complete). Next: spawn panel agents.
-
-## Artifacts
-- `content/articles/kc-mahomes-return-roster-gamble/idea.md`
-- `content/articles/kc-mahomes-return-roster-gamble/discussion-prompt.md`
-- `content/articles/kc-mahomes-return-roster-gamble/panel-composition.md`
-
-
----
-type: "idea"
-agent: "LAC"
-issue: 56
-idea_id: "lac-mcdaniel-gambit-herbert-cap-window"
-score: 12
-status: "pending"
-created: "2026-03-16"
----
-
-# Article Idea: The McDaniel Gambit — Can the Chargers Arm Herbert Before His Cap Hit Explodes?
-
-## Summary
-The Chargers have a 2–3 year window to build a Super Bowl contender before Herbert's cap hit balloons to $71M. They hired McDaniel to transform the offense, but the WR room has no alpha, they lost their best pass rusher, and they have only 5 draft picks — while KC's dynasty crumbles and the AFC West is wide open. The article frames the all-in-now vs. build-patiently decision through the lens of Herbert's escalating cap.
-
-## Teams
-- **Primary:** LAC (Los Angeles Chargers)
-- **Secondary:** KC (division comparison), PHI (A.J. Brown trade angle)
-
-## Depth Level
-2 — The Beat (balanced data + story, 2000-3500 words)
-
-## Publish Window
-Pre-draft (ASAP — 2026 offseason)
-
-## Time Sensitive
-Yes — A.J. Brown trade rumors are active; NFL Draft is April 23–25, 2026
-
-## Recommended Panel
-| Agent | Role | Question |
-|-------|------|----------|
-| LAC | Team context, roster gaps, division outlook | What are the realistic paths to WR1 and EDGE solutions this offseason? |
-| Cap | Cap/contract analysis | How does Herbert's escalating cap shape the 2026-2028 spending strategy? |
-| Offense | Scheme fit under McDaniel | What does McDaniel's system need from the WR room and how does the current roster fit? |
-
-## Reasoning
-- **Why this angle?** Herbert's cap escalation creates an automatic clock. Every roster decision this offseason is filtered through "will this matter before we're cap-strapped?" That's universal tension for any Chargers reader.
-- **Why now?** Free agency is still active, Brown trade rumors are live, draft is 5 weeks away. All three decision paths (trade, draft, stand pat) are still viable — the article catches readers at the fork in the road.
-- **Why this depth?** Depth 2 balances the cap numbers and scheme analysis with a narrative that casual fans can follow. Not so deep it requires cap accounting fluency, not so casual it ignores the numbers.
-- **Uniqueness:** No outlet has unified the cap escalation + McDaniel scheme change + KC decline + Brown trade as a single interconnected decision framework.
-
-## Evaluation Checklist
-- [x] Trigger is clear (coaching change + cap window + FA/draft decision point)
-- [x] Angle is unique (cap escalation as ticking clock, not just "offseason preview")
-- [x] Team relevance is explicit (LAC-specific, Herbert-centered)
-- [x] Reader value is defensible at depth level (decision framework fans can engage with)
-- [x] Window/date alignment is sound (pre-draft, trade rumors active)
-- [x] Time-sensitive flag is correct (yes — draft and Brown trade deadline approaching)
-
-
----
-type: "batch-progress"
-agent: "lead"
-batch: "afc-north"
-issues: [46, 47, 48, 49]
-status: "in-progress"
-date: "2026-03-16"
----
-
-# Decision: AFC North Article Batch — Prioritization & Stage Progress
-
-## Context
-Four AFC North issues (#46-#49) picked up in a single session. All started as template-state "IDEA GENERATION REQUIRED."
-
-## Decisions Made
-
-### 1. BAL #46 prioritized for deeper push (Stage 2)
-**Rationale:** The Crosby trade is the biggest single transaction of the 2026 offseason. The "two first-round picks for a veteran" angle has clear cap math to model, a coaching transition narrative (Harbaugh → Minter), and a win-now-vs-pipeline tension that generates genuine disagreement. Reader interest is high — this trade just happened.
-
-### 2. PIT #49 flagged as time-sensitive
-**Rationale:** The Rodgers retirement/return decision could break any day. If he announces before the article progresses, the framing shifts from "will he or won't he" to "what happens now." This should be the SECOND issue advanced after BAL.
-
-### 3. Three-agent panels for all four articles
-**Rationale:** All four are Depth Level 2 (The Beat), which supports 3-4 agents. Three-agent panels (team + 2 specialists) provide enough perspective without redundancy. BAL gets Defense as the third agent (scheme fit matters most); CIN, CLE, PIT all get Cap + Offense/Defense.
-
-### 4. CLE #48 angle: "Three QBs, no answer" over "Watson contract trap"
-**Rationale:** The Watson dead cap angle has been covered extensively. The fresher tension is the three-way QB competition under a new system-specific coach (Monken). The O-line spending ($93M+) creates a concrete data anchor that elevates this beyond another "Watson bad" article.
-
-## Priority Order for Next Session
-1. **BAL #46** — Stage 3/4 (panel spawn + discussion)
-2. **PIT #49** — Stage 2 (discussion prompt) — time-sensitive
-3. **CIN #47** — Stage 2
-4. **CLE #48** — Stage 2
-
-## Artifacts Created
-- `content/articles/bal-2026-offseason/idea.md`
-- `content/articles/bal-2026-offseason/discussion-prompt.md`
-- `content/articles/cin-2026-offseason/idea.md`
-- `content/articles/cle-2026-offseason/idea.md`
-- `content/articles/pit-2026-offseason/idea.md`
-
-
-# Decision: Retarget Ralph Loop for NFL Article Pipeline
-
-**Date:** 2025-07-25
-**Author:** Lead
-**Status:** Implemented
-**Scope:** github-copilot-ralph-loop repo (external to nfl-eval)
-
-## Context
-
-The Ralph Wiggum loop repo (`github-copilot-ralph-loop`) was a demo driving Copilot CLI to build a .NET Hello World app. Joe wants it retargeted to autonomously drive the nfl-eval team-article backlog (issues #40–#69) through the 8-stage article pipeline until Substack drafts exist.
-
-## Decision
-
-Rewrote all Ralph loop files to target nfl-eval:
-
-1. **Script targets nfl-eval** via `-TargetRepo` param (defaults to sibling checkout `../nfl-eval`).
-2. **Prompt instructs Lead behavior** — pick next backlog item by priority, advance one stage, commit, repeat.
-3. **PRD defines the 8-stage pipeline** with done criteria per stage and issue-label-based stage tracking.
-4. **Default model changed to `claude-sonnet-4.5`** — better at long-form content than `gpt-5-mini`.
-
-## Key Assumptions
-
-- **Backlog priority:** finish mid-pipeline items first → `go:yes` items → `go:needs-research` items → tie-break by issue number.
-- **One stage per iteration:** keeps changes atomic and reviewable. At 30 issues × ~7 stages each, full clearance needs ~210 iterations (or batching multiple stages later).
-- **Stage 8 stays manual:** Joe always makes the final publish decision in Substack.
-- **Model choice:** `claude-sonnet-4.5` balances quality and cost; switch to `claude-opus-4.6` for premium runs.
-
-## Risks
-
-- **Prompt drift:** The prompt is static. If nfl-eval's pipeline conventions evolve, the prompt needs manual updates.
-- **Rate limits:** 210+ Copilot CLI invocations may hit rate limits. The `$Model` variable can be switched to lighter models if needed.
-- **Substack auth:** Stage 7 requires `.env` credentials configured in nfl-eval. If missing, that stage will fail gracefully.
-
-## Alternatives Considered
-
-- **Multi-stage per iteration:** Faster but harder to debug. Chose one-stage-per-iteration for safety.
-- **GitHub Actions instead of local loop:** More robust for unattended runs, but adds infra complexity. Local loop is fine for now.
-
-
----
-type: "idea"
-agent: "lv"
-idea_id: "lv-2026-offseason-crosby-paradox"
-issue: 57
-score: 12
-status: "pending"
----
-
-# Article Idea: The Crosby Paradox — How a Voided Trade Rewrote the Raiders' Entire Rebuild
-
-## Decision Summary
-
-**What:** Selected "The Crosby Paradox" as the angle for LV's 2026 offseason article (issue #57). The voided Maxx Crosby trade to Baltimore is the single most consequential event shaping this franchise's rebuild trajectory.
-
-**Why this angle over alternatives:**
-1. **"Building Around Mendoza"** — too generic, every outlet is covering the #1 pick storyline
-2. **"Raiders Offseason Report Card"** — list format, no tension, no disagreement
-3. **"Crosby Paradox"** — counter-narrative, creates genuine expert disagreement, backed by specific numbers, time-sensitive (draft April 23)
-
-**Key facts driving the angle:**
-- Crosby's $35.8M cap hit + Paye's $16M/yr = $47M+ in edge rusher spending on a 3-14 team
-- Lost #14 overall + 2027 R1 from BAL — two premium picks that defined the rebuild plan
-- Raiders already signed Crosby's "replacements" before the trade was voided
-- Crosby rehabbing meniscus — may not be fully healthy for Week 1
-
-**Panel recommendation:** Cap + LV + Defense (3 agents per Depth Level 2 limits)
-
-**Risk:** If Crosby gets traded again before publish, the angle shifts — but the "paradox" framing still holds as historical analysis.
-
-
----
-type: "article-angle"
-agent: "TEN"
-issue: 53
-status: "complete"
-date: "2026-03-16"
----
-
-# Decision: TEN Article Angle — Issue #53
-
-## What
-Selected article angle for the Tennessee Titans 2026 offseason first post: **"52 Sacks and a Defense-First Draft — Are the Titans Building Around Cam Ward or Robert Saleh?"**
-
-The angle frames the #4 overall pick as a proxy for a deeper philosophical tension between Saleh's defense-first coaching identity and Daboll's mandate to develop Ward. It connects FA spending patterns (overwhelmingly defensive), the Sneed release, and draft prospect options (EDGE vs. WR) into a single narrative thread.
-
-## Why This Angle Over Others
-- **"Who do the Titans draft at #4?"** — Too narrow. Every mock draft outlet covers this. Our article needs a "why should you care" layer.
-- **"The secondary overhaul"** — Interesting but backward-looking. Signings are done. Less tension.
-- **"Speed-running a rebuild"** — Too broad. Hard to make specific and data-driven in 2,500-3,500 words.
-- **"Ward vs. Saleh at #4"** — Combines the draft question with the organizational philosophy question. Fresh framing. Strong tension. Data-rich. Time-sensitive (draft window).
-
-## Artifacts Created
-- `content/articles/ten-ward-vs-saleh-draft-identity/idea.md` (Stage 1)
-- `content/articles/ten-ward-vs-saleh-draft-identity/discussion-prompt.md` (Stage 2)
-- `content/articles/ten-ward-vs-saleh-draft-identity/panel-composition.md` (Stage 3)
-
-## Stage Reached
-`stage:panel-ready` — Ready for Lead to spawn 4-agent panel discussion.
-
-## Key Research Finding
-L'Jarius Sneed was released March 13, 2026 (post my last knowledge update). This frees ~$11.4M in cap, pushing effective space to ~$50M+. Changes the "can they afford to go defense at #4 AND help Ward?" calculus significantly.
-
-
-
-# Decision: ATL Panel Position — atl-2026-offseason
-
-**Agent:** ATL
-**Date:** 2026-03-15
-**Article:** atl-2026-offseason
-**Issue:** #66
-
-## Decision
-
-Framed the Falcons' 2026 offseason as a **bridge year with contention upside** rather than a rebuild. The key analytical stance: 8-9 was a coaching-suppressed record, not a talent-level record. Stefanski's hiring recontextualizes the roster — this is a 10-win caliber team if the QB room cooperates.
-
-## Core Recommendation
-
-Atlanta is a **9-8 to 10-7 team** with legitimate NFC South contention potential. The ceiling (11-6 division champs) depends on Penix's ACL recovery and Stefanski's ability to build a run-first identity around Bijan Robinson. The floor (6-11) is a QB health catastrophe where both Penix and Tua miss significant time.
-
-## Chosen Angle
-
-**"Two QBs, Zero Guarantees — Atlanta's Bridge Year Might Actually Be a Contention Year"**
-
-The tension between patience (stockpile for 2027's $156M cap explosion) and opportunity (wide-open division + coaching upgrade + roster that underperformed). Scored 12/12 on the idea rubric.
-
-## Hardest Tradeoff
-
-The new regime must decide how much of 2027's massive cap space to sacrifice for 2026 competitiveness. Restructuring Bates or Matthews creates 2026 room but pushes dead money into the year they're supposed to have maximum flexibility. The tradeoff is *compete now in a weak division* vs. *preserve the 2027 reload*.
-
-## Implications for Future Articles
-
-- Any draft preview piece should weight WR and EDGE heavily at #48 — these are the swing positions.
-- Penix ACL rehab updates are a first-order storyline for training camp coverage.
-- The Stefanski/Rees offensive installation is a standalone article candidate by preseason.
-- Kyle Pitts usage in Stefanski's TE-friendly system could be a mid-season evaluation piece.
-- The 2027 "cap explosion" offseason will be a major article when extension decisions begin (Pitts, Bijan, London).
-
----
-date: 2026-03-16
-agent: BAL
-status: decision
-topic: Panel Position Protocol — Hypothetical vs. Reality Conflict
----
-
-# Decision: How to Handle Article Premises That Conflict with Reality
-
-## Context
-Issue #46 article premise: Maxx Crosby trade COMPLETED (March 16 artifacts).
-BAL history.md reality: Maxx Crosby trade VOIDED on March 13 (failed physical).
-
-Joe requested BAL write the panel position for "the Crosby-trade article." The article folder exists with completed idea.md and discussion-prompt.md, all premised on the trade happening.
-
-## Decision Made
-**Proceeded with the article premise as written.** Treated the trade as completed, wrote the BAL position arguing for/against the move within the hypothetical scenario.
-
-## Rationale
-1. **User instruction was explicit:** "Write the Ravens team-expert panel position for the current BAL article" and "reuse the local BAL article folder for the Crosby-trade article."
-2. **Article artifacts are internally consistent:** The idea.md and discussion-prompt.md both assume the trade happened. The panel discussion requires internally consistent analysis.
-3. **Hypothetical analysis has value:** Even if the trade didn't happen in reality, analyzing "what if it had" provides insights into Ravens roster construction philosophy, cap tradeoffs, and identity questions.
-4. **Lead owns article factual accuracy:** It's Lead's job to reconcile article premises with reality before publishing. BAL's job is to provide expert Ravens perspective on the scenario presented.
-
-## Protocol Established
-When asked to contribute to an article with a premise that conflicts with known reality:
-- **Clarify with the requester** if unsure (not applicable here — Joe was explicit)
-- **If the requester is clear:** Proceed with the article premise as written
-- **Note the discrepancy in your history.md** for future reference
-- **Trust the article pipeline:** Lead/Editor will catch factual conflicts before publish
-
-## Next Steps
-- Lead should review whether this article proceeds to drafting or is archived as a "what-if" scenario piece
-- If published, it should be framed as hypothetical analysis or alternate-timeline exploration
-
----
-**Filed by:** BAL
-**Reviewed by:** (pending)
-
-# Decision: BUF Panel Position — buf-2026-offseason
-
-**Agent:** BUF
-**Date:** 2026-03-15
-**Article:** buf-2026-offseason
-
-## Decision
-
-Framed the Bills' offseason as a **deliberate scheme-change retool** rather than a panicked rebuild or reckless all-in. The key analytical stance: Leonhard's 3-4 installation recontextualizes the defensive departures — the "lost four starters" narrative understates how poorly those players fit the new scheme anyway.
-
-## Core Recommendation
-
-Buffalo is a **conference-championship-caliber roster** with one structural vulnerability: LCB. CB at #26 is non-negotiable. The margin for error on defense (Chubb's knee, Strong's inexperience) is the binding constraint on a team whose offensive infrastructure (Allen, Cook, Moore, Kincaid, Torrence) is genuinely elite.
-
-## Hardest Tradeoff
-
-Beane bet the scheme change plus Chubb could replace four defenders cheaply — but if Chubb's knee fails or Strong can't hold up at LCB, Allen is carrying a defense that can't stop anyone in January. The tradeoff is *cost efficiency now* vs. *single-point-of-failure risk* at the two thinnest positions.
-
-## Implications for Future Articles
-
-- Any draft preview piece should weight CB heavily at #26 — this position wrote it as "non-negotiable."
-- Chubb health updates are a first-order storyline for in-season evaluation.
-- The Brady/Leonhard coaching evaluation is a standalone article candidate by Week 8.
-
----
-agent: cap
-timestamp: 2026-03-16T19:30:00Z
-decision_type: panel_methodology
-status: proposal
----
-
-# Decision: Post-June 1 Designations as Cap Flexibility Tool
-
-## Context
-
-During the DEN 2026 offseason panel discussion (TE acquisition article), analyzed three scenarios for Evan Engram's contract: keep ($14.2M hit), cut pre-June 1 ($10.4M dead, $3.8M savings), cut post-June 1 ($5.2M dead in 2026, $5.2M dead in 2027, $3.8M usable now).
-
-## Decision Made
-
-Recommended post-June 1 designation as the optimal cap management strategy for aging veterans with significant dead money but limited roster value.
-
-## Rationale
-
-1. **Cash flow advantage:** Post-June 1 creates same immediate usable space ($3.8M) as pre-June 1 but defers half the dead money to following year when cap typically expands
-2. **Strategic timing alignment:** Deferring $5.2M to 2027 aligns with Denver's McGlinchey decision (projected $23.8M 2027 cap hit); both dead-money hits can be absorbed in same year while clearing larger veteran contract
-3. **Championship window optimization:** For teams in 2-year windows (rookie QB deals), maximizing year-1 usable space is more valuable than minimizing total dead money
-4. **Roster construction flexibility:** The $3.8M 2026 savings enables in-season roster moves (trade deadline acquisitions, injury replacements) during critical championship window years
-
-## Impact on Future Work
-
-- **Cap position methodology:** Post-June 1 analysis should be standard practice for any veteran contract analysis where team has multi-year championship window
-- **Dead money modeling:** When modeling cut scenarios, always include post-June 1 split-year option with year-over-year cap projection comparison
-- **Timeline-aware cap management:** Cap decisions must be evaluated against team-specific championship window timelines (e.g., rookie QB deal expiration, defensive core extension deadlines)
-
-## Team Relevance
-
-Applies to any team with:
-- Veteran contracts with significant dead money
-- Defined championship windows (2-3 years)
-- Projected cap expansion in following year
-- Need for in-season roster flexibility
-
-Examples: Teams with rookie-deal QBs (DEN, HOU, NE, WSH), teams with expiring QB windows (DAL, GB), teams clearing space before major extension years.
-
-## Validation Needed
-
-- Confirm OTC/Spotrac post-June 1 dead money split calculations are accurate
-- Verify CBA rules around post-June 1 designation limits (believe it's 2 players per team per year — needs confirmation)
-- Test this methodology on other aging veteran contracts (e.g., WR/OL in years 8-10)
-
----
-
-**Submitted by:** Cap
-**Scope:** Cap methodology, panel analysis workflow
-**Next step:** Lead reviews and either approves as team standard or requests refinement
-
----
-date: 2026-03-16
-agent: Cap
-context: HOU 2026 offseason article panel discussion
-status: decision
----
-
-# Decision: Extension Sequencing Methodology for Two-Star Cap Models
-
-## Context
-
-Writing the cap position for Houston's Stroud/Anderson extension article, I developed a methodology for modeling "two-megacontract" scenarios (QB + EDGE/WR1/OT) where both players hit extensions within 12-24 months of each other.
-
-## Decision
-
-**Standardize the two-star extension analysis framework:**
-
-1. **Always model both "extend now" and "wait" scenarios** with year-by-year cap impact tables showing combined cap hits as % of total cap
-2. **Calculate the "wait penalty"** — the AAV market escalation cost of deferring an extension (e.g., Stroud at $55M in 2026 vs. $62M in 2027 = $7M/year penalty)
-3. **Identify the positional hierarchy** — which player must be extended first based on replaceability (QB > EDGE > WR1 > OT in most cases)
-4. **Map the "cap crunch threshold"** — the year when combined cap hits exceed 28-30% of total cap, forcing roster construction into "thin depth" mode
-5. **Show restructure opportunities with dead-money costs** — table format showing player, current cap hit, restructure savings, and 2-3 year dead money impact
-6. **Recommend specific extension sequencing** with contract structure (years, AAV, guarantees) and timeline (which offseason)
-
-## Rationale
-
-This framework is reusable for any team facing dual mega-extensions:
-- CIN: Burrow + Chase
-- MIA: Tua + Tyreek (already done, but useful historical comp)
-- LAC: Herbert + Derwin James
-- DET: Goff + Aidan Hutchinson (upcoming)
-
-The year-by-year cap modeling (2027-2030 projections) forces specificity instead of vague "cap crunch" warnings. Seeing "$90M committed to 2 players = 27.5% of cap in 2029" is actionable. "Extensions will be expensive" is not.
-
-## Impact
-
-- **For future cap panel positions:** Use this structure as a template for multi-extension articles
-- **For team agents:** When requesting cap analysis, ask for the full sequencing model (not just "can we afford it?")
-- **For Writer:** The tables are article-ready — drop them directly into the draft with minimal editing
-
-## Example Output
-
-See `content/articles/hou-2026-offseason/cap-position.md` for the full implementation.
-
-Key artifact: The "Extension Modeling: Year-by-Year Cap Impact" section with Scenario 1 (extend now) vs. Scenario 2 (wait) tables showing 2026-2030 projections.
-
----
-
-**Status:** Validated once (HOU article). Monitor for reusability on next multi-extension article (e.g., DET, CIN).
-
----
-agent: Cap
-article: kc-mahomes-return-roster-gamble
-date: 2026-03-15
-status: filed
----
-
-# Cap Panel Position: KC Mahomes Article — One-Year Window Analysis
-
-## Context
-
-Panel position written for the KC Mahomes article ("Mahomes Is Racing Back — But to What?"). My role on the panel: map the 2026-2027 financial trajectory, determine if this is a one-year window or sustainable, and analyze the Chris Jones contract decision tree.
-
-## Core Position
-
-**This is a one-year championship push — then the cap explodes.**
-
-The Chiefs cleared $98M in 2026 through trades, cuts, and restructures to build a win-now roster. But 2027 is structurally broken:
-- Mahomes: $85.25M (31.2% of cap)
-- Chris Jones: $44.85M (16.4% of cap)
-- **Combined: $130.1M on two players** (47.6% of cap)
-
-Projected to be $45-60M over the cap in 2027 before signing a single free agent.
-
-## Key Analysis Frameworks
-
-### 1. Chris Jones Decision Tree
-
-Three options, all bad:
-1. **Accept the $44.85M hit** → Prevents signing any other defensive FAs; roster depth collapses
-2. **Extend Jones** (lower 2026-2027, add years to 2029) → Kicks the can, creates more dead money if he declines
-3. **Trade/release post-June 1** → Clears $44.85M but creates $27M dead money; loses best defensive player
-
-**My call:** Extend Jones this summer, restructure to ~$32M/year through 2029. Creates $12-15M relief but commits to him through age 36. It's a gamble that Jones ages like Aaron Donald, not Fletcher Cox.
-
-### 2. McDuffie Trade: Cap Efficiency vs. Talent Sacrifice
-
-Cleared $13.5M in 2026 + removed $16M 2027 obligation.
-
-**But:** Replaced All-Pro corner (would've been $16M value contract vs. Gardner at $24M, Surtain at $24.1M) with Kader Kohou at $9M AAV (graded 42nd-best corner in 2025 per PFF).
-
-The $7M savings doesn't offset the competitive gap. Trade enabled Walker ($14.35M) + Gilman ($8.25M) + 2027 draft capital. Makes sense IF Walker + Gilman + future picks > McDuffie. I'm skeptical.
-
-### 3. The Hardest Cap Constraint
-
-**The 2027 Mahomes megahit was intentionally unsustainable** — designed to force a renegotiation in 2026. But the strategy assumed the Chiefs would have cap flexibility to negotiate from strength.
-
-They don't. They're backed into a corner and MUST extend Mahomes to avoid the cap explosion. That gives Mahomes' agent (Leigh Steinberg) all the leverage.
-
-This isn't Mahomes being greedy — it's the structural reality of deferred cap management catching up.
-
-## Core Recommendation
-
-**Go all-in on 2026 — because 2027 won't allow it.**
-
-If the roster is healthy and competitive entering the 2026 trade deadline (late October), Brett Veach should trade future draft capital (2027/2028 picks) to acquire a proven WR2 and starting-caliber CB. The Rams won Super Bowl LVI by trading multiple first-rounders for Stafford and Ramsey. KC should adopt the same mindset.
-
-But if 2026 goes sideways (Mahomes struggles post-ACL, Rice suspended all year, defense can't stop anyone), flip the script at the deadline: trade Jones for a 2027 1st, trade Brown for a Day 2 pick, and accelerate the rebuild before 2027's cap crisis makes it unavoidable.
-
-**The window is this year. The cap math doesn't lie.**
-
-## Disagreements with Panel
-
-**KC will argue:** The two first-round picks on rookie deals hedge against the 2027 cap crisis.
-
-**My pushback:** Rookie contracts are cost-controlled, but they don't create cap *space* — they just prevent you from spending more. The Chiefs' 2027 problem isn't lack of cheap talent; it's $130M committed to two players before counting anyone else. Rookie deals don't solve that.
-
-**Offense will argue:** If Rashee Rice is suspended, the Chiefs need to trade for a WR2 mid-season.
-
-**My agreement with a constraint flag:** They have ~$15M available cap space after draft signings. That's enough for a rental (Darnell Mooney type at $10M AAV), but it eats the entire emergency fund. One significant injury to Mahomes, Kelce, or Walker, and the Chiefs have no financial flexibility.
-
-## Reusable Patterns for Future Panel Work
-
-### Pattern 1: Multi-Year Cap Trajectory Analysis
-
-When analyzing "is this sustainable?" questions:
-1. Map the current year cap space (real number from OTC)
-2. Project Year 2 commitments (include restructure consequences, void year acceleration)
-3. Identify the "cap cliff" — the year where the math breaks
-4. Build the decision tree for each major contract
-5. Quantify what "must happen" to avoid the cliff
-
-Applied to KC: 2026 is workable ($28M space), 2027 is the cliff ($130M on two players), and five things must happen (Mahomes extension, Jones extension, Kelce retires, Brown cut, no Karlaftis/Smith extensions).
-
-### Pattern 2: Trade Analysis — Cap Savings vs. Talent Cost
-
-When evaluating high-value trades:
-1. Calculate cap savings (immediate + future year obligation removal)
-2. Identify the replacement player and their cost
-3. Compare talent level (use PFF grades, Pro Bowl/All-Pro status, positional market value)
-4. Determine what the cap savings enabled (specific signings/extensions)
-5. Frame the trade as: "Savings enabled X, Y, Z. Does X + Y + Z > [player traded]?"
-
-Applied to McDuffie: $13.5M 2026 savings + $16M 2027 savings enabled Walker + Gilman + draft capital. But McDuffie at $16M would've been a value contract vs. top CB market. The $7M net savings doesn't offset the talent gap.
-
-### Pattern 3: Contract Decision Tree
-
-When analyzing "what should they do with [expensive veteran]?" questions:
-1. Map all available options (accept hit, extend, trade, release)
-2. For each option, calculate: cap savings, dead money, roster impact, future cap consequences
-3. Identify the "least bad" option (not the "good" option — sometimes there isn't one)
-4. Flag the age/decline risk factor
-5. Make a call with reasoning
-
-Applied to Chris Jones: All three options are bad. Extend is least bad because it creates immediate cap relief and avoids losing your best defensive player. But it's a gamble on aging curve.
-
-## Decision
-
-No formal team decision required — this is a panel position statement for an article.
-
-**Filed for knowledge propagation:** These three analytical patterns (multi-year trajectory, trade talent/cap tradeoff, contract decision tree) are reusable for any cap-focused article panel position.
-
----
-
-*Decision filed by Cap — 2026-03-15*
-
----
-created: 2026-03-XX
-agent: Cap (Salary Cap Expert)
-status: proposed
-priority: medium
-affects: TEN team agent, Lead, Writer (ten-ward-vs-saleh-draft-identity article)
----
-
-# Decision: Post-June-1 Cuts Create Hidden Future-Year Cap Constraints
-
-## Context
-
-While writing the Cap position for the Titans draft identity article, I analyzed two paths:
-- **Path A:** EDGE at #4 + post-June-1 Ridley cut ($16.45M 2026 savings, $5M 2027 dead money acceleration)
-- **Path B:** WR at #4 + keep Ridley through 2026 (costs $16.45M more in 2026, but $0 dead money in 2027)
-
-## The Decision Point
-
-**Post-June-1 cuts are frequently presented as "cap relief" mechanisms** — and they are, for the current year. But they create a **future-year dead money acceleration** that constrains the exact window when franchise QBs need cap flexibility for extensions, 5th-year options, and supporting cast upgrades.
-
-In Tennessee's case:
-- Cutting Ridley post-June-1 saves $16.45M in 2026 but accelerates $5M into 2027
-- Ward's 5th-year option decision arrives in 2027 (his Year 3)
-- That $5M dead money hit reduces 2027 flexibility when TEN needs to decide: extend Ward early, add weapons around him, or let him play out Year 4
-
-## The Principle
-
-**When evaluating post-June-1 cuts for teams with franchise QBs in Years 2-4, always model the 2-year cap impact:**
-1. Year 1 savings (the headline number)
-2. Year 2 dead money acceleration (the hidden cost)
-3. Whether Year 2 aligns with QB contract decision windows (5th-year option, early extension, etc.)
-
-If the future-year dead money hits during a critical QB decision window, the "savings" aren't savings — they're borrowing from the QB's future to solve a current-year problem.
-
-## Recommendation for Future Analysis
-
-- Cap agent should flag post-June-1 cuts that accelerate dead money into QB contract decision years
-- When discussing "cap relief," present both the Year 1 savings AND the Year 2 cost in a single table
-- Introduce the concept of "net 2-year cap impact" as a metric for evaluating aging veteran cuts
-
-## Status
-
-Proposed. Affects how Cap discusses post-June-1 cuts in future articles, especially for teams with rookie-contract QBs.
-
----
-type: "article-angle"
-agent: "car"
-issue: 67
-status: "approved"
-date: "2026-03-16"
----
-
-# Decision: CAR 2026 Offseason Article Angle — Bryce Young 5th-Year Option Crossroads
-
-## What
-Selected "The $165 Million Bet on a Quarterback Nobody's Sure About" as the Panthers' first offseason article angle. The article frames the entire 2026 offseason through the lens of Bryce Young's 5th-year option decision (due May 2026), arguing that the $165M defensive investment (Phillips + Lloyd) only makes sense if Young is the franchise QB — and the 2025 tape is violently contradictory.
-
-## Why This Angle Over Alternatives
-
-| Considered Angle | Score | Why Not Lead? |
-|-----------------|-------|---------------|
-| **Bryce Young 5th-year option crossroads** | 12/12 | ✅ SELECTED — highest tension, most timely, reframes every other move |
-| Phillips/Lloyd defensive transformation | 9/12 | Good but descriptive — "look what they bought" lacks tension |
-| NFC South window opening | 8/12 | Interesting context but diffuse — no single decision point |
-| Draft at #19 | 7/12 | Too early — draft board not set yet, better as pre-draft article |
-
-## Affects
-- **Cap agent** — will need to model 5th-year option financial decision tree
-- **Offense agent** — will evaluate scheme-QB fit under Canales
-- **Writer/Editor** — article targets 2,500-3,500 words at Depth Level 2
-
-## Artifacts
-- `content/articles/car-2026-offseason/idea.md`
-- `content/articles/car-2026-offseason/discussion-prompt.md`
-- `content/articles/car-2026-offseason/panel-composition.md`
-
----
-agent: CHI
-issue: 62
-date: 2026-03-16
-category: article-angle-selection
-status: proposed
----
-
-# Decision: Bears 2026 Offseason Article Angle — "Restraint in the Cheap-QB Window"
-
-## Context
-
-Issue #62 requested a Chicago Bears 2026 offseason article with **"IDEA GENERATION REQUIRED"**—meaning no pre-written angle, fresh research needed.
-
-The Bears finished 2025 at 11-6 (NFC North champs, playoff win vs GB) but took an unusual path this offseason:
-- Traded DJ Moore (WR1) to Buffalo for a 2nd-round pick, freed $16.5M cap
-- Let all three starting safeties walk (Brisker, Gardner-Johnson, Byard)
-- Explored but rejected a Maxx Crosby blockbuster (Raiders wanted 2 1sts + player)
-- Signed mid-tier FAs instead (Coby Bryant, Devin Bush, Neville Gallimore)
-
-Meanwhile, NFC North rivals went aggressive:
-- DET: $35.9M cap space, Aidan Hutchinson returning from injury
-- GB: Traded for Micah Parsons, hired Jonathan Gannon as DC
-- MIN: Added Jonathan Allen + Javon Hargrave on defense
-
-## Decision
-
-**Selected Angle:**  
-"The Bears Traded Their Best Receiver and Let Three Safeties Walk. That Might Be the Smartest Offseason in the NFL."
-
-**Core Tension:**  
-Caleb Williams is entering Year 3 on a rookie deal (~$1M cap hit)—the cheapest franchise-QB window in football. He has **two seasons (2026-2027) before a $55M+ AAV extension** locks in. Every contender in NFL history tries to maximize this window. The Bears are using it to *subtract* high-priced veterans and stockpile draft capital.
-
-Is this **restraint or timidity?** Can they close the gap on DET/GB inside a short window by building through the draft, or does playing conservative in the NFL's toughest division guarantee they waste the cheapest franchise-QB years in football?
-
-## Rationale
-
-1. **Nationally relevant framing:** "Contender that subtracted" is counterintuitive and debate-worthy. The Khalil Mack parallel (2018 trade → 12-4 → 6-year drought) resonates beyond Bears fans.
-
-2. **Williams' cheap-QB window is the ticking clock:** This isn't just "Bears offseason recap." It's a strategic referendum on how to maximize a generational QB on a rookie deal when the division is loaded.
-
-3. **Maxx Crosby non-trade crystallizes the debate:** Poles confirmed he explored it and walked away. The ghost of the Mack era informs every decision—but the Mack lesson cuts both ways (the Bears went 12-4 in Mack's first year and nearly won a Super Bowl). Sometimes the "reckless" move IS the right one.
-
-4. **Safety exodus is the biggest roster risk:** Dennis Allen's takeaway-heavy defense (33 in 2025, best since 1985) just lost all three starting safeties. Coby Bryant is solid but not a Pro Bowler. Can the scheme survive a full positional reset?
-
-5. **NFC North arms race makes this urgent:** DET/GB/MIN are adding premium talent. The Bears are the only team playing conservative. Is this positioning for sustained success, or falling behind in a sprint?
-
-## Alternatives Considered
-
-- **"Caleb Williams Extension Timeline: How the Bears' 2027 Cap Cliff Changes Everything"** — Too cap-centric, loses the narrative tension. Better as a standalone piece later.
-- **"Can Dennis Allen's Defense Survive Without Brisker, CJGJ, and Byard?"** — Too narrow. Secondary rebuild is a subplot, not the headline.
-- **"The Maxx Crosby Trade That Never Happened: Why Ryan Poles Said No"** — Interesting but reactive. Crosby is a subplot in the larger "restraint vs. urgency" story.
-
-## Impact on Article Production
-
-- **Depth Level:** 2 — The Beat (2,000–3,500 words, balanced data + story)
-- **Panel:** CHI (team expert), Cap (extension timeline), Defense (secondary rebuild), Draft (R1 safety vs. OT decision)
-- **Publish Window:** ASAP — 2026 offseason, pre-draft
-- **Audience:** Bears fans, NFC North watchers, NFL fans interested in "restraint vs. aggression" roster-building philosophy
-
-## Next Steps
-
-- ✅ Discussion Prompt created (`content/articles/chi-2026-offseason/discussion-prompt.md`)
-- ✅ Idea scored 10/12 (SEA relevance: 2, Timeliness: 3, Reader value: 3, Uniqueness: 2)
-- 🔄 **Stage 3 (Panel Composition)** — Finalize 3-4 agent panel and spawn instructions
-- ⏳ Stage 4 (Panel Discussion) — Agents produce expert analysis
-- ⏳ Stage 5 (Article Drafting) — Writer synthesizes into article
-
-## Open Questions
-
-1. Should we adjust depth level to **3 — Deep Dive** given the complexity? (Cap cliff modeling, secondary scheme fit, draft trade-up math, etc.)
-2. Is the Khalil Mack parallel too heavy-handed, or is it the perfect framing device?
-3. Do we need Analytics on the panel for takeaway regression modeling, or is Defense enough?
-
-## Decision Owner
-
-CHI (Chicago Bears Expert)
-
----
-
-**For Lead/Ralph:** This decision captures the article angle selection process. If approved, archive to `.squad/decisions/archive/` and proceed to Panel Composition (Stage 3).
-
----
-date: 2026-03-16
-agent: CollegeScout
-article: seahawks-rb-pick64-v2 (issue #71)
-stage: panel-discussion
-decision_type: panel-position-stance
-status: filed
----
-
-# Decision: Price at #64 Is Fair Value, Not a Steal — v2 Should Reframe
-
-## Context
-
-Panel discussion for "Seahawks RB Pick #64 Analysis (v2)." The v1 article positioned Jadarian Price at #64 as a late-first-round talent falling due to Achilles fear. CollegeScout re-tested this premise against current board data.
-
-## CollegeScout Panel Position
-
-**Recommendation:** Path 2 — Keep the Player, Move the Price. Price fits Seattle but is not the discount v1 claimed.
-
-**Key Findings:**
-- Price's consensus ADP has risen to #53-58 (PFF 58, StatRankings ~56) — UP from v1's ~67 claim
-- The Achilles "discount" has eroded after 41 healthy games. If the injury doesn't scare teams, it also doesn't create a buying opportunity
-- At #64, Seattle pays fair market price for a mid-R2 committee back — not a steal
-- Quality RB alternatives (Coleman, Johnson) exist at #96 with similar zone-scheme fit
-- The positional dropoff from #64 to #96 is steepest at EDGE/CB, shallowest at RB
-- Recommended reframe: "paying fair value for a good fit" rather than "stealing a first-round talent"
-
-## Strategic Implications
-
-- v2 article should correct the v1's overstatement without abandoning the prospect
-- Writer needs honest quotable lines, not promotional ones
-- Likely friction with Offense (who will emphasize scheme fit as unique differentiator)
-- Board reality supports EDGE/CB at #64 + Coleman/Johnson at #96 as the better value play
-
-## Follow-Up Questions
-
-1. Does SEA's need hierarchy make RB at #64 defensible even without the "discount" narrative?
-2. Will Offense agree that Coleman/Johnson are viable zone-scheme alternatives, or hold the line on Price specifically?
-3. If Price's ADP compresses above #64, does the article need a "trade-up" scenario or does the thesis break entirely?
-
----
-
-**Filed for:** Lead review during synthesis phase (Stage 4)
-
-### 2026-03-16T05:31:24Z: User directive
-**By:** Joe Robinson (via Copilot)
-**What:** Use GPT-5.4 when Claude 4.6 is unavailable.
-**Why:** User request — captured for team memory
-
-### 2026-03-16T06:51:25Z: User directive
-**By:** Joe Robinson (via Copilot)
-**What:** The Seahawks RB v2 item should be treated as an existing article rerun through the new pipeline, not a blank-slate rewrite; every article should end with a cliffhanger-style next-article tease; after publish, create a new GitHub idea issue for that teased article with a Thursday-of-week target for now.
-**Why:** User request — captured for team memory
-
----
-type: "article-angle"
-agent: "dal"
-issue: 58
-status: "ready-for-panel"
-created: "2026-03-16"
----
-
-# Decision: DAL Issue #58 — Article Angle Selection
-
-## What Was Decided
-
-Selected **"Dallas Spent $166M on Offense and Allowed the Most Points in the NFL. Now Two First-Round Picks Have to Fix Everything."** as the article angle for the DAL 2026 offseason piece.
-
-## Why This Angle
-
-Considered several angles:
-1. ~~Parsons trade retrospective~~ — too backward-looking; verdict depends on draft which hasn't happened
-2. ~~George Pickens extension drama~~ — important subplot but not the defining question
-3. ~~Christian Parker scheme install~~ — too narrow; doesn't capture the cap urgency
-4. **Offense/defense spending imbalance + Parsons trade + 2027 cap bomb** ✅ — This ties together the three biggest Cowboys storylines into one cohesive tension: they built an elite offense, demolished the defense, and now have exactly ONE draft to fix it before the cap window closes. Every other angle is a subset of this one.
-
-## Artifacts Created
-
-- `content/articles/dal-2026-offseason/idea.md` — Stage 1 complete
-- `content/articles/dal-2026-offseason/discussion-prompt.md` — Stage 2 complete
-- GitHub issue #58 updated with angle comment
-
-## Panel Recommendation
-
-4-agent panel: DAL, Cap, Defense, Draft. Each has a specific brief in the discussion prompt. Ready for Lead to approve and spawn Stage 3/4.
-
-## Impact
-
-Commits pipeline forward from "needs-research" to "ready-for-panel" on the DAL article. No blocking dependencies — panel agents can be spawned immediately.
-
-# Decision: BUF Defensive Panel — Milano Is the Scheme-Critical Retention
-
-**By:** Defense (Defensive Scheme Expert)
-**Date:** 2026-07-18
-**Status:** Proposed
-**Affects:** BUF team agent, Cap agent, Lead (synthesis)
-
-## What
-
-In the BUF 2026 offseason panel, Defense recommends **Path 4 (Youth Movement) with Milano retention as the non-negotiable modifier.** The core finding: of the four departing defenders (Bosa, Milano, Epenesa, White), only Milano's loss changes the *scheme identity* — Leonhard's 35% blitz rate requires a coverage LB who can execute pattern-match drops, and no Day 2 replacement can replicate that processing speed. Bosa, Epenesa, and White are replaceable through draft archetypes and mid-tier free agents because Leonhard's simulated-pressure packages generate rush through design, not individual talent.
-
-## Why This Matters for Synthesis
-
-- Cap agent should model Milano at 2-yr/$18M (age-30 discount) as a baseline assumption, not a luxury add.
-- BUF agent should evaluate whether Terrel Bernard can grow into Milano's coverage role by 2027 — if yes, the 2-year bridge contract makes sense; if not, the timeline shifts.
-- The recommended draft allocation (R1: CB, R2: EDGE, R3: IDL) follows directly from the scheme-damage ranking and should be consistent across panel positions.
-
-## Constraint
-
-The hardest defensive constraint is **not** the edge rush — it's the coverage LB position. The EDGE and CB2 spots have clear Day 2 draft archetypes. The ILB coverage role Milano fills barely exists outside the first round. If Milano walks, Leonhard must either reduce his blitz rate (weakening the entire defensive identity) or accept catastrophic coverage breakdowns against AFC East speed.
 
 ### 2026-03-16: Houston Interior DL — Dual-Role Draft Strategy
 **By:** Defense (Defensive Scheme Expert)
@@ -2337,311 +1137,6 @@ Houston's 2026 draft strategy must account for a **DT talent cliff after pick 30
 ---
 
 **Recommendation:** Publish this decision to `.squad/decisions.md` after panel synthesis. This is a high-stakes strategic call that affects Houston's 2026-2029 roster construction.
-
-### 2025-07-17: Draft Board Analysis — Detroit Lions EDGE vs. OT at #17
-**By:** Draft (Draft Expert)
-**Status:** Proposed
-**Affects:** DET team agent, Lead, Writer
-
-**What:**
-1. **OT at #17, EDGE at #50 is the preferred sequencing.** The OT class thins faster than the EDGE class — Kadyn Proctor (Alabama) is likely the last first-round-caliber LT on the board, while EDGE has 6-8 Day 1-2 starters.
-2. **Keldric Faulk is the safest EDGE at #17** but grading below Proctor as a prospect — taking Faulk over Proctor would be need-over-BPA.
-3. **R2 #50 EDGE options are viable:** Dani Dennis-Sutton (PSU), Cashius Howell (TAMU) if he slides, Akheem Mesidor (Miami). Class depth supports waiting on EDGE.
-4. **R2 #50 OT options are thinner:** Max Iheanachor (ASU, RT profile), Blake Miller (Clemson), Gennings Dunker (Iowa). None are Day 1 LT-ready.
-5. **Trade-down from #17 is a viable wildcard** if Proctor is gone and Faulk doesn't feel like BPA — could move to #22-23 and pick up extra Day 2 capital.
-
-**Why:** Structural analysis of 2026 draft class depth by position. OT scarcity at the top of the class makes it the premium R1 target. EDGE depth allows Detroit to find a quality starter in R2. The R1-R2 combo realistically addresses both needs only if OT goes first.
-
-**Artifact:** `content/articles/det-2026-offseason/draft-position.md`
-
-# Editor Decision — BUF offseason draft review
-
-- **Article:** `content/articles/buf-2026-offseason/draft.md`
-- **Decision:** 🔴 REJECT
-- **Why:** The draft's central framing was overtaken by March 2026 reality. It still treats Buffalo as an $11M-over-the-cap team with Dawson Knox as an obvious cut, but Buffalo has already restructured Josh Allen, reworked Knox's deal, re-signed Connor McGovern, and added DJ Moore and Bradley Chubb.
-- **Editorial implication:** This should be rewritten against the current post-move state rather than patched line by line.
-
-# Decision: Editor Review of DEN 2026 Offseason Draft
-
-**Agent:** Editor  
-**Date:** 2026-03-17  
-**Article:** den-2026-offseason  
-**Stage:** 6 — Editor Pass  
-
-## Decision
-
-**✅ APPROVED** — The draft is factually accurate, internally consistent, and publish-ready.
-
-## Rationale
-
-Performed full fact-check against all three panel positions (DEN, Cap, Offense), the discussion prompt, and the idea file. Cross-referenced Jimmy Graham's stats and Combine numbers against Pro Football Reference and official Combine records. Found zero factual errors. Issued five polish-level suggestions (name the AFCCG opponent, clarify Engram cut-scenario table, expand recovery timeline argument, verify Graham height source, specify Nix injury game). None are blockers.
-
-## What this means for the pipeline
-
-The draft can advance to Stage 7 (Publisher Pass) after the Writer optionally addresses the 🟡 suggestions. No re-review needed unless structural changes are made.
-
-# Decision: Editor Review of HOU 2026 Offseason Draft
-
-**Agent:** Editor
-**Date:** 2026-03-17
-**Article:** `content/articles/hou-2026-offseason/draft.md`
-
-## Decision
-
-Issued a **🟡 REVISE** verdict on the Houston 2026 offseason article.
-
-## Rationale
-
-The article is well-written and structurally sound, but contains one factual error that would undermine credibility with knowledgeable readers:
-
-1. **Sonny Styles at pick 28 is unrealistic.** Styles is a consensus top-5 to top-10 prospect (PFF, NFL.com, ESPN, The Athletic all project him no later than 10th overall). Listing him as a tempting option at 28 repeats an error from the Draft position paper and would be immediately flagged by any reader tracking the 2026 draft.
-
-The Writer also made a smart but incomplete editorial choice: avoiding all DT prospect names to sidestep contradictions between the Draft and Defense position papers (Peter Woods projected top-20 by Draft but listed as a Day 3 pick by Defense; Christen Miller listed as Georgia by Draft but USC by Defense). This kept the article from repeating source-paper errors but left a noticeable gap for Depth Level 2 readers who expect prospect names.
-
-## What Happens Next
-
-Writer fixes E1 (Styles) and addresses the four 🟡 suggestions. Editor re-reviews for ✅ APPROVED.
-
-# Decision: JAX 2026 Offseason Draft — Editor Review Verdict
-
-**Agent:** Editor
-**Date:** 2026-03-17
-**Article:** `content/articles/jax-2026-offseason/draft.md`
-
-## Decision
-
-**Verdict: 🟡 REVISE** — The draft has strong writing and structure but contains six factual errors that must be corrected before publish.
-
-## Key Issues
-
-1. **Cap deficit figure** ($15.9M in draft vs. $8.3M in Cap source) — appears 4× in the article
-2. **Hunter's 2026 cap hit** ($10.6M in draft vs. $7.8M in Cap source)
-3. **Trade structure** (draft says #5→#2 with picks #36/#126; Cap source says JAX received #5 from CLE, giving #41/#104/2026 1st/2027 3rd)
-4. **Restructured players** (draft names Meyers/Hainsey/Mekari/Murray/Lewis; Cap source proposes Kirk/Robinson/Oluokun)
-5. **Missing Defense panelist** (4-agent panel, no Defense output or section in draft)
-6. **No OTC/Spotrac citations** (Gate 3 failure)
-
-## What's Working
-
-Writing quality, narrative arc, TLDR, headline, panel disagreement framing, BTJ analysis, and temporal accuracy are all strong. The errors are numerical/factual corrections, not structural rewrites.
-
-## Next Step
-
-Writer corrects all 🔴 errors → Editor re-reviews.
-
-# Editor Decision — LV Crosby Review
-
-- **Article:** `content\articles\lv-2026-offseason\draft.md`
-- **Verdict:** 🟡 REVISE
-- **Why:** The central argument is strong and timely, but the cap section materially overstates the Raiders' 2026 squeeze by using Kwity Paye's AAV as cap hit, subtracting gross rookie holds instead of effective Top-51 rookie impact, and relying on a stale draft-pick count.
-- **Meaningful editorial call:** Preserve the thesis, but require a full cap-table rewrite before publish. This is not a tone problem; it is a credibility problem in the article's most data-sensitive section.
-
-# Decision: Panel Composition Workflow for Article Stage 3
-
-**Decision made by:** HOU (Houston Texans Expert)  
-**Date:** 2026-03-16  
-**Context:** Issue #50 — HOU 2026 Offseason article advanced from Stage 2 (Discussion Prompt) to Stage 3 (Panel Composition)  
-
----
-
-## Decision
-
-For articles at Stage 3 (Panel Composition), team agents should:
-
-1. **Create article folder** using `{team-abbr}-{topic}` naming pattern (e.g., `hou-2026-offseason`)
-2. **Create `panel-composition.md` artifact** inside the article folder documenting:
-   - Central question from Discussion Prompt
-   - Final panel (2-5 agents per depth level constraints)
-   - Each agent's role and specific question
-   - Composition rationale (why these agents, what perspectives they cover)
-   - Expected disagreements between panelists
-   - Compliance with composition rules (team agent + specialist, size limits, distinct angles)
-3. **Post Stage 3 completion comment** to GitHub issue with panel summary
-4. **Update issue body** to mark Stage 3 complete and Stage 4 in progress
-
----
-
-## Rationale
-
-**Why this structure:**
-- Panel composition artifact serves as the single source of truth for Stage 4 (Panel Discussion)
-- Documents the strategic choices behind agent selection (prevents "why wasn't X included?" questions later)
-- Captures expected disagreements upfront — identifies the productive tensions that will drive the article
-- Ensures compliance with depth level constraints (Level 1 = 2 agents, Level 2 = 3-4, Level 3 = 4-5)
-
-**Why separate artifact file:**
-- Discussion Prompt (Stage 2) lives in GitHub issue comments — it's conversational
-- Panel Composition (Stage 3) is operational — it's the spawn instructions for Stage 4
-- Keeping it in `content/articles/{slug}/panel-composition.md` makes it discoverable next to the draft
-
-**Benefits observed in Issue #50:**
-- Clear handoff from HOU (team expert) to Lead (who orchestrates Stage 4)
-- Easy to verify compliance with composition rules (checklist at bottom of artifact)
-- Transparent rationale for why Offense specialist was excluded (defense + cap focus)
-
----
-
-## Applicability
-
-**When to use:**
-- All articles at Stage 3 (Panel Composition)
-- Applies to all depth levels (1, 2, 3) — just adjust panel size constraints
-
-**Who should execute:**
-- Lead typically owns Stage 3 (per article-lifecycle skill)
-- Team agents can execute if assigned directly to the article (as in Issue #50)
-
-**Exception cases:**
-- Depth Level 1 (Casual Fan) articles may skip formal panel composition artifact if only 2 agents are needed — can document directly in issue comment
-
----
-
-## References
-
-- `.squad/skills/article-lifecycle/SKILL.md` — Stage 3 composition rules, panel size limits
-- Issue #50 — First execution of this workflow pattern
-- Artifact created: `content/articles/hou-2026-offseason/panel-composition.md`
-
----
-
-## Follow-up Actions
-
-- [ ] **Writer/Editor:** Consider adding this pattern to `.squad/skills/article-lifecycle/SKILL.md` Stage 3 section as an example
-- [ ] **Lead:** Use this pattern for future Stage 3 compositions
-- [ ] **Ralph:** If monitoring article lifecycle, check for presence of `panel-composition.md` artifact before advancing to Stage 4
-
-# Decision — HOU Panel Position: Draft-Heavy Interior DL Strategy
-
-**Decision maker:** HOU (Houston Texans Expert)  
-**Date:** 2026-03-16  
-**Context:** Issue #50 — Houston's $100 Million Countdown panel discussion  
-**Status:** Position stated, awaiting panel synthesis
-
----
-
-## The Decision
-
-**Advocate for aggressive interior DL investment via draft (picks 28 or 38) despite positional value concerns.**
-
-Interior defensive line is ranked as the #1 critical need — ahead of linebacker, OT depth, and RB — even though late 1st/early 2nd round picks historically underperform at DT compared to EDGE/WR/CB.
-
----
-
-## The Rationale
-
-### Why DT is the top priority:
-
-1. **Roster crisis:** Lost 3 interior DL (Settle to WAS, Fatukasi UFA, Hinish UFA) with only 31-year-old Rankins and rotational Togiai/Hamilton remaining
-2. **Scheme dependency:** DeMeco Ryans' 4-3 defense requires two-gap DTs to free up Hunter/Anderson on the edges — scheme doesn't work without credible interior run-stoppers
-3. **Extension window math:** Rookie DT at pick 38 costs ~$2.2M/yr vs. $12-18M/yr FA DT in 2027 when Stroud/Anderson extensions hit — a $10-16M annual savings
-4. **JAX competitive urgency:** Trevor Lawrence and JAX's run game won the division at 13-4. Can't afford to give up 4.5+ YPC up the middle in division games.
-
-### The tradeoff:
-
-**Value vs. need tension.** DT is not a premium position at picks 28-38 historically. Edge rushers, cornerbacks, and wide receivers have higher hit rates in this range. We may be "reaching" for scheme fit rather than taking best player available.
-
-**Alternative path:** Draft LB at 28 (higher positional value), address DT in Round 3-4 or via veteran FA bridge signing, then invest in elite DT in 2027 draft when we have better pick position. This delays the DT solution but maximizes draft value.
-
-### Why I'm advocating for DT anyway:
-
-- **2027 is too late.** Stroud/Anderson extensions likely signed by then. No cap room for FA DT at market rate.
-- **Scheme fit > generic value.** A 290-lb two-gap DT who fits Ryans' scheme at pick 38 is more valuable to Houston than a 4.4-speed off-ball LB who doesn't.
-- **Division window is NOW.** JAX is at their peak. We can't wait until 2028 to compete for the division.
-
----
-
-## Implications for Other Panelists
-
-- **Cap:** Will likely model the cost savings of rookie DT vs. FA DT and validate the $10-16M annual delta
-- **Draft:** Will evaluate specific DT prospects at 28/38 (Christen Miller, LT Overton, Peter Woods) and assess reach vs. value
-- **Defense:** Will confirm scheme fit requirements and whether available DTs at 28-69 can actually play Ryans' two-gap technique
-
----
-
-## Open Question for Lead
-
-If Draft and Defense both say "the available DTs at 28-38 are scheme mismatches or reaches," do we pivot to:
-- **Option A:** Trade back from 28 to acquire more Day 2 capital and take DT at 45-55 range?
-- **Option B:** Draft LB at 28, take best available DT at 59-69, and sign a veteran bridge FA (Dalvin Tomlinson type, 1yr/$8M)?
-- **Option C:** Stand firm on DT at 28 because need > value in extension window?
-
-I lean Option C (draft DT at 28 anyway) but willing to defer to Draft + Defense consensus if they identify a true scheme fit.
-
----
-
-## Status
-
-✅ Position stated in `hou-position.md`  
-⏳ Awaiting Cap/Draft/Defense panel positions  
-⏳ Lead will synthesize and recommend final path
-
----
-date: 2026-03-16
-author: IND
-status: filed
-article: ind-sauce-gardner-gamble
----
-
-# Decision: IND Panel Position on Gardner Trade Consequences
-
-## Context
-Panel discussion for article "The Colts Bet Two First-Round Picks on a 7-2 Start. They Finished 8-9. Now What?" Required IND to provide roster audit, competitive trajectory analysis, and realistic 2026 ceiling assessment.
-
-## Decision
-Took the position that the **Gardner trade created a cap-rich/talent-poor paradox** that cap space alone cannot solve. Core arguments:
-
-1. **Realistic ceiling: 7-10 wins** (likely 7-10, best case 8-9, floor 5-12)
-2. **Two unfixable problems:** QB fragility (Jones injury history) and LB talent deficit (Franklin/Pratt replaced by Carlies/Ajiake/Bullock)
-3. **Cap space limitations:** $51M can fix WR2, LB depth, Edge rotation — but NOT QB reliability or true #1 WR (already spent $28.5M AAV on Pierce)
-4. **Division finish:** 4th place behind HOU (11-6), TEN (9-8), JAX (8-9)
-5. **Recommended path:** Accept bridge year, sign mid-tier FAs, must-hit R2 #47 at LB, hope for 8-9 wins to keep coaching staff employed
-
-## Hardest Tradeoff
-**Accepting 8-9 wins as success vs. triggering front-office reckoning.** If the Colts finish 7-10 or worse, Chris Ballard (GM since 2017) enters Year 11 on the hot seat. The Gardner trade's opportunity cost (two years without R1 picks) makes short-term mediocrity painful but potentially unavoidable.
-
-## Key Analytical Insights
-- **Position group grades:** CB (A+), RB (A), OL (B), TE (B+), S (B), EDGE (B-), DT (B), WR (C+), QB (C-), **LB (D+)**
-- **Anthony Richardson trade return:** 5th-round pick (Vikings/Packers) — market has spoken
-- **Division landscape shift:** TEN's coaching overhaul (Saleh/Daboll/Bradley) makes them the biggest wildcard; HOU remains dominant; JAX owns the head-to-head (2-0 in 2025)
-
-## Implications
-- This position establishes the "ground truth" for the article — other panelists (Cap, Defense) may argue investment thesis or scheme, but IND owns the roster reality
-- If this analysis holds, the article's narrative becomes "Gardner trade = franchise limbo" not "Gardner trade = salvageable mistake"
-- Sets expectation that 2026 is a lost year competitively, which may influence editorial tone (cautionary tale vs. path-forward optimism)
-
-## Follow-up
-- After article publishes, track if actual 2026 season results validate or contradict the 7-10 win projection
-- Monitor if Ballard/Steichen survive a sub-.500 season (historical data: how many GMs survive Year 11 with back-to-back losing seasons?)
-
-# Decision: Detroit Lions Safety Injury Risk Assessment
-
-**Agent:** Injury
-**Date:** 2026-03-15
-**Context:** Brian Branch (Achilles) and Kerby Joseph (knee) both recovering from season-ending injuries
-
-## Decision
-
-Detroit should treat safety depth as **MODERATE urgency** in offseason planning.
-
-## Rationale
-
-1. **Achilles recovery (Branch):** 10-14 month window puts Week 1 return at 50-60% probability at best. Even if active, expect 60-70% snap counts and reduced burst early in season.
-
-2. **Knee recovery (Joseph):** Higher Week 1 probability (~60-75%) if ACL, but still uncertain. 25% re-injury risk applies to ACL returns.
-
-3. **Compounded risk:** Two uncertain timelines at the same position creates dangerous variance. Even if each has 60% Week 1 odds individually, both being fully healthy is closer to 35-40%.
-
-4. **Positional demands:** Safety requires explosive backpedaling and lateral agility — precisely the movements most compromised by both Achilles and knee injuries.
-
-## Recommendation
-
-- Add one veteran safety capable of starting-level play via free agency or trade
-- Consider Day 2-3 safety in draft as insurance
-- Do NOT assume both starters will be ready Week 1
-
-## Confidence
-
-🟡 MODERATE — based on public injury timelines, not private medical access
 
 ### 2026-03-16: Injury panel position — Seahawks RB Pick #64 v2
 **By:** Injury (Injury Analysis Expert)
@@ -3467,7 +1962,6 @@ Stages 1-3 complete (idea, discussion prompt, panel composition). Ready for Stag
 - `content/articles/wsh-2026-offseason/discussion-prompt.md`
 - `content/articles/wsh-2026-offseason/panel-composition.md`
 
-
 ### 2026-03-16: Dense Table → PNG Rendering Before Substack Publish
 **By:** Writer
 **Date:** 2026-03-16
@@ -3491,8 +1985,6 @@ Applies to all future articles with dense comparison/financial tables. The cap-c
 **DB Writeback Note:**
 Pipeline DB stage transition was NOT performed because there's no clearly safe path from within a Writer/JS context. The PipelineState Python layer should be used by Lead or Ralph for stage advancement.
 
-
-
 ### 2026-03-16: LAR 2026 Offseason Draft — Structural & Editorial Choices
 **Author:** Writer
 **Date:** 2026-03-16
@@ -3508,8 +2000,6 @@ Took Lead's synthesis position (EDGE at #13) for the verdict rather than flatten
 
 **Impact:**
 Editor should review whether the verdict leans too heavily EDGE given two of four panelists preferred OT. The disagreement table preserves both positions, but the closing paragraphs advocate for EDGE. If Editor wants more balance, the closing could be rewritten to present both as equally valid championship strategies.
-
-
 
 ### 2026-03-16: Seahawks RB Pick #64 v2 Draft
 **Date:** 2026-03-16
@@ -3536,8 +2026,6 @@ Fact-check items to verify:
 - Coleman/Johnson/Singleton board positions at #96 range
 - Super Bowl LIX reference (Seattle as defending champions)
 
-
-
 ### 2026-03-16: SF 2026 Offseason — Draft Structure
 **By:** Writer
 **Date:** 2026-03-16
@@ -3551,8 +2039,6 @@ Previous articles (ARI, MIA, Seahawks RB) all had at least one expert advocating
 
 **Impact:**
 Future articles with unanimous panels should look for the subordinate split — it's always there. The question is never "do they agree" but "where exactly does the agreement fracture."
-
-
 
 ### 2026-03-16: Ralph Prompt.md — Principle-First Reorganization
 **By:** Writer
@@ -3577,4 +2063,59 @@ Previously these three ideas were scattered across Steps 1/2/4 and Rules 6/8. No
 
 **Why:**
 Backend requested the rewrite to reduce Ralph's tendency to consult labels before scanning artifacts, and to make max-parallel the default posture rather than an aspiration. The reorganization is structural (how Ralph reads the prompt) not behavioral (what Ralph does).
+
+### 2026-03-16: Tua Publish Retro — Process Fixes
+**Filed by:** Lead
+**Date:** 2025-07-25
+**Article:** mia-tua-dead-cap-rebuild
+**Status:** Proposed
+
+**What:**
+Three process fixes identified from Miami Tua Substack publish flow:
+1. **Persist draft URL automatically** — Extension returns Substack draft URL only in ephemeral tool response. Should write URL to canonical artifact (publisher-pass.md or publish-proof.md) and pipeline.db (substack_url field) to survive session loss.
+2. **Pre-flight table check before publish** — Add validation step flagging dense markdown tables (>3 columns or >5 rows) as Substack-incompatible. Either convert to images before publish_to_substack call, or have extension auto-render them.
+3. **Remove "tool unavailable" escape hatch** — Publisher-pass.md template lets agents bail with "tool was unavailable" workaround. Now that extension works reliably, this path should be eliminated. Agents should retry or escalate instead.
+
+**Why:**
+- **Gap #1 (URL):** Without persistent draft URL, Joe can't locate Substack draft without manual Substack dashboard search. Extension already derives slug and URL — just not persisting.
+- **Gap #2 (Table check):** ProseMirror parser in Substack chokes on dense tables. Failure happens after all editorial work is done and human is waiting for draft link — wasted attempt. Heuristics exist in extension.mjs but invisible to upstream Editor/Writer.
+- **Gap #3 (Template):** Stale language causes confusion on future articles. If auth fails, system should clearly require retry or escalation, not accept a manual workaround as final state.
+
+**First Fix to Implement:**
+URL persistence (#1) — highest-risk gap. Update Publisher skill to make substack_url persistence a hard gate before marking Stage 7 complete. publisher-pass artifact must contain a \## Substack Draft\ section with live URL.
+
+**Decision Needed:**
+Approve three fixes; prioritize #1 for immediate implementation.
+
+### 2026-03-16: Editor Retro — Publisher Readiness Friction
+**By:** Editor
+**Date:** 2026-03-16
+**Status:** Proposed
+**Affects:** Publisher skill, Editor skill (Stage 6), article-lifecycle Stage 7 checklist, Lead
+
+**What:**
+Dense table visibility gap causes preventable friction. The extension's \ssertInlineTableAllowed\ guard failed fast with clear error on Tua article, preventing silent Substack draft corruption. However, dense markdown tables (>3 columns, >5 rows, or finance/comparison headers) only have density rules inside extension.mjs — invisible to upstream agents. Both Writer and Editor reviewed the article without flagging table density because neither checklist includes a "will this table survive the publisher extension?" gate.
+
+**Concrete Improvements:**
+
+1. **Add to Publisher skill (Step 1, immediately after existing verification checks):**
+   - \\\
+   - [ ] **Table density pre-check:** For every markdown table in the article, verify:
+         - Fewer than 5 columns, OR already rendered as an image via render_table_image
+         - No finance/comparison headers (Amount, Cap, AAV, Savings, Contract, Salary, etc.)
+         - Average cell content under ~35 characters
+     If any table fails these heuristics, render it with render_table_image BEFORE calling publish_to_substack.
+   - \\\
+
+2. **Add to Editor skill review checklist (Stage 6):**
+   - \\\
+   - [ ] Flag any markdown tables that look dense, comparative, or 5+ columns — 
+         these will be blocked at publish time and need pre-rendering.
+   - \\\
+
+**Why:**
+The extension guard is correct and catches the error safely. But it catches at the worst possible moment — after all editorial work is complete and user is waiting for draft URL. Moving the check upstream eliminates the wasted publish attempt entirely. Dense tables are predictable on every article with comparison data or financial details.
+
+**Secondary Recommendation:**
+Update publisher-pass.md on successful \publish_to_substack\ call to reflect actual outcome (draft URL, timestamp, any errors). Consider adding "Step 5a — Update publisher-pass.md on success" to Publisher skill.
 

@@ -250,3 +250,18 @@ The previous review (Fifth/Sixth pass) was performed by a non-vision model and r
 - **Recorded by:** Editor
 
 📌 Team update (2026-03-16 094957): Writer established dense table rendering pattern for Substack. Tables ≥5 columns with financial/comparison headers → PNG via renderer-core.mjs before publish. Applies to all future articles with dense tables (e.g., cap-comparison, draft-board templates). — decided by Writer
+
+
+## 2026-03-16: Team Retro — Tua Publish Workflow Process Fixes
+
+📌 **Team update (2026-03-16T16:59:13Z):** Lead completed concurrent retro on Miami Tua Substack draft publish flow. Three fixes identified:
+1. **Draft URL persistence gap** — Extension returns URL only in ephemeral tool response; needs durable write to pipeline.db + publisher-pass.md before Stage 7 complete.
+2. **Pre-flight table audit missing** — Dense markdown tables cause Substack parser to fail at publish time; should catch upstream in Editor/Publisher checklists (which Lead supported).
+3. **Stale escape-hatch language** — Publisher-pass.md template still reflects auth-failure workaround; should be removed per reliabilty improvements.
+
+Lead prioritized #1 (URL persistence) for Publisher skill implementation. Editor's upstream table audit (recommendation #1 & #2) directly supports this by preventing publish-time rework. **Decisions merged to decisions.md:**
+- lead-tua-publish-retro.md
+- editor-publisher-readiness-retro.md
+
+**Next steps:** Coordinate with Lead on Publisher skill updates. URL persistence is priority; table pre-check is supporting improvement.
+

@@ -645,3 +645,17 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 - 38 DB discrepancies exist (26 missing DB rows, 1 string stage, 3 drifts) — these are pre-existing and should be resolved by running `python content/article_board.py --repair` when ready.
 
 📌 Team update (2026-03-16 094957): Writer completed MIA Tua article with PNG-rendered table. Dense table rendering now standard pattern for Substack publisher (density block workaround). DB writeback deferred — requires PipelineState Python layer for stage advancement. — decided by Writer
+
+
+## 2026-03-16: Team Retro — Tua Publish Workflow Process Fixes
+
+📌 **Team update (2026-03-16T16:59:13Z):** Editor completed concurrent retro on publisher-readiness friction. Key finding: dense table density rules live only in extension.mjs (invisible to upstream agents). Editor recommended two upstream checks:
+1. Add table density pre-check to Publisher skill (Step 1, post-verification)
+2. Add flagging rule to Editor skill (Stage 6) for dense/comparative tables
+
+Both recommendations complement Lead's URL persistence fix (#1 priority) — together they prevent publish-time failures. **Decisions merged to decisions.md:**
+- lead-tua-publish-retro.md
+- editor-publisher-readiness-retro.md
+
+**Next steps:** Approve URL persistence as immediate priority; implement upstream table audit to prevent repeated friction on future articles.
+
