@@ -50,7 +50,7 @@ Title and subtitle are auto-extracted from the markdown if not provided:
 - **Title** → first `# Heading` line
 - **Subtitle** → first line that is `*wrapped in single asterisks*` (the standard subheadline format)
 
-The `team` parameter accepts full or partial team names — `"Seahawks"` matches `"Seattle Seahawks"`. If omitted, the draft is created without a section assignment (appears in the general feed).
+The `team` parameter accepts full or partial team names — `"Seahawks"` matches `"Seattle Seahawks"`. When provided (or auto-detected from `pipeline.db`), the team name is added as a tag on the draft. Specialist agents who contributed artifacts in the article directory are also auto-tagged.
 
 ---
 
@@ -134,7 +134,7 @@ A few things are best done by Joe during Stage 8 review — they don't need to b
 |---------|--------------|
 | **Cover image** | Upload/select in Substack editor |
 | **URL slug** | Edit in Substack editor (default: auto-generated from title) |
-| **Section/tags** | Set in Substack editor |
+| **Tags** | Auto-applied by the tool (team + specialist agents) |
 | **Scheduled publish time** | Set in Substack editor |
 | **Paywall placement** | Set in Substack editor |
 | **Twitter/X embeds** | Paste tweet URL in Substack editor |
@@ -241,6 +241,7 @@ Discovered by inspecting real Substack drafts via the API:
 ### Lead
 - After Editor approval, call `publish_to_substack(file_path: "content/articles/{slug}.md")`
 - The tool **auto-detects the team** by looking up `primary_team` in `content/pipeline.db` — no `team` param needed
+- Tags are applied automatically: the team name + any specialist agents whose artifacts are in the article directory
 - Pass `team:` explicitly only if the DB lookup won't have the right value (rare)
 - Pass explicit `title` and `subtitle` if you want to override the auto-extracted values
 - Give Joe the returned draft URL — that's all that's needed for Stage 8

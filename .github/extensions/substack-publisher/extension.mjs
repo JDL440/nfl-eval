@@ -11,7 +11,7 @@
 
 import { approveAll } from "@github/copilot-sdk";
 import { joinSession } from "@github/copilot-sdk/extension";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve, dirname, extname } from "node:path";
 import { homedir } from "node:os";
 
@@ -180,29 +180,89 @@ async function uploadImageToSubstack(subdomain, headers, imagePath, articleDir) 
     return data.url;
 }
 
-async function getSectionId(subdomain, headers, teamName) {
-    const res = await fetch(
-        `https://${subdomain}.substack.com/api/v1/publication/sections`,
-        { headers }
-    );
-    if (!res.ok) return null;
-    const sections = await res.json();
-    // Case-insensitive match on full name or partial (e.g. "Seahawks" matches "Seattle Seahawks")
-    const lower = teamName.toLowerCase();
-    const match =
-        sections.find((s) => s.name.toLowerCase() === lower) ||
-        sections.find((s) => s.name.toLowerCase().includes(lower));
-    return match ? match.id : null;
+// ─── Tags ────────────────────────────────────────────────────────────────────
+
+// NFL team → standard abbreviation (used to identify team-agent files in article dirs)
+const NFL_TEAM_ABBREVS = {
+    "arizona cardinals": "ari", "atlanta falcons": "atl", "baltimore ravens": "bal",
+    "buffalo bills": "buf", "carolina panthers": "car", "chicago bears": "chi",
+    "cincinnati bengals": "cin", "cleveland browns": "cle", "dallas cowboys": "dal",
+    "denver broncos": "den", "detroit lions": "det", "green bay packers": "gb",
+    "houston texans": "hou", "indianapolis colts": "ind", "jacksonville jaguars": "jax",
+    "kansas city chiefs": "kc", "las vegas raiders": "lv", "los angeles chargers": "lac",
+    "los angeles rams": "lar", "miami dolphins": "mia", "minnesota vikings": "min",
+    "new england patriots": "ne", "new orleans saints": "no", "new york giants": "nyg",
+    "new york jets": "nyj", "philadelphia eagles": "phi", "pittsburgh steelers": "pit",
+    "san francisco 49ers": "sf", "seattle seahawks": "sea", "tampa bay buccaneers": "tb",
+    "tennessee titans": "ten", "washington commanders": "was",
+};
+
+function getTeamAbbrev(teamName) {
+    if (!teamName) return null;
+    const lower = teamName.toLowerCase().trim();
+    if (NFL_TEAM_ABBREVS[lower]) return NFL_TEAM_ABBREVS[lower];
+    for (const [full, abbrev] of Object.entries(NFL_TEAM_ABBREVS)) {
+        if (full.includes(lower) || lower.includes(abbrev)) return abbrev;
+    }
+    return null;
 }
 
-async function createSubstackDraft({ subdomain, headers, title, subtitle, body, authorId, audience, sectionId }) {
+/**
+ * Scan the article directory for specialist agent artifacts and build a tag list.
+ *
+ * Tag convention:
+ *   - Team tag: the full team name as provided (e.g. "Arizona Cardinals")
+ *   - Specialist tags: agent role from filename, title-cased (e.g. "Cap", "Offense", "Defense")
+ *
+ * Excluded (not specialist artifacts):
+ *   discussion-prompt.md, discussion-summary.md, draft.md, draft-section.md
+ *
+ * The team agent file is identified by its filename starting with the standard
+ * NFL abbreviation (e.g. sf-position.md for San Francisco 49ers).
+ */
+function deriveTagsFromArticleDir(articleDir, teamName) {
+    const tags = [];
+    if (teamName) tags.push(teamName);
+
+    const EXCLUDED_FILES = new Set([
+        "discussion-prompt.md", "discussion-summary.md",
+        "draft.md", "draft-section.md",
+    ]);
+
+    const teamAbbrev = getTeamAbbrev(teamName);
+
+    try {
+        const files = readdirSync(articleDir);
+        for (const file of files) {
+            if (!file.endsWith(".md")) continue;
+            if (EXCLUDED_FILES.has(file)) continue;
+
+            const stem = file.replace(/\.md$/, "");
+            // Skip the team agent file (e.g. sf-position.md, ari-panel-response.md)
+            if (teamAbbrev && stem.startsWith(teamAbbrev + "-")) continue;
+
+            // Strip known suffixes to extract specialist role name
+            const role = stem.replace(/-(position|panel-response|panel)$/, "");
+            if (role === stem) continue; // no recognised suffix → not a specialist artifact
+
+            const tag = role.charAt(0).toUpperCase() + role.slice(1);
+            if (!tags.includes(tag)) tags.push(tag);
+        }
+    } catch {
+        // Directory may not exist or not be readable (single-file articles)
+    }
+
+    return tags;
+}
+
+async function createSubstackDraft({ subdomain, headers, title, subtitle, body, audience, tags }) {
     const payload = {
         type: "newsletter",
         audience: audience || "everyone",
         draft_title: title,
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
-        draft_bylines: authorId ? [{ id: authorId, is_guest: false }] : [],
+        postTags: tags || [],
     };
 
     const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts`, {
@@ -215,48 +275,7 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         const text = await res.text().catch(() => "");
         throw new Error(`Substack API error: HTTP ${res.status} — ${text.slice(0, 300)}`);
     }
-    const draft = await res.json();
-
-    // Section assignment via minimal PUT — sending only section fields avoids the full
-    // payload overwriting / conflicting with the already-created draft content.
-    // Also coerce sectionId to integer: the sections API may return a numeric string
-    // but the drafts API requires an actual number.
-    if (sectionId && draft.id) {
-        const numericSectionId = typeof sectionId === "string" ? parseInt(sectionId, 10) : sectionId;
-
-        const putRes = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draft.id}`, {
-            method: "PUT",
-            headers,
-            body: JSON.stringify({
-                section_id: numericSectionId,
-                draft_section_id: numericSectionId,
-                section_chosen: true,
-            }),
-        });
-        if (!putRes.ok) {
-            const errText = await putRes.text().catch(() => "");
-            console.error(`[warn] Could not set section on draft ${draft.id}: HTTP ${putRes.status} — ${errText.slice(0, 200)}`);
-        } else {
-            const updated = await putRes.json();
-            draft.section_id = updated.section_id ?? updated.draft_section_id ?? numericSectionId;
-        }
-
-        // Verification GET — fetch the persisted draft to confirm section actually stuck
-        try {
-            const getRes = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draft.id}`, {
-                method: "GET",
-                headers,
-            });
-            if (getRes.ok) {
-                const persisted = await getRes.json();
-                draft._verified_section_id = persisted.section_id ?? null;
-                draft._verified_draft_section_id = persisted.draft_section_id ?? null;
-                draft._verified_section_chosen = persisted.section_chosen ?? null;
-            }
-        } catch {}
-    }
-
-    return draft;
+    return await res.json();
 }
 
 // ─── Markdown → ProseMirror ──────────────────────────────────────────────────
@@ -352,6 +371,31 @@ async function markdownToProseMirror(markdown, uploadImage) {
             while (i < lines.length && lines[i].trimStart().startsWith("> ")) {
                 bqLines.push(lines[i].replace(/^\s*>\s?/, ""));
                 i++;
+            }
+            const normalizedBqLines = bqLines.map((l) => l.trim()).filter((l) => l !== "");
+            const firstBqLine = normalizedBqLines[0] || "";
+            const remainingBqLines = normalizedBqLines.slice(1);
+            const isTldrBlock =
+                /TLDR/i.test(firstBqLine.replace(/\*/g, "")) &&
+                remainingBqLines.length > 0 &&
+                remainingBqLines.every((l) => /^[-*+]\s+/.test(l));
+
+            if (isTldrBlock) {
+                content.push({
+                    type: "paragraph",
+                    content: parseInline(firstBqLine),
+                });
+                content.push({
+                    type: "bullet_list",
+                    content: remainingBqLines.map((t) => ({
+                        type: "list_item",
+                        content: [{
+                            type: "paragraph",
+                            content: parseInline(t.replace(/^[-*+]\s+/, "")),
+                        }],
+                    })),
+                });
+                continue;
             }
             content.push({
                 type: "blockquote",
@@ -581,22 +625,42 @@ function parseTable(lines) {
  */
 function extractMetaFromMarkdown(markdown) {
     // Normalize line endings (handles Windows CRLF)
-    const lines = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    const normalized = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines = normalized.split("\n");
     let title = null;
     let subtitle = null;
+    let titleLineIdx = -1;
+    let subtitleLineIdx = -1;
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         if (!title) {
             const h1 = line.match(/^#\s+(.+)$/);
-            if (h1) { title = h1[1].trim(); continue; }
+            if (h1) { title = h1[1].trim(); titleLineIdx = i; continue; }
         }
         if (title && !subtitle) {
             const italic = line.match(/^\*(.+)\*$|^_(.+)_$/);
-            if (italic) { subtitle = (italic[1] || italic[2]).trim(); break; }
+            if (italic) { subtitle = (italic[1] || italic[2]).trim(); subtitleLineIdx = i; break; }
+            // Only look for subtitle in the lines immediately after title (skip blanks)
+            if (line.trim() !== "") break;
         }
     }
 
-    return { title, subtitle };
+    // Build body markdown with title/subtitle stripped — they're sent separately as draft_title/draft_subtitle
+    const skipLines = new Set([titleLineIdx, subtitleLineIdx].filter((i) => i >= 0));
+    const bodyLines = lines.filter((_, i) => !skipLines.has(i));
+    // Trim any leading blank lines left after stripping
+    while (bodyLines.length > 0 && bodyLines[0].trim() === "") bodyLines.shift();
+    // If the file uses a top-of-body horizontal rule under the subtitle, strip it too.
+    // In Substack the title/subtitle render separately, so keeping that separator creates
+    // an awkward empty divider before the actual article body.
+    if (bodyLines.length > 0 && /^(-{3,}|\*{3,}|_{3,})$/.test(bodyLines[0].trim())) {
+        bodyLines.shift();
+        while (bodyLines.length > 0 && bodyLines[0].trim() === "") bodyLines.shift();
+    }
+    const bodyMarkdown = bodyLines.join("\n");
+
+    return { title, subtitle, bodyMarkdown };
 }
 
 // ─── Extension entry ─────────────────────────────────────────────────────────
@@ -610,6 +674,7 @@ const session = await joinSession({
                 "Publishes a markdown article file to Substack as a draft ready for review and one-click publishing. " +
                 "Reads auth from SUBSTACK_TOKEN and SUBSTACK_PUBLICATION_URL in .env. " +
                 "Auto-extracts title and subtitle from the markdown if not provided. " +
+                "Automatically tags the draft with the team name and any participating specialist agents. " +
                 "Returns the Substack editor URL so the author can review and publish.",
             parameters: {
                 type: "object",
@@ -639,9 +704,9 @@ const session = await joinSession({
                     team: {
                         type: "string",
                         description:
-                            "NFL team name to route this article to the correct Substack section. " +
+                            "NFL team name to tag on the Substack draft. " +
                             'Full name (e.g. "Seattle Seahawks") or partial (e.g. "Seahawks"). ' +
-                            "If omitted, the draft is created without a section assignment.",
+                            "If omitted, auto-detected from pipeline.db.",
                     },
                 },
                 required: ["file_path"],
@@ -685,6 +750,8 @@ const session = await joinSession({
                     const extracted = extractMetaFromMarkdown(markdown);
                     const title = args.title || extracted.title;
                     const subtitle = args.subtitle || extracted.subtitle || "";
+                    // Use bodyMarkdown (title/subtitle stripped) — they're sent as draft_title/draft_subtitle
+                    const bodyMarkdown = extracted.bodyMarkdown;
 
                     if (!title) {
                         return {
@@ -698,12 +765,9 @@ const session = await joinSession({
                     // Auth
                     const headers = makeHeaders(token);
                     const subdomain = extractSubdomain(pubUrl);
-
-                    // Fetch author ID — needed to route section assignment; bylines are cleared after creation
                     await session.log(`Connecting to ${subdomain}.substack.com…`, { ephemeral: true });
-                    const authorId = await getAuthorId(subdomain, headers);
 
-                    // Resolve team: explicit arg → DB lookup → null (no section)
+                    // Resolve team: explicit arg → DB lookup → null
                     let teamName = args.team || null;
                     if (!teamName) {
                         const dbTeam = await lookupTeamFromDb(args.file_path, process.cwd());
@@ -713,28 +777,16 @@ const session = await joinSession({
                         }
                     }
 
-                    // Resolve team section ID if we have a team name
-                    let sectionId = null;
-                    if (teamName) {
-                        await session.log(`Looking up section for "${teamName}"…`, { ephemeral: true });
-                        sectionId = await getSectionId(subdomain, headers, teamName);
-                        if (!sectionId && args.team) {
-                            // Only fail hard if team was explicitly specified — silently skip if auto-derived
-                            return {
-                                textResultForLlm:
-                                    `Error: No Substack section found matching "${teamName}".\n\n` +
-                                    `Check available sections at: https://${subdomain}.substack.com/publish/settings/sections`,
-                                resultType: "failure",
-                            };
-                        }
-                    }
-
-                    // Convert markdown → ProseMirror (local images auto-uploaded)
-                    await session.log("Converting article to Substack format…", { ephemeral: true });
+                    // Derive tags from team name + specialist artifacts in the article directory
                     const articleDir = dirname(filePath);
+                    const tags = deriveTagsFromArticleDir(articleDir, teamName);
+                    await session.log(`Tags: ${tags.length > 0 ? tags.join(", ") : "(none)"}`, { ephemeral: true });
+
+                    // Convert markdown → ProseMirror (title/subtitle already sent separately; local images auto-uploaded)
+                    await session.log("Converting article to Substack format…", { ephemeral: true });
                     const uploadImage = (localPath) =>
                         uploadImageToSubstack(subdomain, headers, localPath, articleDir);
-                    const body = await markdownToProseMirror(markdown, uploadImage);
+                    const body = await markdownToProseMirror(bodyMarkdown, uploadImage);
 
                     // Create draft
                     await session.log("Creating draft on Substack…", { ephemeral: true });
@@ -744,26 +796,17 @@ const session = await joinSession({
                         title,
                         subtitle,
                         body,
-                        authorId,
                         audience: args.audience || "everyone",
-                        sectionId,
+                        tags,
                     });
 
                     const draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
-                    const confirmedSection = draft.section_id || draft.draft_section_id || null;
-                    const verifiedDraftSectionId = draft._verified_draft_section_id;
-                    const verifiedSectionChosen = draft._verified_section_chosen;
-                    const numSectionId = typeof sectionId === "string" ? parseInt(sectionId, 10) : sectionId;
-                    const sectionPersisted = verifiedDraftSectionId != null && verifiedDraftSectionId === numSectionId && verifiedSectionChosen === true;
                     return (
                         `✅ Substack draft created!\n\n` +
                         `**Title:** ${title}\n` +
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
                         `**Audience:** ${args.audience || "everyone"}\n` +
-                        (sectionId ? `**Section requested:** ${teamName} (id ${sectionId})\n` : "") +
-                        `**Section confirmed by PUT:** ${confirmedSection ?? "null — Substack ignored section_id"}\n` +
-                        (verifiedDraftSectionId !== undefined ? `**Section verified by GET:** draft_section_id=${verifiedDraftSectionId}, section_chosen=${verifiedSectionChosen}\n` : "") +
-                        (sectionId ? `**Section persisted:** ${sectionPersisted ? "✅ YES" : "❌ NO — section did not stick"}\n` : "") +
+                        `**Tags:** ${tags.length > 0 ? tags.join(", ") : "(none)"}\n` +
                         `**Draft ID:** ${draft.id}\n\n` +
                         `**Review & publish:** ${draftUrl}\n\n` +
                         `Open the URL above to review formatting, add a cover image, and publish.`

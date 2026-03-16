@@ -130,7 +130,7 @@ Every article has a depth level. Set it at Stage 1, adjust at Stage 2 or Stage 5
 
 **Stage 5 (Article Drafting):** Writer tunes headline style, data density, and explanation depth to the level. Level 1 headlines lean narrative; Level 3 headlines can lead with numbers.
 
-**Stage 7 (Publisher Pass):** Depth level informs Substack section assignment and tag choices.
+**Stage 7 (Publisher Pass):** Depth level informs tag choices.
 
 ### Adjusting depth level
 
@@ -400,13 +400,13 @@ publish_to_substack(
 )
 ```
 
-**Team routing is automatic.** The tool reads `primary_team` from `content/pipeline.db` via the article path and routes the draft to the correct NFL team section. You can override by passing `team: "{Team Name}"` explicitly, but this is rarely needed.
+**Team tagging is automatic.** The tool reads `primary_team` from `content/pipeline.db` via the article path and tags the draft with the team name. Specialist agents whose artifacts are in the article directory are also auto-tagged. You can override by passing `team: "{Team Name}"` explicitly, but this is rarely needed.
 
 The tool:
 1. Reads `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` from `.env`
 2. Looks up `primary_team` from `content/pipeline.db` (matched by `article_path`)
 3. Converts the markdown article to Substack's ProseMirror format
-4. Creates a draft on Substack, assigned to the team's section
+4. Creates a draft on Substack, tagged with team + specialist agents
 5. Returns the draft editor URL
 
 Title and subtitle are auto-extracted from the markdown if not provided (first `# Heading` and first `*italic*` line).
@@ -430,8 +430,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 - [ ] "Next from the panel" tease at end points to a real upcoming article
 
 ### Substack Metadata (Joe sets in editor after draft is created)
-- [ ] Section assignment: (e.g., "Free Agency," "Draft," "Game Recaps")
-- [ ] Tags: 3–5 tags (team name, topic, player names, "expert-panel")
+- [ ] Tags: auto-applied by tool (team + specialist agents); add extra tags manually if desired
 - [ ] URL slug: clean, lowercase, hyphenated (e.g., `witherspoon-extension-analysis`)
 - [ ] Cover image: selected in Substack editor
 - [ ] Paywall setting: free / paid-only / preview
@@ -460,7 +459,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 ### Process
 
 1. **Joe opens the draft URL** returned by `publish_to_substack`
-2. **Joe reviews** in the Substack editor: formatting, cover image, metadata (tags, slug, section), schedule
+2. **Joe reviews** in the Substack editor: formatting, cover image, metadata (tags, slug), schedule
 3. **Joe approves** — or sends back to Stage 6 (editorial issues) or Stage 7 (re-run the tool)
 4. **Joe clicks Publish** (or schedules) in the Substack editor
 5. **Post-publish cleanup:**
@@ -494,7 +493,7 @@ These tasks do not need a heavy model. Using gpt-5-mini here costs near-zero and
 |-------|------|----------------|-----------------|
 | **Stage 1** | Idea viability triage | "Given this article idea and the current NFL calendar, is this worth producing now? Answer: YES/NO with a 1-sentence rationale." | YES or NO + 1 sentence |
 | **Stage 3** | Panel composition recommendation | "Given this article type ({type}), depth level ({level}), and available agents ({list}), recommend the optimal {N} agents to include. For each agent, give a 1-sentence rationale." | JSON array of agent names + rationale |
-| **Stage 7** | Article metadata extraction | "Extract from this article: primary_team, secondary_teams (array), topic_tags (3–5), Substack section name (e.g. 'Free Agency', 'Draft', 'Analysis'). Return as JSON." | JSON object |
+| **Stage 7** | Article metadata extraction | "Extract from this article: primary_team, secondary_teams (array), topic_tags (3–5). Return as JSON." | JSON object |
 | **Stage 8** | History entry draft | "Summarize this article's key facts in 3–5 bullets for an agent's history file. Include: topic, key numbers, recommendation, any notable disagreement. Max 200 words." | Bullet list |
 | **Ongoing** | History summarization | See [history-maintenance skill](../history-maintenance/SKILL.md) | Compressed history block |
 

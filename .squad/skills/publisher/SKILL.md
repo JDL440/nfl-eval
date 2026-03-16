@@ -93,7 +93,7 @@ publish_to_substack(
   title: "{final headline}",
   subtitle: "{1-line hook for email preview}",
   audience: "everyone",
-  team: "{Team Name}"              ← routes draft to the team's Substack section
+  team: "{Team Name}"              ← auto-tags the draft with this team (+ specialist agents)
 )
 ```
 
@@ -111,7 +111,7 @@ Post the following to the article thread:
 **Pre-publish checklist for Joe (Stage 8):**
 - [ ] Cover image: select in Substack editor (generated image is in article body; also set as post thumbnail)
 - [ ] URL slug: verify it's clean and SEO-friendly
-- [ ] Section/tags: assign section + 3–5 tags (team, topic, player names, "expert-panel")
+- [ ] Section/tags: tags are auto-applied by the tool (team + specialist agents); add any extras manually
 - [ ] Paywall setting: free / paid-only / preview paywall
 - [ ] Publish date/time: per editorial calendar (default: Tuesday 10 AM PT)
 - [ ] Email send: yes/no (default: yes)

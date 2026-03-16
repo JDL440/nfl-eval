@@ -373,4 +373,31 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 
 **Pattern:** GH CLI batch creation via Python loop with 0.5s delay works cleanly for 28 issues. Template string substitution (ABBR + full name) keeps formatting consistent. All old-format issues (#9–39, closed) are superseded by these generic pipeline starters.
 
+### Publishing: Sections → Tags Migration (2026-03-16)
+
+**Change:** Removed Substack section assignment and byline metadata from the publisher extension. Replaced with `postTags` — each draft is now tagged with the team name + any participating specialist agents.
+
+**Why:**
+- Sections: Joe discovered that per-team sections aren't the right Substack taxonomy. Tags are the correct organizing mechanism.
+- Bylines: `draft_bylines` payload was breaking draft creation. Clearing it fixes the issue.
+
+**Tag convention:**
+- Team tag: full team name as-is (e.g. "San Francisco 49ers")
+- Specialist tags: agent role from position/panel filenames, title-cased (e.g. "Cap", "Offense", "Defense")
+- Derived automatically from article directory artifacts; no manual input needed
+
+**What was removed:**
+- `getSectionId()` function and all section lookup/PUT/verify logic
+- `draft_bylines` / `authorId` from draft payload
+- Section-related success output (replaced with tag report)
+
+**Files changed:**
+- `.github/extensions/substack-publisher/extension.mjs` — core code changes
+- `.squad/skills/substack-publishing/SKILL.md` — updated to reflect tags instead of sections
+- `.squad/skills/publisher/SKILL.md` — updated checklist and tool call docs
+- `.squad/skills/substack-article/SKILL.md` — updated publishing description
+- `.squad/skills/article-lifecycle/SKILL.md` — updated Stage 7/8 references
+
+**Validated:** `node --check` syntax pass + functional tag derivation test against real article directories (sf-2026-offseason, ari-2026-offseason).
+
 

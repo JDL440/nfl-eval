@@ -214,7 +214,7 @@ publish_to_substack(
 )
 ```
 
-**Team section is auto-detected** from `primary_team` in `content/pipeline.db` — no need to pass `team` manually. The tool looks up the article by its path, finds the team, and routes to the correct section. Pass `team:` explicitly only if you need to override.
+**Team tag is auto-applied** from `primary_team` in `content/pipeline.db` — no need to pass `team` manually. The tool also auto-tags any specialist agents whose artifacts are in the article directory. Pass `team:` explicitly only if you need to override.
 
 The tool auto-creates a Substack draft and returns an editor URL. Hand the URL to Joe for final review and one-click publish.
 
