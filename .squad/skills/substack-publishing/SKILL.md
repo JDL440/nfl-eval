@@ -85,7 +85,7 @@ Standard markdown tables do **not** survive as native HTML tables in this workfl
 | 2 | WR — No separator | Douglas (slot), thin boundary corps, no vertical threat | 🔴 HIGH |
 ```
 
-For denser or more visual tables, use the `render_table_image` extension to create a local PNG and embed that instead of relying on inline conversion.
+For denser or more visual tables, use the `render_table_image` extension to create a deterministic local PNG and embed that instead of relying on inline conversion. The renderer writes assets under `content/images/{slug}/`, and article references from `draft.md` should typically resolve as `../../images/{slug}/file.png`.
 
 ### Images
 
