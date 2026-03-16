@@ -386,3 +386,7 @@ _Last updated: 2026-03-12_
 6. ✅ **Coaching stability is the bright spot.** O'Connell + Flores + Frank Smith is a strong coaching trio. The Flores extension was crucial — he's the most important non-player on the roster.
 
 📌 Media update (2026-03-13): Kirk Cousins now UFA (released by ATL, not traded). Russell Wilson also UFA with minimal market. QB landscape shifted — potential veteran QB options available if McCarthy doesn't develop.
+
+7. 📌 **Issue #65 workflow (2026-03-16):** Lead completed idea generation and discussion prompt stages. The issue had a strong, well-researched angle ("No GM, No Plan, Two Quarterbacks") and a comprehensive discussion prompt with 3-agent panel (MIN + Cap + Offense). When picking up the issue at `stage:discussion-prompt`, verified the panel was finalized in the discussion-prompt.md artifact, then advanced directly to `stage:panel-ready` by updating the GitHub label and posting a panel composition comment. The discussion prompt was already complete — no additional research or rewrite needed.
+
+8. 📌 **Article pipeline stage transitions:** `stage:discussion-prompt` → `stage:panel-ready` happens once the panel is finalized in the discussion-prompt.md file. The next agent (Lead) spawns the panel discussion. Pattern: verify panel section is complete, update label, post comment documenting the panel and stage advancement.

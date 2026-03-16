@@ -17,7 +17,7 @@
 
 | # | Title | Topic | Agents Used | Status | Editor Review |
 |---|-------|-------|-------------|--------|---------------|
-| 3 | The Patriots Have ~$44 Million, the #4 Pick, and a Franchise QB on a Rookie Deal. Our Expert Panel Can't Agree on What to Do Next. | Drake Maye Year 2 — NE offseason strategy | NE, Cap, Offense, Draft | 🚀 In Production (draft complete, pending Substack publish) | ✅ Reviewed (2 corrections applied) |
+| 3 | The Patriots Have ~$44 Million, the #4 Pick, and a Franchise QB on a Rookie Deal. Our Expert Panel Can't Agree on What to Do Next. | Drake Maye Year 2 — NE offseason strategy | NE, Cap, Offense, Draft | ✅ Published — [Substack Draft](https://nfllabstage.substack.com/publish/post/191080862) | ✅ Reviewed (2 corrections applied) |
 
 ---
 

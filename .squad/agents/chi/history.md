@@ -112,3 +112,10 @@ _Last updated: 2026-03-12_
 8. 📊 Division is brutal: DET is loaded, GB added Micah Parsons, MIN adding defensive veterans. Bears must nail 2026 draft.
 
 📌 Media update (2026-03-14): Signed Devin Bush (LB, 3yr/$30M) + Jedrick Wills (OT, 1yr). Released Edmunds (→ NYG). Bush replaces Edmunds at LB. Wills competes for LT.
+
+### Issue #62 — Bears 2026 Offseason Article (2026-03-16)
+9. ✅ **Article angle identified:** "Restraint vs. urgency" in the Caleb Williams cheap-QB window is the defining story of the Bears' 2026 offseason. Poles trading away DJ Moore and letting three safeties walk while DET/GB/MIN add premium talent creates a nationally relevant "contender that subtracted" narrative.
+10. 📊 **Maxx Crosby non-trade is the crystallizing moment:** Poles confirmed he explored the trade but walked away from the 2 1sts + player ask. The ghost of the Khalil Mack era (2018 trade → 12-4 → 6-year playoff drought) informs every aggressive-vs.-conservative decision. This debate will define Poles' GM tenure.
+11. 📊 **Safety exodus + secondary rebuild is the biggest roster risk:** Dennis Allen's defense led the NFL in takeaways (33) in 2025, but all three starting safeties (Brisker, CJGJ, Byard) are gone. Coby Bryant ($40M/3yr) is solid but not a Pro Bowl playmaker. Can the scheme survive a full positional reset at the most critical DB spot?
+12. 📊 **Williams' window is NOW:** Years 3-4 (2026-2027) are at ~$1M and ~$12.6M cap hits. Starting 2028, his extension (~$55M+ AAV) makes every other roster move harder. The Bears are stockpiling draft capital instead of buying talent. History says this is either disciplined genius or catastrophic missed opportunity.
+13. 📊 **NFC North is a sprint, not a marathon:** DET has $35.9M cap space + Hutchinson returning. GB traded for Micah Parsons. MIN added Allen + Hargrave. The Bears are the only NFC North team playing conservative. Is Poles building for sustained success or falling behind in a knife fight?

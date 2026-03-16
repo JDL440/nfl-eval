@@ -122,3 +122,43 @@ _Last updated: 2026-03-12_
 5. **Carolina is the division threat.** Panthers won the NFC South, made playoffs, and added Phillips ($120M). They're the standard now.
 6. **OL is actually solid.** Banks, Edwards, McCoy, Ruiz, Fuaga is a quality starting five. Guard spot is locked down.
 7. **Secondary needs CB2 badly.** Losing Taylor to TEN left a gaping hole opposite McKinstry. Riley is unproven — likely a draft target.
+
+---
+
+## Learnings
+
+### 2026-03-16 — Issue #68: Article Panel Composition
+
+**Context:** Picked up issue #68 (Saints 2026 offseason article) at Stage 2 (discussion prompt already created). Advanced it to Stage 3 (panel composition complete) and Stage 4-ready (`stage:panel-ready`).
+
+**What I did:**
+1. Read existing artifacts: `idea.md` and `discussion-prompt.md` at `content/articles/no-2026-offseason/`
+2. Created `panel-composition.md` following the established pattern (HOU/BUF/CAR templates)
+3. Selected 3-agent core panel: NO + Cap + Offense (with Draft as optional 4th)
+4. Updated GitHub issue #68 labels: `stage:discussion-prompt` → `stage:panel-ready`
+5. Posted Stage 3 completion comment with panel rationale
+
+**Key decisions:**
+- **NO** (required): team context, Shough evaluation, 2026 roster depth, locker room temperature
+- **Cap** (required): dead money mechanics, 2027 cap explosion, Olave extension structure, historical comps
+- **Offense** (required): Kellen Moore Year 2 scheme fit, Shough development curve, #8 pick schematic need
+- **Draft** (optional): #8 overall pick analysis — WR vs. CB vs. EDGE, BPA vs. need
+- **Did NOT include Defense**: defensive gaps (CB2, EDGE) are symptoms of the cap problem, not distinct angles. NO can cover depth chart needs; Draft can evaluate defensive picks if needed.
+
+**Learnings:**
+1. **Stage 3 is about validating the panel, not inventing a new one.** The discussion prompt already suggested NO + Cap + Offense. Panel composition confirms that suggestion with detailed rationale — explaining why each agent adds a distinct angle and why others were excluded.
+
+2. **Depth Level 2 = 3-4 agents max.** The Beat articles should have focused expert panels (3 core + 1 optional), not sprawling 5-6 agent discussions. The panel size limits in `.squad/config/models.json` exist to prevent dilution.
+
+3. **Team agent is always on the panel for team-specific articles.** NO owns the Saints' 2025 season context, depth chart reality, and locker room temperature — knowledge that no specialist can replicate. Any Saints article without NO would lack connective tissue.
+
+4. **Expected disagreements are a feature, not a bug.** The panel composition document explicitly flags where Cap (optimistic on 2027 payoff) and NO (skeptical if gaps aren't addressed) will likely clash. These disagreements create the article's tension.
+
+5. **Panel composition artifact structure** (validated via HOU/CAR/BUF examples):
+   - Panel table with specific questions for each agent
+   - Rationale section explaining why each agent was chosen and why others were excluded
+   - Coverage check (which article components are covered by which agents)
+   - Expected disagreements table
+   - Compliance check (depth level panel size limits)
+
+**Next step:** Issue #68 is now at `stage:panel-ready`. Lead can spawn the 3-agent panel (NO + Cap + Offense) in parallel for Stage 4 discussion.

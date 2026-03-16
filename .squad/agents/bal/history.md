@@ -119,3 +119,5 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-13): Maxx Crosby trade VOIDED (failed physical — knee). BAL keeps draft picks but pass rush remains critical unaddressed need. Remove Crosby from roster projections.
+
+📌 Panel position written (2026-03-16): Contributed BAL perspective to hypothetical Crosby trade article (issue #46). Article folder: `content/articles/bal-2026-offseason/`. Core recommendation: Trade is defensible ONLY if Linderbaum is retained. Hardest tradeoff: 2027 first-round pick if season stumbles. Key insight: Three consecutive EDGE draft whiffs (Oweh, Ojabo, Green → 12 combined sacks in 2025) justify departure from draft-and-develop model. Position emphasized Linderbaum as non-negotiable due to center-QB chemistry with Lamar.

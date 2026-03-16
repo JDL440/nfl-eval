@@ -277,7 +277,7 @@ async function generateArticleImages(params) {
                 filename
             );
 
-            const relativePath = `./images/${article_slug}/${savedName}`;
+            const relativePath = `../../images/${article_slug}/${savedName}`;
             const altText = imageType === "cover"
                 ? `Cover image: ${article_title}`
                 : `${article_title} — ${imageType} image ${typeIndex[imageType]}`;

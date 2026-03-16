@@ -121,7 +121,29 @@ _Source: ESPN schedule — fetched 2026-03-12_
 - ✅ Washington is the rising NFC East threat, not just Philadelphia anymore
 - 📊 This is a **transition year** — building for 2027 when cap space explodes and Dart/Carter/Nabers/Skattebo core matures
 - 📊 The #5 pick is the most important asset — must hit on a playmaker (WR or trade down for capital)
+- 📊 **Mock draft consensus (2026-03-16):** Carnell Tate (WR, Ohio State) appears in 33%+ of mocks at #5 — still the favorite, not Sonny Styles. Jordyn Tyson (WR, Arizona State) is the next-most-common WR projection. Styles appears less frequently, mostly in defense-prioritized or BPA scenarios.
+- ⚠️ **Malik Nabers ACL injury:** Rehabbing from ACL tear suffered in 2025. This adds significant urgency to the WR2 need — the Giants cannot assume Nabers is healthy Week 1, and they cannot assume Austin/Mooney are long-term answers. The rookie window argument for drafting Tate/Tyson is even stronger with Nabers's health uncertain.
+- 📊 **NFC East power shift (2026):** Washington is definitively the most improved team this offseason (Oweh $100M, Chenal, Robertson, Okonkwo, plus Daniels entering Year 2). Philadelphia has been weakened significantly by departures (Dean, Blankenship, Phillips to CAR). Dallas retains offensive firepower but defensive concerns persist. The division gap is narrowing — waiting until 2027 to compete risks falling permanently behind WSH.
+- 📊 **Historical QB window lesson:** The Bengals exploited Burrow's rookie deal by drafting Chase #5 in Year 2 and reached a Super Bowl. The Bears prioritized defense over weapons for Fields and destroyed his development. When you have a franchise QB on a rookie deal, the 2-3 year window before the $250M extension is the most valuable asset in football — it must be maximized, not preserved for later.
 
 📌 Media update (2026-03-13): Signed Tremaine Edmunds (3yr/$36M LB) and Calvin Austin (1yr/$4.5M WR). LB room upgraded significantly.
 
 📌 Media update (2026-03-14): Signed Elijah Campbell (S). Minor safety depth addition.
+
+📌 Article work (2026-03-15): Picked up issue #59 (NYG 2026 offseason article). Completed Stages 1-3:
+- **Idea generated:** "Ravens South or Dart's Team?" — franchise identity angle around #5 pick (Styles vs. Tate) as proxy for whether Harbaugh builds Baltimore 2.0 or adapts to Dart's rookie window
+- **Discussion prompt written** with 3-path structure (Defense-first / Arm Dart / Trade down)
+- **Panel composed:** NYG + Cap + Draft + Defense (4 agents, all justified)
+- Score: 11/12 — strong timeliness (pre-draft), unique framing, high reader value
+- Key research findings: Dart's 24 total TDs led all rookies; Mooney/Austin are WR stopgaps not solutions; 2027 cap projects $112-129M; WSH and DAL both improved significantly
+- Isaiah Likely signing ($40M TE) is undersold — he's the Harbaugh offensive identity piece, not just a pass-catcher
+- Darnell Mooney reunion with Matt Nagy is a smart but short-term play
+- The "diminishing returns on defense" argument is real — after Adebo/Holland/Edmunds/Newsome, does Styles at #5 meaningfully improve a unit that's already been overhauled?
+
+📌 Article work (2026-03-16): Completed Stage 4 (Panel Discussion) — NYG position written:
+- **Position framed:** The Giants are on a 2027 timeline (patient rebuild, $112-129M cap explosion) but Dart's Year 1 breakout (24 TDs, Eagles upset) forces the question: is 2027 soon enough?
+- **NFC East context:** WSH most improved (Oweh, Chenal, Robertson, Okonkwo + Daniels), DAL offensive firepower intact (Pickens, Gary), PHI weakened but core remains. Division gap narrowing fast — waiting until 2027 risks falling further behind.
+- **Timeline tension:** Harbaugh's patient infrastructure build ($210M+ defense-first) vs. Dart's rookie window (2-3 years to exploit before $250M extension resets cap). Bengals/Burrow/Chase succeeded by arming the QB; Bears/Fields failed by prioritizing defense.
+- **Strategic fork:** Sonny Styles completes the 2027 rebuild; Carnell Tate/Jordyn Tyson accelerates to match division trajectory. Both can't be right. The #5 pick decides which rebuild this is.
+- **Key insight:** Carnell Tate is still consensus #5 mock pick (33%+ of drafts), not Sonny Styles. Jordyn Tyson also in WR mix. Malik Nabers' ACL injury (rehabbing) adds urgency to WR2 need — can't rely on health.
+- **Verdict:** Framed the question for Cap (Is 2027 financially optimal?), Draft (Tate vs. Styles prospect value), and Defense (Is Styles needed after FA rebuild?) to answer.

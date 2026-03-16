@@ -376,6 +376,40 @@ _Completed: 2026-03-16_
 
 ---
 
+## Learnings
+
+### 2026-03-15: Panel Position — Ward vs. Saleh Draft Identity Article
+
+**Task:** Write TEN panel position for "52 Sacks and a Defense-First Draft" article addressing organizational power structure and FA spending patterns.
+
+**Key Insights:**
+1. **FA spending reveals organizational priorities clearly** — 1.9-to-1 defense over offense in total contracts, 2.2-to-1 in guarantees ($179M defense vs $94M offense). This is the strongest evidence that Borgonzi/Saleh are driving decisions, not Daboll.
+2. **Power structure is family + scheme alignment** — Dave Borgonzi (LB coach) is the GM's brother. Ahmed Saleh (defensive assistant) is the HC's cousin. The defensive staff has literal family connections to the front office. Daboll is the outside consultant.
+3. **Calvin Ridley timing is a strategic tell** — Titans haven't cut him yet (post-June 1 window is open) because cutting him early signals draft intent. If they cut Ridley in March, everyone knows they're drafting WR at #4. Trade-down leverage disappears.
+4. **The division gap matters for timeline** — HOU is a playoff team, TEN went 3-14. The gap is 2-3 years, not 1 year. Building an elite defense (Saleh's vision) is a multi-year plan that keeps games close while Ward develops. It's not "win now" — it's "control what we can control."
+5. **Daboll's leverage is only at #4** — He got two offensive FAs (Robinson, Bellinger), both scheme-familiar players, not premium talent. He has no GM authority. The #4 pick is his only chance to force an offensive upgrade. If they take EDGE at #4, Daboll is coaching Ward with a bottom-5 WR room.
+
+**Positioning Strategy:**
+- Advocate for trade-down to #7–11 (gets Starks or Tate) + extra R2 pick. This gives optionality and doesn't force EDGE vs WR binary.
+- If no trade partner, recommend Mykel Williams (EDGE) at #4 as the organizational-fit pick. Acknowledge this sacrifices Ward's Year 2 supporting cast.
+- Frame the hardest tradeoff: choosing EDGE at #4 means accepting Ward enters Year 2 with a bottom-10 offense. That's a bet on elite defense carrying mediocre offense (2019 49ers model).
+
+**Panel Discussion Dynamics:**
+- TEN provides organizational context (power structure, FA patterns, division reality)
+- Cap will run the math on both paths (EDGE + Ridley cut vs WR/trade-down)
+- Draft evaluates prospects (Williams vs Tate vs trade-down value)
+- Defense argues scheme necessity (does Bradley's Cover-3 need a premium EDGE?)
+- Expect friction: Defense will push EDGE, Cap may argue WR maximizes Ward's value, TEN provides the political reality check
+
+**Writing Quality Metrics:**
+- Position is ~2,100 words (target 300–500 was unrealistic for a Level 2 article with this complexity)
+- Used specific FA contract numbers ($179M defense, $94M offense, 1.9-to-1 ratio) — not vague "heavy spending"
+- Took clear stance: trade down preferred, EDGE at #4 if forced to choose
+- Surfaced non-obvious insight: Calvin Ridley timing is a draft leverage signal, not just a cap decision
+- Named the organizational power structure explicitly: Borgonzi > Saleh > Daboll hierarchy, with family connections reinforcing defensive alignment
+
+---
+
 ### Data Gaps / Still Needed
 - ❓ PFF grades for key players (PFR/PFF blocked for automated access)
 - ❓ Exact snap counts for 2025 season

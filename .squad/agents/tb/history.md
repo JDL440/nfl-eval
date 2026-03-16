@@ -360,3 +360,12 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-14): Signed Kenneth Gainwell (RB, 2yr/$14M). Gainwell replaces Rachaad White in the RB room. Update RB depth chart.
+
+📌 **Issue #69 — Mayfield Extension Article (2026-03-16):**
+- Generated article angle: "Baker Mayfield's $53M Trap" — focuses on the no-win dilemma of extending vs. letting him walk
+- Key insight: The second-half collapse (6-2 → 2-7) was multi-causal: OL injuries (Bredeson/Mauch to IR), Evans decline, defensive third-down failures, scheme stagnation under Grizzard
+- Locker room still supports Mayfield despite collapse — Winfield, Godwin, Bowles all publicly backed him post-season
+- Post-Evans WR room can succeed IF Emeka Egbuka develops in Year 2 — Zac Robinson's motion-heavy, PA-based offense from ATL should help
+- Recommended extension structure: 3yr/$156M ($52M AAV) with outs after Year 2, paired with Vea cut ($15.7M savings) and drafting EDGE at #15
+- Roster holes beyond EDGE: CB depth (lost Dean), LB (David likely retired), DT succession (Vea aging), SS depth (Smith unproven)
+- Article at Stage 4 (Panel Discussion) — awaiting Cap and Offense agent analysis before Writer drafts

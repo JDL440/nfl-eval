@@ -496,3 +496,69 @@ Price's case is more analogous to a high school athlete recovering from ACL surg
 **Recommendation: PROCEED with pre-draft physical. If medicals clear the thresholds above, Price at #64 is a sound pick with manageable medical risk. The Achilles history from 2022 should be treated as a footnote, not a dealbreaker — provided the physical confirms what 41 games of tape already suggest.**
 
 ⚠️ **Disclaimer:** This is a risk assessment based on publicly available data. I am an analyst, not a physician. All conclusions should be verified against Seattle's private medical evaluation and the NFL Combine medical check results.
+
+---
+
+### 12. Detroit Lions Safety Week 1 Readiness Assessment: Branch (Achilles) & Kerby Joseph (Knee)
+_Requested by: Backend (Squad Agent) — Detroit safety dual injury analysis_
+_Assessment date: 2026-03-15_
+_Confidence: 🟡 MODERATE — based on public recovery timelines and positional movement demands_
+
+#### A. INJURY PROFILES
+
+| Player | Injury | Position | Timeline Context |
+|--------|--------|----------|------------------|
+| **Brian Branch** | Achilles (season-ending, 2025) | S | 10-14 month standard recovery window |
+| **Kerby Joseph** | Knee (season-ending, 2025) | S | Variable; depends on specific injury (ACL 9-12 mo, other ligaments shorter) |
+
+#### B. WEEK 1 RETURN EXPECTATIONS BY INJURY TYPE
+
+**Achilles (Branch):**
+- Standard return window: 10-14 months
+- NFL safeties face ELEVATED risk due to explosive change-of-direction demands
+- If surgery occurred mid-season 2025 (e.g., October), aggressive Week 1 return is on the early edge of the window
+- Historical parallel: DBs return closer to 12-14 months due to lateral movement requirements
+- **Week 1 probability:** 📊 ~50-60% if surgery was early fall; drops to ~30% if late-season injury
+
+**Knee (Joseph):**
+- If ACL: 9-12 month window — safeties often closer to 12 due to coverage demands
+- If isolated MCL/meniscus: faster return, possibly 6-8 months
+- Without confirmed injury specifics, assume ACL timeline for planning
+- **Week 1 probability:** 📊 60-75% depending on injury severity and surgery date
+
+#### C. EARLY-SEASON LIMITATIONS IF ACTIVE
+
+| Limitation | Achilles Return | Knee Return |
+|------------|-----------------|-------------|
+| Burst/explosion | Reduced 10-20% through Week 6 | Near-baseline if cleared |
+| Lateral agility | Significant early limitation | Moderate limitation |
+| Snap count | Likely 60-70% of snaps Weeks 1-4 | May be full if cleared |
+| Risk of re-aggravation | Elevated through first 8 weeks | 25% re-injury risk (ACL data) |
+
+**Safety-specific concern:** The position requires explosive backpedaling, breaking on routes, and tackling in space. Both injury types compromise these exact movements. Even if "active," expect conservative deployment in coverage situations early.
+
+#### D. SURVIVABILITY IF ONE CANNOT GO WEEK 1
+
+| Scenario | Survivability | Roster Implication |
+|----------|---------------|-------------------|
+| Joseph out, Branch active | 🟢 MANAGEABLE | Branch + depth can cover |
+| Branch out, Joseph active | 🟢 MANAGEABLE | Joseph + depth can cover |
+| BOTH out Week 1 | 🔴 CRITICAL | Immediate need for competent S depth |
+
+Single-safety absence is survivable for most NFL rosters with adequate depth. Dual absence creates a scheme crisis.
+
+#### E. DRAFT/FREE AGENT PLANNING IMPLICATIONS
+
+**My recommendation: MODERATE urgency for safety depth acquisition.**
+
+- Do NOT assume both safeties will be 100% for Week 1
+- The OVERLAP of two uncertain timelines at the same position = compounded risk
+- Smart planning: Add one veteran safety capable of starting-level play (free agency or trade)
+- Draft consideration: Safety at Day 2-3 value makes sense regardless of injury outcomes
+
+**Risk calculus:** The Lions don't need to replace Branch or Joseph. They need to INSURE against the 30-40% chance that one (or both) opens the season limited or unavailable.
+
+---
+
+#### LEARNINGS FROM THIS ASSESSMENT
+10. **Dual injuries at the same position group require compounded risk analysis** — even if each individual injury has favorable odds, the combined probability of BOTH players being 100% ready is significantly lower than either individual probability.

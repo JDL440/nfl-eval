@@ -344,6 +344,13 @@ _Rumor tracking will activate as draft day approaches and beat reporters begin s
 - ✅ NFC West draft capital details available via NFL.com's "Every team's full set of picks" article
 - ✅ This is a defense-heavy draft — teams needing defensive playmakers are well-positioned
 - ✅ QB-needy teams face a tough class — Mendoza is the clear QB1 with a significant drop-off after him
+- ✅ Detroit Lions at #17: OT class thins faster than EDGE class — structural logic favors OT first, EDGE second across R1-R2
+- ✅ Keldric Faulk (Auburn) is the most-mocked EDGE to DET at #17 — high floor run defender, limited pass-rush upside
+- ✅ Kadyn Proctor (Alabama) is the highest-graded OT likely available at #17 — massive frame, elite ceiling, technique needs refinement
+- ✅ R2 #50 EDGE options are viable: Dennis-Sutton, Howell (if slides), Mesidor, Zion Young — class depth supports waiting
+- ✅ R2 #50 OT options are thinner: Iheanachor (RT profile), Blake Miller, Gennings Dunker — less Day 1 LT-ready
+- ✅ Panel contribution saved to `content/articles/det-2026-offseason/draft-position.md`
+- ✅ web_search is effective for current mock draft consensus and scouting profiles — better than static big board data for team-specific mocking
 
 ---
 
@@ -602,3 +609,94 @@ _Last updated: 2025-07-17 — calculated from pick positions and Jimmy Johnson c
 - ✅ QB scarcity makes #1 overall worth significantly more than JJ chart suggests — only Mendoza is consensus R1 QB
 
 📌 Team update (2026-03-16T04:36:50Z): Multiple article decisions merged — HOU (Draft agent), IND (Cap + IND + Defense), BUF, NYJ, and 8 team-specific angle decisions.
+
+---
+
+## Learnings
+
+### 2026-03-16 — Titans Article Panel Position (ten-ward-vs-saleh-draft-identity)
+
+**Task:** Write Draft specialist panel position for Titans article focused on pick #4 evaluation and roster-building tradeoffs.
+
+**Context:**
+- Article explores tension between developing Cam Ward (offense) vs. Robert Saleh's defensive vision
+- Pick #4 is after tier-1 prospects (Carter #2, Banks #3) are gone
+- Panel question: Compare Bain/Parker (EDGE) vs. Carnell Tate (WR) vs. trade-down packages
+
+**Execution:**
+- Evaluated EDGE prospects (Mykel Williams, Ashton Jeanty) vs. WR (Carnell Tate) at #4
+- Framed as tier-break pick — "very good but not elite" tier (70-80% hit rate vs. 90%+ cornerstone)
+- Ran three trade-down scenarios with JJ point valuations
+- Addressed BPA vs. need tension: Williams/Jeanty grade slightly higher (84-85 vs. 82), but gap is narrow
+- Positioned the pick as revealing organizational philosophy (Saleh defense vs. Ward development)
+
+**Key analytical points:**
+- Williams and Jeanty are scheme-dependent — not slam-dunk All-Pros
+- Tate at #4 is defensible if he's genuinely #4 on the board (not a reach for need)
+- Positional value favors EDGE in aggregate, but marginal value favors WR given TEN's bottom-5 WR room
+- Trade-down only justified at 2,000+ JJ points (overpay territory)
+- Ward's 52 sacks are partly a WR separation problem (2.91 sec time-to-throw, 9th-longest in NFL)
+
+**Recommendation delivered:**
+- Williams (EDGE) at #4 if BPA
+- Tate (WR) at #4 if board says he's close to BPA and org prioritizes Ward
+- Trade down only for premium return (R1 + R2 + future 1st)
+
+**Hardest constraint identified:** Tier break after #3 means #4 is picking from 70-80% hit-rate tier, not 90%+ cornerstone tier — no perfect answer exists.
+
+**Outcome:** Position file created at content/articles/ten-ward-vs-saleh-draft-identity/draft-position.md. Core argument: the pick reveals organizational philosophy more than draft value math can resolve.
+
+**What worked:**
+- JJ point trade valuations grounded trade-down analysis in specific math
+- Tier-break framing set realistic expectations (not chasing generational talent at #4)
+- BPA vs. need tension addressed directly without defaulting to "always take BPA"
+
+**What to improve:**
+- Could have included more specific route-tree concerns for Tate (mentioned but not detailed)
+- Achilles injury for Simmons mentioned but not dated — verify 2024 or 2025 injury timeline
+- Missing comp for Jeanty's positional conversion success rate (LB → EDGE historical hit rate)
+
+📌 Flagged for Writer verification: Simmons Achilles timeline, Ward's time-to-throw stat source, Tate's contested-catch win rate (78%) source.
+
+---
+
+## Learnings
+
+### 2026-03-16: Houston Texans 2026 Draft Panel Position
+**By:** Draft (NFL Draft Expert)
+**Article:** HOU - Houston Texans — 2026 Offseason
+**Panel Role:** Prospect-to-need mapping for picks 28, 38, 59, and 69
+
+**Core recommendation delivered:**
+- Peter Woods (DT, Clemson) or Caleb Banks (DT, Florida) at pick 28 — crisis-level need, prospect quality falls off after pick 30
+- If both gone: Sonny Styles (LB, Ohio State) at 28, then Christen Miller (DT, Georgia) at 38
+- OT depth (Proctor, Lomu, Freeling) at pick 59 if available
+- Depth pass-catcher or rotational DT at pick 69
+
+**Hardest constraint identified:** DT talent cliff after pick 30. Woods and Banks are consensus top-2 DTs; Miller is 10+ picks below them. If Houston doesn't get Woods/Banks at 28, they face a reach (Miller at 28) or a gap (Styles at 28, hope Miller lasts to 38). Trade-up from 28 to 20-25 may be cheaper than paying /yr for veteran DT in 2027 FA.
+
+**Cap-draft window tension:** This is Year 3 of Stroud's rookie deal. 2027 = fifth-year option (\.5M). 2028 = extension (\-80M AAV). Anderson follows similar trajectory. Every position Houston doesn't address in 2026 draft becomes a cap crisis in 2028. Day 2 picks (38, 59, 69) must be starters or high-end rotation by Year 2 — no room for developmental projects.
+
+**What worked:**
+- Prospect tier breaks clearly defined (Woods/Banks >> 15-pick gap >> Miller/Overton)
+- Extension window math anchored the draft-vs-FA tradeoff (cheap talent now vs. expensive FA later)
+- Specific pick-by-pick recommendations with BPA fallbacks at each spot
+- Trade-up scenario framed as cost-benefit (give up pick 59 to secure Banks vs. pay /yr in 2027 FA)
+
+**What to improve:**
+- LT Overton's exact draft range uncertain — listed as "Day 2" but not pinned to round 2 vs. round 3
+- Kayden McDonald (DT, Ohio State) and Lee Hunter (DT, Texas Tech) mentioned as rotational depth but not fully scouted — verify if they're round 3 or round 4-5 targets
+- OT depth chart context missing — how thin is Houston behind Tunsil/Howard? Verify starter status for both tackles.
+- Could have quantified "cost of waiting" on DT more precisely — what's the 2027 FA market for 1-tech vs. 3-tech? Rankins re-signed for 2yr/\ — is that the floor or ceiling?
+
+**Data sources used:**
+- Web search: Houston's 2026 draft picks (28, 38, 59, 69 confirmed)
+- Web search: DT prospect rankings (Woods, Banks, Miller, Overton consensus tiers verified)
+- Web search: Stroud/Anderson extension timeline and cap projections (2027 fifth-year options, 2028+ mega-deals)
+- Web search: Houston DT needs (Settle/Fatukasi departures, Rankins re-signed, scheme fit for DeMeco Ryans' 4-3)
+- Draft history.md: 2026 consensus big board, positional rankings, combine data
+
+**Outcome:** Position file created at `content/articles/hou-2026-offseason/draft-position.md`. Core argument: Houston's draft is dictated by the cap-compression timeline. This is the last cheap-talent window before Stroud/Anderson extensions hit. DT is crisis-level (Rankins aging, Settle/Fatukasi gone). Prospect quality falls off after pick 30. If Woods/Banks gone, consider trade-up (cheaper than 2027 FA) or reach for Miller (safe floor, limited upside). Day 2 picks must be Year 2 starters.
+
+**Key insight for future panels:** When a team's draft is extension-window-driven (rookie QB in Year 3-4), the "cost of waiting" math changes. Draft picks aren't just "value vs. need" — they're "cheap starter now vs. expensive FA later." Frame trade-ups and reaches in terms of multi-year cap savings, not just draft value charts.
+

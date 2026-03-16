@@ -1,0 +1,55 @@
+# Article Idea: The Eagles Have Everything Except a Pass Rush — and the Trade That Could Fix It Might Break the Defense
+
+## Working Title
+**"The Eagles Have Everything Except a Pass Rush. Trading Jalen Carter Could Fix That — or Destroy the Defense."**
+
+## Angle / Tension
+Philadelphia went 11-6 and won the NFC East in 2025. Hurts posted 25 TDs. Barkley ran for 1,140 yards. Brown and Smith both cracked 1,000 receiving. The offensive line remains elite. Fangio's defense ranked top-10. On paper, this is a Super Bowl contender — except for one catastrophic void: **the Eagles have zero proven edge rushers on the roster.**
+
+Jaelan Phillips walked to Carolina for 4yr/$120M. Za'Darius Smith, Ojulari, Uche, and Okoronkwo are all gone. The "edge room" is now Nolan Smith Jr. (25, unproven as a full-time starter), Jalyx Hunt (24, raw), Arnold Ebiketie (a 1yr/$7.3M band-aid signing), and Jose Ramirez. That's not an EDGE rotation — that's a prayer.
+
+Meanwhile, Howie Roseman is fielding calls from at least five teams (SF, GB, CHI, SEA, LV) for 24-year-old DT Jalen Carter — a back-to-back Pro Bowler who anchors the interior alongside the newly-extended Jordan Davis ($78M). The most aggressive reported offer: Cincinnati's #10 overall pick, which would put the Eagles in range for a blue-chip EDGE prospect (Zion Young, Akheem Mesidor). Trading Carter saves $6.9M in cap space and adds a top-10 pick to a team that already has 9 draft selections.
+
+But extending Carter at $50M+ AAV alongside Davis's $26M AAV means committing ~$76M/year to two interior defensive linemen — unprecedented in NFL history. And the Eagles are already carrying **$52M in dead money** (8th most in the league), with only $6.4M in effective cap space (26th).
+
+The core tension: **Philadelphia's championship window is open RIGHT NOW — Hurts (27), Brown (28), Smith (27), Mailata (28) are all in their primes. But without a pass rush, this roster can't get to the Super Bowl. The one move that solves the EDGE crisis (trading Carter for #10) rips out the defense's best interior player. The move that keeps the defense elite (extending Carter at $50M+) leaves no cap room to address the EDGE void through free agency. There is no clean answer — only tradeoffs.**
+
+And looming behind all of it: Washington just signed Odafe Oweh for $100M and has $66M in cap space. Dallas tagged Pickens and traded for Rashan Gary. The NFC East is no longer Philly's to lose.
+
+## Primary Team
+PHI — Philadelphia Eagles
+
+## Key Data Points (sourced, 2026 offseason)
+- **2025 record:** 11-6, NFC East champs, lost Wild Card to SF 23-19 (source: ESPN)
+- **Edge rusher void:** Phillips ($120M to CAR), Smith, Ojulari, Uche, Okoronkwo all departed. Ebiketie signed 1yr/$7.3M as stopgap. (source: ESPN, PhillyVoice)
+- **Jalen Carter trade market:** 5 teams have called (SF, GB, CHI, SEA, LV). Eagles "listening" but Schefter says "never actively shopped." Extension talks ongoing. (source: FOX Sports, Heavy, SI, Yahoo Sports)
+- **Cap situation:** $6.4M effective cap space (26th), $52M dead money (8th). Huff $16.6M + Slay $13.3M dead cap alone = $30M. (source: OTC, Spotrac)
+- **Jordan Davis extension:** 3yr/$78M — locks in the interior alongside Carter (source: ESPN)
+- **Draft capital:** 9 picks including #23 overall, R3 #68 (from NYJ). Top targets: Kenyon Sadiq (TE, Oregon), Zion Young (EDGE, Missouri) (source: NBC Sports Philly, Bleacher Report)
+- **Braden Mann re-signed:** 4yr/$14M ($7M GTD) — punter need resolved (source: ESPN)
+- **Division threat:** WSH signed Oweh 4yr/$100M + $66M cap space. DAL tagged Pickens + traded for Rashan Gary. (source: ESPN, Spotrac)
+- **Window core ages:** Hurts 27, Brown 28, Smith 27, Barkley 29, Mailata 28, Johnson 35 (source: ESPN roster)
+
+## Year Accuracy Gate ✅
+- [x] Current year: 2026 offseason (post-2025 season)
+- [x] Stats cited: 2025 season (11-6, Hurts 25 TD, Barkley 1,140 yds)
+- [x] Cap figures: 2026 cap year ($301.2M league cap)
+- [x] Coaching staff: Sirianni (HC), Mannion (new OC), Fangio (DC) confirmed 2026
+- [x] Carter status: extension talks active, trade calls from 5 teams, not yet resolved
+
+## Depth Level
+2 — The Beat (balanced data + story, 2000–3500 words)
+
+## Suggested Panel
+- **PHI** (team expert — roster audit, window assessment, Carter's on-field value, organizational identity)
+- **Cap** (financial mechanics — Carter extension vs. trade economics, dead money analysis, restructure options)
+- **Defense** (scheme expert — what Fangio's defense looks like with/without Carter, EDGE replacement archetypes, draft fits)
+
+## Score: 11/12
+- PHI Relevance: 3 (THE defining franchise question of this offseason)
+- Timeliness: 3 (Carter decision is live — extension or trade could happen any day pre-draft)
+- Reader Value: 3 (cap mechanics + scheme implications + draft strategy = layered, high-value analysis)
+- Uniqueness: 2 (Carter trade rumors are covered, but the "no-clean-answer tradeoff framework" hasn't been written)
+
+---
+*Generated by PHI using idea-generation skill with current 2026 offseason research (web_search: FOX Sports, Heavy, SI, Yahoo, ESPN, PhillyVoice, NBC Sports Philly, OTC, Spotrac). March 16, 2026.*

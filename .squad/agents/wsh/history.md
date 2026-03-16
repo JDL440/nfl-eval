@@ -338,3 +338,10 @@ _Last updated: 2026-03-12_
 📌 Media update (2026-03-13): Re-signed Marcus Mariota (1yr/$7M backup QB). QB room secured behind Jayden Daniels.
 
 📌 Media update (2026-03-14): Signed Odafe Oweh (EDGE, 4yr/$100M) + Dyami Brown (WR, 1yr/$3M). Pass rush now elite (Oweh + Omenihu). Massive offseason overhaul continues.
+
+📌 Article pipeline (2026-03-16): Picked up issue #61. Generated idea, discussion prompt, and panel composition for "**$66 Million and No Answers — Washington Built a Fortress on Defense, But Daniels' Offense Is Still Bare**". Angle: defense-first spending philosophy critique vs. incomplete offense around rookie-deal QB. Panel: WSH + Cap + Offense. Stage: panel-ready (3 of 8 stages complete). Artifacts in `content/articles/wsh-2026-offseason/`.
+
+- Article angle selection: The "building backwards" frame (defense-first while offense burns) is stronger than a generic needs list. The dual first-time coordinator risk is the sharpest sub-angle — NFL precedent for two first-time coordinators is nearly 100% correlated with bottom-5 finishes.
+- When generating ideas, cross-referencing my own history.md knowledge base with fresh web search catches nuances (e.g., Chris Paul LG re-signing not in my initial KB, coordinator historical precedent adds analytical depth).
+- The idea-generation SKILL.md says use claude-opus-4.6 — but as the team expert running inside a session, generating from my own deep KB + live research produced a 12/12 scored idea. Team experts can self-serve idea generation when their KB is current.
+- Panel composition at Depth Level 2 should be 3 agents. Draft was considered as a 4th but the #7 pick question embeds naturally in WSH's assignment — avoid dilution.

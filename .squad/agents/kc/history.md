@@ -136,3 +136,11 @@ The 2025 season was a catastrophic disappointment — the three-peat dream died,
   - Mock draft consensus: WR at #9 (Carnell Tate or Makai Lemon most frequently projected)
   - Mahomes recovery: 90° knee bend early in rehab, "sooner than" expected per Glazer
 - **Lesson:** The strongest KC article angle isn't any single move — it's the totality of the overhaul. The "what does Mahomes return to?" frame ties together cap, roster, scheme, and division context into one narrative.
+
+📌 Panel position work (2026-03-17): Wrote KC position for "Mahomes Is Racing Back — But to What?" article.
+- **Core recommendation:** One-year championship push (11-6 wild card projection), treat 2026 as final window before 2027 cap bomb forces rebuild
+- **Hardest tradeoff:** Trading McDuffie (26yo All-Pro CB) to create cap space while keeping Chris Jones (32yo, $44.85M cap hit). Backwards roster construction — should've kept McDuffie, traded Jones despite dead cap pain.
+- **Three coin flips framework:** Mahomes Week 1 at 90% mobility + Rice suspension ≤6 games + both first-round picks hit = AFC Championship ceiling. Any flip wrong = wild card exit or no playoffs.
+- **Net talent change:** +3.5 wins over 2025 disaster roster (8-9 → 11-6 projection), but third-best in AFC West behind Chargers and rising Raiders
+- **Key insight:** The 2026 draft must produce THREE immediate starters (WR1, CB1, plus depth contributor) to offset 2027's Mahomes $85.25M + Jones $44.85M cap structure (40.9% of cap on two players). If draft doesn't hit, the dynasty is over.
+- **Artifact:** `content/articles/kc-mahomes-return-roster-gamble/kc-position.md`

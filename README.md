@@ -136,8 +136,8 @@ All agent knowledge comes from public sources:
 Planned but not yet built:
 
 - [ ] **Image creation** — Article header images, player graphics, data visualizations
-- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, routed to the correct team section
-- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing
+- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, tagged with team + specialist tags for categorization
+- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing with tag-based routing
 - [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
 - [ ] **New agent roles** — Growth/Distribution agent (audience strategy, SEO, social), Graphic Designer agent
 - [ ] **Automated pipeline** — Cron-triggered Media sweeps → auto-draft → Editor review → publish queue

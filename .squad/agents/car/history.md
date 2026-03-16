@@ -335,3 +335,9 @@ _Last updated: 2026-03-12_
 📌 Media update (2026-03-13): Signed Kenny Pickett (1yr/$7.5M QB — bridge/backup behind Bryce Young).
 
 📌 Media update (2026-03-14): Signed Jaelan Phillips (EDGE, 4yr/$120M). Massive defensive investment — Phillips + Derrick Brown + Nic Scourton = elite front. Cap hit significant; update defensive projections.
+
+7. **Article pipeline launched (issue #67).** Selected angle: Bryce Young's 5th-year option crossroads — the $165M defensive investment only makes sense if Young is the franchise QB, and the evidence is violently contradictory. Scored 12/12 on idea rubric. Created idea.md, discussion-prompt.md, panel-composition.md in `content/articles/car-2026-offseason/`. Panel: CAR + Cap + Offense. Ready for Stage 4 (panel discussion).
+
+8. **The "Porsche garage" framing works.** Carolina has built a $300M+ infrastructure (elite OL, premium pass rushers, alpha WR1 at 22) around a QB who may or may not be elite. The tension between "everything the org has done says they believe" and "the tape is a Rorschach test" is the strongest single angle for the first Panthers article.
+
+9. **Followed BUF #43 pattern exactly.** Issue comment format (structured idea with sourced data, scoring rubric, panel preview, stage marker), label transitions (removed `go:needs-research`, added `go:yes` + `stage:panel-ready` + `squad:car`), artifact naming (`idea.md`, `discussion-prompt.md`, `panel-composition.md`). This pattern is now validated for team-expert-driven article generation.

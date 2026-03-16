@@ -178,3 +178,27 @@ The previous review (Fifth/Sixth pass) was performed by a non-vision model and r
 
 
 📌 Team update (2026-03-16T04:36:50Z): Witherspoon v2 draft approved after 3-point correction — temporal accuracy, descriptor alignment, credential addition. Article ready for images/publisher review.
+
+## Learnings
+
+📌 Eleventh pass: Miami Tua Dead Cap Rebuild — FULL EDITORIAL REVIEW (2026-03-16)
+- **File:** `content/articles/mia-tua-dead-cap-rebuild/draft.md`
+- **Scope:** ~4,500-word panel article evaluating Miami's $99.2M dead cap rebuild strategy
+- **Fact-check findings:**
+  - 🔴 **CRITICAL ERROR — Goff dead cap comparison:** Table (line 29) claimed LAR took $75M dead cap in 2023 at 33.5% of cap. ACTUAL: Goff trade happened in 2021, dead cap was $24.7M against $182.5M cap (13.5%). The article's central thesis — that Miami's burden is "half what LAR absorbed" — was based on inflated/incorrect LAR numbers. **Corrected table to show 2021 Goff hit ($24.7M/13.5%) and adjusted all comparative language.**
+  - 🔴 **ERROR — Dead cap percentage claim:** Article repeated "Miami's 2026 hit is half the proportional burden the Rams and Broncos absorbed" but this was only true for the incorrect LAR number. Denver's actual burden in 2024 was 20.8% (not 33.4% — that would be the total $85M if absorbed in one year). Miami's 18.4% is actually *comparable* to Denver's, not half. **Corrected to: "Miami's 2026 hit is comparable to Denver's burden in 2024 (20.8% vs 18.4%)."**
+  - 🔴 **ERROR — Cap growth claim:** Article said cap grew "35% since the Goff trade" but Goff trade was 2021 ($182.5M) to 2026 ($301M) = 65% growth, not 35%. **Corrected.**
+  - ✅ All six fact-check items from Writer Notes verified clean:
+    1. Malik Willis 2025: 85.7%, 3 TD/0 INT, 422 yards — developmental bridge label accurate
+    2. Miami draft position: #11 verified (7-10 record in 2025); 4-13 projection is future (2026)
+    3. Chop Robinson Year 1: 6 sacks, 56 pressures, 18.8% win rate — DROY finalist
+    4. 2027 QB class: Manning/Iamaleava/Sellers all eligible, Manning/Sellers Round 1 projections
+    5. Hafley scheme: press man coverage, single-high safety, scheme-talent mismatch confirmed
+    6. Mansoor Delane: zero TDs allowed in 2025 on 358 snaps — unanimous All-American
+  - Hill/Chubb contract savings: sourced from Cap position file, not independently verified but no contradictions found
+  - Jimmy Johnson chart math: sourced from Draft position file, within reasonable range
+- **What was wrong:** The article's entire analytical framework ("Miami's burden is half what LAR/DEN survived") rested on a fundamental factual error about the Goff precedent. The Rams' dead cap hit in 2021 was $24.7M (13.5%), not $75M (33.5%). This error cascaded into the lede, the opening hook, the expert quote, and the core thesis. The corrected comparison shows Miami's burden is *comparable* to Denver's (18.4% vs 20.8%), not dramatically lighter.
+- **How it happened:** Writer likely conflated multiple years or misread source data. The $75M figure doesn't match any known Goff dead cap number (2021 was $24.7M, future years were $0). The 33.5% appears to be fabricated or a calculation error. This is exactly the type of error Editor exists to catch — a plausible-sounding number that forms the foundation of the argument but is factually wrong.
+- **Verdict: ✅ APPROVED after 3 corrections** — The structural error was serious but localized. Once the LAR/DEN comparison table was corrected and the comparative language adjusted, the rest of the article held up. The core argument (Miami's cap structure is manageable, the real constraints are roster talent and QB development) remains valid even with accurate comp data. All 6 Writer fact-check items verified clean. Article is publish-ready after corrections.
+- **Lesson:** Always verify historical dead cap comparisons against primary sources (OverTheCap, Spotrac). Don't trust panel-generated numbers for historical precedents without verification — this is exactly where LLM hallucination risk is highest. The "plausible but wrong" number is more dangerous than the obviously wrong number.
+- **Recorded by:** Editor (2026-03-16)

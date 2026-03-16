@@ -402,3 +402,39 @@ _Last updated: 2026-03-12_
 - Herbert's cap escalation is the single strongest framing device for any Chargers offseason article — it creates automatic urgency and a decision clock
 - The A.J. Brown trade rumors add a concrete "fork in the road" that gives readers a tangible decision to engage with
 - KC's secondary losses are the best AFC West comparison point — concrete, verifiable, and directly relevant to LAC's pass-first ambitions under McDaniel
+
+#### 2026-03-16: Discussion Prompt + Panel Composition (Stages 2-3) ✅
+
+**Issue:** #56 — Article: LAC - Los Angeles Chargers — 2026 Offseason
+**Stage reached:** Stage 3 — Panel Composition Complete → `stage:panel-ready`
+
+**Article folder:** `content/articles/lac-2026-offseason/`
+
+**Artifacts created:**
+- `discussion-prompt.md` — full discussion brief with central question, key tensions, data anchors, panel instructions
+- GitHub issue comment documenting Stage 2 completion and finalized panel
+- Issue label updated: `stage:idea` → `stage:panel-ready`
+
+**Panel finalized (3 agents, Depth Level 2 — The Beat):**
+| Agent | Role | Focus |
+|-------|------|-------|
+| LAC | Team expert | Roster state, offseason moves grade, WR room reality check, AFC West window timing |
+| Cap | Salary cap analyst | Herbert cap escalation (→→) model, A.J. Brown trade/extension math, 2027-2028 cap outlook |
+| Offense | Offensive scheme expert | McDaniel scheme principles, WR profile needs (alpha X vs. scheme-open types), Herbert pressure rate, Keenan Allen loss impact |
+
+**Discussion prompt quality:**
+- Central question is sharp, specific, and contentious (all-in vs. build through draft)
+- Three distinct paths presented (all-in, draft-build, middle path) with no strawmen
+- Data anchors include Herbert cap hits, LAC cap space, A.J. Brown trade cost, WR market comps, draft capital, Oweh loss, McDaniel scheme, AFC West competitive state
+- Per-agent instructions differentiate focus lanes (no overlap)
+- Target: 2,000-3,500 words, pre-draft 2026 publish window
+
+**Next step:** Stage 4 — Panel Discussion (spawn LAC, Cap, Offense agents in parallel with `claude-opus-4.6` model per Beat depth level)
+
+**Learnings:**
+- The JSN extension discussion prompt is the gold standard template — followed that structure closely
+- Combining Stages 2 (discussion prompt) and 3 (panel composition) is efficient when the panel is straightforward (team + 2 specialists)
+- The discussion prompt must include specific dollar amounts, dates, and decision gates — vague tensions produce vague analysis
+- Per-agent instructions must avoid overlap: LAC owns roster reality, Cap owns financial math, Offense owns scheme fit — no shared lanes
+- The `stage:panel-ready` label indicates discussion prompt + panel composition are both complete and panel discussion can be spawned immediately
+- Article folder naming convention: `{team-abbrev}-{year}-offseason` for team-specific offseason articles

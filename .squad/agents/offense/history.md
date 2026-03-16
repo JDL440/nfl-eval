@@ -188,3 +188,85 @@ Sean Payton Tree:
 6. **The McVay/Shanahan tree is creating a schematic monoculture.** This means roster-building across teams is converging — athletic zone-blocking OL, versatile TEs, YAC receivers are universally valued.
 
 📌 Team update (2026-03-16T04:36:50Z): Multiple article decisions merged — HOU Stroud/Anderson extension, JAX offensive allocation, LAC McDaniel scheme fit, NYJ QB architecture, AFC North batch.
+
+---
+
+## KC — Kansas City Chiefs
+
+### Coaching Staff
+- ✅ **Head Coach:** Andy Reid (14th year)
+  - **Background:** One of the greatest offensive minds in NFL history. Built the modern Chiefs dynasty around Patrick Mahomes.
+  - **Play-Caller:** Yes — Reid still calls plays and will not delegate that responsibility.
+  - **Program Focus:** Quarterback-driven vertical passing attack mixed with RPO elements and creative personnel usage.
+  - **Coaching Tree:** West Coast/Air Coryell hybrid. Disciples include Doug Pederson, Matt Nagy, Shane Steichen, and Eric Bieniemy.
+- ✅ **Offensive Coordinator:** Eric Bieniemy (returned 2025)
+  - **Background:** Former Chiefs OC who returned after HC opportunities didn't materialize.
+  - **Role:** Game-plan preparation and personnel management; Reid remains the play-caller.
+
+### Offensive Scheme Identity (2026 — Post-ACL Mahomes Era)
+- ✅ **System Type:** West Coast/Air Coryell hybrid built around quarterback creativity — but evolving toward rhythm passing due to Mahomes' ACL recovery.
+- ✅ **Run Game Philosophy:**
+  - **2025 and Prior:** RPO-heavy, used primarily to manipulate linebackers and set up explosive passes.
+  - **2026 Shift:** With Kenneth Walker signed, expect more traditional zone-based run game to establish play-action credibility while Mahomes regains full mobility.
+  - Walker's contact balance and receiving ability gives Reid the structural foundation the offense needs without Mahomes' usual scramble ability.
+- ✅ **Pass Game Identity:**
+  - **Historical:** Levels-based passing concepts, post-snap QB improvisation, and deep shots off play-action.
+  - **2026 Adjustment:** More quick game (slants, hitches, bubbles, RPO glance routes) to protect Mahomes early post-ACL.
+  - Expect ball-out times under 2.5 seconds early in the season, with Reid minimizing long-developing seven-step drops.
+  - Pre-snap motion usage will increase (60%+ of snaps) to give Mahomes cleaner coverage reads without relying on mobility.
+- 📊 **Personnel Tendencies:**
+  - **Historical:** 10 and 11 personnel (four or five wide receivers) to create space and spread defenses.
+  - **2026 Shift:** More 12 personnel (two tight ends) to create natural protection pockets and easier reads for Mahomes.
+  - Increased 21 personnel (two backs) in short-yardage and red zone situations with Walker and Steele.
+- ❓ **Critical Constraint:** Receiving corps is dangerously thin. If Rashee Rice is suspended AND Xavier Worthy gets hurt, Travis Kelce is the only proven pass-catcher on the roster.
+
+### Key Offensive Players
+| Pos | Player | Notes |
+|-----|--------|-------|
+| QB | ❓ Patrick Mahomes | 29 years old, returning from torn ACL. Will start Week 1 but won't have full functional mobility until 2027. The entire offensive structure must adjust around him. |
+| RB | ✅ Kenneth Walker | 4-year, $43M signing. The best move Veach made — provides play-action credibility, third-down conversion insurance, and red zone diversity. |
+| WR1 | ❓ Rashee Rice | Facing potential 10+ game suspension. If he plays, offense is functional. If suspended, the receiving corps collapses. |
+| WR2 | 📊 Xavier Worthy | 5'11", 165-pound speed receiver drafted to be a vertical constraint. Cannot function as primary WR1 if Rice is suspended. |
+| TE | 📊 Travis Kelce | 36 years old on farewell tour contract. Still excellent but no longer elite. Separation metrics declining for three straight years. |
+| OL | ❓ Offensive line | Needs to protect a less-mobile Mahomes. The entire quick-game structure depends on clean pockets and no interior pressure. |
+
+### Scheme Fit Implications
+- **QBs who thrive:** Historically, elite improvisers with arm talent and mobility (Mahomes' archetype). In 2026, Reid must adapt to a pocket passer temporarily.
+- **RBs who thrive:** Versatile backs who can run zone concepts, catch screens, and contribute in pass protection. Walker fits perfectly.
+- **WRs who thrive:** Route-runners who can win on all three levels and adjust to scramble drills. The 2026 corps is dangerously thin here.
+- **TEs who thrive:** Kelce-style chess pieces who can align anywhere, run the full route tree, and find scramble-drill holes in zone coverage. No successor on roster.
+- **OL who thrive:** Athletic pass-protectors who can handle five-man protections and reach-block on zone runs. Interior pressure kills the quick game.
+- ❓ **2026 Pivot Point:** Can Reid design a functional rhythm passing offense for a limited-mobility Mahomes with a potentially depleted WR corps? This is the most important schematic question in the NFL this offseason.
+
+---
+
+## Learnings
+
+### KC Mahomes Offense Panel Position (2026-03-16)
+- **Post-ACL QB adaptation:** Mahomes will start Week 1 but won't have full functional mobility until 2027. Reid must shift from backyard-football improvisation to rhythm passing — a structure Mahomes has never run in the NFL.
+- **Kenneth Walker value:** The $43M RB signing is the right call because it provides play-action credibility Reid needs without Mahomes' scramble ability. Walker unlocks the quick-game structure.
+- **Rashee Rice as linchpin:** The offense has two completely different ceilings depending on Rice's availability. If suspended 10+ games, the receiving corps collapses to Kelce + Worthy + no proven depth.
+- **Kelce's declining separation:** At 36, Kelce is still excellent but no longer elite. His route speed and burst are declining, forcing Reid to manufacture separation through bunch formations and rub routes rather than expecting Kelce to win on his own.
+- **Offensive identity shift:** Expect more 12 personnel, more quick game, more pre-snap motion for coverage clarity, and significantly fewer deep shots early in the season. This is the 2018 Alex Smith offense with a better QB running it.
+- **Hardest constraint:** Receiving corps is too thin to survive even one injury. If Rice is suspended AND Worthy gets hurt, Kelce is the only proven pass-catcher. Zero margin for error.
+
+### DEN Broncos TE Panel Position (2026-03-16)
+- **Payton-to-Webb transition increases TE importance:** First-time playcaller needs structural support. Webb lacks 20 years of pattern recognition Payton has, making the Joker role a safety valve when coverage surprises him rather than a luxury.
+- **Joker role still viable if unpredictable:** Modern defenses adapted to PREDICTABLE Joker usage (pattern-matching zone, safety/LB hybrids, two-high shells), but can't defend athletic superiority + alignment diversity. Kenyon Sadiq's 95th percentile combine profile (4.58, 38" vert, 6'5" 251) forces bracket-or-get-beat decisions.
+- **Sadiq-Graham comp is realistic:** Athletically identical (4.53 vs 4.58 forty, same vert, similar build), but Sadiq more refined (3 years TE experience vs. Graham as basketball convert). Won't be 2011 Graham Year 1 (99/1310/11), but 60-70 catches, 700-800 yards, 5-6 TDs achievable.
+- **Offense WITH Joker:** 50% 11 personnel (Sadiq in slot), diverse route tree (seams, sluggos, choice routes), red zone size advantage, checkdown safety valve for Nix. Defenses can't bracket because Sutton/Mims punish single coverage.
+- **Offense WITHOUT Joker:** 60% 11 personnel with no featured TE, red zone becomes WR-dependent, no middle-of-field safety valve, defenses play two-high all game (exactly what killed AFCCG offense). Nix's development stalls without checkdown option.
+- **Hardest constraint (non-obvious):** Bo Nix ankle fracture recovery timeline. High ankle fracture = 10-16 week recovery to full cutting/planting ability. Earliest "full speed" return is May OTAs. R1 TE (Sadiq) arrives May for chemistry-building; R2 TE arrives July training camp. That 2-month gap is difference between playoff-ready chemistry and hoping it clicks mid-season.
+- **Recommendation:** Draft Kenyon Sadiq at #30. Webb needs structural support as first-time playcaller, Nix needs safety valve post-injury, championship window is NOW (Nix rookie deal through 2027), and ILB can be addressed Round 2 (Singleton holds one more year). AFCCG loss was offensive ceiling problem, not defensive failure.
+
+
+### JAX Travis Hunter Offense Panel Position (2026-03-16)
+- **WR2 role underutilizes WR1 talent:** Hunter graded 82 PFF as receiver in 7-game sample, has elite route precision and ball tracking, but limited to 4.0 targets/game (68-730-4 pace over 17) because two-way role caps snap rate at 55% offense. Generational receiving talent being deployed as complementary piece.
+- **Route tree constraint from snap volatility:** 55% offensive snap rate eliminates high-value opportunities: no vertical stems on early-down play-action, no two-minute offense rhythm, no 4th-quarter closer volume. Hunter can't develop timing/chemistry with Lawrence when he's only on field 55% of snaps.
+- **Red zone TD rate disparity reveals cost:** JAX scored TDs on 69% of red zone trips when Hunter played offense (13 opps) vs. 36% when he was on defense (22 opps). Two-way role creates play-calling predictability — defenses know when Hunter was just playing CB, he's likely sitting out offensive red zone snap.
+- **BTJ slump is scheme predictability, not target cannibalization:** Hunter's presence only reduced BTJ targets by 0.7/game (6.1→5.4). Real issue: when Hunter went down, defenses rolled coverage to BTJ as clear WR1. Hunter helps BTJ by creating single coverage, not hurting him by stealing targets.
+- **70/10 deployment maximizes offensive ROI:** Move Hunter to 70% offense (slot full-time), 10% defense (goal-line/critical situations only). Raises target projection to 6.5/game (110 targets, 75-1,050-8 over 17 games), unlocks WR1 ceiling, eliminates injury risk from two-way overload. Defense survives if they add veteran CB2 (-5M FA).
+- **Slot alignment optimal for two-way workload:** Shorter routes (crossers, digs, option routes) reduce cardio demand when Hunter plays defense previous series. Leverage vs. LBs/safeties creates mismatches. RPO synergy makes Hunter primary read on slant RPOs without requiring 70%+ snap rate.
+- **Target concentration fixes Lawrence inefficiency:** 57% target concentration to top 4 WRs is outlier (KC 68%, DET 71%). Hunter's snap volatility forces Lawrence to spread ball to 9+ players. Moving Hunter to 70% offense + slot role raises concentration to 65%+, gives BTJ better targets (not just more targets).
+- **Hardest constraint:** Every defensive snap Hunter plays is a rep he's not getting with Trevor Lawrence, preventing development of timing/chemistry/playbook mastery that separates good receivers from great ones. Two-way role caps offensive ceiling below talent level regardless of snap split chosen.
+

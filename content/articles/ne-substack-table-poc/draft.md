@@ -33,6 +33,7 @@ For rank-order tables like this one, a list treatment may be good enough. It pre
 This keeps the same information in a more editorial, high-impact presentation for readers who are skimming.
 
 <!-- TABLE_IMAGE_PRIORITY -->
+![Rendered table showing the Patriots' roster gap priorities|Rendered image version of the New England roster-priority table.](../../images/ne-substack-table-poc/ne-substack-table-poc-priority-table.png)
 
 **Why this option matters:** it preserves visual hierarchy best, especially for email and mobile readers, without relying on HTML table support.
 
@@ -59,6 +60,7 @@ This is the kind of table where inline conversion may be acceptable for web, but
 ## Option 4: The cap table as a rendered image
 
 <!-- TABLE_IMAGE_CAP -->
+![Rendered table showing the Patriots' aggressive spending scenario|Rendered image version of the aggressive spending cap table.](../../images/ne-substack-table-poc/ne-substack-table-poc-cap-table.png)
 
 **Why this option matters:** this is the clearest test of whether image-backed tables are worth the extra workflow for dense financial summaries.
 

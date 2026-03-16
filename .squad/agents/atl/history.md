@@ -357,3 +357,28 @@ _Last updated: 2026-03-12_
 6. **Division is wide open.** CAR is the favorite (defending champs + Phillips), but TB lost Evans and is weakened. NO is spending but unproven at QB. ATL has a path to contend if Penix/Tua are healthy and the defense takes a step forward.
 
 📌 Media update (2026-03-13): Signed Tua Tagovailoa (1yr/$1.3M vet min). Released Kirk Cousins outright. QB room completely reset — Tua + Penix Jr. (rehabbing ACL). Major cap implications from Cousins release.
+
+## Learnings
+
+### 2026-03-15: Issue #66 — ATL 2026 Offseason Article
+
+1. **Angle selection: "bridge year vs. contention year" is the strongest ATL frame.** The QB dual-risk (Penix 3rd ACL + Tua concussion history) combined with the NFC South being wide open creates genuine tension that generic "team in transition" angles lack. The 2026→2027 cap bridge ($17M now → $156M next year) gives the article financial backbone.
+
+2. **8-9 was a coaching record, not a talent record.** The 30-0 shutout at Carolina, blown OT losses, and mid-game play-call abandonment of the run game were correctable issues. Stefanski's track record of overperforming roster talent (Cleveland) supports the "10-win roster" thesis.
+
+3. **Hidden strength: defensive youth core is the real foundation.** Pearce Jr., Walker, Orhorhoro, Watts, Bowman Jr. — all 22-25, all on rookie deals, all improving. This group + Ulbrich's continuity is the most underrated unit in the NFC South.
+
+4. **Fatal flaw: WR2 and CB2 remain the swing positions.** Dotson (2yr/$15M) and Zaccheaus are bridge options, not solutions. At CB2, Hughes is injury-prone and Henderson inconsistent. These two spots will determine whether the roster hits its 11-6 ceiling or its 6-11 floor.
+
+5. **Article workflow efficiency: team agent can carry Stage 1 through Stage 4 (own position) in a single session.** Having the knowledge base pre-built means idea generation doesn't require additional web research — the KB had everything needed. Saved an entire research round.
+
+### 2026-03-15: Issue #66 — ATL Position Confirmation (Retry Request)
+
+1. **Issue #66 status verified: ATL work complete at Stage 4.** The article is NOT in a "generic template state" as suggested in the retry request. All Stage 1-3 work (idea generation, discussion prompt, panel composition) was completed March 15-16, and my ATL position was delivered March 16 in `atl-position.md`. The issue is waiting for Cap and Offense to deliver their positions.
+
+2. **Panel stage handoff requires clear status tracking.** When one agent completes their position but the panel isn't fully assembled, the issue can appear "stuck" without explicit status confirmation. Added a confirmation comment to issue #66 to make it clear ATL work is done and Cap/Offense are the blocking dependencies.
+
+3. **Article angle "bridge year vs. contention year" remains strong.** The dual-QB risk (Penix 3rd ACL + Tua concussion history) combined with tight 2026 cap () vs. explosive 2027 cap () creates the exact tension that drives reader engagement. No angle change needed.
+
+4. **Artifact organization at Stage 4: one position file per panelist.** Each agent delivers to `{article-slug}/{agent}-position.md`. This keeps panel outputs modular and allows Writer (Stage 5) to synthesize them without confusion. ATL delivered to `atl-2026-offseason/atl-position.md` as expected.
+
