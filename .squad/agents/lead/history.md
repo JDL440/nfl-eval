@@ -773,3 +773,18 @@ Our articles are cap-and-contract strong but analytically thin. Panel agents can
 - Dense tables in published drafts should be replaced with rendered images before prod promotion
 - Editor review verdicts on fast-tracked articles should be recorded properly
 - Production (nfllab.substack.com) publish still pending Joe's review of stage drafts
+
+### Dense Table Pipeline Fix (2025-07-25)
+
+**Problem:** Dense markdown tables (financial comparisons, multi-column cap data) were only caught at publish time. 25 tables across 11 Stage 7 articles would have blocked publishing.
+
+**Solution:** Built two pipeline tools: `audit-tables.mjs` (classify all tables using the same density logic as the publisher extension) and `fix-dense-tables.mjs` (batch-render blocked tables to PNG via renderer-core.mjs and replace in drafts). Both run locally, no Copilot SDK needed.
+
+**Key learnings:**
+- Table density classifier lives in `substack-publisher/extension.mjs` (lines 752-816). Threshold: densityScore >= 7.5 = blocked.
+- renderer-core.mjs is directly importable -- no Copilot SDK extension wrapper needed
+- Simple tables (2 columns, label-value) are fine as Substack lists; dense tables with financial headers need PNG rendering
+- Table cleanup belongs at Writer/Editor stage (5-6), with batch safety net at pre-publish (7) -- NOT at publish time
+- 25 tables rendered, 0 failures, 40 total table images across Stage 7 articles after fix
+
+**Decision filed:** `.squad/decisions/inbox/lead-stage7-tables.md`

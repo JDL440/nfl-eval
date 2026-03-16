@@ -67,14 +67,7 @@ That quote gets at the real football point. Without Witherspoon, Seattle is not 
 
 This negotiation starts with one uncomfortable truth for Seattle: the cornerback market moved faster than the team's original model.
 
-| Player | Team | Year Signed | AAV | Fully GTD | Total GTD |
-|--------|------|-------------|-----|-----------|-----------|
-| Trent McDuffie | LAR | Mar 2026 | $31.0M | ~$100M | $100M |
-| Sauce Gardner | IND | Jul 2025 | $30.1M | $40.5M | $85.7M |
-| Derek Stingley Jr. | HOU | Mar 2025 | $30.0M | $48.0M | $89.0M |
-| Jaycee Horn | CAR | 2025 | $25.0M | $46.7M | $70.0M |
-| Pat Surtain II | DEN | Sep 2024 | $24.0M | $40.7M | $77.5M |
-| DaRon Bland | DAL | 2025 | $23.0M | $36.3M | $50.0M |
+![Player vs Team vs Year Signed. 6 rows and 6 columns. Columns include Player, Team, Year Signed, and more. First row: Trent McDuffie.](../../images/witherspoon-extension-v2/witherspoon-extension-v2-player-vs-team-vs-year-signed.png)
 
 There are two ways to read that table, which is exactly why the negotiation is so interesting.
 
@@ -94,13 +87,7 @@ Cap's refreshed position is more realistic than the original sticker price. The 
 
 The logic is less about what Witherspoon deserves in a vacuum and more about what Seattle's 2026–2029 roster has to absorb after this deal gets signed.
 
-| Year | Age | Cap Hit | % of Projected Cap |
-|------|-----|---------|-------------------|
-| 2026 | 26 | $16.9M | 5.6% |
-| 2027 | 27 | $23.0M | 7.0% |
-| 2028 | 28 | $27.5M | 7.8% |
-| 2029 | 29 | $30.5M | 8.1% |
-| 2030 | 30 | $34.2M | 8.5% |
+![Year vs Age vs Cap Hit. 5 rows and 4 columns. Columns include Year, Age, Cap Hit, and more. First row: 2026.](../../images/witherspoon-extension-v2/witherspoon-extension-v2-year-vs-age-vs-cap-hit.png)
 
 That model tells you what Seattle is buying: a star corner whose cap hit stays below 8.5% of the cap every year, a manageable 2027 number instead of a clunky fifth-year option bridge, and room to carry the rest of the defense without turning other needs into bargain-bin emergencies.
 
@@ -145,11 +132,7 @@ PlayerRep's real projection is narrower and more revealing: **4 years, $128–13
 
 The agent also has a leverage point most teams hate admitting out loud: the fifth-year option does not corner the player nearly as much as fans assume it does.
 
-| Season | Contract status | Guaranteed money |
-|--------|-----------------|-----------------|
-| 2026 | Final rookie year | $10.1M |
-| 2027 | Fifth-year option | $21.16M |
-| Bridge total before UFA | Two fully controlled years | $31.26M |
+![Season vs Contract status vs Guaranteed money. 3 rows and 3 columns. Columns include Season, Contract status, Guaranteed money. First row: 2026.](../../images/witherspoon-extension-v2/witherspoon-extension-v2-season-vs-contract-status-vs-guaranteed-money.png)
 
 That is not chump change. It is a guaranteed bridge to age-28 free agency. Which means Witherspoon does not have to panic into signing a team-friendly deal simply because Seattle can exercise one more year of control. The option gives the team time, yes. But it also gives the player enough guaranteed money to wait for the market to get even louder.
 
@@ -165,12 +148,7 @@ The walk-away scenario is not the likeliest outcome, but it is credible enough t
 
 Once you strip away the opening rhetoric, the disagreement gets very specific.
 
-| Element | Cap's Model | PlayerRep's Projection | Gap |
-|---------|-----------|----------------------|-----|
-| AAV | $30.5M | $32.5M | $2M/yr |
-| Fully Guaranteed | $60M | $75M | $15M |
-| Total Guarantees | $92M | $105M | $13M |
-| Total Value | $122M | $130M | $8M |
+![Element vs Cap's Model vs PlayerRep's Projection. 4 rows and 4 columns. Columns include Element, Cap's Model, PlayerRep's Projection, and more. First row: AAV.](../../images/witherspoon-extension-v2/witherspoon-extension-v2-element-vs-cap-s-model-vs-playerrep-s-projection.png)
 
 That table is the whole negotiation in miniature. The average annual value gap is real, but it is no longer existential. Two million per year is serious money, but it is a closing gap, not a philosophical canyon. The fully guaranteed gap is where the blood gets drawn.
 

@@ -19,21 +19,11 @@ Here's what four domain experts — a salary cap analyst, a player advocate, the
 
 ## The Four Paths
 
-| Path | Description | 2026 Cap Hit | Risk to Seattle | Risk to JSN |
-|------|-------------|--------------|----------------|-------------|
-| **Path 1** | Extend now (4yr/$124–136M) | $16.4M | Overpay if injured | Secured early |
-| **Path 2** | 5th-year option ($21–23M), negotiate simultaneously | $3.4M (2026), $21–23M (2027) | Extension costs more later | 16+ games unprotected |
-| **Path 3** | Let him play it out, negotiate 2027 | $3.4M | He walks to UFA | 32+ games unprotected |
-| **Path 4** | Franchise tag ($35M/yr) | $35M+ | $77M for 2 years of hostility | 1-year injury exposure |
+![The Four Paths. 4 rows and 5 columns. Columns include Path, Description, 2026 Cap Hit, and more. First row: Path 1.](../../images/jsn-extension-preview/jsn-extension-preview-the-four-paths.png)
 
 The panel's positions:
 
-| Panelist | Recommended Path | AAV Target | Guaranteed $ | Rationale |
-|----------|-----------------|------------|--------------|-----------|
-| **Cap** | Path 1 — Extend now | $34M | $90M fully gtd | Front-load maximizes cap efficiency; waiting costs $30–40M over deal life |
-| **PlayerRep** | Path 1 — But only at full market | $34–36M | $95–105M fully gtd | Lamb floor is $34M/$102M; JSN four years younger; Shaheed deal tipped Seattle's hand |
-| **SEA** | Path 2 hybrid — Option + negotiate | $30–32M | $75–90M fully gtd | EDGE/safety come first; use option savings to fix the defense |
-| **Offense** | Path 1 at the right price | $28–32M | $75–85M fully gtd | Top-5-to-8 WR, not top-3; scheme-amplified but not scheme-dependent |
+![Panelist vs Recommended Path vs AAV Target. 4 rows and 5 columns. Columns include Panelist, Recommended Path, AAV Target, and more. First row: Cap.](../../images/jsn-extension-preview/jsn-extension-preview-panelist-vs-recommended-path-vs-aav-target.png)
 
 ![JSN — Four Paths to an Extension](../../images/jsn-extension-preview/jsn-extension-preview-inline-1.png)
 
@@ -62,12 +52,7 @@ The data backs Offense's read. JSN's 1,800-yard season is the best any Shanahan-
 
 **Where this leaves the negotiation:** Somewhere between $31M and $34M AAV. Below $31M and JSN's camp declines on comp grounds. Above $34M and Seattle pays a premium for a system-amplified receiver when the defense desperately needs investment. The smart number is probably **$32–33M** — market-adjacent but not market-setting.
 
-| Comp | AAV | Fully Guaranteed | Age at Signing | Draft Pick |
-|------|-----|------------------|----------------|------------|
-| Justin Jefferson (MIN) | $35.0M | $110M | 24 | Pick 22 |
-| CeeDee Lamb (DAL) | $34.0M | $102M | 25 | Pick 17 |
-| A.J. Brown (PHI) | $32.0M | $84M | 26 | Pick 51 |
-| **JSN (market estimate)** | **$32–34M** | **$90–105M** | **23** | **Pick 20** |
+![Comp vs AAV vs Fully Guaranteed. 4 rows and 5 columns. Columns include Comp, AAV, Fully Guaranteed, and more. First row: Justin Jefferson (MIN).](../../images/jsn-extension-preview/jsn-extension-preview-comp-vs-aav-vs-fully-guaranteed.png)
 
 ---
 
@@ -131,13 +116,7 @@ The question isn't "JSN or defense." It's "JSN at $34M now or $32M now while fix
 
 All four panelists agree: any JSN deal must be heavily front-loaded. Here's Cap's proposed structure for a 4yr/$136M extension ($34M AAV):
 
-| Year | Base Salary | Signing Bonus Proration | Roster Bonus | Cap Hit | % of Projected Cap |
-|------|------------|------------------------|--------------|---------|-------------------|
-| **2026** | $3.4M (rookie) | $13.0M | — | **$16.4M** | 5.4% of $301M |
-| **2027** | $14.0M | $13.0M | $8M (Day 1) | **$35.0M** | 10.7% of $327M |
-| **2028** | $17.0M | $13.0M | — | **$30.0M** | 8.5% of $352M |
-| **2029** | $20.6M | $13.0M | — | **$33.6M** | 9.0% of ~$375M |
-| **2030** | $20.0M | $13.0M | — | **$33.0M** | 8.3% of ~$400M |
+![Year vs Base Salary vs Signing Bonus Proration. 5 rows and 6 columns. Columns include Year, Base Salary, Signing Bonus Proration, and more. First row: 2026.](../../images/jsn-extension-preview/jsn-extension-preview-year-vs-base-salary-vs-signing-bonus-proration.png)
 
 *2027 cap hit of $35.0M includes $8M Day 1 roster bonus; base cap hit excluding roster bonus is $27.0M.*
 

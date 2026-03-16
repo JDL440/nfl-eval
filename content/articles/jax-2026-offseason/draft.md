@@ -29,13 +29,7 @@ Our panel sees the same paradox from three directions. JAX says Hunter must be m
 
 Before you get to philosophy, you get to the math.
 
-| Question | 2025/2026 answer | Why it matters |
-|----------|------------------|----------------|
-| What did Jacksonville pay for Hunter? | A move from No. 5 to No. 2 in 2025, plus picks No. 36, No. 126, and the 2026 first-rounder | The Jaguars surrendered the cheap starter pipeline that normally patches roster holes around a contender |
-| What did Hunter cost on the cap in 2026? | $10.6M | Normal top-five-pick money, but still far more than the rookie cap hit attached to the missing No. 19 slot |
-| What did Jacksonville lose with the missing 2026 first? | A shot at RB1, CB2, or a three-down WILL linebacker | Those are the exact holes now stressing the roster |
-| How was Hunter used as a rookie? | 67% offense, 36% defense, 103% total combined snaps per game | The usage created immediate excitement and obvious durability risk |
-| Where is Jacksonville's 2026 cap sheet? | It opened about $15.9M over before Jacksonville started restructuring veterans | The team had to create breathing room before it could even address its roster holes |
+![Question vs 2025/2026 answer vs Why it matters. 5 rows and 3 columns. Columns include Question, 2025/2026 answer, Why it matters. First row: What did Jacksonville pay for Hunter?.](../../images/jax-2026-offseason/jax-2026-offseason-question-vs-2025-2026-answer-vs-why-it-matters.png)
 
 Hunter is good enough to make the trade feel defensible. He is also expensive in the ways top-five picks always are, except Jacksonville compounded that cost by sacrificing the exact pick that would have made the rest of this roster easier to finish.
 
@@ -58,11 +52,7 @@ In seven games, Hunter put up 28 catches for 298 yards and a touchdown while als
 
 JAX's proposed fix is the kind of compromise coaches talk themselves into after watching a special player get hurt: **55% offense, 25% defense, 80% total workload.** In this model, Hunter stays a featured offensive player — WR2 opposite **Brian Thomas Jr.** in three-receiver sets, red-zone packages, and third downs — while becoming a defensive closer rather than a full-time CB1. Think dime, nickel, obvious passing downs, and leverage moments instead of base-down survival.
 
-| Deployment model | Offense | Defense | Total | Intended identity |
-|------------------|---------|---------|-------|-------------------|
-| **2025 reality** | 67% | 36% | 103% | Two full jobs, one body |
-| **JAX proposal** | 55% | 25% | 80% | WR2 plus sub-package CB1 |
-| **What JAX is really buying** | ~37 snaps/game | ~17 snaps/game | ~54 snaps/game | Availability over maximal usage |
+![Deployment model vs Offense vs Defense. 3 rows and 5 columns. Columns include Deployment model, Offense, Defense, and more. First row: 2025 reality.](../../images/jax-2026-offseason/jax-2026-offseason-deployment-model-vs-offense-vs-defense.png)
 
 The logic is blunt. Hunter graded better as a receiver than a corner in the early sample. Jacksonville's offense is more explosive when he is on the field with Thomas, **Jakobi Meyers**, and **Parker Washington**. And the quarterback-centric argument matters here: if Lawrence is 27 and still in the affordable phase of his deal, the front office should skew its scarce star resources toward helping him.
 
@@ -109,10 +99,7 @@ That red-zone piece is the sharpest offensive evidence in the whole packet. Jack
 
 Offense's solution is not a slight adjustment. It's a reframing.
 
-| Model | Offense | Defense | What Jacksonville gets |
-|-------|---------|---------|------------------------|
-| **JAX model** | 55% | 25% | Sustainability with some two-way identity intact |
-| **Offense model** | 70% | 10% | Full-time receiving impact, emergency-use defense |
+![Model vs Offense vs Defense. 2 rows and 4 columns. Columns include Model, Offense, Defense, and more. First row: JAX model.](../../images/jax-2026-offseason/jax-2026-offseason-model-vs-offense-vs-defense.png)
 
 In this version, Hunter becomes a slot-heavy offensive centerpiece who plays corner only in true leverage spots: end-of-game possessions, goal-line stands, third-and-long, two-minute defense, and Hail Mary prevention. The defense loses the idea of Hunter as a routine answer. The offense gains something closer to a real WR1.
 
@@ -139,21 +126,13 @@ This is where the article stops being theoretical. Hunter is entering Year 2 on 
 
 Cap's case is merciless because it turns every Hunter deployment decision into an opportunity-cost conversation. Jacksonville didn't just flirt with a cap problem; it opened the offseason roughly $15.9M over and already had to use restructures to regain operating room. The names that actually got touched tell the story: the Jaguars leaned on veterans such as **Jakobi Meyers**, **Robert Hainsey**, **Patrick Mekari**, **Eric Murray**, and **Jourdan Lewis** before they could seriously address the rest of the roster.
 
-| Cap lever | What it buys | What it mortgages |
-|------|--------------|-------------------|
-| Already completed restructures on Meyers, Hainsey, and Mekari | Immediate breathing room on offense without tearing up the starting lineup | More money pushed into future seasons for a roster already short on cheap starters |
-| Already completed restructures on Lewis and Murray | Enough additional flexibility to get functional in the secondary | Less room to maneuver later if the defense still needs outside additions |
-| Remaining big levers like Lawrence, Hines-Allen, or Oluokun | Emergency relief still exists if Jacksonville needs another wave of space | More 2027 dependence, which undercuts the idea that this is a clean long-term build |
+![Cap lever vs What it buys vs What it mortgages. 3 rows and 3 columns. Columns include Cap lever, What it buys, What it mortgages. First row: Already completed restructures on Meyers, Hainsey, and Mekari.](../../images/jax-2026-offseason/jax-2026-offseason-cap-lever-vs-what-it-buys-vs-what-it-mortgages.png)
 
 That gets Jacksonville functional. It doesn't get them finished.
 
 The missing first-round pick is the second half of the squeeze. At #19 overall, the Jaguars could have been shopping for a three-down back, a ready-made outside corner, or a coverage-capable linebacker. Cap's logic is brutally simple:
 
-| Need created by roster | Likely #19 answer | Approx. 2026 rookie cap hit | Why that matters now |
-|------------------------|-------------------|------------------------------|----------------------|
-| RB1 after Etienne left | Lead-back talent at No. 19 | ~$3.5M | Cheap three-down starter instead of a committee patch |
-| CB depth behind Hunter | Starting-caliber outside corner | ~$3.4M | Real depth for the snaps Hunter can't play |
-| Linebacker after Lloyd exit | Coverage-capable off-ball linebacker | ~$3.4M | Athletic answer on a rookie deal |
+![Need created by roster vs Likely #19 answer vs Approx. 2026 rookie cap hit. 3 rows and 4 columns. Columns include Need created by roster, Likely #19 answer, Approx. 2026 rookie cap hit, and more. First row: RB1 after Etienne left.](../../images/jax-2026-offseason/jax-2026-offseason-need-created-by-roster-vs-likely-19-answer-vs-approx-2026-ro.png)
 
 Instead, Jacksonville is paying Hunter $10.6M in 2026 while receiving none of the extra rookie-contract support that normally comes with building around a premium young quarterback. That doesn't make Hunter a bad bet. It makes him a bet that now has to solve multiple downstream problems at once.
 

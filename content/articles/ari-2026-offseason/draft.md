@@ -42,11 +42,7 @@ Start with the brutal number. Arizona is carrying $47.5M in dead money from the 
 
 The key is the cliff. That $47.5M in dead money evaporates completely in 2027, and the math gets absurd:
 
-| Year | Projected Cap | Murray Dead Cap | Projected Space |
-|------|--------------|-----------------|-----------------|
-| **2026** | $301.2M | $47.5M | $40–48M |
-| **2027** | ~$320–325M | $0 | **$105–115M** |
-| **2028** | ~$340–350M | $0 | **$130–145M** |
+![Year vs Projected Cap vs Murray Dead Cap. 3 rows and 4 columns. Columns include Year, Projected Cap, Murray Dead Cap, and more. First row: 2026.](../../images/ari-2026-offseason/ari-2026-offseason-year-vs-projected-cap-vs-murray-dead-cap.png)
 
 For context, the 2025 Jaguars had ~$80M and rebuilt their entire defense. The 2024 Chargers had ~$70M and built a playoff roster around Harbaugh. Arizona in 2027 could have **$30–40M more than either of those teams.** The question isn't whether the cap rebounds. It's whether the Cardinals deploy it correctly — because Cleveland has had cap space for a decade and nothing to show for it.
 

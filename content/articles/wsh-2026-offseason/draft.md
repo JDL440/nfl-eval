@@ -66,21 +66,11 @@ Our cap expert's position is the sharpest counterpunch in the entire discussion:
 
 Cap's key distinction is between topline spending and productive spending. The offense/defense split looks balanced if you just glance at the big numbers. It looks a lot less balanced when you strip out dead money tied to offensive players who are gone.
 
-| Spending View | Offense | Defense | What It Means |
-|---------------|---------|---------|---------------|
-| Topline allocation | ~$120M | ~$122M | Looks balanced on the surface |
-| Productive spending view | ~$99M | ~$122M | Offense trails by roughly $23M once dead money is stripped out |
-| New marginal spending | Minimal compared to defense | Majority of new money | Peters chose defense with the spendable dollars |
+![Spending View vs Offense vs Defense. 3 rows and 4 columns. Columns include Spending View, Offense, Defense, and more. First row: Topline allocation.](../../images/wsh-2026-offseason/wsh-2026-offseason-spending-view-vs-offense-vs-defense.png)
 
 That leads to the central cap question: what would it actually cost to make the offense functional *now*?
 
-| Position | Realistic 2026 Cap Hit | Why It Matters |
-|----------|------------------------|----------------|
-| Starter-tier center | $8–10M | Makes the under-center plan operational |
-| RB1 | $9–11M | Gives the offense real run-game gravity |
-| Veteran WR2 | $10–12M | Prevents McLaurin from living in bracket coverage |
-| Kicker | $4–5M | Avoids losing games to a roster hole that should not exist |
-| **Total** | **$31–38M** | Still leaves meaningful flexibility inside $66M of space |
+![Position vs Realistic 2026 Cap Hit vs Why It Matters. 5 rows and 3 columns. Columns include Position, Realistic 2026 Cap Hit, Why It Matters. First row: Starter-tier center.](../../images/wsh-2026-offseason/wsh-2026-offseason-position-vs-realistic-2026-cap-hit-vs-why-it-matters.png)
 
 That is the part Washington fans should linger on. The shopping list sounds long. The bill doesn't. Even if the Commanders spend roughly $35M to fill every obvious offensive gap, they still keep room for in-season moves, draft-pick slots, and basic operational sanity.
 

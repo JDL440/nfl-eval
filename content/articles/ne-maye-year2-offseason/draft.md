@@ -72,13 +72,7 @@ Cap modeled two scenarios for the remaining space:
 
 Restructure Onwenu and Barmore to free ~$12–15M. Address RT and add one more playmaker.
 
-| Signing | AAV | Year 1 Cap Hit | Comp Range |
-|---------|-----|---------------|------------|
-| RT (starter-caliber) | $18–22M | $10–13M | Dan Moore Jr. ($20.5M), Alaric Jackson ($19.25M) |
-| WR2/vertical threat | $13–17M | $8–11M | Mid-market vertical separator |
-| Depth / rotational | $4–6M | $4–6M | — |
-| Draft pool + in-season reserve | — | ~$15–18M | — |
-| **Total** | — | **$37–48M** | — |
+![Signing vs AAV vs Year 1 Cap Hit. 5 rows and 4 columns. Columns include Signing, AAV, Year 1 Cap Hit, and more. First row: RT (starter-caliber).](../../images/ne-maye-year2-offseason/ne-maye-year2-offseason-signing-vs-aav-vs-year-1-cap-hit.png)
 
 The risk: committed dollars jump to ~$280M+ next year against a projected ~$315–320M cap. And roughly 30% of top-market free agent signings underperform their deals.
 
@@ -86,12 +80,7 @@ The risk: committed dollars jump to ~$280M+ next year against a projected ~$315�
 
 Address RT through the draft. Sign role players and depth pieces.
 
-| Signing | AAV | Year 1 Cap Hit | Comp Range |
-|---------|-----|---------------|------------|
-| Versatile OL depth / swing tackle | $8–12M | $5–8M | Mid-market starter or high-end backup |
-| Role players (2–3 signings) | $3–5M each | $6–10M | — |
-| Draft pool + in-season reserve | — | ~$15–18M | — |
-| **Total** | — | **$26–36M** | — |
+![Signing vs AAV vs Year 1 Cap Hit. 4 rows and 4 columns. Columns include Signing, AAV, Year 1 Cap Hit, and more. First row: Versatile OL depth / swing tackle.](../../images/ne-maye-year2-offseason/ne-maye-year2-offseason-signing-vs-aav-vs-year-1-cap-hit.png)
 
 The payoff: roll $15–25M into next year, where the dead money cliff gives New England a projected **$92 million in cap space** (per OTC). With rollover, that could push above **$110 million**. That's elite trade acquisition territory *and* Maye extension runway.
 
@@ -131,12 +120,7 @@ The #31 pick is a different animal than picking in the top five. Our draft exper
 
 At pick #31, the elite prospects — Bailey (EDGE, Texas Tech), Mauigoa (OT, Miami), Tate (WR, Ohio State), Reese (LB/EDGE, Ohio State) — will be long gone. But late first-rounders on a Super Bowl roster carry a different kind of value: cost-controlled contributors who can start immediately in a winning environment.
 
-| Prospect | Pos | School | Profile | Draft Range |
-|----------|-----|--------|---------|-------------|
-| Kadyn Proctor | OT | Alabama | Physical, powerful tackle; potential Moses successor at RT | 20–35 range |
-| Blake Miller | OT | Clemson | Versatile lineman, can play either tackle spot | Late 1st to early 2nd |
-| Monroe Freeling | OT | Georgia | Athletic tackle with zone-scheme upside | Late 1st to early 2nd |
-| T.J. Parker | EDGE | Clemson | Explosive first step, developmental edge rusher | 20–35 range |
+![Prospect vs Pos vs School. 4 rows and 5 columns. Columns include Prospect, Pos, School, and more. First row: Kadyn Proctor.](../../images/ne-maye-year2-offseason/ne-maye-year2-offseason-prospect-vs-pos-vs-school.png)
 
 But the board only tells half the story. The *class depth* tells the rest:
 

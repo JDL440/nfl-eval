@@ -54,11 +54,7 @@ Cap's position is the cleanest argument in the room: the Saints are not making e
 ![New Orleans Saints bridge year — inline image 1|New Orleans Saints offseason analysis](../../images/no-2026-offseason/no-2026-offseason-inline-1.jpg)
 
 
-| Year | Projected Cap | Dead Money | Draft Pool | Projected Available Space |
-|------|---------------|------------|------------|---------------------------|
-| **2026** | $301.2M | **$114.0M** | ~$14M | **~$8-12M** |
-| **2027** | $327.0M | **~$0M** | ~$12M | **~$115-120M** |
-| **2028** | $350.0M | ~$0M | ~$12M | **~$125-135M** |
+![Year vs Projected Cap vs Dead Money. 3 rows and 5 columns. Columns include Year, Projected Cap, Dead Money, and more. First row: 2026.](../../images/no-2026-offseason/no-2026-offseason-year-vs-projected-cap-vs-dead-money.png)
 
 That swing is almost absurd. New Orleans goes from paying for ghosts in 2026 to potentially having top-three leaguewide flexibility a year later. The Eagles are the comp everyone reaches for because Philadelphia used a dead-money purge, a cheap young quarterback, and then one aggressive spending wave to turn cap pain into a Super Bowl push. The Saints can see that path. The temptation is obvious.
 

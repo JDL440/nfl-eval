@@ -66,11 +66,7 @@ At roughly $13.7 million in workable room, the Bills can sign their draft class,
 
 If Beane wants more room than that, the cap model points to additional restructures:
 
-| Player | 2026 Cap Hit | Potential 2026 Relief | Future Cost |
-|--------|--------------|-----------------------|-------------|
-| Mitch Morse | $9.2M | ~$5.5M | Added charges in 2027-28 |
-| Dion Dawkins | $16.5M | ~$8.0M | Added charges in 2027-28 |
-| DaQuan Jones | $7.8M | ~$4.0M | Added charges in 2027-28 |
+![Player vs 2026 Cap Hit vs Potential 2026 Relief. 3 rows and 4 columns. Columns include Player, 2026 Cap Hit, Potential 2026 Relief, and more. First row: Mitch Morse.](../../images/buf-2026-offseason/buf-2026-offseason-player-vs-2026-cap-hit-vs-potential-2026-relief.png)
 
 Push all the available buttons and Buffalo can create something like $30M-plus in 2026 breathing room. But our cap expert views that as a trap, not a solution.
 
@@ -80,11 +76,7 @@ That line carries the whole argument. The Bills can absolutely create enough roo
 
 Allen's contract trajectory is the real warning sign:
 
-| Year | Age | Cap Hit | Dead Money if Cut |
-|------|-----|---------|-------------------|
-| 2026 | 30 | ~$43.6M | ~$118M |
-| 2027 | 31 | ~$48.2M | ~$80M |
-| 2028 | 32 | ~$52.4M | ~$43M |
+![Year vs Age vs Cap Hit. 3 rows and 4 columns. Columns include Year, Age, Cap Hit, and more. First row: 2026.](../../images/buf-2026-offseason/buf-2026-offseason-year-vs-age-vs-cap-hit.png)
 
 The Bills are not one restructure away from freedom. They are entering the expensive years of the quarterback deal without the kind of natural escape hatches Kansas City built into Patrick Mahomes' structure. That doesn't mean Buffalo is doomed. It does mean the franchise has stopped living in the easy surplus years.
 

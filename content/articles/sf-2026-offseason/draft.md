@@ -164,12 +164,7 @@ Here's what the panel agrees on, which is more than you'd expect from four exper
 
 The disagreement — EDGE vs. OT at #27 — is legitimate and unresolved. But even there, the panel converges on the underlying truth: San Francisco cannot afford to get the allocation wrong, because the cap math guarantees there is no follow-up spending spree. Whatever the 49ers build this spring is what they ride into January.
 
-| Expert | Bottom Line | Risk They're Most Worried About |
-|--------|------------|-------------------------------|
-| **SF** | Two-front triage is survivable, but 2026 is the last clean year — the window slams shut, it doesn't gently close | NFC West parity + fan base confidence if both Bosas miss time |
-| **Cap** | Evans deal is brilliant; Bosa reunion is affordable *if* structured as 2yr, Year 1 guarantees only | 2027 projected at -$19M+ — every dollar committed now is borrowed |
-| **Defense** | Morris' 3-4 is the hidden variable — Joey is the better scheme fit, and the system may help Nick's ACL rehab | CB depth and nose tackle remain unfixed behind the Bosa headlines |
-| **Offense** | Evans adds a dimension Purdy has never had, but Jennings' chain-mover role is the real hole | Williams succession at 38 — if the LT goes, the entire architecture collapses |
+![Expert vs Bottom Line vs Risk They're Most Worried About. 4 rows and 3 columns. Columns include Expert, Bottom Line, Risk They're Most Worried About. First row: SF.](../../images/sf-2026-offseason/sf-2026-offseason-expert-vs-bottom-line-vs-risk-they-re-most-worried-about.png)
 
 The Shanahan dynasty isn't cracking. But it's being stress-tested in a way it has never been, and the answer depends on whether two enormous gambles — Bosa health and Evans fit — both hit in the same 17-game window.
 

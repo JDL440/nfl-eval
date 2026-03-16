@@ -57,12 +57,7 @@ Our cap expert's argument is the least emotional and probably the most important
 
 The cleanest way to see it is to isolate the names everyone already knows:
 
-| Contract Pressure | 2026 Cap Hit | 2027 Cap Hit | Change |
-|---|---:|---:|---:|
-| **Dak Prescott + CeeDee Lamb** | **$63.3M** | **$122.3M** | **+$59.0M** |
-| Projected 2027 cap space | — | **-$244K** | Already effectively gone |
-| **George Pickens** tag in 2026 | **$27.3M** | — | Huge short-term spend on a non-extended player |
-| Second tag for Pickens (if used) | — | **~$32.8M** | Nearly impossible alongside the 2027 core hits |
+![Contract Pressure vs 2026 Cap Hit vs 2027 Cap Hit. 4 rows and 4 columns. Columns include Contract Pressure, 2026 Cap Hit, 2027 Cap Hit, and more. First row: Dak Prescott + CeeDee Lamb.](../../images/dal-2026-offseason/dal-2026-offseason-contract-pressure-vs-2026-cap-hit-vs-2027-cap-hit.png)
 
 > *"The 2027 wall doesn't care about roster talent."* — **Cap**
 

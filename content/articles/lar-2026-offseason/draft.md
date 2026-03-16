@@ -55,11 +55,7 @@ Our cap analyst's assessment was blunt: the money *supports* all-in because the 
 
 Stafford's $48.26 million cap hit consumes 16% of the $301.2 million salary cap — the second-highest quarterback allocation among competitive rosters behind only Tua Tagovailoa's $56.3 million in Miami. That leaves 84 cents of every cap dollar for the other 52 roster spots.
 
-| Year | Projected Cap | Est. Space | Key Dynamic |
-|------|--------------|------------|-------------|
-| 2026 | $301.2M | ~$40–44M | Window open. Functional flexibility. |
-| 2027 | $327.0M | **~$3M** | Cliff. Secondary eating $55M+. Dead money accelerates if Stafford retires. |
-| 2028 | $352.0M | ~$150M | Relief — but only via teardown. McDuffie still owed $35M+. |
+![Year vs Projected Cap vs Est. Space. 3 rows and 4 columns. Columns include Year, Projected Cap, Est. Space, and more. First row: 2026.](../../images/lar-2026-offseason/lar-2026-offseason-year-vs-projected-cap-vs-est-space.png)
 
 The cliff is 2027, not 2028. That distinction matters. The relatively clean $8.6 million in 2026 dead money masks what's coming: accelerated charges from any restructures plus the full secondary overhaul hitting simultaneously. With roughly 30 players under contract and $3 million in projected space, the Rams will need painful cuts just to field a 2027 roster.
 
