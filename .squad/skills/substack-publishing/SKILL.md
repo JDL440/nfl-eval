@@ -43,6 +43,7 @@ publish_to_substack(
   subtitle: "One-line hook",         ← optional: auto-extracted from first *italic* line
   audience: "everyone"               ← "everyone" (default) or "only_paid"
   team: "Seattle Seahawks"           ← optional: auto-detected from pipeline.db; override only if needed
+  draft_url: "https://..."           ← optional: update existing draft instead of creating new one
 )
 ```
 
@@ -51,6 +52,18 @@ Title and subtitle are auto-extracted from the markdown if not provided:
 - **Subtitle** → first line that is `*wrapped in single asterisks*` (the standard subheadline format)
 
 The `team` parameter accepts full or partial team names — `"Seahawks"` matches `"Seattle Seahawks"`. When provided (or auto-detected from `pipeline.db`), the team name is added as a tag on the draft. Specialist agents who contributed artifacts in the article directory are also auto-tagged.
+
+### Draft Update Mode
+
+If a `substack_draft_url` is stored in `pipeline.db` for the article (set via `PipelineState.set_draft_url()`), the tool **automatically updates the existing draft** instead of creating a new one. This avoids duplicate drafts when re-publishing after edits.
+
+- **Auto-detect:** If the article has a stored draft URL in `pipeline.db`, the tool uses it automatically.
+- **Manual override:** Pass `draft_url` explicitly to update a specific draft.
+- **New draft:** If no stored URL and no `draft_url` param, creates a new draft as before.
+
+### Published-Article Guard
+
+The tool includes a hard safety guard: if the article is Stage 8 or status `published` in `pipeline.db`, the tool **refuses to operate** and returns an explicit error. This prevents accidentally overwriting live Substack content. There is no override — published articles must be edited directly in the Substack editor.
 
 ---
 
@@ -248,10 +261,14 @@ Discovered by inspecting real Substack drafts via the API:
 - After Editor approval, call `publish_to_substack(file_path: "content/articles/{slug}.md")`
 - The tool **auto-detects the team** by looking up `primary_team` in `content/pipeline.db` — no `team` param needed
 - Tags are applied automatically: the team name + any specialist agents whose artifacts are in the article directory
+- If a `substack_draft_url` is stored in `pipeline.db`, the tool updates the existing draft automatically
+- Pass `draft_url:` explicitly to override the stored URL or force an update to a specific draft
 - Pass `team:` explicitly only if the DB lookup won't have the right value (rare)
 - Pass explicit `title` and `subtitle` if you want to override the auto-extracted values
 - Give Joe the returned draft URL — that's all that's needed for Stage 8
 - Post the Publisher Pass checklist from `article-lifecycle` SKILL alongside the URL
+- **After publish_to_substack returns, persist the draft URL:** `ps.set_draft_url(slug, url)`
+- The tool refuses to operate on Stage 8 / published articles (hard guard)
 
 ---
 

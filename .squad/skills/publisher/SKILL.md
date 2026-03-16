@@ -101,26 +101,42 @@ publish_to_substack(
 )
 ```
 
-The tool returns a direct Substack editor URL.
+The tool returns a direct Substack editor URL. If a stored draft URL exists in `pipeline.db` for this article, the tool **updates the existing draft** instead of creating a new one.
 
-### Step 5b — Record Stage 7 in Pipeline DB
+**Published-article guard:** The tool will refuse to operate on articles that are already published (Stage 8 / status `published`). This is a hard safety guard — there is no override.
 
-After `publish_to_substack` returns successfully, record the publisher pass and stage transition:
+**Manual override:** To update a specific draft, pass `draft_url` explicitly:
+```
+publish_to_substack(
+  file_path: "content/articles/{slug}.md",
+  draft_url: "https://nfllab.substack.com/publish/post/{DRAFT_ID}"
+)
+```
+
+### Step 5b — Record Stage 7 + Draft URL in Pipeline DB
+
+After `publish_to_substack` returns successfully, record the publisher pass, stage transition, **and draft URL**:
 
 ```python
 from content.pipeline_state import PipelineState
 
-ps = PipelineState()
-ps.advance_stage('{slug}', from_stage=6, to_stage=7, agent='Publisher',
-                 notes='Publisher pass complete. Draft URL: {url}')
-ps.record_publisher_pass('{slug}',
-    title_final=1, subtitle_final=1, body_clean=1,
-    section_assigned=1, tags_set=1, url_slug_set=1,
-    names_verified=1, numbers_current=1, no_stale_refs=1)
-ps.close()
+with PipelineState() as ps:
+    # For NEW drafts (first publish from Stage 6):
+    ps.advance_stage('{slug}', from_stage=6, to_stage=7, agent='Publisher',
+                     notes='Publisher pass complete. Draft URL: {url}')
+    ps.set_draft_url('{slug}', '{url}')
+    ps.record_publisher_pass('{slug}',
+        title_final=1, subtitle_final=1, body_clean=1,
+        section_assigned=1, tags_set=1, url_slug_set=1,
+        names_verified=1, numbers_current=1, no_stale_refs=1)
+
+    # For UPDATES (article already at Stage 7):
+    # ps.set_draft_url('{slug}', '{url}')   # just refresh the URL — no stage transition needed
 ```
 
 **Note:** The `publish_to_substack` extension does NOT write back to pipeline.db. The calling agent (Lead or Publisher) is responsible for this step using the shared helper.
+
+**Note:** `set_draft_url()` includes the published-article guard — it will raise `ValueError` if the article is Stage 8 or status `published`.
 
 ### Step 6 — Hand Off to Joe
 

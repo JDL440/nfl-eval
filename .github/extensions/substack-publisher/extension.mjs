@@ -279,6 +279,70 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
     return await res.json();
 }
 
+/**
+ * Update an existing Substack draft by ID.
+ * Uses the same payload shape as create but PUTs to the specific draft endpoint.
+ */
+async function updateSubstackDraft({ subdomain, headers, draftId, title, subtitle, body, audience, tags }) {
+    const payload = {
+        audience: audience || "everyone",
+        draft_title: title,
+        draft_subtitle: subtitle || "",
+        draft_body: JSON.stringify(body),
+        postTags: tags || [],
+    };
+
+    const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draftId}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Substack draft update failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+    }
+    return await res.json();
+}
+
+/**
+ * Extract a Substack draft ID from a draft editor URL.
+ * Accepts: https://subdomain.substack.com/publish/post/191150015
+ * Returns: "191150015" or null
+ */
+function extractDraftIdFromUrl(url) {
+    if (!url) return null;
+    const m = url.match(/\/publish\/post\/(\d+)/);
+    return m ? m[1] : null;
+}
+
+/**
+ * Look up an article's draft URL and current stage from pipeline.db.
+ * Returns { draftUrl, currentStage, status } or null if DB unavailable.
+ */
+async function lookupArticleStateFromDb(articleSlug, cwd) {
+    const dbPath = resolve(cwd, "content", "pipeline.db");
+    if (!existsSync(dbPath)) return null;
+
+    try {
+        const { DatabaseSync } = await import("node:sqlite");
+        const db = new DatabaseSync(dbPath, { readOnly: true });
+        const stmt = db.prepare(
+            "SELECT substack_draft_url, current_stage, status FROM articles WHERE id = ?"
+        );
+        const row = stmt.get(articleSlug);
+        db.close();
+        if (!row) return null;
+        return {
+            draftUrl: row.substack_draft_url || null,
+            currentStage: row.current_stage,
+            status: row.status,
+        };
+    } catch {
+        return null;
+    }
+}
+
 // ─── Markdown → ProseMirror ──────────────────────────────────────────────────
 
 /**
@@ -948,6 +1012,8 @@ const session = await joinSession({
             name: "publish_to_substack",
             description:
                 "Publishes a markdown article file to Substack as a draft ready for review and one-click publishing. " +
+                "If a stored draft URL exists in pipeline.db for this article, updates the existing draft instead of creating a new one. " +
+                "Hard guard: refuses to operate on already-published articles (Stage 8). " +
                 "Reads auth from SUBSTACK_TOKEN and SUBSTACK_PUBLICATION_URL in .env. " +
                 "Auto-extracts title and subtitle from the markdown if not provided. " +
                 "Automatically tags the draft with the team name and any participating specialist agents. " +
@@ -983,6 +1049,13 @@ const session = await joinSession({
                             "NFL team name to tag on the Substack draft. " +
                             'Full name (e.g. "Seattle Seahawks") or partial (e.g. "Seahawks"). ' +
                             "If omitted, auto-detected from pipeline.db.",
+                    },
+                    draft_url: {
+                        type: "string",
+                        description:
+                            "Existing Substack draft URL to update instead of creating a new draft. " +
+                            'Format: "https://subdomain.substack.com/publish/post/DRAFT_ID". ' +
+                            "If omitted, auto-detected from pipeline.db substack_draft_url column.",
                     },
                 },
                 required: ["file_path"],
@@ -1043,6 +1116,45 @@ const session = await joinSession({
                     const subdomain = extractSubdomain(pubUrl);
                     await session.log(`Connecting to ${subdomain}.substack.com…`, { ephemeral: true });
 
+                    // Derive article slug from file path
+                    // e.g. content/articles/jsn-extension-preview/draft.md → jsn-extension-preview
+                    //      content/articles/ari-2026-offseason.md → ari-2026-offseason
+                    const pathParts = args.file_path.replace(/\\/g, "/").split("/");
+                    const draftIdx = pathParts.indexOf("articles");
+                    let articleSlug = draftIdx >= 0 && draftIdx + 1 < pathParts.length
+                        ? pathParts[draftIdx + 1]
+                        : null;
+                    if (articleSlug && articleSlug.endsWith(".md")) {
+                        articleSlug = articleSlug.slice(0, -3);
+                    }
+
+                    // ── Published-article guard + draft URL lookup ────────
+                    let existingDraftUrl = args.draft_url || null;
+                    if (articleSlug) {
+                        const articleState = await lookupArticleStateFromDb(articleSlug, process.cwd());
+                        if (articleState) {
+                            // Hard guard: refuse to touch published articles
+                            if (articleState.currentStage === 8 || articleState.status === "published") {
+                                return {
+                                    textResultForLlm:
+                                        `🛑 BLOCKED: Article '${articleSlug}' is already published ` +
+                                        `(stage=${articleState.currentStage}, status=${articleState.status}). ` +
+                                        `Cannot update a published article through the draft-update path. ` +
+                                        `This is a safety guard to prevent overwriting live Substack content.`,
+                                    resultType: "failure",
+                                };
+                            }
+                            // Auto-detect existing draft URL from DB if not explicitly provided
+                            if (!existingDraftUrl && articleState.draftUrl) {
+                                existingDraftUrl = articleState.draftUrl;
+                                await session.log(`Found existing draft URL in pipeline.db: ${existingDraftUrl}`, { ephemeral: true });
+                            }
+                        }
+                    }
+
+                    const existingDraftId = extractDraftIdFromUrl(existingDraftUrl);
+                    const isUpdate = !!existingDraftId;
+
                     // Resolve team: explicit arg → DB lookup → null
                     let teamName = args.team || null;
                     if (!teamName) {
@@ -1064,61 +1176,75 @@ const session = await joinSession({
                         uploadImageToSubstack(subdomain, headers, localPath, articleDir);
                     const body = await markdownToProseMirror(bodyMarkdown, uploadImage);
 
-                    // Create draft
-                    await session.log("Creating draft on Substack…", { ephemeral: true });
-                    const draft = await createSubstackDraft({
-                        subdomain,
-                        headers,
-                        title,
-                        subtitle,
-                        body,
-                        audience: args.audience || "everyone",
-                        tags,
-                    });
-
-                    const draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
-
-                    // Derive article slug from file path for writeback
-                    // e.g. content/articles/jsn-extension-preview/draft.md → jsn-extension-preview
-                    //      content/articles/ari-2026-offseason.md → ari-2026-offseason
-                    const pathParts = args.file_path.replace(/\\/g, "/").split("/");
-                    const draftIdx = pathParts.indexOf("articles");
-                    let articleSlug = draftIdx >= 0 && draftIdx + 1 < pathParts.length
-                        ? pathParts[draftIdx + 1]
-                        : null;
-                    // Strip trailing .md for flat files
-                    if (articleSlug && articleSlug.endsWith(".md")) {
-                        articleSlug = articleSlug.slice(0, -3);
+                    // Create or update draft
+                    let draft;
+                    let draftUrl;
+                    if (isUpdate) {
+                        await session.log(`Updating existing draft ${existingDraftId}…`, { ephemeral: true });
+                        draft = await updateSubstackDraft({
+                            subdomain,
+                            headers,
+                            draftId: existingDraftId,
+                            title,
+                            subtitle,
+                            body,
+                            audience: args.audience || "everyone",
+                            tags,
+                        });
+                        draftUrl = existingDraftUrl;
+                    } else {
+                        await session.log("Creating new draft on Substack…", { ephemeral: true });
+                        draft = await createSubstackDraft({
+                            subdomain,
+                            headers,
+                            title,
+                            subtitle,
+                            body,
+                            audience: args.audience || "everyone",
+                            tags,
+                        });
+                        draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
                     }
 
-                    // ── Pipeline DB writeback (Stage 7) ──────────────────
+                    // ── Pipeline DB writeback (Stage 7 + draft URL) ──────
                     // The calling agent (Lead / Ralph) MUST update pipeline.db
                     // after this tool returns. Direct DB writes from this JS
                     // extension are avoided to prevent conflicts with the
-                    // Python PipelineState layer. Use the slug and URL below:
+                    // Python PipelineState layer. Use the slug and URL below.
                     //
-                    //   from content.pipeline_state import PipelineState
-                    //   ps = PipelineState()
-                    //   ps.advance_stage('<slug>', from_stage=6, to_stage=7,
-                    //                    agent='Publisher', notes='Draft: <url>')
+                    // For NEW drafts (stage 6→7):
+                    //   ps.advance_stage('<slug>', from_stage=6, to_stage=7, ...)
+                    //   ps.set_draft_url('<slug>', '<url>')
+                    //
+                    // For UPDATES (already stage 7):
+                    //   ps.set_draft_url('<slug>', '<url>')   # just refresh the URL
 
-                    // Build writeback instruction block for the calling agent
                     const writebackBlock = articleSlug
-                        ? `\n**⚡ DB Writeback required (Stage 7):**\n` +
-                          `\`\`\`python\n` +
-                          `from content.pipeline_state import PipelineState\n` +
-                          `with PipelineState() as ps:\n` +
-                          `    ps.advance_stage('${articleSlug}', from_stage=6, to_stage=7, agent='Publisher', notes='Draft: ${draftUrl}')\n` +
-                          `\`\`\`\n`
+                        ? isUpdate
+                            ? `\n**⚡ DB Writeback required (draft URL refresh):**\n` +
+                              `\`\`\`python\n` +
+                              `from content.pipeline_state import PipelineState\n` +
+                              `with PipelineState() as ps:\n` +
+                              `    ps.set_draft_url('${articleSlug}', '${draftUrl}')\n` +
+                              `\`\`\`\n`
+                            : `\n**⚡ DB Writeback required (Stage 7 + draft URL):**\n` +
+                              `\`\`\`python\n` +
+                              `from content.pipeline_state import PipelineState\n` +
+                              `with PipelineState() as ps:\n` +
+                              `    ps.advance_stage('${articleSlug}', from_stage=6, to_stage=7, agent='Publisher', notes='Draft: ${draftUrl}')\n` +
+                              `    ps.set_draft_url('${articleSlug}', '${draftUrl}')\n` +
+                              `\`\`\`\n`
                         : "";
 
+                    const actionWord = isUpdate ? "updated" : "created";
                     return (
-                        `✅ Substack draft created!\n\n` +
+                        `✅ Substack draft ${actionWord}!\n\n` +
+                        `**Mode:** ${isUpdate ? "UPDATE (existing draft)" : "CREATE (new draft)"}\n` +
                         `**Title:** ${title}\n` +
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
                         `**Audience:** ${args.audience || "everyone"}\n` +
                         `**Tags:** ${tags.length > 0 ? tags.join(", ") : "(none)"}\n` +
-                        `**Draft ID:** ${draft.id}\n` +
+                        `**Draft ID:** ${isUpdate ? existingDraftId : draft.id}\n` +
                         (articleSlug ? `**Article slug:** ${articleSlug}\n` : "") +
                         `\n**Review & publish:** ${draftUrl}\n` +
                         writebackBlock +

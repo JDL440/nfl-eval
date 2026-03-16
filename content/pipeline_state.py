@@ -88,6 +88,47 @@ class PipelineState:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    # ── Draft URL management ─────────────────────────────────────────────────
+
+    def get_draft_url(self, article_id):
+        """Return the stored Substack draft URL for an article, or None."""
+        row = self._conn.execute(
+            "SELECT substack_draft_url FROM articles WHERE id = ?", (article_id,)
+        ).fetchone()
+        return row["substack_draft_url"] if row else None
+
+    def set_draft_url(self, article_id, draft_url):
+        """
+        Persist the Substack draft URL for an article.
+
+        Raises if the article is already published (Stage 8 / status 'published')
+        to prevent accidental overwrites of live articles.
+        """
+        self.assert_not_published(article_id)
+        self._conn.execute(
+            "UPDATE articles SET substack_draft_url = ?, updated_at = ? WHERE id = ?",
+            (draft_url, _now_iso(), article_id),
+        )
+        self._conn.commit()
+
+    def assert_not_published(self, article_id):
+        """
+        Hard guard: raise ValueError if the article is published (Stage 8 or status='published').
+
+        Call this before any draft-update or re-publish operation to prevent
+        accidentally overwriting a live Substack post.
+        """
+        article = self.get_article(article_id)
+        if article is None:
+            raise ValueError(f"Article '{article_id}' not found in pipeline.db")
+        if article["current_stage"] == 8 or article.get("status") == "published":
+            raise ValueError(
+                f"Article '{article_id}' is already published "
+                f"(stage={article['current_stage']}, status={article.get('status')}). "
+                f"Cannot update a published article through the draft-update path. "
+                f"This is a safety guard to prevent overwriting live content."
+            )
+
     # ── Stage transitions ────────────────────────────────────────────────────
 
     def advance_stage(self, article_id, from_stage, to_stage, agent, notes=None, status=None):
