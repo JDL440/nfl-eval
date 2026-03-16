@@ -1,6 +1,6 @@
 # The Giants Spent March Building Ravens South. The No. 5 Pick Will Tell You if Jaxson Dart Changed the Plan.
 
-*John Harbaugh's first offseason in New York screams defense, toughness, and patience. Our expert panel's conclusion is more uncomfortable: if the Giants stay at No. 5 and draft Sonny Styles, they may be solving the part of the roster they've already fixed while wasting the most valuable asset in the building.*
+*Harbaugh's Giants spent March building Ravens South. Our expert panel thinks the No. 5 pick could waste their most valuable asset.*
 
 ---
 
