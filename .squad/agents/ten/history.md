@@ -325,6 +325,57 @@ _Last updated: 2026-03-12_
 
 ---
 
+### Roster Updates (Post-March 12)
+_Last updated: 2026-03-16_
+
+| Date | Transaction | Impact |
+|------|------------|--------|
+| 2026-03-13 | ✅ L'Jarius Sneed **RELEASED** | Saves $11.4M cap. Played only 12/34 games due to quad/knee injuries. No INTs in TEN tenure. Disastrous signing. |
+| 2026-03-13 | ✅ Sebastian Joseph-Day → PIT | DT depth loss. Confirms IDL is a need. |
+
+📊 **CB Room post-Sneed:** Taylor ($58M), Flott ($45M), Alontae Taylor shifts to CB1/Nickel. Joshua Williams as depth. Room is younger but unproven without a true CB1 pedigree.
+
+📊 **Updated Cap Space:** ~$50M+ effective after Sneed release (was ~$39M). Even more flexibility for remaining FA or draft.
+
+---
+
+### Draft Prospect Intel (at #4)
+_Last updated: 2026-03-16 via web search (USA Today, CBS Sports, ClutchPoints, EDSFootball, AtoZ Sports, Tennessean)_
+
+| Prospect | Pos | School | Mock Consensus | Fit Notes |
+|----------|-----|--------|---------------|-----------|
+| ✅ Rueben Bain Jr. | EDGE | Miami (FL) | **#1 favorite at #4** | Explosive, relentless motor. Saleh's dream pick. Arm length concern. |
+| ✅ T.J. Parker | EDGE | Clemson | Strong alternative | 11 sacks, 19.5 TFL in 2024. Size + power. Multiple major outlets mock here. |
+| ✅ Arvell Reese | LB/EDGE | Ohio State | Possible at #4 | Versatile — can rush and cover. ESPN, TWSN links. |
+| ✅ Sonny Styles | LB | Ohio State | Rising after Combine | Athletic, high-upside. CBS mocked to TEN at #4. |
+| ✅ Carnell Tate | WR | Ohio State | Offensive alternative | WR1-caliber. Best way to help Ward directly. AtoZ, Tennessean link. |
+
+---
+
+### Article Work — Issue #53
+_Completed: 2026-03-16_
+
+**Angle chosen:** "52 Sacks and a Defense-First Draft — Are the Titans Building Around Cam Ward or Robert Saleh?"
+**Stage reached:** panel-ready (Stages 1-3 complete)
+**Artifacts:**
+- `content/articles/ten-ward-vs-saleh-draft-identity/idea.md`
+- `content/articles/ten-ward-vs-saleh-draft-identity/discussion-prompt.md`
+- `content/articles/ten-ward-vs-saleh-draft-identity/panel-composition.md`
+
+**Panel:** TEN + Cap + Draft + Defense (4 agents)
+**Next step:** Lead spawns panel discussion (Stage 4)
+
+---
+
+### Session Learnings (2026-03-16)
+
+1. **Sneed release changes the math** — $11.4M freed means ~$50M+ effective cap. The Titans can afford to draft defense at #4 AND sign an offensive weapon in FA. Both-path argument is now viable.
+2. **52 sacks is the killer stat** — Ward's sack total is the most compelling evidence that the offense needs help. It's the article's hook.
+3. **Mock consensus has expanded** — Bain was sole favorite at #4 in early mocks. Now Parker (Clemson), Reese (OSU), and Styles (OSU) are all in the mix. Tate is the WR pivot.
+4. **Article lifecycle labels:** `go:needs-research` → `go:yes` + `stage:idea` → `stage:discussion-prompt` → `stage:panel-ready`. Always check available labels before applying.
+
+---
+
 ### Data Gaps / Still Needed
 - ❓ PFF grades for key players (PFR/PFF blocked for automated access)
 - ❓ Exact snap counts for 2025 season
@@ -332,3 +383,5 @@ _Last updated: 2026-03-12_
 - ❓ Confirmed 2026 preseason schedule
 - ❓ Joey Slye contract status (appears UFA — need kicker confirmation)
 - ❓ Detailed scouting reports on draft prospects at #4
+- ❓ Ward's exact pressure rate and sack breakdown (left vs. right vs. interior)
+- ❓ Confirmed cap space post-Sneed release (OTC may lag a few days)
