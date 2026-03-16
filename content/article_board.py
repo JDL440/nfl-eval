@@ -108,6 +108,54 @@ def _count_images(dirpath):
     return len([f for f in os.listdir(dirpath) if re.match(r".*\.(png|jpe?g|webp)$", f, re.IGNORECASE)])
 
 
+def _infer_discussion_path(slug):
+    """
+    Infer canonical discussion_path from artifacts.
+    
+    Returns:
+        - content/articles/{slug}/discussion-summary.md (preferred)
+        - content/articles/{slug}/discussion-synthesis.md (alternate)
+        - None if neither exists
+    
+    Conservative: we do NOT return prompt or panel-composition paths
+    as canonical discussion artifacts.
+    """
+    base = os.path.join(_ARTICLES_DIR, slug)
+    
+    # Prefer summary, fallback to synthesis
+    for filename in ("discussion-summary.md", "discussion-synthesis.md"):
+        candidate = os.path.join(base, filename)
+        if os.path.isfile(candidate):
+            # Return as relative path from repo root
+            return os.path.relpath(candidate, _REPO_ROOT).replace("\\", "/")
+    
+    return None
+
+
+def _infer_article_path(slug):
+    """
+    Infer canonical article_path from artifacts.
+    
+    Returns:
+        - content/articles/{slug}/draft.md (preferred for stage 5+)
+        - content/articles/{slug}.md (legacy flat file for stage 8)
+        - None if neither exists
+    
+    Conservative: we do NOT return temp/section drafts as canonical.
+    """
+    # First check for structured draft
+    draft_path = os.path.join(_ARTICLES_DIR, slug, "draft.md")
+    if os.path.isfile(draft_path):
+        return os.path.relpath(draft_path, _REPO_ROOT).replace("\\", "/")
+    
+    # Fallback: legacy flat file (typically published articles)
+    flat_path = os.path.join(_ARTICLES_DIR, f"{slug}.md")
+    if os.path.isfile(flat_path):
+        return os.path.relpath(flat_path, _REPO_ROOT).replace("\\", "/")
+    
+    return None
+
+
 # ── Stage inference ──────────────────────────────────────────────────────────
 
 def infer_stage(article_dir):
@@ -299,6 +347,12 @@ def reconcile(dry_run=True):
 
     Returns list of dicts describing each discrepancy:
         slug, artifact_stage, db_stage, db_stage_type, action, detail
+    
+    Now includes path reconciliation:
+        - Checks discussion_path for stage 4+ articles with discussion artifacts
+        - Checks article_path for stage 5+ articles with draft artifacts
+        - Reports PATH_MISMATCH or PATH_MISSING discrepancies
+        - In repair mode, fixes paths to canonical values
     """
     board = scan_articles()
     discrepancies = []
@@ -326,15 +380,22 @@ def reconcile(dry_run=True):
                 "detail": f"Artifacts at stage {artifact_stage} but no DB row",
             })
             if not dry_run:
-                # Backfill: create the missing row
+                # Backfill: create the missing row with canonical paths
                 # Derive title from slug (best effort)
                 title = slug.replace("-", " ").title()
+                
+                # Infer paths based on stage
+                discussion_path = _infer_discussion_path(slug) if artifact_stage >= 4 else None
+                article_path = _infer_article_path(slug) if artifact_stage >= 5 else None
+                
                 ps.backfill_article(
                     article_id=slug,
                     title=title,
                     stage=artifact_stage,
                     status="in_production" if artifact_stage > 1 else "proposed",
                     agent="article_board",
+                    discussion_path=discussion_path,
+                    article_path=article_path,
                 )
             continue
 
@@ -400,6 +461,43 @@ def reconcile(dry_run=True):
                     "action": "MISSING_EDITOR_REVIEW",
                     "detail": f"Editor review artifact exists (verdict={item['editor_verdict']}) but no DB row",
                 })
+        
+        # ── Path reconciliation ──────────────────────────────────────────────
+        # Check discussion_path for stage 4+ articles with discussion artifacts
+        if artifact_stage >= 4:
+            canonical_discussion = _infer_discussion_path(slug)
+            db_discussion = db_row.get("discussion_path")
+            
+            if canonical_discussion and db_discussion != canonical_discussion:
+                # Mismatch: DB has wrong path or None
+                discrepancies.append({
+                    "slug": slug,
+                    "artifact_stage": artifact_stage,
+                    "db_stage": db_stage,
+                    "db_stage_type": db_type,
+                    "action": "PATH_MISMATCH" if db_discussion else "PATH_MISSING",
+                    "detail": f"discussion_path: DB='{db_discussion}' → canonical='{canonical_discussion}'",
+                })
+                if not dry_run:
+                    ps.set_discussion_path(slug, canonical_discussion)
+        
+        # Check article_path for stage 5+ articles with draft artifacts
+        if artifact_stage >= 5:
+            canonical_article = _infer_article_path(slug)
+            db_article = db_row.get("article_path")
+            
+            if canonical_article and db_article != canonical_article:
+                # Mismatch: DB has wrong path or None
+                discrepancies.append({
+                    "slug": slug,
+                    "artifact_stage": artifact_stage,
+                    "db_stage": db_stage,
+                    "db_stage_type": db_type,
+                    "action": "PATH_MISMATCH" if db_article else "PATH_MISSING",
+                    "detail": f"article_path: DB='{db_article}' → canonical='{canonical_article}'",
+                })
+                if not dry_run:
+                    ps.set_article_path(slug, canonical_article)
 
     # Articles in DB but no local directory
     for db_id, db_row in db_articles.items():

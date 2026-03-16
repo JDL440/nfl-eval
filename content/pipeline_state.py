@@ -270,7 +270,8 @@ class PipelineState:
 
     # ── Backfill: create missing articles rows ───────────────────────────────
 
-    def backfill_article(self, article_id, title, stage=1, status="proposed", agent="pipeline_state"):
+    def backfill_article(self, article_id, title, stage=1, status="proposed", agent="pipeline_state",
+                         discussion_path=None, article_path=None):
         """
         Create a missing articles row from artifact-discovered slug and inferred stage.
         
@@ -289,6 +290,10 @@ class PipelineState:
             Article status (default 'proposed')
         agent : str
             Who created the row (default 'pipeline_state')
+        discussion_path : str or None
+            Canonical discussion path (auto-inferred if None and stage >= 4)
+        article_path : str or None
+            Canonical article path (auto-inferred if None and stage >= 5)
         """
         _validate_stage(stage, "stage")
         if status not in VALID_STATUSES:
@@ -304,9 +309,9 @@ class PipelineState:
         # Safe defaults: minimal row that won't break anything
         self._conn.execute(
             """INSERT INTO articles 
-               (id, title, status, current_stage, created_at, updated_at, depth_level, time_sensitive)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (article_id, title, status, stage, now, now, 2, 0),
+               (id, title, status, current_stage, discussion_path, article_path, created_at, updated_at, depth_level, time_sensitive)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (article_id, title, status, stage, discussion_path, article_path, now, now, 2, 0),
         )
         
         # Log the backfill as a stage transition
