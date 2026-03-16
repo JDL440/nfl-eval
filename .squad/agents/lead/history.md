@@ -463,4 +463,47 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 - MIA panel is ready to run (3 agents, all prompts written) — next session should spawn the panel
 - The 4-path structure for MIA (Rams/Texans/GB/Hail Mary) gives the panel concrete options to evaluate, not vague "rebuild" talk
 
+### Social Link Image — Backlog Item Created (2026-03-17)
 
+**Request:** Joe corrected an earlier preference — he likes the **social link image** (not the cover image) from the Witherspoon article (`witherspoon-extension-v2`). Asked for an unassigned backlog item to track future social image improvements.
+
+**Duplicate check:** Searched open issues for "social image", "social link image", "og:image" — none found.
+
+**Action:** Created GitHub issue **#70** — *"Improve social link image generation for Substack articles"*
+- **URL:** https://github.com/JDL440/nfl-eval/issues/70
+- **Label:** `enhancement` (no `squad` labels — avoids auto-routing/assignment)
+- **Assignee:** none (backlog only, per user request)
+- **Style reference:** Witherspoon article social link preview flagged as the target aesthetic
+
+**Decision filed:** `.squad/decisions/inbox/lead-social-image-backlog.md`
+
+
+
+### Witherspoon Extension V2 — Article Refresh from Original Source (2026-03-15)
+
+**Request:** Joe asked to regenerate the Witherspoon extension article from original source artifacts.
+
+**Source artifact findings:**
+- **Original article exists:** `content/articles/witherspoon-extension-cap-vs-agent.md` (published 2026-03-14, Article #2)
+- **No structured pipeline artifacts exist:** This was a pre-pipeline article — no discussion-prompt, position files, or discussion-summary were ever created. It predates the Article Lifecycle skill.
+- **Idea entry:** One line in `content/article-ideas.md` (line 14) — agents: Cap, PlayerRep, SEA
+- **DB seed:** `content/init_db.py` has the article record with slug and metadata
+
+**Action taken:**
+- Used the published article as source material (premise, data anchors, expert positions, market comps)
+- Created full pipeline artifacts in `content/articles/witherspoon-extension-v2/`:
+  - `discussion-prompt.md` — reconstructed from original data
+  - `cap-position.md` — fresh Cap panel position (441 words)
+  - `playerrep-position.md` — fresh PlayerRep panel position (500 words)
+  - `sea-position.md` — fresh SEA panel position (450 words)
+  - `discussion-summary.md` — Lead synthesis
+  - `draft.md` — complete fresh article (~3,300 words)
+
+**Key changes from v1:**
+- Removed all WA tax legislation references (SB 6346, 9.9% millionaires tax) per content constraint
+- Added TLDR section per current article standards
+- Narrowed the AAV gap: v1 had $27M vs ; v2 panel converged to $30.5M vs .5M — more realistic post-McDuffie
+- Guarantee fight surfaced as the real tension (v1 focused more on AAV; v2 identifies guarantees as the actual battlefield)
+- PlayerRep's non-obvious insight (5th-year option strengthens the player's hand) is a stronger argument than v1's tax angle
+
+**Learning:** Pre-pipeline articles (Articles 1-2) have no structured artifacts. When refreshing them, the published article itself IS the source material. The pipeline structure (discussion-prompt → positions → synthesis → draft) can be reconstructed retroactively.

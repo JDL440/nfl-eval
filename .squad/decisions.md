@@ -999,3 +999,37 @@ New language (L139–L141):
 **Decision:**
 ✅ **APPROVED** — Update README to reflect current tag-based publishing behavior. Minimal, surgical change with high accuracy impact.
 
+
+### 2026-03-16T04:18:50Z: User directive — Social link image preference
+**By:** Joe Robinson (via Copilot)
+**What:** The preferred Witherspoon visual reference is the social link image, not the cover image. Track a future backlog item to update social image handling, and leave it unassigned.
+**Why:** User request — captured for team memory.
+
+
+### 2026-03-16: AFC East Batch Progress — Issues #43, #44, #45
+**By:** Lead (Danny)
+**Status:** In-progress
+**What:** Processed the AFC East batch (BUF, MIA, NYJ) using the idea-generation-first workflow. Advanced MIA (#44) as the strongest article (12/12 score) through to panel-ready stage. BUF (#43) and NYJ (#45) remain at `stage:idea`. Added `stage:idea`, `stage:discussion-prompt`, `stage:panel-ready` labels to the repo.
+**Why:** MIA's $99.2M dead cap story is a historic NFL event — unprecedented financial constraints, new regime, full roster teardown. It has natural tension and broad appeal. BUF and NYJ are strong but more conventional; they benefit from waiting for MIA to validate the pipeline. 3-agent panel (Cap + MIA + Draft) is tight and non-overlapping.
+
+
+### 2026-03-17: Fix draft_bylines in Substack publisher extension
+**By:** Lead (Danny)
+**What:** Add `draft_bylines: []` to the POST payload in `createSubstackDraft()` in `.github/extensions/substack-publisher/extension.mjs`. The API requires this field to be present — omitting it entirely triggers an HTTP 400 validation error.
+**Why:** Discovered during republishing of NE Patriots / Drake Maye article. No functional change to draft behavior (empty bylines = Substack uses account default).
+
+
+### 2026-03-17: Social Link Image — Backlog Tracking (Issue #70)
+**By:** Lead (Danny)
+**Status:** Recorded
+**Affects:** Writer, Editor, image generation pipeline
+**What:** Created GitHub issue #70 to track future work on social link image (Open Graph / `og:image`) generation and consistency across Substack articles. No `squad` labels — backlog only, unassigned. Joe identified the Witherspoon v2 social link preview image as the preferred style reference.
+**Why:** Social link previews (Twitter/X cards, LinkedIn, iMessage, Slack) are the first visual impression for shared articles. Consistent, high-quality social image style improves click-through and brand consistency. Future work — no immediate action required.
+
+
+### 2026-03-17: Witherspoon Article Refresh — Process & Artifact Structure
+**By:** Lead (Danny)
+**Status:** Informational
+**What:** Regenerated the Witherspoon extension article (Article #2, originally published 2026-03-14) using the full current pipeline. Reconstructed discussion prompt from original article, spawned 3-agent panel (Cap, PlayerRep, SEA) with fresh positions, produced complete v2 draft. All 6 artifacts saved to `content/articles/witherspoon-extension-v2/`. Original article preserved as archive. Removed all WA tax legislation references per post-v1 content constraint; replaced with football/business arguments. Panel convergence tighter than v1 ($30.5–32.5M range vs. original $27–33M).
+**Why:** Pre-pipeline articles can be retroactively structured. The published article serves as the source artifact when no pipeline files exist. Pattern established for future retroactive pipeline runs.
+
