@@ -424,4 +424,18 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 
 **Decision filed:** `.squad/decisions/inbox/lead-readme-publish-tags.md`
 
+### Republish: NE Patriots / Drake Maye Draft (2026-03-17)
+
+**Request:** Joe asked to republish `content/articles/ne-maye-year2-offseason/draft.md` to verify the updated Substack publisher behavior (tags instead of sections, no bylines).
+
+**Result:** ✅ Draft created successfully.
+- **Draft ID:** 191093154
+- **Draft URL:** https://nfllab.substack.com/publish/post/191093154
+- **Tags applied:** New England Patriots, Cap, Draft, Offense
+- **Title:** The Patriots Have ~$44 Million, the #31 Pick, and a Franchise QB on a Rookie Deal. Our Expert Panel Can't Agree on What to Do Next.
+
+**Finding:** The Substack API requires `draft_bylines: []` to be explicitly sent in the POST payload — omitting the field entirely triggers a 400 error (`"Invalid value"` for `draft_bylines`). The extension.mjs currently does NOT include this field. This needs to be patched in the extension for the Copilot SDK path to work correctly.
+
+**Extension fix needed:** Add `draft_bylines: []` to the `createSubstackDraft` payload in `.github/extensions/substack-publisher/extension.mjs`.
+
 

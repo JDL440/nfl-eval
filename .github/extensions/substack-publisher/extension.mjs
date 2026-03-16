@@ -262,6 +262,7 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         draft_title: title,
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
+        draft_bylines: [],
         postTags: tags || [],
     };
 
