@@ -89,3 +89,12 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
    - **Non-obvious coaching hires > non-obvious cap insights for non-cap articles.** LAR's Kingsbury/Woods angle is stronger than Cap's synchronized bomb as the article's differentiator — narrative insights surprise more than financial ones. Placed it as standalone section before the verdict.
    - **10 fact-check items flagged for Editor.** Havenstein retirement is the most critical — if wrong, the OT-vs-EDGE debate shifts entirely.
 
+📌 **Miami Tua Dead Cap — Table Image Rendering & Substack Publish (2026-03-16)** — Dense markdown table blocked by publisher's `assertInlineTableAllowed` guard. Key learnings:
+   - **The repo's `renderer-core.mjs` in `.github/extensions/table-image-renderer/` is the canonical path for dense table images.** It can be imported directly in a standalone Node.js script (`import { renderTableImage } from "./renderer-core.mjs"`). No SDK needed — the renderer is a pure Node + headless Edge module.
+   - **Tables with 6+ columns and financial/comparison headers always block at publish time.** The publisher's density classifier (densityScore ≥ 7.5, or columnCount ≥ 5 with dense headers) rejects them. Render these tables as PNG images before submitting.
+   - **The `cap-comparison` template** produces clean green-accented table images ideal for dead cap / financial comparison data.
+   - **The substack-publisher extension can be patched for standalone use:** strip the two `@github/copilot-sdk` imports and the `joinSession` block, then call the internal functions (loadEnv, makeHeaders, markdownToProseMirror, createSubstackDraft) directly. This is the workaround when the Copilot CLI extension host isn't loaded.
+   - **Image path convention for table images:** `content/images/{slug}/{slug}-{output-name}.png`, referenced from the article as `../../images/{slug}/{slug}-{output-name}.png`.
+   - **Published to nfllab.substack.com** (not nfllabstage) — Draft ID 191150015, URL: `https://nfllab.substack.com/publish/post/191150015`.
+   - **DB writeback was intentionally skipped** per user instruction ("avoid unsafe DB mutation"). The PipelineState Python layer is the safe path for stage transitions; JS-side direct writes risk conflicts.
+

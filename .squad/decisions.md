@@ -3467,3 +3467,114 @@ Stages 1-3 complete (idea, discussion prompt, panel composition). Ready for Stag
 - `content/articles/wsh-2026-offseason/discussion-prompt.md`
 - `content/articles/wsh-2026-offseason/panel-composition.md`
 
+
+### 2026-03-16: Dense Table → PNG Rendering Before Substack Publish
+**By:** Writer
+**Date:** 2026-03-16
+**Context:** Miami Tua dead cap article (mia-tua-dead-cap-rebuild)
+
+**What:**
+When the Substack publisher's density classifier blocks a markdown table (≥5 columns with financial/comparison headers, or densityScore ≥ 7.5), render it as a PNG using the repo's enderer-core.mjs table-image-renderer and replace the markdown table with the image reference before publishing.
+
+**Why:**
+The publisher extension's ssertInlineTableAllowed guard intentionally rejects dense tables because Substack's inline list conversion destroys layout meaning. The dead cap comparison table (6 columns: Team, Year, Dead Cap, Total Cap, Dead %, Recovery Timeline) triggered this guard. Rendering to PNG preserves the visual hierarchy that makes the data scannable.
+
+**Implementation:**
+1. Call enderTableImage() from .github/extensions/table-image-renderer/renderer-core.mjs with the blocked table markdown
+2. Save the PNG to content/images/{slug}/
+3. Replace the markdown table in the article with ![alt|caption](../../images/{slug}/{filename}.png)
+4. Proceed with publish
+
+**Scope:**
+Applies to all future articles with dense comparison/financial tables. The cap-comparison template is ideal for dead cap data; draft-board for draft pick tables.
+
+**DB Writeback Note:**
+Pipeline DB stage transition was NOT performed because there's no clearly safe path from within a Writer/JS context. The PipelineState Python layer should be used by Lead or Ralph for stage advancement.
+
+
+
+### 2026-03-16: LAR 2026 Offseason Draft — Structural & Editorial Choices
+**Author:** Writer
+**Date:** 2026-03-16
+**Article:** content/articles/lar-2026-offseason/draft.md
+
+**What:**
+Took Lead's synthesis position (EDGE at #13) for the verdict rather than flattening the OT vs. EDGE disagreement. Both sides are fully preserved in the body — LAR and Draft lean OT, Defense demands EDGE — but the verdict is decisive per house style ("don't write generic 'both sides have a point' conclusions").
+
+**Rationale:**
+1. Lead's synthesis explicitly recommended EDGE at #13 with the reasoning that "RT problem is real but more solvable in free agency or Day 2."
+2. Draft's LB-class insight (EDGE values suppressed, top-12 talent at #13) provides the evidence bridge — it's not just a preference, it's a market inefficiency argument.
+3. The article's defensive scheme section builds a feedback-loop argument (coverage → sacks → shorter downs) that structurally supports EDGE over OT.
+
+**Impact:**
+Editor should review whether the verdict leans too heavily EDGE given two of four panelists preferred OT. The disagreement table preserves both positions, but the closing paragraphs advocate for EDGE. If Editor wants more balance, the closing could be rewritten to present both as equally valid championship strategies.
+
+
+
+### 2026-03-16: Seahawks RB Pick #64 v2 Draft
+**Date:** 2026-03-16
+**Agent:** Writer
+**Article:** seahawks-rb-pick64-v2
+**Issue:** #71
+
+**Decision:**
+Drafted the v2 article at content/articles/seahawks-rb-pick64-v2/draft.md. Honored the lead call: the article lands on "EDGE/CB at #64, RB at #96 or veteran bridge" rather than reaffirming Price at #64. Preserved Offense's dissent (7/10 pull toward RB at #64) as a full section with its own quotes and argument rather than a footnote.
+
+**Key Structural Choices:**
+1. Led with "what changed" rather than "what we found." The defensive losses are the narrative engine — they explain why the panel reconvened and why the answer shifted.
+2. Gave Offense its own section, not just a row in the disagreement table. The scheme argument is the article's tension. Flattening it to a table cell would violate the "disagreement is content" principle.
+3. Used CollegeScout's dropoff table as the analytical centerpiece. This is the single most persuasive data point and it anchors the verdict without editorializing.
+4. Did not frame Price negatively. The article repeatedly says he's a good player at the wrong price — respecting the prospect while redirecting the pick.
+
+**For Editor:**
+Fact-check items to verify:
+- Charbonnet ACL timeline (late January surgery, IR placement January 23)
+- Price ADP range (53–58 per PFF/StatRankings)
+- FA contract details (Mafe 3yr/\, Woolen 1yr/\, Bryant 3yr/\)
+- Robinson Jr. market value estimate (\–5M)
+- Lawrence retirement reporting sources
+- Coleman/Johnson/Singleton board positions at #96 range
+- Super Bowl LIX reference (Seattle as defending champions)
+
+
+
+### 2026-03-16: SF 2026 Offseason — Draft Structure
+**By:** Writer
+**Date:** 2026-03-16
+**Article:** sf-2026-offseason
+
+**Decision:**
+Organized the article around unanimous Path 2 consensus, with the primary tension point moved to **pick #27 allocation** (EDGE vs. OT) rather than the usual path-vs-path disagreement. This is a structural choice — when all four experts agree on the path, the article's conflict must come from a subordinate disagreement that still has real stakes.
+
+**Rationale:**
+Previous articles (ARI, MIA, Seahawks RB) all had at least one expert advocating a different path, making the disagreement section straightforward. Here, all four panelists wanted Path 2. Framing the pick #27 fight as the "real" disagreement keeps expert tension alive without manufacturing a split that didn't exist.
+
+**Impact:**
+Future articles with unanimous panels should look for the subordinate split — it's always there. The question is never "do they agree" but "where exactly does the agreement fracture."
+
+
+
+### 2026-03-16: Ralph Prompt.md — Principle-First Reorganization
+**By:** Writer
+**Status:** Implemented (not committed per user request)
+**Date:** 2026-03-16
+**Affects:** Ralph orchestrator prompt, pipeline iteration behavior
+
+**What:**
+Rewrote alph/prompt.md to use the three operating principles as the structural backbone:
+1. **Artifact-First Discovery** — filesystem is authoritative; labels/DB are followers
+2. **Max-Parallel Scheduling** — every unblocked article moves every iteration, no lane caps
+3. **Labels Are Visibility Mirrors** — write-only output, never read for scheduling
+
+Previously these three ideas were scattered across Steps 1/2/4 and Rules 6/8. Now they form the top-level "Operating Principles" section with explicit priority ordering, and the iteration steps and rules reference them by name.
+
+**What did NOT change:**
+- Stage-specific instructions (1→2 through 8) — identical
+- Critical files table — identical
+- Progress file format — identical
+- Important notes — identical
+- Commit protocol — identical
+
+**Why:**
+Backend requested the rewrite to reduce Ralph's tendency to consult labels before scanning artifacts, and to make max-parallel the default posture rather than an aspiration. The reorganization is structural (how Ralph reads the prompt) not behavioral (what Ralph does).
+
