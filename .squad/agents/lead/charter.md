@@ -105,6 +105,7 @@ When Lead is assigned a GitHub issue with the `article` label (or any issue whos
    ```
 5. **Close the issue** once the Substack draft URL is posted.
 6. **Update pipeline.db** and `content/article-ideas.md` as normal.
+7. **After live publish is confirmed, create or confirm the follow-on GitHub idea issue** for the article teased in "Next from the panel" and target Thursday of that publication week by default.
 
 ### Pipeline Comments (post frequently — no silent gaps)
 

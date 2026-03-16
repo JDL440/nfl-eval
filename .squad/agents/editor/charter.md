@@ -38,7 +38,8 @@
 - **Identify buried ledes** — if the most interesting insight is in paragraph 12, suggest moving it up.
 - **Assess section balance** — no expert should dominate unless the article is specifically about their domain.
 - **Check the conclusion** — does it take a clear position? Articles that end with "well, both sides have a point" are a failure.
-- **Verify the teaser** — the "Next from the panel" section should tease a real, planned article.
+- **Verify the teaser** — the "Next from the panel" section should tease a real, planned article and land like a cliffhanger, not a generic sign-off.
+- **Escalate generic teasers** — if the next-article hook is vague, flat, or points to something that is not actually planned, flag it. Treat a nonexistent follow-on article as a factual pipeline error, not just style.
 - **Suggest structural rewrites** when the current structure isn't serving the content. Propose specific alternatives, not vague "make it better."
 
 ## Review Process

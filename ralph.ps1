@@ -30,6 +30,7 @@ if (-not (Test-Path $TargetRepo)) {
 Set-Location $TargetRepo
 
 $Model = "claude-sonnet-4.5"
+$Agent = "squad"
 # $Model = "gpt-5.1-codex-mini"  # fallback if rate-limited
 
 $ProgressFile = Join-Path $scriptRoot "ralph\state\progress.txt"
@@ -74,9 +75,148 @@ function Initialize-ProgressFile {
             "iteration: 0",
             "status: not_started",
             "current_item: none",
-            "completed_items: []"
+            "completed_items: []",
+            "last_stage: none",
+            "follow_on_issue: none",
+            "follow_on_target_date: none"
         ) | Set-Content -Path $ProgressFile -Encoding UTF8
     }
+}
+
+function Set-ProgressValues {
+    param(
+        [string]$ProgressFile,
+        [hashtable]$Values
+    )
+
+    $content = if (Test-Path $ProgressFile) { Get-Content -Path $ProgressFile } else { @() }
+
+    foreach ($key in $Values.Keys) {
+        $pattern = '^{0}:' -f [regex]::Escape($key)
+        $updated = $false
+        $content = $content | ForEach-Object {
+            if ($_ -match $pattern) {
+                $updated = $true
+                "{0}: {1}" -f $key, $Values[$key]
+            } else {
+                $_
+            }
+        }
+
+        if (-not $updated) {
+            $content += "{0}: {1}" -f $key, $Values[$key]
+        }
+    }
+
+    $content | Set-Content -Path $ProgressFile -Encoding UTF8
+}
+
+function Get-ProgressValue {
+    param(
+        [string]$ProgressFile,
+        [string]$Key
+    )
+
+    if (-not (Test-Path $ProgressFile)) {
+        return $null
+    }
+
+    $line = Select-String -Path $ProgressFile -Pattern ("^{0}:" -f [regex]::Escape($Key)) | Select-Object -First 1
+    if (-not $line) {
+        return $null
+    }
+
+    return ($line.Line -replace ("^{0}:\s*" -f [regex]::Escape($Key)), '').Trim()
+}
+
+function Reset-IterationMetadata {
+    param([string]$ProgressFile)
+
+    Set-ProgressValues -ProgressFile $ProgressFile -Values @{
+        last_stage = "none"
+        follow_on_issue = "none"
+        follow_on_target_date = "none"
+    }
+}
+
+function Get-WeekThursday {
+    param([datetime]$ReferenceDate)
+
+    $offsetFromMonday = (([int]$ReferenceDate.DayOfWeek + 6) % 7)
+    $weekStart = $ReferenceDate.Date.AddDays(-$offsetFromMonday)
+    return $weekStart.AddDays(3)
+}
+
+function Test-FollowOnIssueEnforcement {
+    param(
+        [string]$ProgressFile,
+        [datetime]$ReferenceDate
+    )
+
+    $lastStage = Get-ProgressValue -ProgressFile $ProgressFile -Key "last_stage"
+    if (-not $lastStage -or $lastStage -eq "none") {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: progress file did not record last_stage." -ForegroundColor Red
+        return $false
+    }
+
+    if ($lastStage -ne "stage:published") {
+        return $true
+    }
+
+    $followOnIssue = Get-ProgressValue -ProgressFile $ProgressFile -Key "follow_on_issue"
+    $followOnTargetDate = Get-ProgressValue -ProgressFile $ProgressFile -Key "follow_on_target_date"
+
+    if (-not $followOnIssue -or $followOnIssue -eq "none" -or -not $followOnTargetDate -or $followOnTargetDate -eq "none") {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: stage:published requires follow_on_issue and follow_on_target_date." -ForegroundColor Red
+        return $false
+    }
+
+    $issueNumber = ($followOnIssue -replace '[^0-9]', '')
+    if (-not $issueNumber) {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: follow_on_issue '$followOnIssue' is not a valid issue number." -ForegroundColor Red
+        return $false
+    }
+
+    $targetDate = $null
+    if (-not [datetime]::TryParse($followOnTargetDate, [ref]$targetDate)) {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: follow_on_target_date '$followOnTargetDate' is not a valid date." -ForegroundColor Red
+        return $false
+    }
+
+    $expectedThursday = Get-WeekThursday -ReferenceDate $ReferenceDate
+    if ($targetDate.Date -ne $expectedThursday.Date) {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: follow_on_target_date must equal Thursday of this week ($($expectedThursday.ToString('yyyy-MM-dd')))." -ForegroundColor Red
+        return $false
+    }
+
+    try {
+        $issue = gh issue view $issueNumber --repo JDL440/nfl-eval --json title,body | ConvertFrom-Json
+    }
+    catch {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: could not read follow-on issue #$issueNumber from GitHub." -ForegroundColor Red
+        return $false
+    }
+
+    if (-not $issue.body -or $issue.body -notmatch 'IDEA GENERATION REQUIRED') {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: follow-on issue #$issueNumber is missing the idea-generation marker." -ForegroundColor Red
+        return $false
+    }
+
+    if ($issue.body -notmatch '## Target Publish Date' -or $issue.body -notmatch [regex]::Escape($expectedThursday.ToString('yyyy-MM-dd'))) {
+        Write-Host ""
+        Write-Host "  ⚠ Enforcement failure: follow-on issue #$issueNumber does not record the required Thursday target date ($($expectedThursday.ToString('yyyy-MM-dd')))." -ForegroundColor Red
+        return $false
+    }
+
+    Write-Host "  ✓ Follow-on issue enforcement satisfied (#$issueNumber → $($expectedThursday.ToString('yyyy-MM-dd')))" -ForegroundColor Green
+    return $true
 }
 
 function Get-Iteration {
@@ -168,12 +308,14 @@ function Run-Iteration {
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
 
     Update-Iteration -ProgressFile $ProgressFile -Iteration $Iteration
+    Reset-IterationMetadata -ProgressFile $ProgressFile
 
     $prompt = Get-Content -Path $PromptFile -Raw
     
+    Write-Host "  Agent: $Agent" -ForegroundColor Cyan
     Write-Host "  Model: $Model" -ForegroundColor Cyan
     Write-Host "  Prompt length: $($prompt.Length) characters" -ForegroundColor Cyan
-    Write-Host "  Mode: --yolo (autonomous)" -ForegroundColor Cyan
+    Write-Host "  Mode: --yolo --agent $Agent (autonomous)" -ForegroundColor Cyan
     Write-Host "  Timeout: $TimeoutSeconds seconds" -ForegroundColor Cyan
     Write-Host ""
 
@@ -185,6 +327,8 @@ function Run-Iteration {
         $processInfo.FileName = "copilot"
         # Use ArgumentList to properly handle arguments with spaces
         $processInfo.ArgumentList.Add("--yolo")
+        $processInfo.ArgumentList.Add("--agent")
+        $processInfo.ArgumentList.Add($Agent)
         $processInfo.ArgumentList.Add("--model")
         $processInfo.ArgumentList.Add($Model)
         $processInfo.ArgumentList.Add("--prompt")
@@ -303,6 +447,10 @@ function Run-Iteration {
             Write-Host "  ⚠ Copilot CLI exited with error code $($process.ExitCode)" -ForegroundColor Red
             return $false
         }
+
+        if (-not (Test-FollowOnIssueEnforcement -ProgressFile $ProgressFile -ReferenceDate $endTime)) {
+            return $false
+        }
         
         Write-Host ""
         return $true
@@ -364,6 +512,7 @@ $null = Register-EngineEvent -SourceIdentifier ConsoleCancelEvent -Action {
 
 Write-Banner
 Write-Host "  Target repo : $TargetRepo" -ForegroundColor Cyan
+Write-Host "  Agent       : $Agent" -ForegroundColor Cyan
 Write-Host "  Model       : $Model" -ForegroundColor Cyan
 Write-Host ""
 Ensure-RequiredFiles -PrdFile $PrdFile -PromptFile $PromptFile

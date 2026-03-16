@@ -93,12 +93,20 @@ Execute exactly one pipeline stage for the selected item. Follow the skills and 
 - Follow `.squad/skills/publisher/SKILL.md` checklist.
 - Call `publish_to_substack` with correct metadata and tags (team tag is mandatory).
 - Record the Substack draft URL in the article directory.
+- BEFORE treating an item as `stage:published`, create or confirm the follow-on GitHub idea issue teased in "Next from the panel".
+- That follow-on issue MUST include `IDEA GENERATION REQUIRED` and `## Target Publish Date` set to the Thursday of the current week.
 
 ### Step 4 — Update Progress
 
 1. Update the progress file with the completed item and new stage.
 2. Update the GitHub issue labels to reflect the new stage (remove old `stage:*` label, add new one).
 3. If all #40–#69 issues reach `stage:publisher` or beyond, set `status: complete`.
+4. Update these machine-readable progress fields every iteration:
+   - `last_stage: <stage label or none>`
+   - `follow_on_issue: <issue number or none>`
+   - `follow_on_target_date: <YYYY-MM-DD or none>`
+
+If `last_stage` is `stage:published`, the loop wrapper will validate that the follow-on issue exists on GitHub and that `follow_on_target_date` equals the Thursday of the current week.
 
 ### Step 5 — Commit Changes
 
@@ -116,6 +124,7 @@ Execute exactly one pipeline stage for the selected item. Follow the skills and 
 6. **TAG-BASED PUBLISHING** — Substack uses team + specialist tags, not sections.
 7. **2026 OFFSEASON FRAMING** — All content is framed around the 2026 NFL offseason.
 8. **COMMIT AFTER EACH STAGE** — Keep the repo in a clean state for the next iteration.
+9. **THURSDAY FOLLOW-ON ISSUE IS ENFORCED** — A `stage:published` iteration is invalid unless the teased next article has a GitHub idea issue with a Thursday target date for the current week.
 
 ## Progress File Format
 
@@ -124,6 +133,9 @@ iteration: <number>
 status: in_progress | complete
 current_item: <issue-number or none>
 completed_items: [<issue-number>:<stage>, ...]
+last_stage: <stage label or none>
+follow_on_issue: <issue-number or none>
+follow_on_target_date: <YYYY-MM-DD or none>
 ```
 
 ## Important Notes

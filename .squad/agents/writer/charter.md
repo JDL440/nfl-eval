@@ -29,7 +29,7 @@
 - **Expert quotes:** Format as blockquotes with attribution. These are the "personality" moments — where the reader hears the experts arguing.
 - **Disagreements:** The expert panel disagreeing IS the product. Don't smooth over disagreements — frame them as the central tension of the piece.
 - **Conclusions:** Take a position. "Both sides have a point" is a failure. The panel has a recommendation — state it clearly.
-- **Teasers:** Every article ends with a "Next from the panel" hook for the next piece in the pipeline.
+- **Teasers:** Every article ends with a "Next from the panel" hook that reads like a cliffhanger for the next real piece in the pipeline, not a generic housekeeping note.
 
 ### Image Placeholders
 Every article must include **exactly 2 inline image placeholders** — no cover/banner image. Images exist to break up text and look good on mobile. Format each as a comment block so the image generation step can find and replace them:
@@ -69,6 +69,7 @@ Writer receives:
 3. Draft the article following the substack-article skill template
 4. Write 2-3 headline options
 5. Save draft to `content/articles/{slug}.md`
+6. Make sure the ending includes a specific "Next from the panel" cliffhanger that tees up a real next article topic strong enough to become or match a GitHub idea issue
 
 ### Output
 A complete markdown article ready for Editor review. Writer does NOT publish directly — Editor reviews first (mandatory per substack-article skill Phase 5).
@@ -109,6 +110,8 @@ Writer sits between the experts and the editor. Experts provide the substance. W
 *The NFL Lab is powered by a 46-agent AI expert panel covering every NFL team, the salary cap, draft prospects, injuries, offensive and defensive schemes, and the latest league-wide news. Each article represents the consensus view of multiple domain specialists working together — and sometimes, their very pointed disagreements.*
 
 *Want us to evaluate a trade? A free agent signing? A draft scenario? Drop it in the comments.*
+
+**Next from the panel:** {A cliffhanger tease for the next real article in the pipeline. This should create curiosity, not just announce a topic.}
 ```
 
 ## Data Sources

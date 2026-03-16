@@ -17,7 +17,7 @@
   },
   "backlogIssues": {
     "range": "Open squad article issues #40-#69 plus #71",
-    "type": "Remaining team article backlog + Seahawks RB Pick #64 v2 regeneration",
+    "type": "Remaining team article backlog + Seahawks RB Pick #64 pipeline rerun of existing content through the new workflow",
     "labels": {
       "go:yes": "Approved to start or continue pipeline work",
       "go:needs-research": "Needs idea generation / research before approval",
@@ -391,9 +391,9 @@
           "issue": 71,
           "team": "SEA",
           "slug": "seahawks-rb-pick64-v2",
-          "currentStage": "Stage 3 panel-ready",
+          "currentStage": "Stage 3 panel-ready (existing Seahawks RB article selected for rerun through the new pipeline)",
           "nextStage": "Stage 4 panel discussion",
-          "blocker": "Needs SEA/Injury/CollegeScout/Offense panel run and discussion-summary.md."
+          "blocker": "Use the existing Seahawks RB article thesis/content as source material, then run SEA/Injury/CollegeScout/Offense panel and create a fresh discussion-summary.md for the new pipeline."
         },
         {
           "issue": 69,
@@ -465,8 +465,8 @@
         "team": "SEA",
         "issue": 71,
         "slug": "seahawks-rb-pick64-v2",
-        "currentStage": "panel-ready",
-        "nextAction": "Run SEA/Injury/CollegeScout/Offense panel and synthesize discussion-summary.md."
+        "currentStage": "existing Seahawks RB article chosen for rerun; panel-ready",
+        "nextAction": "Run the new-panel step using the existing Seahawks RB article as source material, then synthesize discussion-summary.md before Writer drafts the v2 pipeline version."
       }
     ]
   },

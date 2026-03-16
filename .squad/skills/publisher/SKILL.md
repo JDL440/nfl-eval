@@ -42,7 +42,7 @@ Open `content/articles/{slug}.md` and verify:
 - [ ] No stale date references (e.g., "upcoming Draft" when it already happened)
 - [ ] Author line present: `**By: The NFL Lab Expert Panel**`
 - [ ] Boilerplate footer present: expert panel description + CTA + next article tease
-- [ ] "Next from the panel" tease references a real upcoming article idea
+- [ ] "Next from the panel" tease references a real upcoming article idea and reads like a cliffhanger
 
 ### Step 2 — Image Placement Verification
 
@@ -115,6 +115,7 @@ Post the following to the article thread:
 - [ ] Paywall setting: free / paid-only / preview paywall
 - [ ] Publish date/time: per editorial calendar (default: Tuesday 10 AM PT)
 - [ ] Email send: yes/no (default: yes)
+- [ ] Follow-on idea issue: create or confirm the teased next-article GitHub issue for Thursday of the publication week
 
 **Images generated:**
 {list image filenames and types from content/images/{slug}/}
@@ -153,6 +154,10 @@ Post the following to the article thread:
 | **Mindset** | "Is this article good?" | "Is this article ready to ship?" |
 
 Publisher does **not** re-evaluate editorial quality. If Publisher finds a new factual error, they flag it to Editor (not fix it themselves).
+
+### Post-Publish Follow-On Rule
+
+Once Joe publishes the article live, Lead (or the publishing owner) should create or confirm the next teased article as a GitHub idea issue. Default scheduling rule for now: target **Thursday of the same publication week** so the cliffhanger at the bottom of one article immediately feeds the next article in the pipeline.
 
 ---
 

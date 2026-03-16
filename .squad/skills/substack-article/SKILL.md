@@ -138,7 +138,7 @@ Use the team's current situation to create urgency.}
 
 ---
 
-**Next from the panel:** {Tease the next article topic}
+**Next from the panel:** {Cliffhanger tease for the next real article topic — specific enough to spin up or match a GitHub idea issue}
 ```
 
 ### Phase 4: Headline Craft
@@ -197,7 +197,7 @@ If 🔴 errors exist, fix them and re-submit. The Emmanwori name error (mixing N
 
 1. Save article to `content/articles/{slug}.md` (with image references inserted)
 2. Commit with descriptive message (include images: `content/images/{slug}/`)
-3. Tease the next article at the end (creates a content pipeline)
+3. Tease the next article at the end with a cliffhanger hook that points to a real queued topic — or to the topic that will become the next GitHub idea issue
 
 ### Phase 7: Publisher Pass + Publish to Substack
 
@@ -228,7 +228,7 @@ The tool auto-creates a Substack draft and returns an editor URL. Hand the URL t
 - **Disagreements:** Highlight, don't hide. Expert disagreement IS the content.
 - **Length:** 2,000-4,000 words (8-15 min read). Long enough to be substantive, short enough to finish.
 - **Emoji:** Use sparingly for risk ratings (🟢🟡🔴) and section markers, not decoration
-- **Boilerplate:** Every article ends with the expert panel description + engagement CTA + next article tease
+- **Boilerplate:** Every article ends with the expert panel description + engagement CTA + a cliffhanger-style next article tease
 
 ## Anti-Patterns
 
@@ -237,6 +237,7 @@ The tool auto-creates a Substack draft and returns an editor URL. Hand the URL t
 - ❌ Don't make every article agree internally — disagreement is what makes expert panels compelling
 - ❌ Don't skip the data tables — they're the credibility backbone
 - ❌ Don't bury the recommendation — lead with it or build clearly toward it
+- ❌ Don't end with a flat "next article" blurb — the teaser should make the next piece feel necessary
 
 ## Validated On
 

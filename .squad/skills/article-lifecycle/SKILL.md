@@ -318,7 +318,7 @@ Writer takes all panel outputs and assembles a polished article following the ho
 - [ ] Article follows the structure template from substack-article skill
 - [ ] All panelists' analysis is represented (none dropped)
 - [ ] Headline follows the formula options in substack-article skill
-- [ ] Boilerplate footer included (expert panel description + CTA + next article tease)
+- [ ] Boilerplate footer included (expert panel description + CTA + cliffhanger-style next article tease)
 
 ---
 
@@ -355,6 +355,7 @@ Editor reviews the draft for factual accuracy, structural issues, and style comp
 - [ ] All 🔴 errors are resolved
 - [ ] Final verdict is ✅ APPROVED
 - [ ] Approved draft is committed to `content/articles/{slug}.md`
+- [ ] Editor has verified the "Next from the panel" hook points to a real planned follow-on article and reads like a cliffhanger
 
 ---
 
@@ -427,7 +428,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 - [ ] All names spelled correctly (one last check)
 - [ ] All numbers current (cap figures, contract terms — things move fast)
 - [ ] No stale references to "upcoming" events that already happened
-- [ ] "Next from the panel" tease at end points to a real upcoming article
+- [ ] "Next from the panel" tease at end points to a real upcoming article and reads like a genuine cliffhanger
 
 ### Substack Metadata (Joe sets in editor after draft is created)
 - [ ] Tags: auto-applied by tool (team + specialist agents); add extra tags manually if desired
@@ -470,6 +471,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 | Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`; insert `stage_transitions` row |
 | Git commit | `git add . && git commit -m "Published: {article title}"` |
 | Content pipeline | Ensure "Next from the panel" tease at article end points to a real upcoming idea |
+| Follow-on issue | Create or confirm a GitHub idea issue for the teased next article, targeted for Thursday of the publication week (current default cadence) |
 | **History maintenance** | Run history summarization for all agents that participated (see [history-maintenance skill](../history-maintenance/SKILL.md)) |
 | Cross-post | Reddit threads, Twitter/X, other channels |
 
@@ -477,6 +479,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 
 - [ ] Article is live on Substack
 - [ ] `content/article-ideas.md` reflects ✅ Published with date and Substack URL
+- [ ] Follow-on GitHub idea issue exists for the teased next article (Thursday-of-week target by default)
 - [ ] Git repo is committed and clean
 - [ ] Cross-post plan executed (if applicable)
 
