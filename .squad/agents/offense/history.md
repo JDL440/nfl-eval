@@ -270,3 +270,15 @@ Sean Payton Tree:
 - **Target concentration fixes Lawrence inefficiency:** 57% target concentration to top 4 WRs is outlier (KC 68%, DET 71%). Hunter's snap volatility forces Lawrence to spread ball to 9+ players. Moving Hunter to 70% offense + slot role raises concentration to 65%+, gives BTJ better targets (not just more targets).
 - **Hardest constraint:** Every defensive snap Hunter plays is a rep he's not getting with Trevor Lawrence, preventing development of timing/chemistry/playbook mastery that separates good receivers from great ones. Two-way role caps offensive ceiling below talent level regardless of snap split chosen.
 
+### SEA Seahawks RB Pick #64 v2 Panel Position (2026-03-16)
+- **Fleury's system demands 3 RBs, not 1+depth:** Shanahan-tree committee systems (SF, GB, MIN) consistently churn through backs. Going below three zone-fit backs leads to November attrition. Seattle has Charbonnet (ACL uncertain) + Wilson (gap runner, not zone fit) + Holani (not NFL-ready). That's 1.5 backs in a 3-back system.
+- **Emanuel Wilson is a schematic mismatch as primary zone runner:** Wilson's gap/power strengths don't translate to wide zone reads. Starting him in Fleury's outside zone scheme suppresses run efficiency, which suppresses play-action, which suppresses Darnold's passing numbers. The cascade is real.
+- **Price's Notre Dame zone/gap hybrid is the cleanest college-to-Fleury translation available:** Three years of one-cut zone experience in a system structurally similar to Seattle's. No scheme adjustment period needed — rare for a rookie RB.
+- **Scheme pull rated 7/10 toward RB at #64:** Not a must-draft (CB/EDGE compete for resources), but higher than most need-based rankings suggest because the replacement curve at zone-fit RB within this specific system is steeper than at CB/EDGE where veteran FA alternatives exist.
+- **Charbonnet's ACL timeline is the swing variable:** If healthy Week 1 (90%+ probability), the pull drops to ~5/10. If uncertain (50-60% Week 1), the pull rises to 8/10. The medical assessment drives the entire offensive case.
+- **Key disagreement framing:** Offense argues drop-off severity differs from need severity. Seattle can sign a veteran CB for 80 cents on the dollar; it cannot sign a veteran zone-fit committee back who contributes for four years at rookie cost.
+
+
+## Panel: seahawks-rb-pick64-v2 (Issue #71)
+
+📌 **Team update (2026-03-16T07:49:26Z):** RB at #64 evaluation complete. Consensus: Pass on RB due to CB/EDGE priority, despite scheme preference and manageable medical risk. Decision drivers: positional hierarchy (SEA), fair value not a steal (CollegeScout), insufficient medical urgency alone (Injury), scheme preference overridden (Offense).

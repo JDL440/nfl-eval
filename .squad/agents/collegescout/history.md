@@ -811,3 +811,31 @@ _📊 Macro observations about the class_
 - South Bend Tribune, ND Observer, Irish Sports Daily (character/leadership reporting)
 - 247Sports, SI.com, Roundtable.io (character and RB duo features)
 - Seahawks.com, FOX 13 Seattle, NFL.com, Heavy.com (Brian Fleury scheme info)
+
+---
+
+## v2 Panel Position: Seahawks RB Pick #64 (2026-03-16)
+
+**Task:** Re-test whether Price at #64 is a true value play for the v2 regeneration of the RB article.
+
+**Key findings:**
+- Price's ADP has risen to ~53-58 across consensus boards (PFF 58, StatRankings ~56) — higher than v1's ~67 estimate
+- Achilles discount has eroded: 41 healthy games, 3 KR TDs — teams are moving off the flag
+- At #64, Seattle pays fair market price, not a discount
+- Quality zone-scheme RBs available at #96: Jonah Coleman (Washington, 5.5 YPC, 87 career rec), Emmett Johnson (Nebraska, 1,451 yds / 46 catches in 2025)
+- EDGE/CB dropoff from #64→#96 is significantly steeper than RB dropoff
+- Recommended Path 2: keep the player, move the narrative — Price fits but isn't a steal
+
+**Output:** `content/articles/seahawks-rb-pick64-v2/collegescout-position.md`
+**Decision filed:** `.squad/decisions/inbox/collegescout-seahawks-rb-pick64-v2-panel.md`
+
+### Learnings
+
+7. 📊 **ADP drift matters for re-tests:** When regenerating articles, prospect ADP must be re-checked against current boards. Price moved ~10 picks higher between v1 authoring and v2 re-test. Stale ADP creates false "value" narratives.
+8. 📊 **Medical discounts erode over time:** The longer a prospect plays healthy post-injury, the less draft-stock suppression remains. Price's Achilles was a 15-30 pick discount in 2024; by March 2026, it may be 5-10 picks or less. Future articles should time-adjust medical discount claims.
+9. 📊 **RB positional dropoff is shallow in 2026:** This class has unusual depth at RB in the R2-R3 range (Coleman, Johnson, Singleton, Allen, Claiborne). The dropoff from R2 to R3 is gentler than at EDGE/CB. This is a class-specific finding — future classes may differ.
+10. 📊 **2026 RB class Day 2 depth chart:** After Love (RB1, R1): Price (RB2, mid-R2) → Washington Jr. (RB3, R2/R3 riser) → Coleman (RB4, R2/R3) → Singleton (RB5, R2/R3 w/ foot concern) → Johnson (RB6, R2/R3 zone fit) → Allen (RB7, R3 power) → Claiborne (RB8, R3 explosive).
+
+## Panel: seahawks-rb-pick64-v2 (Issue #71)
+
+📌 **Team update (2026-03-16T07:49:26Z):** RB at #64 evaluation complete. Consensus: Pass on RB due to CB/EDGE priority, despite scheme preference and manageable medical risk. Decision drivers: positional hierarchy (SEA), fair value not a steal (CollegeScout), insufficient medical urgency alone (Injury), scheme preference overridden (Offense).

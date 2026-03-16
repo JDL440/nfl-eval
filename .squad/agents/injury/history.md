@@ -562,3 +562,11 @@ Single-safety absence is survivable for most NFL rosters with adequate depth. Du
 
 #### LEARNINGS FROM THIS ASSESSMENT
 10. **Dual injuries at the same position group require compounded risk analysis** — even if each individual injury has favorable odds, the combined probability of BOTH players being 100% ready is significantly lower than either individual probability.
+11. **Achilles draft discount compresses through the draft process** — early in the cycle (Jan-Feb) the stigma is 20-30 picks; by draft day after team physicals, it may shrink to 5-15 picks. Board projections must account for this temporal compression.
+12. **Late-season ACL for RBs = ~35-45% Week 1 probability** — the position's cutting/contact demands push recovery to the long end of the 9-12 month ACL window. Planning around anything better than a coin flip is optimistic.
+13. **Veteran bridge health profile matters as much as scheme fit** — when the bridge role exists to insure against injury, picking a bridge with his own injury risk (e.g., Mostert at 34 with ACL + knee history) stacks risk on risk. Prioritize durability over ceiling for the insurance role.
+14. **v2 reassessments should explicitly state what changed vs. what held** — prevents panel drift and helps Writer distinguish fresh analysis from inherited conclusions.
+
+## Panel: seahawks-rb-pick64-v2 (Issue #71)
+
+📌 **Team update (2026-03-16T07:49:26Z):** RB at #64 evaluation complete. Consensus: Pass on RB due to CB/EDGE priority, despite scheme preference and manageable medical risk. Decision drivers: positional hierarchy (SEA), fair value not a steal (CollegeScout), insufficient medical urgency alone (Injury), scheme preference overridden (Offense).
