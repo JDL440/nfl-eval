@@ -161,11 +161,7 @@ This is also why Cap is less tolerant of the "just lean into the fun" argument t
 
 At first glance this looks like a snap-count debate. It isn't. It's a disagreement about what Jacksonville is optimizing for.
 
-| Expert | Preferred deployment | Fear | Hidden assumption |
-|--------|----------------------|------|-------------------|
-| **JAX** | 55% offense / 25% defense | Another injury makes the whole project unstable | Hunter's two-way value only matters if he stays available |
-| **Offense** | 70% offense / 10% defense | Jacksonville never sees the true return on elite WR talent | Lawrence's window matters more than preserving the concept |
-| **Cap** | No exact split, but offense-heavy only works if the rest of the roster is patched cheaply | The trade cost creates too many holes for Hunter to be merely good | Hunter must generate surplus value across the whole roster equation |
+![Expert vs Preferred deployment vs Fear. 3 rows and 4 columns. Columns include Expert, Preferred deployment, Fear, and more. First row: JAX.](../../images/jax-2026-offseason/jax-2026-offseason-expert-vs-preferred-deployment-vs-fear.png)
 
 The core question isn't "Should Hunter play more receiver or more corner?" It's this: **what is the most realistic way for Travis Hunter to be worth a missing first-round pick on a team that already has too many places to spend?**
 

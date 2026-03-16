@@ -39,11 +39,23 @@ Table density auditing and remediation now happen **before Stage 7 publish**, no
 
 ## Implementation
 
-- 25 blocked tables across 11 Stage 7 articles rendered and replaced in this session
+### Phase 1 (prior session): BLOCKED tables
+- 25 blocked tables across 11 Stage 7 articles rendered and replaced
 - `audit-tables.mjs` and `fix-dense-tables.mjs` committed to repo root
 - Both tools use the same density classifier as the Substack publisher extension
 - `fix-dense-tables.mjs` imports `renderer-core.mjs` directly (no Copilot SDK dependency)
 
+### Phase 2 (2025-07-25): BORDERLINE tables
+- Lowered `fix-dense-tables.mjs` threshold from BLOCKED-only to density ≥ 5.5
+- 20 borderline tables across 14 articles rendered and replaced in drafts
+- Post-fix audit: **0 borderline, 0 blocked** across all 22 Stage 7 articles
+- Table image count: 40 → 60 total rendered images
+- All remaining 108 inline tables are low-density and will convert to clean lists
+
 ## Articles Fixed
 
+### Phase 1 (BLOCKED)
 jsn-extension-preview (4), buf-2026-offseason (2), ari-2026-offseason (1), dal-2026-offseason (1), jax-2026-offseason (5), lar-2026-offseason (1), ne-maye-year2-offseason (3), no-2026-offseason (1), sf-2026-offseason (1), witherspoon-extension-v2 (4), wsh-2026-offseason (2)
+
+### Phase 2 (BORDERLINE)
+jsn-extension-preview (1), buf-2026-offseason (1), ari-2026-offseason (2), car-2026-offseason (1), dal-2026-offseason (2), den-2026-offseason (1), gb-2026-offseason (1), hou-2026-offseason (3), jax-2026-offseason (1), lar-2026-offseason (1), ne-maye-year2-offseason (1), nyg-2026-offseason (2), sf-2026-offseason (1), wsh-2026-offseason (2)

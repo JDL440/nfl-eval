@@ -139,10 +139,7 @@ This is not a polite panel disagreement. It's a genuine resource-allocation coll
 
 > *"Williams succession isn't optional — it's existential."* — **Offense**
 
-| Pick #27 Case | Who Wants It | Core Argument | Risk If Wrong |
-|---------------|-------------|---------------|---------------|
-| **EDGE/IDL** | Defense, SF, Cap | Bosa brothers have 30+ combined missed games; a third rusher is mandatory insurance | Williams (38) has no succession plan; mid-season decline tanks the entire offense |
-| **OT** | Offense | Williams is irreplaceable; the scheme collapses without elite LT play | Nick's ACL + Joey's durability = real chance both miss time with no depth behind them |
+![Pick #27 Case vs Who Wants It vs Core Argument. 2 rows and 4 columns. Columns include Pick #27 Case, Who Wants It, Core Argument, and more. First row: EDGE/IDL.](../../images/sf-2026-offseason/sf-2026-offseason-pick-27-case-vs-who-wants-it-vs-core-argument.png)
 
 The Lead's synthesis — and the panel's majority — leans EDGE at #27, with OT succession addressed at picks #91–#130 on Day 2/3. The reasoning: Williams is 38 but still elite, and one more year of his protection is survivable. The EDGE depth cannot wait, because 2025 proved what happens when it doesn't exist.
 

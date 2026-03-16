@@ -54,11 +54,7 @@ Our cap expert's case is blunt: Buffalo can solve the paperwork problem, but sol
 
 Here's the cleanest cap waterfall:
 
-| Move | 2026 Effect | Running Total |
-|------|-------------|---------------|
-| Starting position | — | **-$11.0M** |
-| Cut Dawson Knox | +$9.7M | **-$1.3M** |
-| Restructure Josh Allen | +~$15.0M | **+$13.7M** |
+![Move vs 2026 Effect vs Running Total. 3 rows and 3 columns. Columns include Move, 2026 Effect, Running Total. First row: Starting position.](../../images/buf-2026-offseason/buf-2026-offseason-move-vs-2026-effect-vs-running-total.png)
 
 That gets Buffalo out of emergency status. It does **not** get Buffalo to shopping-spree status.
 

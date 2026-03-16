@@ -199,11 +199,7 @@ Carolina can absolutely compete in 2026 with Young on the fourth year of his roo
 
 This isn't a fake disagreement built for content. The experts are genuinely arguing from different priorities.
 
-| Question | **CAR** | **Cap** | **Offense** |
-|----------|---------|---------|-------------|
-| What does the roster spending mean? | Carolina already went all-in on Young | Sunk cost should not drive new guarantees | The spending is real, but the offensive usage still feels hedged |
-| What should happen with the option? | Exercise it | Decline it | Fix the scheme first; current evaluation is muddy |
-| What's the biggest danger? | Undermining the whole project by blinking now | Guaranteeing $30M to a quarterback who hasn't earned it | Misdiagnosing a scheme problem as a pure quarterback problem |
+![Question vs CAR vs Cap. 3 rows and 4 columns. Columns include Question, CAR, Cap, and more. First row: What does the roster spending mean?.](../../images/car-2026-offseason/car-2026-offseason-question-vs-car-vs-cap.png)
 
 That last row is the article.
 

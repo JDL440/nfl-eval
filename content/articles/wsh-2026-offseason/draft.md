@@ -133,11 +133,7 @@ The Commanders are missing second- and fourth-round capital after the **Laremy T
 
 The temptation, of course, is obvious. If **Jeremiyah Love** is there and the offense desperately needs juice in the backfield, the fan-brain solution is to draft the electric player and figure the rest out later. But that's exactly the kind of move that feels decisive on draft night and incomplete by Labor Day.
 
-| Path at #7 | Upside | Hidden Cost |
-|------------|--------|-------------|
-| Draft RB at #7 | Immediate splash, solves one obvious need | Burns premium capital on a non-premium spot while center and WR2 still dangle |
-| Draft another single position | Adds talent, keeps star-upside on the board | Same core problem: Washington needs volume as much as it needs top-end help |
-| Trade down into 15-20 range | Gains extra capital, especially a needed Day 2 asset | Less sexy on TV, but better aligned with the roster math |
+![Path at #7 vs Upside vs Hidden Cost. 3 rows and 3 columns. Columns include Path at #7, Upside, Hidden Cost. First row: Draft RB at #7.](../../images/wsh-2026-offseason/wsh-2026-offseason-path-at-7-vs-upside-vs-hidden-cost.png)
 
 The cap and offense perspectives both quietly support the trade-down logic even when they don't phrase it that way. If the team can buy a center and a WR2 with money, then the draft can target value instead of panic. If the draft has to rescue three offensive holes at once, then every miss becomes catastrophic.
 
@@ -176,13 +172,7 @@ Here's the beat-level answer after sitting with all three positions: Peters was 
 
 A franchise quarterback on a $10.3M cap hit is not a museum asset. You don't preserve it by leaving it behind glass. You use it. You build around it while the advantage exists. Washington has enough room to do that without torching the future. The panel's blueprint is neither reckless nor timid. It's just overdue.
 
-| Priority | Move | Estimated 2026 Cost | Why It Matters |
-|----------|------|---------------------|----------------|
-| 1 | Sign a starter-tier center | $8–10M | Makes the entire offensive structure functional |
-| 2 | Add a real RB1 | $9–11M | Gives Daniels actual play-action and game-script support |
-| 3 | Add a veteran WR2 | $10–12M | Prevents the passing game from shrinking around McLaurin |
-| 4 | Sign a competent kicker | $4–5M | Stops a stupid roster hole from deciding real games |
-| 5 | Trade down from #7 | Gain Day 2 capital | Lets Washington solve more than one problem before September |
+![Priority vs Move vs Estimated 2026 Cost. 5 rows and 4 columns. Columns include Priority, Move, Estimated 2026 Cost, and more. First row: 1.](../../images/wsh-2026-offseason/wsh-2026-offseason-priority-vs-move-vs-estimated-2026-cost.png)
 
 That's roughly $31–38M. In other words: the Commanders can still finish this offseason and keep meaningful flexibility. The tension isn't cap-based anymore. It's philosophical.
 

@@ -316,7 +316,10 @@ async function fixArticle(slug, draftPath, dryRun) {
         if (!parsed) continue;
 
         const classification = classifyMarkdownTableForInline(parsed);
-        if (classification.allowInline) continue;
+        // Render both BLOCKED (allowInline=false) and BORDERLINE (density ≥ 5.5)
+        // tables to PNG — borderline tables technically pass but look rough as
+        // flattened lists on Substack.
+        if (classification.allowInline && classification.densityScore < 5.5) continue;
 
         // This table is blocked — needs rendering
         const template = inferTemplate(parsed.headerRow);

@@ -147,12 +147,7 @@ Our draft expert surfaced the insight that might tip the scales. The 2026 class 
 
 If Faulk slides to 13 — a real possibility given the LB-heavy top 12 — the Rams would be getting elite surplus value: a first-round edge rusher at ~$4.5 million per year against a cap that allocates 16% to the quarterback alone. In a championship window, cheap production is the most valuable commodity on the roster.
 
-| Option | Player | Position | Win-Now Impact | Future Value | Risk |
-|--------|--------|----------|---------------|-------------|------|
-| **OT** | Monroe Freeling (Georgia) | RT | Immediate starter, protects Stafford | 5-year starter | Doesn't address pass rush hole |
-| **EDGE** | Keldric Faulk (Auburn) | DE | Completes defensive feedback loop | Premium position, rookie deal | RT remains unresolved |
-| Trade back | — | — | ~2027 late 1st + 2026 2nd | Future flexibility | Weakens 2026 window |
-| QB | — | — | None in 2026 | Succession plan | Wastes championship window |
+![Option vs Player vs Position. 4 rows and 6 columns. Columns include Option, Player, Position, and more. First row: OT.](../../images/lar-2026-offseason/lar-2026-offseason-option-vs-player-vs-position.png)
 
 The trade-back return — realistically a late 2027 first plus a 2026 second — doesn't help a team whose window might close after this season. And the QB class has one first-round talent (Fernando Mendoza at #1 to Las Vegas), then a cliff. Reaching for a successor two rounds early in a championship window is organizational malpractice.
 

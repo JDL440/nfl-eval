@@ -788,3 +788,23 @@ Our articles are cap-and-contract strong but analytically thin. Panel agents can
 - 25 tables rendered, 0 failures, 40 total table images across Stage 7 articles after fix
 
 **Decision filed:** `.squad/decisions/inbox/lead-stage7-tables.md`
+
+---
+
+## Stage 7 Table Cleanup — Borderline Threshold Fix (2025-07-25)
+
+**Problem:** The ix-dense-tables.mjs script only caught BLOCKED tables (density >= 7.5). Twenty borderline tables (density 5.5-7.5) were passing through to Substack as ugly flattened bullet lists, losing their visual structure and editorial meaning.
+
+**Fix:** Lowered ix-dense-tables.mjs render threshold to density >= 5.5, catching both BLOCKED and BORDERLINE tables. The script now renders any table that would look rough as a list into a styled PNG image before it reaches the publisher.
+
+**Result:**
+- 20 borderline tables across 14 articles rendered and replaced in drafts
+- Post-fix audit: 0 borderline, 0 blocked across all 22 Stage 7 articles
+- Table images: 40 → 60 total (20 new PNG renders)
+- 108 remaining inline tables are all low-density and convert to clean lists
+
+**Key learning:** The density classifier has three tiers worth caring about — not two. Tables in the 5.5-7.5 range technically pass the publisher gate but look bad. The pre-publish fix pass should catch these too. This threshold change should be the permanent default.
+
+**Pipeline position:** Table cleanup now happens as a pre-publish batch step (ix-dense-tables.mjs) against local markdown files, making changes visible in staging before prod promotion. The publisher extension's density guard remains as a final backstop but should never fire if the batch step runs first.
+
+**Affected articles (Phase 2):** jsn-extension-preview, buf-2026-offseason, ari-2026-offseason, car-2026-offseason, dal-2026-offseason, den-2026-offseason, gb-2026-offseason, hou-2026-offseason, jax-2026-offseason, lar-2026-offseason, ne-maye-year2-offseason, nyg-2026-offseason, sf-2026-offseason, wsh-2026-offseason

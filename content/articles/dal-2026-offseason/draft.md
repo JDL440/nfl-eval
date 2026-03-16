@@ -99,10 +99,7 @@ The front is not the disaster. The second level and the coverage stress are. In 
 
 The panel kept returning to the same schematic demands for the two first-round picks:
 
-| Pick | Likely Role | What Parker Needs on Day 1 |
-|---|---|---|
-| **#12** | Cornerback | A player who can survive press-bail, handle isolation, and avoid losing vertical routes without constant safety help |
-| **#20** | EDGE or contingency defender | A pass-rush body who can set the edge, hold the C-gap, and contribute in four-man sub packages immediately |
+![Pick vs Likely Role vs What Parker Needs on Day 1. 2 rows and 3 columns. Columns include Pick, Likely Role, What Parker Needs on Day 1. First row: #12.](../../images/dal-2026-offseason/dal-2026-offseason-pick-vs-likely-role-vs-what-parker-needs-on-day-1.png)
 
 That explains why the defense expert is more rigid than the draft expert about positional urgency. In this scheme, rookie corner is scary, but unavoidable. The coverage family asks the outside corner to live alone more often than fans realize. **Jalen Thompson** as a robber helps underneath; he does not erase mistakes over the top. If the rookie CB can't play disciplined technique, the whole back end gets stretched.
 
@@ -193,13 +190,7 @@ The panel agrees on the most important part: this is not a "best player availabl
 
 Here's the cleanest synthesis of the panel's recommendation:
 
-| Priority | Move | Why |
-|---|---|---|
-| 1 | Draft **CB at #12** | It's the position the scheme cannot hide |
-| 2 | At **#20**, take EDGE only if the value is real | Need matters, but forcing the board is how this gets worse |
-| 3 | If the EDGE tier collapses, consider **CB-CB** or trade down | The defense still benefits from two legitimate corners more than one reach |
-| 4 | Create 2026 breathing room with a **Steele post-June 1** move if needed | Keeps the short-term roster functional without pretending the long-term problem is solved |
-| 5 | Resolve **Pickens** with 2027 in mind, not just 2026 vibes | The offense cannot stay this expensive and still ask the draft to save the defense forever |
+![Priority vs Move vs Why. 5 rows and 3 columns. Columns include Priority, Move, Why. First row: Draft CB at #12.](../../images/dal-2026-offseason/dal-2026-offseason-priority-vs-move-vs-why.png)
 
 My beat-level answer after sitting with all of it: the **Cowboys** probably had to make some version of this bet. The 2027 cap wall is too real, the defense was too broken, and the old version of the roster was too expensive to keep pretending balance was coming from the veteran market. But necessity is not the same as brilliance. Dallas deserves credit only if it follows the logic all the way through.
 

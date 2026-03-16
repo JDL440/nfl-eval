@@ -98,10 +98,7 @@ The less glamorous version is the one the panel kept dragging back into the ligh
 
 HOU called interior defensive line a crisis. Defense went even further and described it as a scheme-critical emergency. In DeMeco Ryans' front, "defensive tackle" is not one job. It's two.
 
-| Role | What Houston needs | Why it matters |
-|------|--------------------|----------------|
-| **1-tech anchor** | A body that can absorb doubles and protect the linebackers | Lets Houston stay structurally sound against the run without compromising the back end |
-| **Attacking 3-tech** | Interior disruption on passing downs | Prevents quarterbacks from stepping up when edge rushers win wide |
+![Role vs What Houston needs vs Why it matters. 2 rows and 3 columns. Columns include Role, What Houston needs, Why it matters. First row: 1-tech anchor.](../../images/hou-2026-offseason/hou-2026-offseason-role-vs-what-houston-needs-vs-why-it-matters.png)
 
 Defense's warning was the clearest scheme note in the entire panel:
 
@@ -128,11 +125,7 @@ If that's true, Houston doesn't just have a need. It has a timing problem.
 
 ### The core draft tension
 
-| Scenario at #28 | Draft's read | Defense's read | Team-level consequence |
-|-----------------|-------------|----------------|------------------------|
-| **A top DT tier is still on the board** | Take the value before the drop-off | Fine with it if the player solves the correct 1-tech or 3-tech job | Cleanest outcome |
-| **Top DTs are gone** | Consider trade-up logic or pivot to value | Still prioritize exact interior role over generic "best athlete" logic | Board gets uncomfortable |
-| **Linebacker value is stronger** | Sonny Styles becomes tempting | DT still carries more structural importance | Houston risks punting the crisis |
+![The core draft tension. 3 rows and 4 columns. Columns include Scenario at #28, Draft's read, Defense's read, and more. First row: A top DT tier is still on the board.](../../images/hou-2026-offseason/hou-2026-offseason-the-core-draft-tension.png)
 
 Draft sees the board in tiers. If Houston's favorite interior defenders are clustered above its slot, then simply "waiting your turn" at 28 may be bad process. That's where the trade-up idea enters.
 
@@ -152,12 +145,7 @@ This is what makes Houston's board so tricky. The Texans don't just need *a* def
 
 Where the panel largely converged is on the shape of a successful first two days.
 
-| Pick | Most common panel outcome | Why |
-|------|---------------------------|-----|
-| **28** | DT first if the right fit is there | Interior line is the crisis point |
-| **38** | DT or LB, depending on what happened at 28 | Houston needs at least one Day 2 defensive starter |
-| **59** | OT depth or linebacker | Protect Stroud, preserve 2027 flexibility |
-| **69** | Rotational DL, pass-catcher, or depth | Finish the cheap-core work without chasing luxury |
+![Pick vs Most common panel outcome vs Why. 4 rows and 3 columns. Columns include Pick, Most common panel outcome, Why. First row: 28.](../../images/hou-2026-offseason/hou-2026-offseason-pick-vs-most-common-panel-outcome-vs-why.png)
 
 The two clearest expert mandates were these:
 

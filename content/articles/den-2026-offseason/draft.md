@@ -31,12 +31,7 @@ Denver's first call isn't the draft card. It's what to do with Engram's contract
 
 **DEN** gets to the same destination from a less spreadsheet-shaped route. Engram wasn't schemed out. He failed the job. The route concepts were there, but the finishes weren't, and by the end of the year Denver no longer treated him like a trusted answer. That's a brutal conclusion for a veteran tight end, but it clarifies the choice: if the offense itself is sound, you stop trying to rescue the player who couldn't run it.
 
-| 2025 Snapshot | Number | Why It Matters |
-|---------------|--------|----------------|
-| Engram production | **50 catches, 461 yards, 1 TD** | Far below the level Payton historically gets from featured TEs |
-| Red-zone TD rate | **52%** | Denver won a lot, but not with a killer finishing offense |
-| Inside-the-10 TD rate | **46%** | This is where the missing mismatch weapon showed up most clearly |
-| Effective 2026 cap space | **~$14.6M** | Enough to function, not enough to waste |
+![2025 Snapshot vs Number vs Why It Matters. 4 rows and 3 columns. Columns include 2025 Snapshot, Number, Why It Matters. First row: Engram production.](../../images/den-2026-offseason/den-2026-offseason-2025-snapshot-vs-number-vs-why-it-matters.png)
 
 Denver's offense wasn't broken everywhere. It was broken in the exact place Payton usually uses a tight end to solve problems: the middle of the field, especially near the goal line. That's why this conversation keeps coming back to the same uncomfortable conclusion. The Broncos don't just need *a* tight end. They need **the** type of tight end their coach has historically used as the cheat code.
 

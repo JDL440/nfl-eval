@@ -95,12 +95,7 @@ And that is why the Packers' own internal sales pitch feels incomplete. "Jordan 
 
 This is the part where Green Bay's offseason gets slippery. The Packers are not cap-dead. They're also not nearly as flexible as the raw number suggests.
 
-| 2026-2029 Window | Projected Reality | Meaning |
-|------------------|------------------|---------|
-| 2026 effective cap space | ~$27-29M | Enough to function, not enough to erase multiple mistakes |
-| 2026 dead money | $39.2M | The hidden drag on every "they can still add help" argument |
-| 2027 projected space | $84.6M | Real relief arrives if the team gets there intact |
-| 2028-2029 outlook | Parsons and Love consume premium dollars | Young-core extensions start competing for oxygen |
+![2026-2029 Window vs Projected Reality vs Meaning. 4 rows and 3 columns. Columns include 2026-2029 Window, Projected Reality, Meaning. First row: 2026 effective cap space.](../../images/gb-2026-offseason/gb-2026-offseason-2026-2029-window-vs-projected-reality-vs-meaning.png)
 
 Cap's framing is blunt: Green Bay paid a Super Bowl contender's price for a championship window that lasts about **18 months**.
 

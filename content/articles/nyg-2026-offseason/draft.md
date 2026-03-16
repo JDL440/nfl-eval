@@ -31,11 +31,7 @@ He didn't just survive 2025. He flashed enough arm talent, movement ability, and
 
 Before you even get to the board, the three paths look like this:
 
-| Path | What the pick says | 2026 implication | 2027 implication |
-|------|--------------------|------------------|------------------|
-| **Draft Sonny Styles at No. 5** | Harbaugh's defensive blueprint remains the franchise's North Star | Better chance of a top-10 defense right away | Offense becomes the expensive fix next spring |
-| **Draft Carnell Tate at No. 5** | The Giants believe Dart's rookie-deal window has already started | Dart gets a real WR partner for Nabers immediately | 2027 cap room can finish the defense and line |
-| **Trade down** | The front office sees the roster as broad, not top-heavy | More assets, more flexibility, less pressure on one player | Best chance to attack both offense and defense across two drafts |
+![Path vs What the pick says vs 2026 implication. 3 rows and 4 columns. Columns include Path, What the pick says, 2026 implication, and more. First row: Draft Sonny Styles at No. 5.](../../images/nyg-2026-offseason/nyg-2026-offseason-path-vs-what-the-pick-says-vs-2026-implication.png)
 
 That table is the article. Not because the options are equally likely, but because each one exposes a different belief about where New York actually is.
 
@@ -160,12 +156,7 @@ So the trade-down path is the best *conditional* answer, not the clean default.
 
 For all the tension in the setup, the panel is closer to consensus than the headline might suggest.
 
-| Expert | Bottom-line position |
-|--------|----------------------|
-| **NYG** | The franchise context says this pick decides whether the rebuild is still Harbaugh's timeline or already Dart's |
-| **Cap** | Draft **Tate**; the WR cap arbitrage and QB-window math are too strong to ignore |
-| **Draft** | **Tate over Styles** as a prospect; **trade down** is optimal only if the compensation is strong |
-| **Defense** | Styles is a luxury, not a necessity; the defense is already rebuilt enough to justify offense first |
+![Expert vs Bottom-line position. 4 rows and 2 columns. Columns include Expert, Bottom-line position. First row: NYG.](../../images/nyg-2026-offseason/nyg-2026-offseason-expert-vs-bottom-line-position.png)
 
 That is not four analysts yelling in different directions. It is four analysts arriving at the same practical conclusion from different lanes:
 

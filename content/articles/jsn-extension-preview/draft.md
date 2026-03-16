@@ -64,11 +64,7 @@ Cap says it's a trap. Here's why.
 
 **The cost-of-waiting math:**
 
-| Timing | Total Cost Through 2030 | Cash in First 24 Months | Cap Hit 2026 |
-|--------|------------------------|------------------------|--------------|
-| **Extend now** | ~$139M (4yr extension + 2026 rookie year) | $68M+ (bonus + salaries) | $16.4M |
-| **Option + extend 2027** | ~$172M (option + later extension) | ~$24M (option year only) | $3.4M (2026), $21–23M (2027) |
-| **Cost of waiting** | **+$33M** | **-$44M in early security** | **+$5M delayed** |
+![Timing vs Total Cost Through 2030 vs Cash in First 24 Months. 3 rows and 4 columns. Columns include Timing, Total Cost Through 2030, Cash in First 24 Months, and more. First row: Extend now.](../../images/jsn-extension-preview/jsn-extension-preview-timing-vs-total-cost-through-2030-vs-cash-in-first-24-months.png)
 
 Why does waiting cost $33 million more? Because the WR market inflates 8–12% annually. The extension JSN signs in 2027 will cost more in both AAV and guarantees than the one available today. Cap growth doesn't keep pace with positional market inflation at the top end — the best players capture surplus value as the ceiling rises. Delaying the deal doesn't just push the cap hit out; it increases the total real-dollar cost.
 

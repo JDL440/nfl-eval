@@ -61,11 +61,7 @@ Our draft expert was blunt: **there is no quarterback worth the #3 overall pick 
 
 So what IS at #3? An elite pass rusher staring Arizona in the face.
 
-| Prospect | Pos | School | Why at #3 |
-|----------|-----|--------|-----------|
-| **Rueben Bain Jr.** | EDGE | Miami (FL) | Consensus top-5 EDGE. Technically refined, scheme-versatile. Cameron Jordan comp with better bend. |
-| **Francis Mauigoa** | OT | Miami (FL) | Best tackle in the class. Penei Sewell-type profile. Multiple mocks project this exact pick. |
-| **David Bailey** | EDGE | Texas Tech | Explosive first step, legitimate coverage ability. Some see him #6-10, not #3. |
+![Prospect vs Pos vs School. 3 rows and 4 columns. Columns include Prospect, Pos, School, and more. First row: Rueben Bain Jr..](../../images/ari-2026-offseason/ari-2026-offseason-prospect-vs-pos-vs-school.png)
 
 > *"Arizona has the single most valuable asset in this draft that nobody's talking about — a top-3 pick with no obligation to take a quarterback."* — **Draft**
 
@@ -154,12 +150,7 @@ Cap pushes back: Harrison's cost-controlled window extends through 2028 (Year 5 
 
 Here's the tension the article exists to expose. Every expert agrees on the destination — franchise quarterback, contending roster, Harrison Jr. producing at his ceiling. They cannot agree on the route.
 
-| Expert | QB Timeline | Recommended Path | Key Argument |
-|--------|------------|-----------------|--------------|
-| **Draft** | 2026 — Simpson via trade-back | Bain at #3 + Simpson at ~#28 | Two first-round starters. Trade math works. Safety net of 2027 class. |
-| **Offense** | 2026 — Simpson, start by midseason | Same as Draft, but shorter leash on Brissett | Harrison's Year 3 is burning. Shanahan-tree template says start the kid. |
-| **Cap** | 2027 — stronger class, cleaner cap | EDGE at #3, full bridge year | $105-115M in 2027 is a spending bonanza. Don't force it in a weak QB class. |
-| **ARI** | Open — trade #3 for a haul | Trade down, address five roster holes | 30 sacks, 31st-ranked run game, 29th-ranked defense. One pick doesn't fix this. |
+![Expert vs QB Timeline vs Recommended Path. 4 rows and 4 columns. Columns include Expert, QB Timeline, Recommended Path, and more. First row: Draft.](../../images/ari-2026-offseason/ari-2026-offseason-expert-vs-qb-timeline-vs-recommended-path.png)
 
 The Draft-Offense alliance is the strongest. Both want Bain at #3 and Simpson via trade-back. The difference is urgency: Draft is comfortable letting Simpson sit a full season behind Brissett; Offense wants the switch by Week 6-8 if Simpson shows he can execute LaFleur's play-action concepts at an NFL level.
 

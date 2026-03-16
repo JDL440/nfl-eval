@@ -182,12 +182,7 @@ Despite the disagreements, the panel converges on a clear recommendation: **Path
 
 ### The Blueprint
 
-| Priority | Action | Target | Budget |
-|----------|--------|--------|--------|
-| 1 | Draft OT at #31 or early R2 | Proctor, Freeling, or Miller — Moses's successor at RT | Rookie slot |
-| 2 | Address EDGE in rounds 2–3 | Parker, Mesidor, or Moore — young complement to Landry/Jones | Draft capital |
-| 3 | Add WR depth through draft + patience | Day 2/3 vertical threat; monitor mid-season trade market | Draft capital + held cap |
-| 4 | Preserve rollover for the war chest | Keep $15–20M unspent for the dead money cliff | $110M+ projected next year |
+![The Blueprint. 4 rows and 4 columns. Columns include Priority, Action, Target, and more. First row: 1.](../../images/ne-maye-year2-offseason/ne-maye-year2-offseason-the-blueprint.png)
 
 ### Each Expert's Bottom Line
 
