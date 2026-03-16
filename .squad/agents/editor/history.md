@@ -265,3 +265,54 @@ Lead prioritized #1 (URL persistence) for Publisher skill implementation. Editor
 
 **Next steps:** Coordinate with Lead on Publisher skill updates. URL persistence is priority; table pre-check is supporting improvement.
 
+## Stage 7 Quality Gate Audit (2025-07-25)
+
+📌 **Stage 7 Production-Readiness Audit** — Full quality gate check across all 22 Stage 7 articles.
+
+### Image Fixes: ✅ VERIFIED
+- 94 image references across 22 articles — ALL resolve to valid files on disk
+- 0 broken references
+- 60 table-image PNGs rendered (from Phase 1 + Phase 2 dense table cleanup)
+- All inline JPG/PNG images in `content/images/{slug}/` directories present and referenced correctly
+
+### Table Fixes: ✅ VERIFIED
+- `audit-tables.mjs --stage 7` confirms: 108 remaining markdown tables, **0 blocked, 0 borderline**
+- All 108 pass density classifier as inline-safe (will convert to clean bullet lists in Substack)
+- 60 table images already rendered for the dense/borderline tables from prior fix passes
+- No further table rendering work required
+
+### Quality Blockers for Production Push:
+
+**Tier 1 — APPROVED and production-ready (2 articles):**
+1. `den-2026-offseason` — ✅ Editor APPROVED, publisher_pass complete (names/numbers/stale refs verified)
+2. `witherspoon-extension-v2` — ✅ Editor APPROVED, publisher_pass complete
+
+**Tier 2 — Editor-approved in history but DB shows REVISE (2 articles, need DB reconciliation):**
+3. `mia-tua-dead-cap-rebuild` — Editor APPROVED after 3 corrections (history pass 11), publisher_pass complete, but DB still shows REVISE with 17 errors (stale DB record)
+4. `jsn-extension-preview` — Editor APPROVED content (history pass 3), image issues resolved (passes 7-9), but DB still shows REVISE with 14 errors (stale)
+
+**Tier 3 — Editor-reviewed with outstanding REVISE (6 articles, corrections not confirmed):**
+5. `ari-2026-offseason` — 1 🔴 (Trubisky pick direction), Writer Notes not stripped
+6. `seahawks-rb-pick64-v2` — 1 🔴 (Charbonnet surgery year 2025→2026)
+7. `hou-2026-offseason` — 1 🔴 (Sonny Styles draft projection wrong)
+8. `lv-2026-offseason` — 2 🔴 (cap math + draft pick count stale)
+9. `ne-maye-year2-offseason` — 2 🔴 (Doubs stats, Mason Thomas name)
+10. `jax-2026-offseason` — 6 🔴 (worst shape: cap deficit, trade structure, missing panelist)
+
+**Tier 4 — REJECTED (1 article, needs rewrite):**
+11. `buf-2026-offseason` — Core premise stale (Knox cut scenario outdated), cap tables invalid, major March 2026 moves omitted
+
+**Tier 5 — Never editor-reviewed (11 articles, must complete Stage 6 before prod):**
+car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-vs-saleh-draft-identity, wsh
+
+### Publisher Pass Gaps:
+- Only 3 articles have `names_verified=1, numbers_current=1, no_stale_refs=1`: den, mia, witherspoon
+- Remaining 19 have these verification flags at 0 — publisher-pass fact checks are incomplete
+
+### Lesson:
+- Confirms Lead's own audit finding (lead-stage7-audit.md): DB stages are inflated from batch table cleanup that advanced metadata without completing the full editorial/publisher pipeline
+- `pipeline.db` editor_reviews table is stale for at least 2 articles (mia, jsn) where corrections were applied but DB wasn't updated
+- Image and table fixes are genuinely complete across all 22 articles — those are not blockers
+- The real blockers are: (a) 11 articles with no editor review, (b) 7 articles with unresolved REVISE/REJECT, (c) 19 articles with incomplete publisher-pass fact checks
+- **Recorded by:** Editor (2025-07-25)
+
