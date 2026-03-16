@@ -1,7 +1,7 @@
 # NFL Lab — Article Ideas & Editorial Pipeline
 
-> **Last updated:** 2026-03-14
-> **Published so far:** 2 articles
+> **Last updated:** 2026-03-15
+> **Published so far:** 2 articles (+ 1 in production)
 > **Status:** 🟢 Active pipeline
 
 ---
@@ -12,6 +12,12 @@
 |---|-------|-------|-------------|-----------|---------------|
 | 1 | The Seahawks Have a Hole at RB. Here's Why Pick #64 Might Be the Smartest Play Seattle Makes All Draft. | RB evaluation (Price + Robinson) | SEA, Cap, Injury, CollegeScout, Offense, Media | 2026-03-14 | ❌ Pre-Editor |
 | 2 | Our Cap Expert Says $27 Million. Witherspoon's Agent Will Demand $33 Million. Here's Why They're Both Right. | Witherspoon extension | Cap, PlayerRep, SEA | 2026-03-14 | ✅ Reviewed (6 corrections) |
+
+## 🚀 In Production
+
+| # | Title | Topic | Agents Used | Status | Editor Review |
+|---|-------|-------|-------------|--------|---------------|
+| 3 | The Patriots Have ~$44 Million, the #4 Pick, and a Franchise QB on a Rookie Deal. Our Expert Panel Can't Agree on What to Do Next. | Drake Maye Year 2 — NE offseason strategy | NE, Cap, Offense, Draft | 🚀 In Production (draft complete, pending Substack publish) | ✅ Reviewed (2 corrections applied) |
 
 ---
 
