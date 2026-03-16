@@ -325,6 +325,17 @@ def reconcile(dry_run=True):
                 "action": "MISSING_DB_ROW",
                 "detail": f"Artifacts at stage {artifact_stage} but no DB row",
             })
+            if not dry_run:
+                # Backfill: create the missing row
+                # Derive title from slug (best effort)
+                title = slug.replace("-", " ").title()
+                ps.backfill_article(
+                    article_id=slug,
+                    title=title,
+                    stage=artifact_stage,
+                    status="in_production" if artifact_stage > 1 else "proposed",
+                    agent="article_board",
+                )
             continue
 
         db_stage = db_row["current_stage"]

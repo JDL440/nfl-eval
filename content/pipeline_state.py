@@ -113,11 +113,14 @@ class PipelineState:
         if article is None:
             raise ValueError(f"Article '{article_id}' not found in pipeline.db")
 
-        # Safety: warn (don't block) if from_stage doesn't match DB
+        # Safety: fail loudly if from_stage is provided and doesn't match DB
         db_stage = article["current_stage"]
         if from_stage is not None and db_stage != from_stage:
-            # Coerce string stages to allow repair
-            pass  # caller handles reconciliation
+            raise ValueError(
+                f"Stage mismatch for '{article_id}': caller expects stage {from_stage}, "
+                f"but DB has {db_stage!r} (type={type(db_stage).__name__}). "
+                f"Refusing transition to avoid stale-stage corruption."
+            )
 
         now = _now_iso()
         self._conn.execute(
@@ -263,6 +266,55 @@ class PipelineState:
             "UPDATE articles SET current_stage = ?, updated_at = ? WHERE id = ?",
             (correct_numeric_stage, now, article_id),
         )
+        self._conn.commit()
+
+    # ── Backfill: create missing articles rows ───────────────────────────────
+
+    def backfill_article(self, article_id, title, stage=1, status="proposed", agent="pipeline_state"):
+        """
+        Create a missing articles row from artifact-discovered slug and inferred stage.
+        
+        Safe for backfilling when content exists on disk but DB row is missing.
+        Derives artifact paths when possible; uses safe defaults for all fields.
+        
+        Parameters
+        ----------
+        article_id : str
+            The slug (e.g. 'ari-2026-offseason')
+        title : str
+            Article title (derived from slug if unknown)
+        stage : int
+            Inferred stage from artifacts (default 1)
+        status : str
+            Article status (default 'proposed')
+        agent : str
+            Who created the row (default 'pipeline_state')
+        """
+        _validate_stage(stage, "stage")
+        if status not in VALID_STATUSES:
+            raise ValueError(f"Invalid status '{status}', expected one of {VALID_STATUSES}")
+        
+        # Check if already exists
+        existing = self.get_article(article_id)
+        if existing is not None:
+            raise ValueError(f"Article '{article_id}' already exists in DB")
+        
+        now = _now_iso()
+        
+        # Safe defaults: minimal row that won't break anything
+        self._conn.execute(
+            """INSERT INTO articles 
+               (id, title, status, current_stage, created_at, updated_at, depth_level, time_sensitive)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (article_id, title, status, stage, now, now, 2, 0),
+        )
+        
+        # Log the backfill as a stage transition
+        self._conn.execute(
+            "INSERT INTO stage_transitions (article_id, from_stage, to_stage, agent, notes, transitioned_at) VALUES (?,?,?,?,?,?)",
+            (article_id, None, stage, agent, f"Backfilled missing DB row at stage {stage}", now),
+        )
+        
         self._conn.commit()
 
 
