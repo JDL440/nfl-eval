@@ -6,6 +6,10 @@
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
 
+# Python
+__pycache__/
+*.pyc
+
 # Node.js / BullMQ
 node_modules/
 package-lock.json
