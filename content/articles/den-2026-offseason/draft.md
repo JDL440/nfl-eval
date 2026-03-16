@@ -23,11 +23,7 @@ That would already be a problem. The part that makes it urgent is the calendar. 
 
 Denver's first call isn't the draft card. It's what to do with Engram's contract.
 
-| Scenario | 2026 Result | Why It Appeals | Why It Doesn't |
-|----------|-------------|----------------|----------------|
-| **Keep Engram** | $14.2M cap hit stays on the books | Veteran insurance, no new dead money | Paying TE1 money for 50/461/1 after Denver benched him in Week 17 and the AFCCG |
-| **Cut pre-June 1** | Immediate dead money hit, limited relief | Clean break now | Little flexibility gained for a meaningful roster problem |
-| **Cut post-June 1** | ~$3.8M usable 2026 savings, dead money split into 2027 | Best cash-flow outcome, preserves some operating room | You still eat the mistake, just more strategically |
+![The Engram Decision Matrix. 3 rows and 4 columns. Columns include Scenario, 2026 Result, Why It Appeals, and more. First row: Keep Engram.|The Engram contract decision matrix](../../images/den-2026-offseason/den-2026-offseason-engram-decision.png)
 
 **Cap's** read is cold, and probably correct on the accounting: the Engram deal is already a sunk cost. The only question is whether Denver wants to pay premium money for a failed experiment or carry dead money while pivoting to a better answer. His preferred path is post-June 1 because it creates just enough breathing room to sign the rookie class, keep some in-season flexibility, and avoid treating a 31-year-old bounce-back as a serious team-building plan.
 
@@ -44,11 +40,7 @@ Denver's first call isn't the draft card. It's what to do with Engram's contract
 
 Denver's offense wasn't broken everywhere. It was broken in the exact place Payton usually uses a tight end to solve problems: the middle of the field, especially near the goal line. That's why this conversation keeps coming back to the same uncomfortable conclusion. The Broncos don't just need *a* tight end. They need **the** type of tight end their coach has historically used as the cheat code.
 
-<!-- IMAGE: Editorial illustration of Sean Payton and a Denver draft board centered on the "Joker" tight end role, with Evan Engram's 50/461/1 line fading into the background and pick #30 highlighted.
-     Placement: inline
-     Tone: analytical front-office tension
-     Key elements: Sean Payton, Denver Broncos colors, draft board at pick #30, tight end iconography, subtle red-zone field markings, Engram stat line
--->
+![The Broncos' Missing Joker: Why Denver's Super Bowl Push May Come Down to One Tight End Bet — inline image 1|Denver's offensive potential in the red zone](../../images/den-2026-offseason/den-2026-offseason-inline-1.png)
 
 ---
 
@@ -64,12 +56,7 @@ The traditional Payton answer to those moments is the Joker: align him inline, i
 
 The prospect who keeps haunting this discussion is **Kenyon Sadiq**, because his profile maps almost too neatly onto what Denver wants.
 
-| Trait | Jimmy Graham (2010) | Kenyon Sadiq (2026) | Why Denver Cares |
-|------|----------------------|---------------------|------------------|
-| Size | 6'7", 260 | 6'5", 251 | Big enough to create red-zone problems |
-| Speed | 4.53 | 4.58 | Fast enough to stress linebackers and safeties |
-| Vertical | 38.5" | 38" | Still wins above the rim |
-| Development curve | Raw basketball convert | More refined route background | Better chance to help earlier |
+![Sadiq vs. Graham: The Joker Comparison. 4 rows and 4 columns. Columns include Trait, Jimmy Graham (2010), Kenyon Sadiq (2026), and more. First row: Size.|Sadiq vs. Graham comparison](../../images/den-2026-offseason/den-2026-offseason-sadiq-graham-comparison.png)
 
 Offense isn't claiming Sadiq walks in and becomes 2011 Graham. That's fan-fiction. The real argument is smaller and more persuasive: Sadiq gives Webb a player defenses must actually account for in the seams, in the red zone, and on third down. And Denver's current receiver room, for all its speed and promise, doesn't replace that geometry.
 
@@ -89,10 +76,7 @@ This is where the panel stops nodding politely and starts arguing.
 
 **Cap's** counterargument is the one every sensible front office person in the room will understand immediately. Tight end in Round 1 is expensive relative to Round 2, the hit rate on first-round tight ends is lumpy, and Denver has a real linebacker need staring at it. **CJ Allen** gives the defense a Day 1 answer at a position where age and attrition are both looming. Then you come back at #62 for a cheaper tight end like Jack Endries or Eli Stowers, preserve more cap efficiency, and keep the roster from becoming too top-heavy in one bet.
 
-| Option | Year 1 Cost | Roster Logic | Main Risk |
-|--------|-------------|--------------|-----------|
-| **Sadiq at #30** | ~**$3.1M** | Buy the highest-upside solution to the offense's biggest schematic problem | Rookie TE volatility, ILB still thin |
-| **Allen at #30 + TE later** | ~**$3.1M** for Allen, ~**$1.8M** for R2 TE | Better positional balance, cheaper TE pipeline | The Round 2 TE may be fine, not transformative |
+![Pick #30: Two Paths. 2 rows and 4 columns. Columns include Option, Year 1 Cost, Roster Logic, and more. First row: Sadiq at #30.|Pick #30 decision comparison](../../images/den-2026-offseason/den-2026-offseason-pick-30-options.png)
 
 Cap isn't wrong. He's just losing on urgency.
 
@@ -119,11 +103,7 @@ This is why Offense kept hammering the timing problem. If Nix is working back fr
 
 That doesn't mean a rookie tight end is guaranteed to hit the ground running. It means Denver is already out of "wait and see" runway. The next two years are the cheap-quarterback years. After that, every compromise costs more.
 
-<!-- IMAGE: Split-scene visual of Bo Nix's rookie-contract championship window, with a two-year timeline from 2026 to 2027, Kenyon Sadiq as a highlighted draft option, and linebacker versus tight end decision markers.
-     Placement: inline
-     Tone: urgent strategic infographic
-     Key elements: Bo Nix silhouette, Denver Broncos branding, 2026-2027 timeline, rookie contract framing, pick #30 decision fork, subtle AFC title-game imagery
--->
+![The Broncos' Missing Joker: Why Denver's Super Bowl Push May Come Down to One Tight End Bet — inline image 2|Denver's franchise-defining draft decision at pick #30](../../images/den-2026-offseason/den-2026-offseason-inline-2.png)
 
 ---
 

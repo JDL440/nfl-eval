@@ -24,13 +24,7 @@ We convened three experts to evaluate whether Miami can execute a competitive re
 
 Everyone fixates on the total. The number that actually predicts recovery speed is **dead money as a percentage of the cap**.
 
-| Team | Year | Dead Cap | Total Cap | Dead % | Recovery Timeline |
-|------|------|----------|-----------|--------|-------------------|
-| LAR (Goff trade) | 2021 | $22.2M | $184.2M | **12.1%** | Won Super Bowl Y2 |
-| DEN (Wilson cut) | 2024 | $53M | $255.4M | **20.8%** | Made playoffs Y1 |
-| **MIA (Tua Y1)** | **2026** | **$55.4M** | **$301M** | **18.4%** | **—** |
-| **MIA (Tua Y2)** | **2027** | **$43.8M** | **~$317M** | **13.8%** | **—** |
-| HOU (Watson trade) | 2022 | ~$40M | $208M | **19.2%** | Competitive by 2023 |
+![Dead cap as percentage of total cap comparison table showing LAR DEN MIA and HOU historical data|Miami's proportional burden is comparable to rebuilds that recovered in 1–2 years](../../images/mia-tua-dead-cap-rebuild/mia-tua-dead-cap-rebuild-dead-cap-comparison.png)
 
 Our salary cap expert put it bluntly: *"Miami's 2026 hit (18.4%) sits between Denver's first-year burden (20.8%) and the Rams' single-year Goff hit (12.1%). The Broncos made the playoffs in Year 1, the Rams won the Super Bowl in Year 2. The $99.2M is a nominal record because the cap itself has grown 64% since the Goff trade, not because the structural damage is worse."*
 
@@ -61,11 +55,7 @@ The cap rises to ~$317M. The second Tua tranche ($43.8M) still hits, but expensi
 > *"This is a two-year tax, not a five-year sentence. At 18.4% and 13.8% of cap, both years are lighter proportional hits than what LA and Denver survived. Miami's math supports competitiveness by 2027. The constraint isn't dollars — it's quarterback."*
 > — Cap, Salary Cap Expert
 
-<!-- IMAGE: Split-screen infographic comparing Miami's dead cap burden to LAR and DEN historical precedents
-     Placement: inline
-     Tone: analytical data visualization with clean modern design
-     Key elements: Bar chart showing dead cap as percentage of total cap (12.1% LAR 2021, 20.8% DEN 2024, 18.4% MIA 2026), team logos, color-coded bars (Rams blue/gold, Broncos orange/blue, Dolphins aqua/orange)
--->
+![$99 Million Ghost: How Miami Rebuilds With the Largest Dead Cap Hit in NFL History — inline image 1|Miami's front-office rebuild under financial constraint](../../images/mia-tua-dead-cap-rebuild/mia-tua-dead-cap-rebuild-inline-1.png)
 
 ---
 
@@ -100,11 +90,7 @@ Willis behind a half-built offensive line, throwing to Waddle and no one else, w
 
 4-13 puts Miami in the top 3-5 pick range for 2027 — which is exactly where they need to be if Willis doesn't emerge.
 
-<!-- IMAGE: Miami Dolphins 2026 roster building blocks visualization
-     Placement: inline
-     Tone: modern roster graphic with player photos and position groupings
-     Key elements: Five core players (Achane, Waddle, Robinson, Grant, Savaiinaea) highlighted in Dolphins aqua, secondary/WR depth shown as question marks or silhouettes, clean hierarchy showing proven starters vs developmental pieces
--->
+![$99 Million Ghost: How Miami Rebuilds With the Largest Dead Cap Hit in NFL History — inline image 2|Miami drafts its future on the board](../../images/mia-tua-dead-cap-rebuild/mia-tua-dead-cap-rebuild-inline-2.png)
 
 ---
 
@@ -141,14 +127,7 @@ Three 3rds in a defense-heavy class is the real story. Historical hit rate for R
 
 Day 2 targets by need:
 
-| Player | School | Pos | Round | Notes |
-|--------|--------|-----|-------|-------|
-| T.J. Parker | Clemson | EDGE | R2-R3 | Pairs with Delane-at-#11 scenario |
-| Cashius Howell | Texas A&M | EDGE | R3 | Pass-rush upside |
-| Avieon Terrell | Clemson | CB | R2-R3 | Starting-caliber corner depth |
-| Colton Hood | Tennessee | CB | R3 | Can't enter 2026 with one rookie CB |
-| KC Concepcion | Texas A&M | WR | R2-R3 | Size and contested-catch ability |
-| Denzel Boston | Washington | WR | R2-R3 | Complements Waddle's speed |
+![Day 2 Draft Targets by Need. 6 rows and 5 columns. Columns include Player, School, Pos, and more. First row: T.J. Parker.|Day 2 draft targets by position need](../../images/mia-tua-dead-cap-rebuild/mia-tua-dead-cap-rebuild-day-2-targets.png)
 
 The 2nd-round pick should be BPA from EDGE/CB/WR — whichever premium position #11 didn't address.
 
