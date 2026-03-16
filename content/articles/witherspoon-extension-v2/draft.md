@@ -59,6 +59,8 @@ The Seahawks' internal priority stack reflects that reality:
 
 That quote gets at the real football point. Without Witherspoon, Seattle is not simply replacing a star. It is changing the menu. Jobe gets promoted into a role he has never been asked to carry for a full season. Emmanwori gets dragged away from the big-nickel role that makes him dangerous. The defense becomes easier to identify and easier to attack. You can survive injuries around the edges of a championship roster. You do not casually test the load-bearing wall.
 
+![Devon Witherspoon extension — inline image 1|Placeholder for generated art: Seattle's defense is built around Devon Witherspoon's versatility.](../../images/witherspoon-extension-v2/witherspoon-extension-v2-inline-1.png)
+
 ---
 
 ## The CB Market
@@ -193,6 +195,8 @@ So what is the actual negotiation battlefield?
 - **Both sides want early cash, front-loaded structure, and a clean path that avoids the option-year theater.**
 
 In other words: the fight is not whether there is a deal. The fight is which side gets to claim the symbolic win on guarantees.
+
+![Devon Witherspoon extension — inline image 2|Placeholder for generated art: the real negotiation is market leverage versus guarantee structure.](../../images/witherspoon-extension-v2/witherspoon-extension-v2-inline-2.png)
 
 ---
 

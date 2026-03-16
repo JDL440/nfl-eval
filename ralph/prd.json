@@ -1,0 +1,474 @@
+{
+  "project": "NFL Content Intelligence — Remaining Article Pipeline Work",
+  "repository": "JDL440/nfl-eval",
+  "context": {
+    "season": "2026 offseason",
+    "statsSeason": "2025 (most recently completed)",
+    "capYear": 2026,
+    "publication": "NFL Lab (Substack)",
+    "publicationUrl": "https://nfllab.substack.com",
+    "publishModel": "tag-based (team tag + specialist tags per article)",
+    "publisherRules": [
+      "Use nfllab.substack.com as the publication target.",
+      "Use tags, not sections.",
+      "No byline in Substack draft payloads.",
+      "Filesystem state beats stale issue labels when they disagree."
+    ]
+  },
+  "backlogIssues": {
+    "range": "Open squad article issues #40-#69 plus #71",
+    "type": "Remaining team article backlog + Seahawks RB Pick #64 v2 regeneration",
+    "labels": {
+      "go:yes": "Approved to start or continue pipeline work",
+      "go:needs-research": "Needs idea generation / research before approval",
+      "stage:idea": "Idea exists, needs discussion prompt",
+      "stage:discussion-prompt": "Discussion prompt written, needs panel composition",
+      "stage:panel-ready": "Panel composed, ready for panel discussion",
+      "stage:panel-complete": "Panel discussion completed, ready for Writer",
+      "stage:review": "Draft exists, needs Editor fact-check pass",
+      "stage:publisher": "Editor approved, needs publisher pass + Substack draft",
+      "stage:published": "Substack draft created — Joe publishes manually"
+    }
+  },
+  "currentReality": {
+    "sourceOfTruth": "content/articles/ filesystem + open GitHub issues; trust files over labels when they conflict.",
+    "updatedAt": "2026-03-16T06:22:12Z",
+    "counts": {
+      "publisherNow": 5,
+      "editorQueue": 11,
+      "writerQueue": 2,
+      "panelQueue": 10,
+      "earlyStageQueue": 3,
+      "totalRemainingItems": 31
+    },
+    "priorityOrder": [
+      "Finish publish-ready items first.",
+      "Run Editor on existing drafts second.",
+      "Turn discussion summaries into drafts third.",
+      "Run missing panels fourth.",
+      "Backfill idea/discussion work last."
+    ]
+  },
+  "pipeline": [
+    {
+      "stage": 1,
+      "name": "Idea Generation",
+      "owner": "Lead",
+      "skill": ".squad/skills/idea-generation/SKILL.md",
+      "output": "content/articles/{slug}/idea.md",
+      "doneCriteria": [
+        "idea.md exists with working title, angle/tension, key data, and depth level",
+        "GitHub issue body updated with proposed angle",
+        "Issue labeled stage:idea"
+      ]
+    },
+    {
+      "stage": 2,
+      "name": "Discussion Prompt",
+      "owner": "Lead",
+      "skill": ".squad/skills/article-discussion/SKILL.md",
+      "output": "content/articles/{slug}/discussion-prompt.md",
+      "doneCriteria": [
+        "Discussion prompt contains Core Question, Key Tensions, Data Anchors, The Paths, and Panel Instructions",
+        "Issue labeled stage:discussion-prompt"
+      ]
+    },
+    {
+      "stage": 3,
+      "name": "Panel Composition",
+      "owner": "Lead",
+      "skill": ".squad/skills/article-discussion/SKILL.md",
+      "output": "content/articles/{slug}/panel-composition.md",
+      "doneCriteria": [
+        "2-5 agents selected with rationale",
+        "Relevant team agent included",
+        "At least one specialist included",
+        "Issue labeled stage:panel-ready"
+      ]
+    },
+    {
+      "stage": 4,
+      "name": "Panel Discussion",
+      "owner": "Panel agents",
+      "skill": ".squad/skills/article-discussion/SKILL.md",
+      "output": "content/articles/{slug}/{agent}-position.md + discussion-summary.md",
+      "doneCriteria": [
+        "Each panelist has a position file",
+        "discussion-summary.md exists",
+        "Issue labeled stage:panel-complete"
+      ]
+    },
+    {
+      "stage": 5,
+      "name": "Article Drafting",
+      "owner": "Writer",
+      "skill": ".squad/skills/substack-article/SKILL.md",
+      "output": "content/articles/{slug}/draft.md",
+      "doneCriteria": [
+        "Draft follows substack-article structure template",
+        "TLDR block present",
+        "Exactly 2 image placeholders or inline image refs are present",
+        "Conclusion takes a clear position",
+        "Issue labeled stage:review"
+      ]
+    },
+    {
+      "stage": 6,
+      "name": "Editor Pass",
+      "owner": "Editor",
+      "skill": ".squad/agents/editor/charter.md",
+      "output": "content/articles/{slug}/editor-review.md",
+      "doneCriteria": [
+        "Editor review exists with structured report",
+        "All blocking errors resolved",
+        "Verdict is APPROVED before publish",
+        "Issue labeled stage:publisher"
+      ]
+    },
+    {
+      "stage": 7,
+      "name": "Publisher Pass + Substack Draft",
+      "owner": "Lead",
+      "skill": ".squad/skills/publisher/SKILL.md",
+      "output": "Substack draft URL recorded in article directory or issue comment",
+      "doneCriteria": [
+        "Publisher checklist completed",
+        "publish_to_substack called against nfllab.substack.com",
+        "Team tag applied",
+        "Substack draft URL recorded",
+        "Issue labeled stage:published"
+      ]
+    },
+    {
+      "stage": 8,
+      "name": "Joe Reviews & Publishes",
+      "owner": "Joe (human)",
+      "skill": null,
+      "output": "Live Substack article",
+      "doneCriteria": [
+        "Joe clicks Publish in Substack editor",
+        "Issue closed"
+      ],
+      "note": "The loop considers an item operationally done at stage 7."
+    }
+  ],
+  "remainingWork": [
+    {
+      "priority": 1,
+      "bucket": "publisher-now",
+      "goal": "Create Substack drafts immediately for editor-approved team articles.",
+      "items": [
+        {
+          "issue": 43,
+          "team": "BUF",
+          "slug": "buf-2026-offseason",
+          "currentStage": "Stage 6 complete",
+          "nextStage": "Stage 7 publisher pass",
+          "blocker": "Needs publish_to_substack run and stage label sync."
+        },
+        {
+          "issue": 54,
+          "team": "DEN",
+          "slug": "den-2026-offseason",
+          "currentStage": "Stage 6 complete",
+          "nextStage": "Stage 7 publisher pass",
+          "blocker": "Needs publish_to_substack run and draft URL recording."
+        },
+        {
+          "issue": 50,
+          "team": "HOU",
+          "slug": "hou-2026-offseason",
+          "currentStage": "Stage 6 complete",
+          "nextStage": "Stage 7 publisher pass",
+          "blocker": "Needs publish_to_substack run and issue label sync."
+        },
+        {
+          "issue": 52,
+          "team": "JAX",
+          "slug": "jax-2026-offseason",
+          "currentStage": "Stage 6 complete",
+          "nextStage": "Stage 7 publisher pass",
+          "blocker": "Needs publisher pass; verify any Editor notes before upload."
+        },
+        {
+          "issue": 57,
+          "team": "LV",
+          "slug": "lv-2026-offseason",
+          "currentStage": "Stage 6 complete",
+          "nextStage": "Stage 7 publisher pass",
+          "blocker": "Needs publish_to_substack run and draft URL recording."
+        }
+      ]
+    },
+    {
+      "priority": 2,
+      "bucket": "editor-queue",
+      "goal": "Run Editor and clear existing draft backlog.",
+      "items": [
+        {
+          "issue": 40,
+          "team": "ARI",
+          "slug": "ari-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md; draft still contains writer notes/placeholders."
+        },
+        {
+          "issue": 67,
+          "team": "CAR",
+          "slug": "car-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 58,
+          "team": "DAL",
+          "slug": "dal-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 64,
+          "team": "GB",
+          "slug": "gb-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 55,
+          "team": "KC",
+          "slug": "kc-mahomes-return-roster-gamble",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 44,
+          "team": "MIA",
+          "slug": "mia-tua-dead-cap-rebuild",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 68,
+          "team": "NO",
+          "slug": "no-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 59,
+          "team": "NYG",
+          "slug": "nyg-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 60,
+          "team": "PHI",
+          "slug": "phi-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 53,
+          "team": "TEN",
+          "slug": "ten-ward-vs-saleh-draft-identity",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        },
+        {
+          "issue": 61,
+          "team": "WSH",
+          "slug": "wsh-2026-offseason",
+          "currentStage": "Stage 5 draft exists",
+          "nextStage": "Stage 6 editor pass",
+          "blocker": "Missing editor-review.md."
+        }
+      ]
+    },
+    {
+      "priority": 3,
+      "bucket": "writer-queue",
+      "goal": "Turn completed panel discussions into article drafts.",
+      "items": [
+        {
+          "issue": 41,
+          "team": "LAR",
+          "slug": "lar-2026-offseason",
+          "currentStage": "Stage 4 discussion summary exists",
+          "nextStage": "Stage 5 writer draft",
+          "blocker": "Missing draft.md."
+        },
+        {
+          "issue": 42,
+          "team": "SF",
+          "slug": "sf-2026-offseason",
+          "currentStage": "Stage 4 discussion summary exists",
+          "nextStage": "Stage 5 writer draft",
+          "blocker": "Missing draft.md."
+        }
+      ]
+    },
+    {
+      "priority": 4,
+      "bucket": "panel-queue",
+      "goal": "Run panel composition or panel discussion for mid-pipeline items before starting new research-heavy work.",
+      "items": [
+        {
+          "issue": 66,
+          "team": "ATL",
+          "slug": "atl-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 46,
+          "team": "BAL",
+          "slug": "bal-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 62,
+          "team": "CHI",
+          "slug": "chi-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 63,
+          "team": "DET",
+          "slug": "det-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 51,
+          "team": "IND",
+          "slug": "ind-sauce-gardner-gamble",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 56,
+          "team": "LAC",
+          "slug": "lac-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 65,
+          "team": "MIN",
+          "slug": "min-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 45,
+          "team": "NYJ",
+          "slug": "nyj-two-firsts-qb-decision",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        },
+        {
+          "issue": 71,
+          "team": "SEA",
+          "slug": "seahawks-rb-pick64-v2",
+          "currentStage": "Stage 3 panel-ready",
+          "nextStage": "Stage 4 panel discussion",
+          "blocker": "Needs SEA/Injury/CollegeScout/Offense panel run and discussion-summary.md."
+        },
+        {
+          "issue": 69,
+          "team": "TB",
+          "slug": "tb-2026-offseason",
+          "currentStage": "Stage 2 discussion prompt exists",
+          "nextStage": "Stage 3 panel composition",
+          "blocker": "Missing panel-composition.md."
+        }
+      ]
+    },
+    {
+      "priority": 5,
+      "bucket": "early-stage-queue",
+      "goal": "Backfill idea/discussion work only after the in-flight items above move forward.",
+      "items": [
+        {
+          "issue": 47,
+          "team": "CIN",
+          "slug": "cin-2026-offseason",
+          "currentStage": "Stage 1 / idea only",
+          "nextStage": "Stage 1 idea generation then Stage 2 discussion prompt",
+          "blocker": "Missing discussion-prompt.md and downstream artifacts."
+        },
+        {
+          "issue": 48,
+          "team": "CLE",
+          "slug": "cle-2026-offseason",
+          "currentStage": "Stage 1 / idea only",
+          "nextStage": "Stage 1 idea generation then Stage 2 discussion prompt",
+          "blocker": "Missing discussion-prompt.md and downstream artifacts."
+        },
+        {
+          "issue": 49,
+          "team": "PIT",
+          "slug": "pit-2026-offseason",
+          "currentStage": "Stage 1 / idea only",
+          "nextStage": "Stage 1 idea generation then Stage 2 discussion prompt",
+          "blocker": "Missing discussion-prompt.md and downstream artifacts."
+        }
+      ]
+    }
+  ],
+  "nfcWestTonight": {
+    "goal": "Push the NFC West batch as far as possible in the next loop window.",
+    "teams": [
+      {
+        "team": "ARI",
+        "issue": 40,
+        "slug": "ari-2026-offseason",
+        "currentStage": "Draft exists",
+        "nextAction": "Run Editor, resolve any blocking errors, then publish if approved."
+      },
+      {
+        "team": "LAR",
+        "issue": 41,
+        "slug": "lar-2026-offseason",
+        "currentStage": "discussion-summary.md exists",
+        "nextAction": "Writer creates draft.md."
+      },
+      {
+        "team": "SF",
+        "issue": 42,
+        "slug": "sf-2026-offseason",
+        "currentStage": "discussion-summary.md exists",
+        "nextAction": "Writer creates draft.md."
+      },
+      {
+        "team": "SEA",
+        "issue": 71,
+        "slug": "seahawks-rb-pick64-v2",
+        "currentStage": "panel-ready",
+        "nextAction": "Run SEA/Injury/CollegeScout/Offense panel and synthesize discussion-summary.md."
+      }
+    ]
+  },
+  "completionCriteria": "All remaining open squad article issues (#40-#69 plus #71) reach at least Stage 7, with nfllab.substack.com draft URLs recorded and stage labels synchronized to published state."
+}
