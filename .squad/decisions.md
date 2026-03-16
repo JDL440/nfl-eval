@@ -914,3 +914,88 @@ LaFleur's title chain (OC → HC), Simpson's start count, 2027 QB class eligibil
 - Status: Not duplicates
 
 **Why:** Ensures JSN article publishes with verified unique assets. Duplicate image issue now resolved with hash verification and prompt engineering fixes applied.
+
+### 2026-03-16T03:42:21Z: User directive — Publish with tags, not sections/bylines
+**By:** Joe Robinson (via Copilot)
+**What:** Stop assigning Substack sections during publish, clear bylines because they break, and use tags instead — always tag the team and also tag any specialist agents who participated.
+**Why:** User request — captured for team memory
+
+
+### 2026-03-16: Substack publishing — sections removed, tags adopted
+
+**By:** Lead (on behalf of Joe Robinson)
+**Status:** Implemented
+
+**Decision:** Stop assigning Substack sections during publish. Stop sending `draft_bylines` (was breaking). Instead, tag each post with:
+1. The team name (full, e.g. "San Francisco 49ers")
+2. Any specialist agents who contributed artifacts (e.g. "Cap", "Offense", "Defense")
+
+**Rationale:**
+- Per-team sections are not the correct Substack taxonomy for this publication
+- `draft_bylines` payload was causing publish failures
+- Tags provide flexible, additive categorization without the rigidity of sections
+
+**Tag convention:**
+- Team tag: full NFL team name as provided or auto-detected from `pipeline.db`
+- Specialist tags: derived from article directory filenames (`{role}-position.md`, `{role}-panel.md`, etc.), title-cased
+- Team agent files (identified by NFL abbreviation prefix) are excluded from specialist tags
+
+**Implementation:**
+- `getSectionId()`, section PUT/verify, and `draft_bylines` removed from extension
+- `postTags` array added to draft creation payload
+- `deriveTagsFromArticleDir()` scans article directory for specialist artifacts
+- Success output now reports tags instead of section status
+- All related skill docs updated
+
+**Affects:** Publisher extension, substack-publishing skill, publisher skill, substack-article skill, article-lifecycle skill
+
+
+### 2026-03-17: README.md Documentation Update — Publishing Behavior
+
+**Date:** 2026-03-17  
+**Decision Maker:** Lead (Joe Robinson directive)  
+**Category:** Documentation Accuracy
+
+**Problem:**
+README.md lines 139–141 contained stale language describing automated Substack publishing behavior:
+- "routed to the correct team section" — implied automatic per-team section assignment
+- Missing description of actual tag-based publishing
+- No mention of specialist agent tags
+
+These descriptions no longer matched the operational publishing model after the sections→tags migration (2026-03-16).
+
+**What Changed:**
+
+Old language (L139–L141):
+\\\
+- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, routed to the correct team section
+- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing
+- [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
+\\\
+
+New language (L139–L141):
+\\\
+- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, tagged with team + specialist tags for categorization
+- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing with tag-based routing
+- [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
+\\\
+
+**Rationale:**
+1. **Section routing removed:** The publisher extension no longer assigns drafts to per-team sections. Tags are the organizing mechanism.
+2. **Tag-based categorization:** Drafts now carry two types of tags:
+   - Team tag (full team name, e.g. "San Francisco 49ers")
+   - Specialist tags (agent roles from panel, e.g. "Cap", "Offense", "Defense")
+3. **No bylines:** Old code had broken `draft_bylines` logic. This is now cleared entirely.
+4. **Accuracy:** README is team-facing documentation. Stale language misleads future contributors about the actual publishing behavior.
+
+**Impact:**
+- **Low risk:** These are documentation lines only. No code changes. README describes behavior that already changed.
+- **High value:** Prevents future confusion about publishing workflow.
+- **Scope:** Minimal edit (3 lines, same section, no roadmap/status changes elsewhere).
+
+**Files Changed:**
+- `README.md` — lines 139–141 updated
+
+**Decision:**
+✅ **APPROVED** — Update README to reflect current tag-based publishing behavior. Minimal, surgical change with high accuracy impact.
+

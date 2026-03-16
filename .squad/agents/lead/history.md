@@ -400,4 +400,28 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 
 **Validated:** `node --check` syntax pass + functional tag derivation test against real article directories (sf-2026-offseason, ari-2026-offseason).
 
+### README.md Documentation Update — Publishing Behavior (2026-03-17)
+
+**Task:** Fix stale README lines that incorrectly described automated publishing as routing drafts to team sections with bylines.
+
+**Lines updated (L139–L141 in "What's Next" roadmap section):**
+
+**OLD:**
+```
+- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, routed to the correct team section
+- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing
+- [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
+```
+
+**NEW:**
+```
+- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, tagged with team + specialist tags for categorization
+- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing with tag-based routing
+- [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
+```
+
+**Rationale:** The deprecated "routed to the correct team section" language implied automatic section assignment. Current behavior is tag-based publishing (no section routing, no bylines). The updated text accurately reflects the operational reality: drafts are tagged with team name + specialist agent roles for Substack categorization.
+
+**Decision filed:** `.squad/decisions/inbox/lead-readme-publish-tags.md`
+
 
