@@ -343,6 +343,27 @@ Editor reviews the draft for factual accuracy, structural issues, and style comp
 
 ---
 
+## Accuracy Gates
+
+Every article must pass three accuracy checks before moving to Stage 7 (Publisher Pass):
+
+### Gate 1: Temporal Accuracy
+- All player stats refer to the most recently completed season (not a prior season)
+- Year references (e.g., "Year 2", "Year 3") reflect the UPCOMING season, not the season just played
+- Cap figures, roster construction, and coaching staff reflect the current offseason (not last year's)
+
+### Gate 2: TLDR Present
+- Article must have a `> **📋 TLDR**` callout block immediately after the opening hook
+- TLDR must have 3-4 bullet points: situation, assets, verdict, central debate
+- Editor is responsible for verifying TLDR presence and accuracy
+
+### Gate 3: Player/Staff Name Accuracy
+- All player names, coach names, and team staff verified (no invented first names)
+- Draft prospects are real 2026 prospects, not hallucinated names
+- Contract figures are sourced (OTC/Spotrac citation in text or table)
+
+---
+
 ## Stage 7 — Publisher Pass
 
 **Owner:** Lead (calls `publish_to_substack` tool) → Joe reviews the draft URL

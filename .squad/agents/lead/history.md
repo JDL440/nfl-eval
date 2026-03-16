@@ -236,3 +236,35 @@ CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-li
 
 **Decision filed:** `.squad/decisions/inbox/lead-substack-section-fix.md`
 
+### Article Process Guards — Temporal Accuracy + TLDR Requirement (2026-03-16)
+
+**Context:** The Drake Maye article ("Year 2 Decision Time") had two critical process failures:
+
+1. **Temporal accuracy failure:** Article treated Maye as entering "Year 2" with Year 1 stats, when he's actually entering Year 3 of his career. Panel experts wrote analysis based on stale/wrong season context because the spawning prompts didn't specify the current NFL calendar. Agents defaulted to their training cutoff, which was one season behind.
+
+2. **Missing TLDR:** Article published without a quick-scan summary box at the top. Every article should have a TLDR callout block (situation, assets, verdict, debate) immediately after the subtitle to help readers decide if they want to read 3,000+ words.
+
+**Root cause:** No temporal context guards in panel spawns, no TLDR requirement in the article structure template, no verification gate in the Editor checklist.
+
+**Process updates implemented:**
+
+1. **`.squad/skills/substack-article/SKILL.md`:**
+   - Added TLDR template to article structure (4-bullet callout block after subtitle)
+   - Added "Temporal Accuracy (REQUIRED for every spawn)" subsection to Phase 2
+   - All panel spawns now MUST include season context block: current year (2026), most recent completed season (2025), upcoming season (2026), explicit stat sourcing requirements
+
+2. **`.squad/skills/article-lifecycle/SKILL.md`:**
+   - Added new "Accuracy Gates" section between Stage 6 and Stage 7
+   - Gate 1: Temporal Accuracy (stats from correct season, year references accurate, current offseason data)
+   - Gate 2: TLDR Present (callout block required, 3-4 bullets verified by Editor)
+   - Gate 3: Player/Staff Name Accuracy (no invented names, real prospects, sourced contract figures)
+
+3. **`.squad/agents/editor/charter.md`:**
+   - Added "Temporal Accuracy Checklist" subsection under Fact-Checking
+   - 5 explicit checks Editor must perform on EVERY article: season stats, year references, cap data, TLDR presence, name verification
+
+**Why this matters:** Temporal context errors destroy credibility — readers who follow the NFL closely will catch "Year 2" framing for a Year 3 player instantly. Missing TLDRs reduce engagement — busy readers scanning the site need to know if an article is worth their time. These guards prevent both failure modes from recurring.
+
+**Decision filed:** `.squad/decisions/inbox/lead-article-process-guards.md`
+
+

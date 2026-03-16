@@ -50,6 +50,22 @@ Provide your expert assessment with:
 - Areas where you DISAGREE with other experts (Cap vs PlayerRep, Team vs Scheme, etc.)
 ```
 
+#### Temporal Accuracy (REQUIRED for every spawn)
+
+Every panel agent spawn MUST include the current NFL calendar context:
+
+```
+CURRENT SEASON CONTEXT (required — verify before writing):
+- Current NFL year: 2026
+- Most recent completed season: 2025 (Year N for {player})
+- Upcoming season: 2026 (Year N+1 for {player})
+- All stats MUST be from the {2025} season unless explicitly noted as historical
+- All roster/contract/cap data MUST be 2026 offseason current
+```
+
+Failure to specify this causes agents to default to their training cutoff context,
+which may be one or more seasons stale.
+
 ### Phase 3: Write the Article (Writer Agent)
 
 **Writer takes the raw expert output and crafts it into a polished Substack article.** Writer follows the house style guide in their charter and the structure template below. Writer does NOT fact-check — that's Editor's job.
@@ -69,6 +85,12 @@ Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 # {Clickbait-worthy but substantive headline}
 
 *{Subheadline describing the expert panel angle}*
+
+> **📋 TLDR**
+> - {1-line on the player/situation heading into the upcoming season}
+> - {1-line on key assets / resources available}
+> - {1-line panel verdict}
+> - {1-line: the central expert debate}
 
 ---
 

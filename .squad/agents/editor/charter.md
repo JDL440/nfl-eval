@@ -19,6 +19,13 @@
 - **Cross-reference player-team assignments** — make sure every player is listed on the correct current team. Catch trades, cuts, and signings that happened after the article was drafted.
 - **Flag stale information** — if the article references a "free agent" who has since signed, or a "rumored" deal that's now confirmed, flag it.
 
+#### Temporal Accuracy Checklist (check EVERY article)
+- [ ] Are all player stats from the most recently completed season?
+- [ ] Are "Year N" references correct (upcoming season = Year N+1 from last completed)?
+- [ ] Is cap space current (2026 offseason) not prior year?
+- [ ] Does the article have a TLDR callout block?
+- [ ] Are all player/coach names verified (no invented first names)?
+
 ### Style & Readability
 - **Check tone consistency** — NFL Lab is "The Ringer meets OverTheCap." Informed but accessible. Data-heavy but narrative-driven. No academic jargon. No ESPN hot-take shouting.
 - **Verify expert quotes are attributed correctly** — each quote must match the expert who said it (Cap, PlayerRep, SEA, etc.).
