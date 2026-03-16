@@ -626,3 +626,20 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 - Editor verdict parsing covers: `## Verdict: [emoji] VERDICT`, `### [emoji] VERDICT`, `**VERDICT**` patterns
 
 **Pattern:** When building pipeline state helpers, separate reads (article_board.py) from writes (pipeline_state.py) and make the reader filesystem-first. This prevents the common failure mode where DB is stale but the system trusts it over actual artifacts.
+
+### Integration Pass (2026-03-16)
+
+**Scope:** Coherence pass across pipeline_state.py consumers + heartbeat + extension.
+
+**Changes made (4 files):**
+1. `content/update_jsn.py` — Migrated from raw SQL/string stages to PipelineState helper with numeric stages. Uses `advance_stage(from_stage=1, to_stage=2)` and `repair_string_stage()` for safety.
+2. `content/set_discussion_path.py` — Migrated from raw SQL to PipelineState `set_discussion_path()` with context manager.
+3. `.github/workflows/squad-heartbeat.yml` — Fixed reconciliation output parsing: was matching `⚠️`/`WARNING` but `article_board.py` actually outputs `[WARN]`/`[FIX]` prefixes. Also fixed action line counting (skips header and separator rows).
+4. `.github/extensions/substack-publisher/extension.mjs` — Made stage-7/writeback path explicit: extracts article slug from file path, returns slug + concrete PipelineState writeback code block in tool output. Replaced vague TODO with actionable instructions.
+
+**Decisions:**
+- Extension still does NOT write directly to pipeline.db — conflict avoidance with Python PipelineState layer. The writeback is a structured instruction in the return value that the calling agent (Lead/Ralph) executes.
+- `pipeline_state.py` and `article_board.py` left unchanged — both already coherent and safe.
+
+**Remaining bounded gap:**
+- 38 DB discrepancies exist (26 missing DB rows, 1 string stage, 3 drifts) — these are pre-existing and should be resolved by running `python content/article_board.py --repair` when ready.

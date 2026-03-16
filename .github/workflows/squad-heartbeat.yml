@@ -271,9 +271,14 @@ jobs:
               });
 
               const lines = output.trim().split('\n');
-              const discrepancyLines = lines.filter(l => l.includes('⚠️') || l.includes('WARNING'));
+              // article_board.py outputs [WARN] for dry-run, [FIX] for repair
+              const discrepancyLines = lines.filter(l =>
+                l.includes('[WARN]') || l.includes('[FIX]')
+              );
+              // Also match the "OK No discrepancies" success line
+              const isClean = lines.some(l => l.includes('No discrepancies'));
 
-              if (discrepancyLines.length === 0) {
+              if (isClean || discrepancyLines.length === 0) {
                 core.info('📋 Article pipeline: DB matches artifacts — no drift detected');
               } else {
                 core.warning(`📋 Article pipeline: ${discrepancyLines.length} discrepancies found`);
@@ -290,9 +295,12 @@ jobs:
                 encoding: 'utf-8',
                 timeout: 30000,
               });
-              const actionLines = actionsOutput.trim().split('\n').filter(l => !l.startsWith('-') && l.trim());
-              if (actionLines.length > 1) {
-                core.info(`📋 Article pipeline: ${actionLines.length - 1} unblocked actions ready`);
+              // Skip header row and separator; count actual action lines
+              const actionLines = actionsOutput.trim().split('\n').filter(l =>
+                l.trim() && !l.startsWith('-') && !l.startsWith('SLUG')
+              );
+              if (actionLines.length > 0) {
+                core.info(`📋 Article pipeline: ${actionLines.length} unblocked actions ready`);
               }
             } catch (e) {
               core.warning(`Article pipeline reconciliation failed: ${e.message}`);

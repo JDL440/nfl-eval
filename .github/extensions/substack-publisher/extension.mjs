@@ -1078,14 +1078,34 @@ const session = await joinSession({
 
                     const draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
 
-                    // ── Pipeline DB writeback ─────────────────────────────
-                    // TODO(publisher-writeback): The calling agent (Lead) should
-                    // update pipeline.db after this tool returns, using:
-                    //   python -c "from content.pipeline_state import PipelineState; ps=PipelineState(); ps.advance_stage('{slug}', 6, 7, 'Publisher', notes='Draft: {url}')"
-                    // Direct DB writes from this extension are intentionally
-                    // avoided to prevent conflicts with the Python state layer.
-                    // The draft URL is included in the return value below for
-                    // the calling agent to capture and record.
+                    // Derive article slug from file path for writeback
+                    // e.g. content/articles/jsn-extension-preview/draft.md → jsn-extension-preview
+                    const pathParts = args.file_path.replace(/\\/g, "/").split("/");
+                    const draftIdx = pathParts.indexOf("articles");
+                    const articleSlug = draftIdx >= 0 && draftIdx + 1 < pathParts.length
+                        ? pathParts[draftIdx + 1]
+                        : null;
+
+                    // ── Pipeline DB writeback (Stage 7) ──────────────────
+                    // The calling agent (Lead / Ralph) MUST update pipeline.db
+                    // after this tool returns. Direct DB writes from this JS
+                    // extension are avoided to prevent conflicts with the
+                    // Python PipelineState layer. Use the slug and URL below:
+                    //
+                    //   from content.pipeline_state import PipelineState
+                    //   ps = PipelineState()
+                    //   ps.advance_stage('<slug>', from_stage=6, to_stage=7,
+                    //                    agent='Publisher', notes='Draft: <url>')
+
+                    // Build writeback instruction block for the calling agent
+                    const writebackBlock = articleSlug
+                        ? `\n**⚡ DB Writeback required (Stage 7):**\n` +
+                          `\`\`\`python\n` +
+                          `from content.pipeline_state import PipelineState\n` +
+                          `with PipelineState() as ps:\n` +
+                          `    ps.advance_stage('${articleSlug}', from_stage=6, to_stage=7, agent='Publisher', notes='Draft: ${draftUrl}')\n` +
+                          `\`\`\`\n`
+                        : "";
 
                     return (
                         `✅ Substack draft created!\n\n` +
@@ -1093,9 +1113,11 @@ const session = await joinSession({
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
                         `**Audience:** ${args.audience || "everyone"}\n` +
                         `**Tags:** ${tags.length > 0 ? tags.join(", ") : "(none)"}\n` +
-                        `**Draft ID:** ${draft.id}\n\n` +
-                        `**Review & publish:** ${draftUrl}\n\n` +
-                        `Open the URL above to review formatting, add a cover image, and publish.`
+                        `**Draft ID:** ${draft.id}\n` +
+                        (articleSlug ? `**Article slug:** ${articleSlug}\n` : "") +
+                        `\n**Review & publish:** ${draftUrl}\n` +
+                        writebackBlock +
+                        `\nOpen the URL above to review formatting, add a cover image, and publish.`
                     );
                 } catch (err) {
                     return {
