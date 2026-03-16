@@ -206,3 +206,33 @@ CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-li
 
 **Decision filed:** `.squad/decisions/inbox/lead-image-uniqueness.md`
 
+### Substack Section Routing Bug — Root Cause & Fix (2026-03-16)
+
+**Bug:** Drafts created via the Substack publisher extension always showed an empty section in the Substack editor, despite the API reporting a non-null section ID after the PUT.
+
+**Root cause:** Missing `section_chosen: true` field. Substack's draft model has 4 section-related fields:
+- `section_id` — always null for drafts (only set on published posts)
+- `draft_section_id` — the section ID for unpublished drafts ✅
+- `section_chosen` — boolean flag the editor checks to determine if a section was explicitly selected ⚠️ THIS WAS THE BUG
+- `syndicate_to_section_id` — cross-publication syndication (not relevant)
+
+**What was happening:** The old code sent `section_id` + `draft_section_id` in the PUT. Substack persisted `draft_section_id = 355520` correctly, but `section_chosen` remained `null`. The Substack editor only displays the section in its dropdown when `section_chosen === true`. Without it, the editor shows "No section" even though the API has the correct ID stored.
+
+**Secondary fix:** The old PUT also spread the full payload (`...payload` with `draft_body`, `draft_title`, etc.) into the section-assignment PUT. This was unnecessary and potentially interfering. Changed to a minimal PUT with only the 3 section fields.
+
+**API findings from debugging:**
+1. Substack **ignores** `section_id` and `draft_section_id` at POST time — both return null
+2. PUT with `draft_section_id` + `section_chosen: true` is the only reliable way to assign a section
+3. `section_id` remains null for all drafts — it's only populated on published posts
+4. A GET after PUT is the only way to verify section persistence (PUT response echoes input)
+
+**Code changes in `.github/extensions/substack-publisher/extension.mjs`:**
+1. Changed PUT body from `{ ...payload, section_id, draft_section_id }` → `{ section_id, draft_section_id, section_chosen: true }`
+2. Added integer coercion for sectionId (safety)
+3. Added verification GET after PUT to confirm persistence
+4. Updated output to show GET verification results including `section_chosen`
+
+**Verification:** Test draft 191082679 created with NE Patriots section. GET confirmed `draft_section_id: 355520, section_chosen: true`.
+
+**Decision filed:** `.squad/decisions/inbox/lead-substack-section-fix.md`
+

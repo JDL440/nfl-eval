@@ -144,12 +144,19 @@ async function uploadImageToSubstack(subdomain, headers, imagePath, articleDir) 
     const ext = extname(imagePath).toLowerCase();
     const mime = mimeMap[ext] || "image/jpeg";
 
-    const absPath = /^([A-Za-z]:[\\/]|\/)/.test(imagePath)
+    let absPath = /^([A-Za-z]:[\\/]|\/)/.test(imagePath)
         ? imagePath
         : resolve(articleDir, imagePath);
 
+    // Fallback: try resolving relative to cwd (repo root) when article-dir-relative fails.
+    // This handles paths like `./images/slug/img.png` written relative to the repo root.
     if (!existsSync(absPath)) {
-        throw new Error(`Image file not found: ${absPath}`);
+        const cwdPath = resolve(process.cwd(), imagePath);
+        if (existsSync(cwdPath)) {
+            absPath = cwdPath;
+        } else {
+            throw new Error(`Image file not found: ${absPath} (also tried ${cwdPath})`);
+        }
     }
 
     const dataUri = `data:${mime};base64,${readFileSync(absPath).toString("base64")}`;
@@ -195,9 +202,7 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         draft_title: title,
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
-        // draft_bylines is required — empty array works; populated when authorId resolves
         draft_bylines: authorId ? [{ id: authorId, is_guest: false }] : [],
-        ...(sectionId ? { section_id: sectionId, draft_section_id: sectionId } : {}),
     };
 
     const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts`, {
@@ -210,7 +215,48 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         const text = await res.text().catch(() => "");
         throw new Error(`Substack API error: HTTP ${res.status} — ${text.slice(0, 300)}`);
     }
-    return await res.json();
+    const draft = await res.json();
+
+    // Section assignment via minimal PUT — sending only section fields avoids the full
+    // payload overwriting / conflicting with the already-created draft content.
+    // Also coerce sectionId to integer: the sections API may return a numeric string
+    // but the drafts API requires an actual number.
+    if (sectionId && draft.id) {
+        const numericSectionId = typeof sectionId === "string" ? parseInt(sectionId, 10) : sectionId;
+
+        const putRes = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draft.id}`, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({
+                section_id: numericSectionId,
+                draft_section_id: numericSectionId,
+                section_chosen: true,
+            }),
+        });
+        if (!putRes.ok) {
+            const errText = await putRes.text().catch(() => "");
+            console.error(`[warn] Could not set section on draft ${draft.id}: HTTP ${putRes.status} — ${errText.slice(0, 200)}`);
+        } else {
+            const updated = await putRes.json();
+            draft.section_id = updated.section_id ?? updated.draft_section_id ?? numericSectionId;
+        }
+
+        // Verification GET — fetch the persisted draft to confirm section actually stuck
+        try {
+            const getRes = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draft.id}`, {
+                method: "GET",
+                headers,
+            });
+            if (getRes.ok) {
+                const persisted = await getRes.json();
+                draft._verified_section_id = persisted.section_id ?? null;
+                draft._verified_draft_section_id = persisted.draft_section_id ?? null;
+                draft._verified_section_chosen = persisted.section_chosen ?? null;
+            }
+        } catch {}
+    }
+
+    return draft;
 }
 
 // ─── Markdown → ProseMirror ──────────────────────────────────────────────────
@@ -418,12 +464,6 @@ function buildCaptionedImage(src, alt, caption) {
         },
     };
     const captionedContent = [imageNode];
-    if (caption) {
-        captionedContent.push({
-            type: "paragraph",
-            content: [{ type: "text", marks: [{ type: "italic" }], text: caption }],
-        });
-    }
     return { type: "captionedImage", attrs: {}, content: captionedContent };
 }
 
@@ -659,7 +699,7 @@ const session = await joinSession({
                     const headers = makeHeaders(token);
                     const subdomain = extractSubdomain(pubUrl);
 
-                    // Get author ID (best-effort — draft still works without it)
+                    // Fetch author ID — needed to route section assignment; bylines are cleared after creation
                     await session.log(`Connecting to ${subdomain}.substack.com…`, { ephemeral: true });
                     const authorId = await getAuthorId(subdomain, headers);
 
@@ -710,12 +750,20 @@ const session = await joinSession({
                     });
 
                     const draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
+                    const confirmedSection = draft.section_id || draft.draft_section_id || null;
+                    const verifiedDraftSectionId = draft._verified_draft_section_id;
+                    const verifiedSectionChosen = draft._verified_section_chosen;
+                    const numSectionId = typeof sectionId === "string" ? parseInt(sectionId, 10) : sectionId;
+                    const sectionPersisted = verifiedDraftSectionId != null && verifiedDraftSectionId === numSectionId && verifiedSectionChosen === true;
                     return (
                         `✅ Substack draft created!\n\n` +
                         `**Title:** ${title}\n` +
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
                         `**Audience:** ${args.audience || "everyone"}\n` +
-                        (sectionId ? `**Section:** ${teamName} (id ${sectionId})\n` : "") +
+                        (sectionId ? `**Section requested:** ${teamName} (id ${sectionId})\n` : "") +
+                        `**Section confirmed by PUT:** ${confirmedSection ?? "null — Substack ignored section_id"}\n` +
+                        (verifiedDraftSectionId !== undefined ? `**Section verified by GET:** draft_section_id=${verifiedDraftSectionId}, section_chosen=${verifiedSectionChosen}\n` : "") +
+                        (sectionId ? `**Section persisted:** ${sectionPersisted ? "✅ YES" : "❌ NO — section did not stick"}\n` : "") +
                         `**Draft ID:** ${draft.id}\n\n` +
                         `**Review & publish:** ${draftUrl}\n\n` +
                         `Open the URL above to review formatting, add a cover image, and publish.`
