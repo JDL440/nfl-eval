@@ -1077,6 +1077,16 @@ const session = await joinSession({
                     });
 
                     const draftUrl = `https://${subdomain}.substack.com/publish/post/${draft.id}`;
+
+                    // ── Pipeline DB writeback ─────────────────────────────
+                    // TODO(publisher-writeback): The calling agent (Lead) should
+                    // update pipeline.db after this tool returns, using:
+                    //   python -c "from content.pipeline_state import PipelineState; ps=PipelineState(); ps.advance_stage('{slug}', 6, 7, 'Publisher', notes='Draft: {url}')"
+                    // Direct DB writes from this extension are intentionally
+                    // avoided to prevent conflicts with the Python state layer.
+                    // The draft URL is included in the return value below for
+                    // the calling agent to capture and record.
+
                     return (
                         `✅ Substack draft created!\n\n` +
                         `**Title:** ${title}\n` +

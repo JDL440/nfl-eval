@@ -246,6 +246,58 @@ jobs:
               }
             }
 
+      # ── Article Pipeline Reconciliation ──────────────────────────────────
+      # Scan content/articles/* and compare against pipeline.db.
+      # Reports drift but does NOT auto-repair (dry-run only).
+      - name: Ralph — Article pipeline reconciliation
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const fs = require('fs');
+
+            // Check that article_board.py exists
+            if (!fs.existsSync('content/article_board.py')) {
+              core.info('content/article_board.py not found — skipping pipeline reconciliation');
+              return;
+            }
+
+            try {
+              // Run reconciliation in dry-run mode
+              const output = execSync('python content/article_board.py reconcile', {
+                encoding: 'utf-8',
+                timeout: 30000,
+              });
+
+              const lines = output.trim().split('\n');
+              const discrepancyLines = lines.filter(l => l.includes('⚠️') || l.includes('WARNING'));
+
+              if (discrepancyLines.length === 0) {
+                core.info('📋 Article pipeline: DB matches artifacts — no drift detected');
+              } else {
+                core.warning(`📋 Article pipeline: ${discrepancyLines.length} discrepancies found`);
+                for (const line of discrepancyLines.slice(0, 10)) {
+                  core.warning(line.trim());
+                }
+                if (discrepancyLines.length > 10) {
+                  core.warning(`... and ${discrepancyLines.length - 10} more`);
+                }
+              }
+
+              // Run next-actions summary
+              const actionsOutput = execSync('python content/article_board.py actions', {
+                encoding: 'utf-8',
+                timeout: 30000,
+              });
+              const actionLines = actionsOutput.trim().split('\n').filter(l => !l.startsWith('-') && l.trim());
+              if (actionLines.length > 1) {
+                core.info(`📋 Article pipeline: ${actionLines.length - 1} unblocked actions ready`);
+              }
+            } catch (e) {
+              core.warning(`Article pipeline reconciliation failed: ${e.message}`);
+            }
+
       # Copilot auto-assign step (uses PAT if available)
       - name: Ralph — Assign @copilot issues
         if: success()

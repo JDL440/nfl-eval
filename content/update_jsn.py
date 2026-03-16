@@ -1,6 +1,14 @@
 import sqlite3
 from datetime import datetime
 
+# DEPRECATED: Use content/pipeline_state.py instead.
+# This script was a one-off patch for jsn-extension-preview.
+# Kept for historical reference only — do not run.
+# Example replacement:
+#   from content.pipeline_state import PipelineState
+#   ps = PipelineState()
+#   ps.advance_stage('jsn-extension-preview', from_stage=1, to_stage=2, agent='Lead', status='in_discussion')
+
 conn = sqlite3.connect('content/pipeline.db')
 
 # Update the existing idea with richer framing and advance to in_discussion
