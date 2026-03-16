@@ -569,10 +569,97 @@ function parseInline(text) {
     return parts.length > 0 ? parts : [{ type: "text", text: text || " " }];
 }
 
-// Substack's ProseMirror schema has no table node types at all.
-// We convert markdown tables to structured paragraphs:
-//   Header row → bold "Col1 · Col2 · Col3 ..."
-//   Each data row → "Col1Value — Col2Label: Col2Value | Col3Label: Col3Value ..."
+function buildParagraph(content) {
+    return {
+        type: "paragraph",
+        content: content.length > 0 ? content : [{ type: "text", text: " " }],
+    };
+}
+
+function normalizeTableHeader(value) {
+    return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function isDetailTableHeader(value) {
+    const normalized = normalizeTableHeader(value);
+    return /^(current state|severity|status|budget|aav|year 1 cap hit|cap hit|comp range|draft range|profile|school|notes?)$/.test(normalized);
+}
+
+function buildLabeledTableParagraph(label, value) {
+    return buildParagraph([
+        { type: "text", text: `${label}: `, marks: [{ type: "bold" }] },
+        ...parseInline(value),
+    ]);
+}
+
+function getTableTitleParts(row, headerRow, ordered) {
+    const usedIndices = new Set();
+    const titleParts = [];
+    const leadIndex = ordered && row.length > 1 ? 1 : 0;
+
+    if (ordered && /^\d+$/.test(row[0] || "")) {
+        usedIndices.add(0);
+    }
+
+    const primaryTitle = row[leadIndex] || "";
+    if (primaryTitle) {
+        titleParts.push(primaryTitle);
+        usedIndices.add(leadIndex);
+    }
+
+    const secondaryIndex = leadIndex + 1;
+    const secondaryTitle = row[secondaryIndex] || "";
+    const secondaryHeader = headerRow[secondaryIndex] || "";
+    if (
+        secondaryTitle &&
+        !isDetailTableHeader(secondaryHeader) &&
+        secondaryTitle.length <= 40
+    ) {
+        titleParts.push(secondaryTitle);
+        usedIndices.add(secondaryIndex);
+    }
+
+    if (titleParts.length === 0) {
+        const fallbackIndex = row.findIndex((cell) => cell && cell.trim() !== "");
+        if (fallbackIndex >= 0) {
+            titleParts.push(row[fallbackIndex]);
+            usedIndices.add(fallbackIndex);
+        }
+    }
+
+    return {
+        title: titleParts.join(" — "),
+        usedIndices,
+    };
+}
+
+function buildTableListItem(row, headerRow, ordered) {
+    const { title, usedIndices } = getTableTitleParts(row, headerRow, ordered);
+    const content = [];
+
+    if (title) {
+        content.push(buildParagraph([
+            { type: "text", text: title, marks: [{ type: "bold" }] },
+        ]));
+    }
+
+    row.forEach((cell, index) => {
+        if (usedIndices.has(index)) return;
+        if (!cell || cell.trim() === "") return;
+
+        const label = headerRow[index] || `Column ${index + 1}`;
+        content.push(buildLabeledTableParagraph(label, cell));
+    });
+
+    if (content.length === 0) {
+        content.push(buildParagraph([{ type: "text", text: row.join(" | ") }]));
+    }
+
+    return { type: "list_item", content };
+}
+
+// Substack has no reliable HTML-table path for this workflow, so we transform
+// markdown tables into structured lists that keep label/value pairs scannable.
 function parseTable(lines) {
     // Filter out separator rows (|---|---|)
     const dataRows = lines.filter((l) => !l.match(/^\|[\s\-:|]+\|$/));
@@ -586,35 +673,33 @@ function parseTable(lines) {
     );
 
     const [headerRow, ...bodyRows] = cells;
-    const nodes = [];
-
-    // Header row as bold labels separated by " · "
-    if (headerRow) {
-        nodes.push({
-            type: "paragraph",
-            content: [{ type: "text", text: headerRow.join(" · "), marks: [{ type: "bold" }] }],
-        });
+    if (bodyRows.length === 0) {
+        return buildParagraph([
+            { type: "text", text: headerRow.join(" · "), marks: [{ type: "bold" }] },
+        ]);
     }
 
-    // Each data row: first column bold, remaining as "Label: Value" pairs
-    for (const row of bodyRows) {
-        const parts = [];
-        row.forEach((cell, i) => {
-            if (i === 0) {
-                parts.push({ type: "text", text: cell, marks: [{ type: "bold" }] });
-                if (row.length > 1) parts.push({ type: "text", text: " — " });
-            } else {
-                const label = headerRow && headerRow[i] ? headerRow[i] : null;
-                const value = label ? `${label}: ${cell}` : cell;
-                if (i > 1) parts.push({ type: "text", text: "  |  " });
-                parts.push({ type: "text", text: value });
-            }
-        });
-        nodes.push({ type: "paragraph", content: parts });
+    const firstHeader = normalizeTableHeader(headerRow[0]);
+    const looksOrdered =
+        /^(priority|rank|ranking|order|no|number)$/.test(firstHeader) ||
+        bodyRows.every((row) => /^\d+$/.test((row[0] || "").trim()));
+
+    const listItems = bodyRows.map((row) => buildTableListItem(row, headerRow, looksOrdered));
+    if (looksOrdered) {
+        const start = /^\d+$/.test((bodyRows[0][0] || "").trim())
+            ? Math.max(1, parseInt(bodyRows[0][0], 10))
+            : 1;
+        return {
+            type: "ordered_list",
+            attrs: { start, order: start, type: null },
+            content: listItems,
+        };
     }
 
-    // Wrap in a blockquote-style separator for visual grouping
-    return nodes;
+    return {
+        type: "bullet_list",
+        content: listItems,
+    };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

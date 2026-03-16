@@ -76,14 +76,16 @@ Everything here converts cleanly to Substack format.
 
 ### Tables
 
-Standard markdown tables render as native Substack tables (first row becomes column headers):
+Standard markdown tables do **not** survive as native HTML tables in this workflow. The publisher converts them into structured lists so the content stays readable inside Substack:
 
 ```markdown
-| Player | Position | Cap Hit | Contract |
-|--------|----------|---------|----------|
-| Devon Witherspoon | CB | $27-33M/yr | 4 years |
-| Tariq Woolen | CB | $18M/yr | 3 years |
+| Priority | Position | Current State | Severity |
+|----------|----------|--------------|----------|
+| 1 | OL — Left tackle, center | Worst-graded OL in 2024; LT and C are both critical needs | 🔴 HIGH |
+| 2 | WR — No separator | Douglas (slot), thin boundary corps, no vertical threat | 🔴 HIGH |
 ```
+
+For denser or more visual tables, use the `render_table_image` extension to create a local PNG and embed that instead of relying on inline conversion.
 
 ### Images
 
@@ -207,7 +209,7 @@ Discovered by inspecting real Substack drafts via the API:
 | `paragraph` | Normal text | |
 | `horizontal_rule` | `---` | |
 | `blockquote` | `> text` | |
-| `table` + cells | `\| col \| col \|` | First row = headers |
+| markdown table block | `\| col \| col \|` | Converted to ordered/bullet lists, not native tables |
 | `bullet_list` / `list_item` | `- item` | |
 | `ordered_list` / `list_item` | `1. item` | |
 | `captionedImage` + `image2` | `![alt](./local.jpg)` or `![alt](https://url)` | Local files auto-uploaded to S3 |
@@ -229,7 +231,8 @@ Discovered by inspecting real Substack drafts via the API:
 - Use `![alt|caption](./images/file.jpg)` for local images — just drop the file next to the article or in an `images/` subfolder
 - Use `![alt|caption](https://url)` for remote images — any public URL works
 - Use `::youtube VIDEO_ID` for video embeds
-- Use standard markdown tables for all data
+- Use markdown tables for short, scannable inline conversions
+- Use `render_table_image` when a table's layout carries editorial meaning or needs stronger visual impact
 - Don't worry about cover image — Joe handles that in the editor
 
 ### Editor
