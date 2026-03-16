@@ -396,3 +396,16 @@ _Last updated: 2026-03-12 by DET agent_
 - ✅ 2025 rollover of $19.2M (6th in NFL) gives Lions more flexibility than raw cap space suggests
 
 📌 Media update (2026-03-14): Signed Tyler Conklin (TE). Minor move, fills TE depth roster spot.
+
+### Article Work — Issue #63
+
+- ✅ **2026-03-16:** Picked up issue #63 (DET 2026 offseason article). Generated angle and created discussion prompt.
+- ✅ **Angle:** "The Lions Have $200 Million in Elite Talent. They're One Pick Away From Wasting All of It." — championship window framing with EDGE vs. OT at #17 as the fulcrum.
+- ✅ **Artifacts:** `content/articles/det-2026-offseason/idea.md` + `discussion-prompt.md`
+- ✅ **Stage:** Completed Stages 1-2 (Idea + Discussion Prompt). Ready for Stage 3 (Panel Composition).
+- ✅ **Learnings from article work:**
+  - The "coordinator brain drain" (Johnson + Glenn both leaving for HC jobs, then Morton fired after 1yr) is a richer angle than just "they need an EDGE" — connects the 9-8 collapse to structural causes
+  - EDGE prospect research via web_search returned strong current data: Cashius Howell (TAMU), Keldric Faulk (Auburn), Dani Dennis-Sutton (PSU) all mocked to DET at #17
+  - The $200M-in-locked-up-talent framing makes the stakes concrete and visceral for readers — better than abstract "window closing" language
+  - Hutchinson extension ($50M+ AAV) is the looming cap event that will define 2027 flexibility — must be central to any financial analysis
+  - Ben Johnson coaching division-rival CHI adds a layer of tension that no other NFC North article has — he literally knows the Lions' playbook
