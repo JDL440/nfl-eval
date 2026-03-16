@@ -320,3 +320,9 @@ _Accumulated from research sessions_
 📌 Media update (2026-03-13): Signed Chauncey Gardner-Johnson (1yr/$6M S) and Kyle Allen (2yr backup QB).
 
 📌 Media update (2026-03-14): Dawson Knox extended (3yr). TE room stabilized, cap impact manageable.
+
+11. **Panel writing — frame around what actually happened, not hypotheticals.** The discussion prompt was written pre-moves. By the time BUF writes its position, most roster decisions are made. Lead with the reality of Beane's choices, then evaluate whether they work — don't re-litigate paths not taken.
+12. **LCB is the single-point-of-failure.** Every roster evaluation loops back to Dorian Strong's readiness. CB at #26 isn't a preference, it's a structural necessity for the 3-4 defense to function against AFC East passing attacks.
+13. **Scheme change reframes the "lost 4 starters" narrative.** Leonhard's 3-4 means the replacements don't need to be the same player types. Oliver/Walker/Chubb/Rousseau fit the new front better than they fit McDermott's 4-3. This is the key analytical move for any BUF position piece.
+
+📌 Team update (2026-03-16T04:36:50Z): Issue #43 advanced to discussion prompt + panel composition. BUF + Cap + Draft panel ready for spawn.

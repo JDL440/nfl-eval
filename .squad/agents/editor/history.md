@@ -158,3 +158,23 @@ The previous review (Fifth/Sixth pass) was performed by a non-vision model and r
 - **Lesson:** When AI repeatedly generates unwanted text on "contract" or "document" subjects, switching to "blank papers" while keeping the same visual concept (pen + papers + desk) is an effective workaround.
 - **Recorded by:** Editor (2025-01-22)
 
+📌 Tenth pass: Witherspoon Extension v2 — FULL EDITORIAL REVIEW
+- **File:** `content/articles/witherspoon-extension-v2/draft.md`
+- **Scope:** Regenerated article (~3,500 words) replacing the pre-pipeline v1 Witherspoon article. Fact-checked all names, contract figures, quotes, and structural elements against v2 position files (Cap, PlayerRep, SEA) and discussion summary.
+- **Source verification:** All 6 CB market comps match discussion prompt exactly. All Cap year-by-year figures match cap-position.md. All PlayerRep projections match playerrep-position.md. All SEA quotes trace cleanly to sea-position.md.
+- **Fixes applied (3):**
+  1. 🔴 **Temporal error:** "Six months after Super Bowl LIX" → "A month after Super Bowl LIX." The article is set in the 2026 offseason (March); the Super Bowl was February 2026. Six months would be August, contradicting all offseason context.
+  2. 🟡 **Arizona competitive descriptor:** "Arizona is still building" → "Arizona is retooling" per decisions.md (precise competitive descriptors when team has $41.7M cap space and #3 pick).
+  3. 🟢 **Missing credential:** Added All-Pro (1, 2nd Team, 2025) to Witherspoon's stats table. Was in discussion prompt but omitted from draft. Strengthens the player's résumé case.
+- **Items noted but not changed:**
+  - Cap quote (line 119) is a polished synthesis, not verbatim from position file — same pattern flagged in JSN review. Captures Cap's argument accurately; not a blocker.
+  - Woolen ($15M/yr) and Bryant (3yr/$40M) contract details sourced from v1, not in v2 position files. Not contradicted; internally consistent.
+  - WA tax content correctly excluded from v2 — good compliance with editorial directive.
+  - Nick Emmanwori spelled correctly throughout — no Nehemiah error.
+- **What improved from v1:** The v2 draft is significantly stronger. The $27M vs $33M framing is properly recast as "theater" with the guarantee fight elevated as the real negotiation. The fifth-year-option insight (strengthens player's hand) is given proper prominence. The verdict is more specific ($126M/$31.5M/$66M) and better supported by all three positions. Cap's position is updated from $27M to $30.5M, reflecting the post-McDuffie reality.
+- **Lesson:** When articles are regenerated from scratch, the most dangerous errors are temporal claims that made sense when originally drafted but don't match the article's own internal calendar. "Six months after" was plausible boilerplate but wrong for a March-set article about a February Super Bowl. Always verify time references against the article's own season context.
+- **Verdict: ✅ APPROVED** — 3 corrections applied, all clean. Draft is editor-approved and ready for further pipeline steps.
+- **Recorded by:** Editor
+
+
+📌 Team update (2026-03-16T04:36:50Z): Witherspoon v2 draft approved after 3-point correction — temporal accuracy, descriptor alignment, credential addition. Article ready for images/publisher review.

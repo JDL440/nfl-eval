@@ -186,3 +186,5 @@ Sean Payton Tree:
 4. **OC turnover is epidemic.** PHI has had 5 OCs in 5 years. TB, DET, NYJ, and ATL all changed OCs. Stability correlates with offensive success.
 5. **QB-friendly systems are the norm.** Every new coaching hire emphasizes "building around the QB." The days of "run my system regardless" are mostly dead.
 6. **The McVay/Shanahan tree is creating a schematic monoculture.** This means roster-building across teams is converging — athletic zone-blocking OL, versatile TEs, YAC receivers are universally valued.
+
+📌 Team update (2026-03-16T04:36:50Z): Multiple article decisions merged — HOU Stroud/Anderson extension, JAX offensive allocation, LAC McDaniel scheme fit, NYJ QB architecture, AFC North batch.

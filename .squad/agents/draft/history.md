@@ -600,3 +600,5 @@ _Last updated: 2025-07-17 — calculated from pick positions and Jimmy Johnson c
 - ✅ Five teams hold two first-round picks: LV, NYJ, CLE, DAL, KC — these are the draft's power brokers
 - ✅ Jimmy Johnson chart values remain the industry standard but modern analytics models (Rich Hill, Fitzgerald-Spielberger) adjust for position-specific surplus value
 - ✅ QB scarcity makes #1 overall worth significantly more than JJ chart suggests — only Mendoza is consensus R1 QB
+
+📌 Team update (2026-03-16T04:36:50Z): Multiple article decisions merged — HOU (Draft agent), IND (Cap + IND + Defense), BUF, NYJ, and 8 team-specific angle decisions.

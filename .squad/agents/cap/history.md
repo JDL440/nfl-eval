@@ -647,3 +647,5 @@ The bigger risk is NOT extending these players and watching them walk into a WR/
 - **Forward planning baseline:** OTC currently points to a 2027 cap projection of $327,000,000 📊
 - **Dead money remains the fastest shorthand for cap health** — raw cap space alone misses situations like MIA, NYJ, CLE, and NO.
 - **Franchise tag values remain unresolved** because OTC's tag content rendered inconsistently and surfaced outdated data during collection ❓
+
+�� Team update (2026-03-16T04:36:50Z): Multiple article decisions merged — Editor (Witherspoon), BUF, NYJ, DEN, HOU, IND, JAX, KC, LAC, LV, TEN, AFC North batch, Ralph loop retarget.

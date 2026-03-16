@@ -344,3 +344,7 @@ _Last updated: 2026-03-12_
 - ✅ Glenn's coaching overhaul (12 of 22 coaches replaced) signals organizational awareness that 2025 was a scheme/coaching problem, not just a talent problem
 
 📌 Media update (2026-03-14): Acquired Geno Smith (trade from LV) + Minkah Fitzpatrick (trade from MIA, 3yr/$40M ext). Major QB + safety upgrades. Smith likely starter. Draft strategy may shift away from QB.
+
+📌 Panel position (2026-03-15): Wrote NYJ panel position for `nyj-two-firsts-qb-decision` article. Recommended Path 1 (Mendoza at #2, best defender at #16). Key argument: QB purgatory is the greater risk than reaching in a thin class. Flagged Breece Hall tag ($14.3M) and Fitzpatrick trade as teardown-inconsistent moves. Projected 2028 as earliest realistic contention window. Identified CB1 as the second-most critical roster hole after QB — Glenn's press-man scheme can't function without one.
+
+📌 Team update (2026-03-16T04:36:50Z): Issue #45 advanced to discussion prompt + panel composition. NYJ + Cap + Draft + Offense panel ready for spawn.

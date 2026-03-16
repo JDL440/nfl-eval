@@ -487,6 +487,16 @@ _Last updated: 2026-07-18_
 
 ## Learnings
 
+### BUF Panel Position — Scheme-Impact Ranking for Multi-Starter Departures
+_Recorded: 2026-07-18_
+
+- 📊 When multiple starters depart simultaneously, rank departures by **scheme damage** (how much the coordinator's system changes) rather than **talent level** (PFF grade, sacks, etc.). Milano's coverage processing matters more to Leonhard's blitz-heavy scheme than Bosa's raw sack production.
+- 📊 **Blitz-heavy schemes (35%+ blitz rate) are more resilient to edge-rusher turnover** than low-blitz schemes (~20%) because they generate pressure through design (safety fire blitzes, A-gap mugs, simulated pressures) rather than relying purely on individual edge talent. This is a reusable framework for evaluating defensive roster churn.
+- 📊 When evaluating replacement archetypes for a 3-4 OLB, the critical trait is **stand-up to hand-down versatility** — pure speed rushers fail in 3-4 OLB alignments due to the wider alignment set demanding a counter/power move.
+- 📊 AFC East divisional matchup analysis should be part of any BUF defensive position — Miami's speed and NYJ's contested-catch offense specifically target the positions most vulnerable to turnover (CB2, coverage LB).
+
+---
+
 ### Research Process Notes
 _Recorded: 2026-07-18_
 
@@ -3503,3 +3513,5 @@ _Last updated: 2026-07-18_
 4. **Elite Interior DL Era:** Carter (PHI), Jones (KC), Madubuike (BAL), Buckner (IND), Lawrence (NYG), Vea (TB), Brown (CAR), Simmons (TEN) — interior DL talent is at an all-time high across the league.
 
 5. **Hybrid/Positionless Defense:** More teams deploying chess-piece defenders (Hamilton-BAL, James-LAC, Metellus-MIN, Deablo-ATL) who play 3-5 positions per game.
+
+📌 Team update (2026-03-16T04:36:50Z): Multiple article decisions merged — DEN TE crisis, IND defensive implications, JAX Travis Hunter paradox, AFC North batch.
