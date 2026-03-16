@@ -231,6 +231,9 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
  *   **bold**, *italic*, ***both***, [text](url)
  */
 async function markdownToProseMirror(markdown, uploadImage) {
+    // Strip HTML comments (writer/editor notes, TODOs, internal markup) before parsing
+    markdown = markdown.replace(/<!--[\s\S]*?-->/g, "");
+
     // Normalize line endings (handles Windows CRLF)
     const lines = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
     const content = [];
