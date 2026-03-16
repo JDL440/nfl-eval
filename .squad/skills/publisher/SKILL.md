@@ -91,9 +91,12 @@ Prepare the Substack metadata before calling the tool:
 
 ### Step 5 — Call publish_to_substack
 
+**Stage-first:** Always target `"stage"` first for formatting review, then `"prod"` once approved.
+
 ```
 publish_to_substack(
   file_path: "content/articles/{slug}.md",
+  target: "stage",                   ← "stage" (default) or "prod"
   title: "{final headline}",
   subtitle: "{1-line hook for email preview}",
   audience: "everyone",
@@ -109,6 +112,7 @@ The tool returns a direct Substack editor URL. If a stored draft URL exists in `
 ```
 publish_to_substack(
   file_path: "content/articles/{slug}.md",
+  target: "prod",
   draft_url: "https://nfllab.substack.com/publish/post/{DRAFT_ID}"
 )
 ```

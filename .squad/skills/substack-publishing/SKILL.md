@@ -30,7 +30,15 @@ content/articles/{slug}.md   →   publish_to_substack tool   →   Substack dra
 
 The `publish_to_substack` Copilot extension converts the article markdown to Substack's native format (ProseMirror JSON) and creates a draft. Joe gets a direct editor URL — no copy-paste required.
 
-**Requires:** `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` in `.env` (see `.env.example` for one-time setup).
+**Requires:** `SUBSTACK_TOKEN`, `SUBSTACK_PUBLICATION_URL` (prod), and `SUBSTACK_STAGE_URL` (stage) in `.env` (see `.env.example` for one-time setup).
+
+### Stage-First Workflow
+
+Always publish to **stage** (`nfllabstage.substack.com`) first to verify formatting, images, and table rendering. Only promote to **prod** (`nfllab.substack.com`) after Joe reviews the stage draft.
+
+```
+Stage target (default)  →  Joe reviews on nfllabstage  →  Prod target  →  Joe reviews + publishes
+```
 
 ---
 
@@ -39,6 +47,7 @@ The `publish_to_substack` Copilot extension converts the article markdown to Sub
 ```
 publish_to_substack(
   file_path: "content/articles/{slug}.md",
+  target: "stage",                   ← "stage" (default) or "prod"
   title: "Final headline",           ← optional: auto-extracted from first # heading
   subtitle: "One-line hook",         ← optional: auto-extracted from first *italic* line
   audience: "everyone"               ← "everyone" (default) or "only_paid"
@@ -50,6 +59,12 @@ publish_to_substack(
 Title and subtitle are auto-extracted from the markdown if not provided:
 - **Title** → first `# Heading` line
 - **Subtitle** → first line that is `*wrapped in single asterisks*` (the standard subheadline format)
+
+The `target` parameter controls which Substack publication receives the draft:
+- **`"stage"`** (default) → `SUBSTACK_STAGE_URL` (nfllabstage.substack.com)
+- **`"prod"`** → `SUBSTACK_PUBLICATION_URL` (nfllab.substack.com)
+
+If `SUBSTACK_STAGE_URL` is not set, the tool falls back to the production URL with a warning.
 
 The `team` parameter accepts full or partial team names — `"Seahawks"` matches `"Seattle Seahawks"`. When provided (or auto-detected from `pipeline.db`), the team name is added as a tag on the draft. Specialist agents who contributed artifacts in the article directory are also auto-tagged.
 

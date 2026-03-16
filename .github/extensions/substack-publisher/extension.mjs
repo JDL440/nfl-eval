@@ -1012,9 +1012,10 @@ const session = await joinSession({
             name: "publish_to_substack",
             description:
                 "Publishes a markdown article file to Substack as a draft ready for review and one-click publishing. " +
+                "Defaults to STAGE target (SUBSTACK_STAGE_URL) for safe preview; use target='prod' to publish to production. " +
                 "If a stored draft URL exists in pipeline.db for this article, updates the existing draft instead of creating a new one. " +
                 "Hard guard: refuses to operate on already-published articles (Stage 8). " +
-                "Reads auth from SUBSTACK_TOKEN and SUBSTACK_PUBLICATION_URL in .env. " +
+                "Reads auth from SUBSTACK_TOKEN in .env, and publication URLs from SUBSTACK_STAGE_URL / SUBSTACK_PUBLICATION_URL. " +
                 "Auto-extracts title and subtitle from the markdown if not provided. " +
                 "Automatically tags the draft with the team name and any participating specialist agents. " +
                 "Returns the Substack editor URL so the author can review and publish.",
@@ -1057,6 +1058,14 @@ const session = await joinSession({
                             'Format: "https://subdomain.substack.com/publish/post/DRAFT_ID". ' +
                             "If omitted, auto-detected from pipeline.db substack_draft_url column.",
                     },
+                    target: {
+                        type: "string",
+                        description:
+                            'Publication target: "stage" (default) publishes to the staging publication ' +
+                            "(SUBSTACK_STAGE_URL), \"prod\" publishes to production (SUBSTACK_PUBLICATION_URL). " +
+                            "Always use stage first to verify formatting before promoting to prod.",
+                        enum: ["stage", "prod"],
+                    },
                 },
                 required: ["file_path"],
             },
@@ -1065,8 +1074,22 @@ const session = await joinSession({
                     // Load config
                     const env = loadEnv();
                     const token = process.env.SUBSTACK_TOKEN || env.SUBSTACK_TOKEN;
-                    const pubUrl =
-                        process.env.SUBSTACK_PUBLICATION_URL || env.SUBSTACK_PUBLICATION_URL;
+
+                    // Resolve publication target: stage (default) or prod
+                    const target = args.target || "stage";
+                    let pubUrl;
+                    if (target === "stage") {
+                        pubUrl = process.env.SUBSTACK_STAGE_URL || env.SUBSTACK_STAGE_URL;
+                        if (!pubUrl) {
+                            // Fallback: no stage URL configured, use prod with a warning
+                            pubUrl = process.env.SUBSTACK_PUBLICATION_URL || env.SUBSTACK_PUBLICATION_URL;
+                            if (pubUrl) {
+                                await session.log("⚠️  SUBSTACK_STAGE_URL not set — falling back to production URL", { ephemeral: true });
+                            }
+                        }
+                    } else {
+                        pubUrl = process.env.SUBSTACK_PUBLICATION_URL || env.SUBSTACK_PUBLICATION_URL;
+                    }
 
                     if (!token) {
                         return {
@@ -1079,8 +1102,10 @@ const session = await joinSession({
                     if (!pubUrl) {
                         return {
                             textResultForLlm:
-                                "Error: SUBSTACK_PUBLICATION_URL not found in .env.\n\n" +
-                                "Add: SUBSTACK_PUBLICATION_URL=https://yourpub.substack.com",
+                                `Error: No publication URL found for target="${target}".\n\n` +
+                                "Add to .env:\n" +
+                                "  SUBSTACK_PUBLICATION_URL=https://yourpub.substack.com    (production)\n" +
+                                "  SUBSTACK_STAGE_URL=https://yourpubstage.substack.com     (staging)",
                             resultType: "failure",
                         };
                     }
@@ -1114,7 +1139,7 @@ const session = await joinSession({
                     // Auth
                     const headers = makeHeaders(token);
                     const subdomain = extractSubdomain(pubUrl);
-                    await session.log(`Connecting to ${subdomain}.substack.com…`, { ephemeral: true });
+                    await session.log(`Targeting ${subdomain}.substack.com (${target})…`, { ephemeral: true });
 
                     // Derive article slug from file path
                     // e.g. content/articles/jsn-extension-preview/draft.md → jsn-extension-preview
@@ -1237,8 +1262,10 @@ const session = await joinSession({
                         : "";
 
                     const actionWord = isUpdate ? "updated" : "created";
+                    const targetLabel = target === "prod" ? "🔴 PRODUCTION" : "🟡 STAGE";
                     return (
                         `✅ Substack draft ${actionWord}!\n\n` +
+                        `**Target:** ${targetLabel} (${subdomain}.substack.com)\n` +
                         `**Mode:** ${isUpdate ? "UPDATE (existing draft)" : "CREATE (new draft)"}\n` +
                         `**Title:** ${title}\n` +
                         `**Subtitle:** ${subtitle || "(none)"}\n` +
