@@ -202,3 +202,49 @@ The previous review (Fifth/Sixth pass) was performed by a non-vision model and r
 - **Verdict: ✅ APPROVED after 3 corrections** — The structural error was serious but localized. Once the LAR/DEN comparison table was corrected and the comparative language adjusted, the rest of the article held up. The core argument (Miami's cap structure is manageable, the real constraints are roster talent and QB development) remains valid even with accurate comp data. All 6 Writer fact-check items verified clean. Article is publish-ready after corrections.
 - **Lesson:** Always verify historical dead cap comparisons against primary sources (OverTheCap, Spotrac). Don't trust panel-generated numbers for historical precedents without verification — this is exactly where LLM hallucination risk is highest. The "plausible but wrong" number is more dangerous than the obviously wrong number.
 - **Recorded by:** Editor (2026-03-16)
+
+📌 Twelfth pass: Witherspoon Extension v2 — FORMAL REVIEW REPORT
+- **File:** `content/articles/witherspoon-extension-v2/draft.md`
+- **Report saved:** `content/articles/witherspoon-extension-v2/editor-review.md`
+- **Scope:** Full editorial review of the post-correction v2 draft. Verified 70+ data points across 6 source files (discussion-prompt, discussion-summary, cap-position, playerrep-position, sea-position).
+- **Result:** 0 🔴 errors, 4 🟡 suggestions, 10 🟢 notes.
+- **Key findings:**
+  - All 6 CB market comps verified clean (30 data points exact match).
+  - All Cap year-by-year figures, restructure math, and combined projections verified.
+  - All PlayerRep projections (opening ask, settlement, walk-away) verified.
+  - Nick Emmanwori spelled correctly throughout — no Nehemiah error.
+  - Cap quote (line 122) is a polished synthesis, not verbatim — same pattern as JSN review. Flagged as 🟡.
+  - "Roughly one-fifth of the cap" slightly overstates (~18.5% vs 20%). Faithful to Cap's own language but flagged for precision.
+  - Woolen/Bryant contract details unsourced in v2 files — consistent with v1 but worth confirming.
+  - Image placeholders pending — no images generated yet.
+- **Verdict: ✅ APPROVED** — publish-ready pending image generation.
+- **Lesson:** When reviewing a draft that already passed a prior editorial fix cycle (Tenth pass), the formal report pass catches different things — mostly stylistic and process items rather than hard errors. The previous pass caught the temporal/descriptor/credential errors; this pass verified the full data integrity and caught quote-attribution and sourcing gaps. Both passes have value at different stages.
+- **Recorded by:** Editor
+
+📌 Thirteenth pass: Arizona Post-Murray Rebuild — FULL EDITORIAL REVIEW
+- **File:** `content/articles/ari-2026-offseason/draft.md`
+- **Report saved:** `content/articles/ari-2026-offseason/editor-review.md`
+- **Scope:** Full editorial review of ~3,200-word panel article (ARI, Draft, Cap, Offense). Verified 25+ key facts across 6 source files (discussion-prompt, discussion-summary, cap-position, ari-panel-response, offense-panel, draft-section).
+- **Result:** 1 🔴 error, 6 🟡 suggestions, 8 🟢 notes.
+- **Key findings:**
+  - 🔴 **Historical comp error:** "Chicago in 2017 — trading up to #3 for Mitch Trubisky" is wrong. Bears traded UP FROM #3 to #2. Verified against NFL.com, Wikipedia, ESPN. Error propagated from Draft panel's ambiguous historical comps table.
+  - All 7 expert quotes verified clean against source panels — no mashups, no misattributions. Clean quote hygiene, major improvement from JSN article.
+  - $47.5M dead cap, Harrison Jr. stats, McBride stats, Brissett stats, trade chart math, Murray career record — all verified clean.
+  - Dead cap discrepancy: ARI panel says $7.2M carries into 2027, Cap says $0 in 2027. Article follows Cap (correct editorial choice). Flagged to Lead.
+  - Scheme comparison table attributes 2025 "bottom 10" pre-snap motion stat to "Kingsbury Era" column — stat is from Gannon era. Misleading label.
+  - Writer Notes (8 items) still present — must be stripped before publish.
+  - Image placeholders (2) present — no images generated yet.
+- **Verdict: 🟡 REVISE** — Fix 1 red error, strip Writer Notes, resolve images. Then re-submit for approval.
+- **Lesson:** Historical comp facts (draft pick numbers, trade details from past drafts) are a high-risk area for panel-generated content. The Draft panel described Chicago's pick as "#3" (their original position) but the article used "trading up to #3" which inverts the direction. When panel sources provide historical comps, verify the actual draft pick number and trade mechanics against primary sources — don't assume the panel's table captures the full story.
+- **Recorded by:** Editor
+
+📌 Review: Seahawks RB Pick #64 v2 article (2026-03-16). Key findings:
+- **🔴 Surgery year error:** Article states Charbonnet's surgery was "late January 2025" — should be "late January 2026." The recovery math (7.5–8 months to Week 1, 35–45% availability) only works with a 2026 date. A January 2025 surgery would put Week 1 at 20 months post-op — full recovery, zero urgency. Error originated in the Injury position paper ("IR placement | January 23, 2025") and Writer faithfully inherited it. This is the textbook case for editorial review: source-propagated date errors that break internal consistency.
+- All 9 expert quotes verified clean against position files — zero mashups, zero misattributions, zero over-polished rewrites. Best quote hygiene of any article reviewed to date.
+- "All-American" on line 16 missing "returner" qualifier — CollegeScout specifies First-Team All-American *returner*, not RB. Line 98 gets it right. Minor but misleading in opening paragraph.
+- No cover image placeholder despite template requirement. Two inline placeholders are well-crafted.
+- Full compliance with all 5 discussion-summary guardrails (no overclaiming on Price's talent, Charbonnet timeline, etc.).
+- Known error patterns (Emmanwori/Pritchett name confusion, first-name invention) did NOT recur.
+- **Verdict: 🟡 REVISE** — 1 🔴 error (surgery year), 4 🟡 suggestions. After fixing the year, article is near publish-ready.
+- **Lesson:** Date/year errors from position papers are an emerging pattern. The Injury position paper had "January 23, 2025" when the recovery math demands 2026. Cross-referencing stated dates against the article's own timeline math (recovery window × stated availability = implied surgery date) is a reliable catch mechanism. Add this to the standard editorial checklist: **verify that any stated injury date + recovery window = the availability claim.**
+- **Recorded by:** Editor

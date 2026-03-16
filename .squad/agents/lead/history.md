@@ -586,3 +586,19 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 - **Disagreement framing matters more than resolution.** The 3-vs-1 split was clear, but the article is stronger because Offense's dissent is preserved and respected. Don't flatten minority positions — they create the narrative tension Writer needs.
 - **v1→v2 regeneration benefits from explicitly killing dead narratives.** CollegeScout's correction of the "first-round talent at a discount" framing was the panel's sharpest contribution. Writer needs explicit permission to abandon v1 claims.
 - **Medical timelines are the emotional engine, not the logical engine.** Injury's coin-flip framing (35-45% Week 1) creates urgency the reader feels, even though the Lead call is to address RB elsewhere. Let the urgency breathe in the article while the logic redirects the pick.
+
+### Ralph Maximum Parallel Throughput Rule (2025-07-25)
+
+**Task:** Codify the proven parallel execution patterns into an explicit Ralph operating rule, replacing the original "one stage per iteration" constraint.
+
+**Evidence reviewed:**
+- NFC West parallel panel: 8 agents, ~4 min, zero quality loss (Approved decision, 2026-03-16)
+- AFC North batch: 4 teams researched in parallel, ~15 min vs. ~60 min serial (history entry)
+- NFC West publish wave: Writer + Editor + Panel running cross-stage simultaneously (2026-03-17)
+- User directive: "Max out parallel throughput … no artificial caps; only block on real dependencies"
+
+**What was delivered:**
+1. Decision proposal: `.squad/decisions/inbox/lead-ralph-max-throughput.md` — full operating spec with 6 concrete principles (fan-out by stage, saturate downstream lanes, serialize only on real dependencies, batch same-stage work, no agent cap, multi-article iteration accounting).
+2. Updated `.squad/identity/now.md` — session focus shifted from "interactive article creation" to "maximum-throughput Ralph pipeline."
+
+**Key learning:** The "one stage per iteration" rule was correct for initial pipeline validation but became the primary bottleneck once the pattern was proven. Parallel execution is cost-neutral (same total tokens) but cuts wall-clock time by 3-4×. The only real serialization constraint is intra-article stage ordering — cross-article work is always independent.
