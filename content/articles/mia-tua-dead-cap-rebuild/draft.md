@@ -14,7 +14,7 @@
 
 The Miami Dolphins just created a new NFL record nobody wants to hold: $99.2 million in dead cap space tied to Tua Tagovailoa. That's $14 million more than Russell Wilson's dead money crater in Denver. It's a number so large that every national headline treats it as a franchise obituary — a multi-year death sentence that guarantees irrelevance until 2028 at the earliest.
 
-But here's what the headlines miss: dead cap math doesn't work the way casual fans think it does. The $99.2 million is split across two years ($55.4M in 2026, $43.8M in 2027), and the salary cap has grown 65% since the Goff trade in 2021. As a percentage of available cap space, Miami's 2026 burden (18.4%) is actually lighter than Denver's first-year Wilson hit (20.8%) — and the Broncos made the playoffs in Year 1.
+But here's what the headlines miss: dead cap math doesn't work the way casual fans think it does. The $99.2 million is split across two years ($55.4M in 2026, $43.8M in 2027) using the post-June 1 designation — a cap mechanism that spreads the hit over multiple years instead of accelerating it all into one season. As a percentage of available cap space, Miami's 2026 burden (18.4%) is comparable to Denver's first-year Wilson hit (20.8%) — and the Broncos made the playoffs in Year 1.
 
 We convened three experts to evaluate whether Miami can execute a competitive rebuild under unprecedented dead money, or whether this albatross condemns them to a talent drought no amount of drafting can overcome. What we found: unanimous agreement on the path forward, sharp disagreement on how fast it actually works, and a non-obvious market strategy that turns Miami's biggest constraint into a draft-pick harvesting tool.
 
@@ -26,13 +26,13 @@ Everyone fixates on the total. The number that actually predicts recovery speed 
 
 | Team | Year | Dead Cap | Total Cap | Dead % | Recovery Timeline |
 |------|------|----------|-----------|--------|-------------------|
-| LAR (Goff trade) | 2021 | $24.7M | $182.5M | **13.5%** | Won Super Bowl Y1 |
-| DEN (Wilson cut) | 2024 | $53M | $255M | **20.8%** | Made playoffs Y1 |
+| LAR (Goff trade) | 2021 | $22.2M | $184.2M | **12.1%** | Won Super Bowl Y2 |
+| DEN (Wilson cut) | 2024 | $53M | $255.4M | **20.8%** | Made playoffs Y1 |
 | **MIA (Tua Y1)** | **2026** | **$55.4M** | **$301M** | **18.4%** | **—** |
 | **MIA (Tua Y2)** | **2027** | **$43.8M** | **~$317M** | **13.8%** | **—** |
 | HOU (Watson trade) | 2022 | ~$40M | $208M | **19.2%** | Competitive by 2023 |
 
-Our salary cap expert put it bluntly: *"Miami's 2026 hit is comparable to Denver's burden in 2024 (20.8% vs 18.4%), and the Broncos made the playoffs in Year 1. The $99.2M is a nominal record because the cap itself has grown 65% since the Goff trade, not because the structural damage is worse."*
+Our salary cap expert put it bluntly: *"Miami's 2026 hit (18.4%) sits between Denver's first-year burden (20.8%) and the Rams' single-year Goff hit (12.1%). The Broncos made the playoffs in Year 1, the Rams won the Super Bowl in Year 2. The $99.2M is a nominal record because the cap itself has grown 64% since the Goff trade, not because the structural damage is worse."*
 
 The post-June 1 designation was the right structural move. Eating $99.2M in one year would've consumed 33% of 2026 cap — Denver's worst case, on a thinner roster. Splitting the hit drops each year to survivable levels (18.4%, 13.8%) and preserves trade flexibility on movable veteran assets.
 
@@ -61,13 +61,19 @@ The cap rises to ~$317M. The second Tua tranche ($43.8M) still hits, but expensi
 > *"This is a two-year tax, not a five-year sentence. At 18.4% and 13.8% of cap, both years are lighter proportional hits than what LA and Denver survived. Miami's math supports competitiveness by 2027. The constraint isn't dollars — it's quarterback."*
 > — Cap, Salary Cap Expert
 
+<!-- IMAGE: Split-screen infographic comparing Miami's dead cap burden to LAR and DEN historical precedents
+     Placement: inline
+     Tone: analytical data visualization with clean modern design
+     Key elements: Bar chart showing dead cap as percentage of total cap (12.1% LAR 2021, 20.8% DEN 2024, 18.4% MIA 2026), team logos, color-coded bars (Rams blue/gold, Broncos orange/blue, Dolphins aqua/orange)
+-->
+
 ---
 
 ## The Roster Reality: Five Building Blocks and a Crisis at Corner
 
 Strip away the names and count genuine building blocks — players you'd protect in an expansion draft. Miami's roster expert gets to five: **De'Von Achane, Jaylen Waddle, Chop Robinson, Kenneth Grant, Jonah Savaiinaea.** That's it.
 
-Everyone else is either aging out of the timeline (Calais Campbell turns 40 this year, Zach Sieler turns 30), a bridge piece (Willis, Josh Uche, Aaron Brewer), or completely unproven (every single defensive back on this roster).
+Everyone else is either aging out of the timeline (Calais Campbell is 40 years old, Zach Sieler turns 30), a bridge piece (Willis, Josh Uche, Aaron Brewer), or completely unproven (every single defensive back on this roster).
 
 ### The Secondary Is the Real Crisis
 
@@ -93,6 +99,12 @@ The risk: Hafley has never been a head coach. Coordinating a full rebuild while 
 Willis behind a half-built offensive line, throwing to Waddle and no one else, with a secondary full of developmental players playing man coverage. The defense will be competitive at the line of scrimmage (Robinson, Grant, Sieler) and porous everywhere behind it.
 
 4-13 puts Miami in the top 3-5 pick range for 2027 — which is exactly where they need to be if Willis doesn't emerge.
+
+<!-- IMAGE: Miami Dolphins 2026 roster building blocks visualization
+     Placement: inline
+     Tone: modern roster graphic with player photos and position groupings
+     Key elements: Five core players (Achane, Waddle, Robinson, Grant, Savaiinaea) highlighted in Dolphins aqua, secondary/WR depth shown as question marks or silhouettes, clean hierarchy showing proven starters vs developmental pieces
+-->
 
 ---
 
