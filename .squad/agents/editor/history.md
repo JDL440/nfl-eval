@@ -248,3 +248,5 @@ The previous review (Fifth/Sixth pass) was performed by a non-vision model and r
 - **Verdict: 🟡 REVISE** — 1 🔴 error (surgery year), 4 🟡 suggestions. After fixing the year, article is near publish-ready.
 - **Lesson:** Date/year errors from position papers are an emerging pattern. The Injury position paper had "January 23, 2025" when the recovery math demands 2026. Cross-referencing stated dates against the article's own timeline math (recovery window × stated availability = implied surgery date) is a reliable catch mechanism. Add this to the standard editorial checklist: **verify that any stated injury date + recovery window = the availability claim.**
 - **Recorded by:** Editor
+
+📌 Team update (2026-03-16 094957): Writer established dense table rendering pattern for Substack. Tables ≥5 columns with financial/comparison headers → PNG via renderer-core.mjs before publish. Applies to all future articles with dense tables (e.g., cap-comparison, draft-board templates). — decided by Writer
