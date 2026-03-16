@@ -676,6 +676,236 @@ The JSN article's 🟡 items all stemmed from the same root cause: the expert pa
 
 **By:** Coordinator & Editor
 
+---
+
+### 2026-03-16: Batch-Create Generic Article Issues for Remaining Divisions
+**By:** Lead (GM/Lead Specialist)
+**Status:** Completed
+**Affects:** All remaining 28 NFL teams (AFC/NFC divisions)
+
+**What:**
+Created 28 GitHub issues (#43–#69) covering every remaining team except NE and SEA, using the same generic template as NFC West batch (#40–#42: ARI, LAR, SF).
+
+**Decision:**
+- **Skipped NE** — Joe confirmed already generated; skip to avoid duplicate
+- **Skipped SEA** — Home team; not included in NFC West batch either; gets dedicated, non-generic treatment
+- **Template:** Generic `IDEA GENERATION REQUIRED` at Depth Level 2 (matches #40–#42 pattern)
+- **Labels:** All issues tagged `squad`, `squad:lead`, `article`
+- **Issue map by division:**
+  - AFC East: BUF #43, MIA #44, NYJ #45
+  - AFC North: BAL #46, CIN #47, CLE #48, PIT #49
+  - AFC South: HOU #50, IND #51, JAX #52, TEN #53
+  - AFC West: DEN #54, KC #55, LAC #56, LV #57
+  - NFC East: DAL #58, NYG #59, PHI #60, WAS #61
+  - NFC North: CHI #62, DET #63, GB #64, MIN #65
+  - NFC South: ATL #66, CAR #67, NO #68, TB #69
+
+**Why:**
+Batch issue creation is stable at 28 items (0.5s delay, template loop). Generic template + mandatory idea generation upfront shifts responsibility to runtime (when issue is claimed) instead of creation time. All old-format issues (#9–#39) now superseded by generic pipeline starters. Skipping NE and SEA maintains design consistency.
+
+**Pattern Established:**
+Batch issue creation works cleanly for 28+ teams. Generic template enforces idea generation at claim time (Step 1b of Lead's pipeline) rather than creation time, preventing staleness.
+
+---
+
+### 2026-03-16: NFC West Parallel Panel Execution Pattern
+**By:** Lead
+**Status:** Approved
+**Affects:** Article pipeline, batch processing strategy
+
+**What:**
+Run NFC West articles in parallel batches (2 articles × 4 agents = 8 simultaneous panel agents) when:
+- Both articles are at the same pipeline stage
+- Both are Depth Level 2 (same model/token budget)
+- No dependency exists between the two articles
+
+**Outcome:**
+- Total wall time for 8 agents: ~4 minutes (same as running 4 agents for one article)
+- All 8 positions produced were high quality — no degradation from parallelism
+- Both syntheses completed with actionable writer briefs
+
+**Reusable Pattern:**
+When multiple articles in the same division are at the same pipeline stage, batch them:
+1. Create all discussion prompts first
+2. Spawn all panel agents simultaneously (up to 8 tested successfully)
+3. Wait for all to complete
+4. Write syntheses sequentially (Lead needs to read all positions for each synthesis)
+
+**Why:**
+Parallel execution is cost-neutral (no token discount) but saves wall-clock time significantly. Division-specific batching leverages shared domain context (all agents understand NFC West landscape). No context window pressure — agents are stateless and independent.
+
+---
+
+### 2026-03-16: Idea Generation Must Use Top Model + Current Data
+**By:** Lead
+**Status:** Implemented
+**Critical:** Yes
+
+**What:**
+Issues must be generic triggers. Idea generation must happen as the FIRST STEP of the pipeline using a top model with real research.
+
+**Root Cause of Old Problem:**
+1. Batch issue creation asked Lead to generate 30 ideas all at once
+2. Lead used cheaper model to save tokens without fetching current data
+3. Model relied on training data (last updated mid-2025 at best)
+4. Stale angles got committed to GitHub issues, locking in wrong assumptions
+5. Example failures: QB situations referenced wrong year, cap figures from wrong offseason, "Year N" framing for Year N+1 players
+
+**Implementation:**
+1. **Model Requirement:** ALWAYS use `claude-opus-4.6` for idea generation (non-negotiable)
+2. **Current Data Requirement:** MUST fetch current data (OTC, ESPN, web_search) before generating any angle
+3. **Year Accuracy Gate:** Confirm 2026 offseason context, 2025 season stats, 2026 cap year
+4. **Process Integration:** New generic issue template (`.squad/templates/team-article-issue.md`), issue says "IDEA GENERATION REQUIRED", Lead runs Step 1b (read skill → fetch data → generate → post comment → continue)
+
+**Files Updated:**
+- `.squad/skills/idea-generation/SKILL.md` — Mandates top model + current context
+- `.squad/agents/lead/charter.md` — Added Step 1b to pipeline protocol
+- `.squad/templates/team-article-issue.md` — New generic template
+- `.squad/skills/article-lifecycle/SKILL.md` — Documented GitHub Issue-Triggered idea generation
+
+**Pattern Established:**
+**Idea generation is NOT a bulk batch task.** It's a research-intensive, current-data-dependent task that must happen just-in-time before each article starts. Never: "Generate 30 team ideas up front". Always: "Trigger 30 issues with 'IDEA GENERATION REQUIRED' and let Lead research each individually as Step 1 of pipeline".
+
+---
+
+### 2026-03-16: Article Process Guards — Temporal Accuracy + TLDR Requirement
+**By:** Lead (Joe Robinson directive)
+**Status:** Implemented
+**Critical:** Yes
+
+**What:**
+Add three accuracy gates to the article lifecycle:
+
+**Gate 1: Temporal Accuracy**
+- All panel agent spawns MUST include season context block: current NFL year (2026), most recent completed season (2025), upcoming season (2026)
+- All stats cited = 2025 season unless noted as historical
+- All cap figures = 2026 cap year
+- Coaching staff = who is actually coaching in 2026
+- Year N framing accurate (e.g., QB drafted 2024 = entering Year 3 in 2026)
+
+**Gate 2: TLDR Present**
+- Article structure template MUST include TLDR callout block after subtitle
+- TLDR format: 4 bullets (situation, assets, verdict, debate)
+- Editor MUST verify presence and accuracy before approval
+
+**Gate 3: Player/Staff Name Accuracy**
+- All player/coach names verified against current rosters
+- Draft prospects verified as real 2026 prospects
+- Contract figures sourced (OTC/Spotrac citation required)
+
+**Root Cause:**
+Drake Maye article ("Year 2 Decision Time") shipped with:
+1. Temporal accuracy failure — framed Maye as Year 2 entering Year 3, panel used wrong season context
+2. Missing TLDR — 3,500+ word article published without quick-scan summary
+
+**Files Updated:**
+- `.squad/skills/substack-article/SKILL.md` — Added TLDR to structure + Temporal Accuracy subsection
+- `.squad/skills/article-lifecycle/SKILL.md` — Added "Accuracy Gates" section (stages 6-7)
+- `.squad/agents/editor/charter.md` — Added "Temporal Accuracy Checklist" to fact-checking
+
+**Why:**
+Temporal accuracy is non-negotiable. Readers who follow NFL closely will catch "Year 2" for a Year 3 player instantly. TLDRs drive engagement — busy readers scanning the site need 15-second answer to "Is this article for me?". Name accuracy protects credibility — one invented name undermines trust in everything else (contract projections, scheme analysis, etc.).
+
+**Expected Impact:**
+- Zero temporal accuracy errors (panel agents work from current context)
+- 100% TLDR presence (Editor gate enforces before publish)
+- Name verification as routine checklist
+
+---
+
+### 2026-03-16: Substack Section Routing Fix — `section_chosen: true`
+**By:** Lead (debugging task from Joe Robinson)
+**Status:** Implemented
+**Affects:** `.github/extensions/substack-publisher/extension.mjs`
+
+**What:**
+Fixed Substack publisher extension's section assignment for drafts. Root cause: missing `section_chosen: true` field in PUT request.
+
+**Changes:**
+1. PUT body minimized: Changed from spreading full draft payload to minimal body with only section fields: `{ section_id, draft_section_id, section_chosen: true }`
+2. Verification GET added: After PUT, fetch persisted draft to confirm `draft_section_id` and `section_chosen` saved
+3. Integer coercion added for `sectionId` safety
+4. Output enhanced to show GET verification results including `section_chosen` status
+
+**Key API Finding:**
+Substack's draft editor checks `section_chosen === true` before displaying section in UI dropdown. Without this flag, `draft_section_id` is stored but editor treats it as unset. Old code never sent `section_chosen`, so every draft appeared to have no section despite API confirming ID.
+
+**Verification:**
+Test draft 191082679 (NE Patriots, section 355520) confirmed via GET: `draft_section_id: 355520, section_chosen: true`.
+
+---
+
+### 2026-03-16: Drake Maye Article Fact Corrections — Year 3 Reframe
+**By:** NE (New England Patriots Expert)
+**Status:** Completed
+**Affects:** `content/articles/ne-maye-year2-offseason/draft.md`
+
+**What:**
+Comprehensive fact-check and rewrite of Drake Maye offseason article. Article was written using 2024 (Year 1) data but Maye just finished his 2nd season (2025). All content updated to reflect Year 3 framing (2026 offseason).
+
+**Critical Corrections:**
+- "just finished a rookie season" → "just finished his sophomore campaign"
+- 66.6% comp, 2,276 yds, 15 TDs → 72.0% comp, 4,394 yds, 31 TDs, 8 INTs
+- PFF OL graded "worst in NFL" → improved from 32nd to ~6th after additions
+- "#4 overall pick" → "#31 overall pick" (14-3 record, Super Bowl runner-up)
+- "new head coach in Mike Vrabel" → "coaching staff entering Year 2"
+- All "Year 2" references for upcoming season → "Year 3"
+- $73.5M cap projection → $92M (per OTC)
+
+**Major Rewrites:**
+1. Intro/Hook — reframed from "unproven rookie" to "MVP-caliber sophomore post-SB loss"
+2. The Situation — OL from "worst" to "dramatically improved", WR from "bare cupboard" to "partially addressed"
+3. Cap Math — acknowledged completed FA moves (Doubs, AVT, Jones, Byard), updated remaining scenarios
+4. Draft Board — complete rewrite from #4 pick logic to #31 pick logic, trade-down to trade-up math
+5. Debate sections — WR debate (Doubs already signed), pick debate (#31 context), Year 3 framing
+6. Verdict Blueprint — updated targets for #31 context
+
+**Added Content:**
+- TLDR callout box (4 bullets)
+- Maye's 113.5 passer rating, 77.1 QBR, 2nd-team All-Pro, MVP consideration
+- 14-3 record, Super Bowl LX loss to Seattle 29-13
+- Post-FA spending breakdown with cap hits
+- 11 total draft picks context
+- Updated AFC East: MIA released Tua, NYJ 3-14, BUF fired McDermott
+
+**Verified As Correct:**
+- ~$44M cap space (OTC: $43.9M)
+- $301.2M salary cap
+- $10M Maye cap hit
+- $33.7M dead money total
+- Dugger ($12.2M), Diggs ($9.7M), Peppers ($3M)
+- Mike Vrabel HC, Josh McDaniels OC
+- All 4 draft prospects are real 2026 prospects
+
+**Impact:**
+Article title remains accurate. Slug (`ne-maye-year2-offseason`) unchanged per instructions.
+
+---
+
+### 2026-03-16: Cardinals Article Draft Structure
+**By:** Writer
+**Article:** Arizona Cardinals 2026 Offseason (#40)
+**Status:** Draft complete, pending Editor review
+
+**What:**
+Structured the Cardinals article around the QB timing disagreement as central tension rather than dead-cap or #3 pick evaluation. Cap's "dead cap as receipt" reframe and Offense's "Lamborghini on regular unleaded" urgency create narrative engine. Verdict endorses Draft's two-step plan (Bain at #3 + trade back for Simpson) with Offense's shorter leash on Brissett as modifier.
+
+**Rationale:**
+- Dead-cap angle is obvious but one-section story
+- QB timing gives every expert distinct lane
+- ARI's trade-down dissent preserved as honest outlier
+- Cap's Path D (wait until 2027) presented as strongest counterargument
+
+**Editor Watch Items:**
+LaFleur's title chain (OC → HC), Simpson's start count, 2027 QB class eligibility, Harrison Jr. CBA extension timeline. Eight items flagged in writer notes.
+
+---
+
+### 2026-03-16T03:25:56Z: User Directive — Pipeline Progress Comments
+**By:** Joe Robinson (via Copilot)
+**What:** Pipeline progress comments should be more frequent — post to GitHub issue after each individual panel agent completes, not just after full panel batch. The 45-minute pipeline felt opaque with too few check-ins.
+**Why:** User request — captured for team memory
+
 **What:** jsn-extension-preview article had duplicate inline images. Regenerated jsn-extension-preview-inline.png (Attempt 1 rejected for AI text hallucination; Attempt 2 approved with improved prompt). Final hashes verified unique: 550CFD87 ≠ 18CBD39A. Republished to Substack draft 191077419.
 
 **Images:**

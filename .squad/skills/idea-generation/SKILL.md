@@ -1,20 +1,108 @@
 ---
 name: "idea-generation"
-description: "How to generate, evaluate, and submit new article ideas for the NFL content pipeline. Covers idea triggers, angle validation, DB schema format, routing to Lead, and batch idea sprints with scoring."
+description: "How to generate the best article idea for an NFL team using current research. MUST use top-tier model and current data — no training-data-only angles."
 domain: "content-production"
-confidence: "low"
-source: "manual — designed by Joe Robinson & Lead"
+confidence: "high"
+source: "manual — designed by Joe Robinson & Lead; updated 2026-03-14 to fix stale-angle problem"
 ---
 
-# Idea Generation Skill
+# Idea Generation — Skill
 
 ## Purpose
 
-This skill enables agents across the squad to generate high-quality article ideas that align with reader value, SEA-priority lens, and editorial timelines. All new ideas flow through Lead's decisions inbox for approval before insertion into `content/pipeline.db`.
+Generate the single most pressing/interesting offseason question facing an NFL franchise, grounded in CURRENT season context (not prior seasons).
+
+This skill is MANDATORY for any GitHub issue marked "IDEA GENERATION REQUIRED" — the idea is generated as **Step 1 of the pipeline** before discussion/drafting begins.
+
+## When to Use
+
+- Any time a GitHub issue triggers idea generation as the first pipeline step
+- Any time Lead needs to generate a topic for a team article
+- When creating 30-team content batches (do NOT pre-write stale angles — generate ideas in real-time)
 
 ---
 
-## 1. Idea Triggers — What Sparks a Good Idea?
+## Critical Rules
+
+### 1. Model Selection — ALWAYS Use Top Tier
+
+Idea generation MUST use **`claude-opus-4.6`** (or the best available premium model).
+
+**This is non-negotiable.** Cheaper models produce stale, generic, or hallucinated angles because they:
+- Rely on training data (at least one season out of date)
+- Miss recent QB changes, coaching staff turnover, cap situation shifts
+- Generate "safe" angles that sound plausible but are factually wrong
+
+**Only use top-tier models for idea generation.** The rest of the pipeline can use cheaper models, but the idea must be right.
+
+### 2. Current Context — REQUIRED Before Generating Any Idea
+
+**DO NOT generate an angle without fetching current data first.** Training-data-only answers will be stale by at least one season.
+
+Before proposing any angle, Lead MUST fetch current data for the team:
+
+**What to fetch:**
+- Current QB situation (who started in 2025? injury status? contract status?)
+- 2026 offseason priorities (cap space, key free agents, draft position, picks)
+- Coaching staff (any changes from 2025 to 2026?)
+- Key storylines from the 2025 season that carry into 2026 offseason
+
+**Where to fetch from:**
+- **Over the Cap**: `https://overthecap.com/team/{team-slug}` (cap data, free agents, contract details)
+- **ESPN Roster**: `https://www.espn.com/nfl/team/roster/_/name/{abbr}` (current roster)
+- **News search**: Use web_search for "{team name} 2026 offseason" on ESPN/NFL.com/The Athletic
+
+**Example research queries:**
+```
+web_search: "Buffalo Bills 2026 offseason priorities cap space"
+web_fetch: https://overthecap.com/team/buffalo-bills
+web_fetch: https://www.espn.com/nfl/team/roster/_/name/buf
+```
+
+### 3. Idea Format
+
+After research, generate the idea using this format:
+
+```
+## Working Title
+{Specific, tension-based title — not generic}
+
+## Angle / Tension
+{The single most interesting question facing this team in 2026}
+{Why it matters NOW, not historically}
+
+## Primary Team
+{Team abbreviation and full name}
+
+## Key Data Points (sourced)
+- {Stat or fact 1} (source: OTC/ESPN/PFR)
+- {Stat or fact 2}
+- {Stat or fact 3}
+```
+
+### 4. Year Accuracy Gate (MANDATORY)
+
+Before finalizing the idea, run this checklist:
+
+- [ ] **Confirm current year context**: We are in the 2026 offseason (post-2025 season)
+- [ ] **All player stats cited**: Use 2025 season stats (not 2024 or earlier)
+- [ ] **All cap figures**: Use 2026 cap year (not 2025)
+- [ ] **Coaching staff**: Who is actually coaching in 2026 (not 2025 staff if there were changes)
+- [ ] **Year N framing**: e.g., a QB drafted in 2024 is entering Year 3 in 2026
+
+**If any of these checks fail, the idea is STALE. Go back and fetch current data.**
+
+---
+
+## OLD PROCESS (Pre-2026-03-14) — For Context Only
+
+The sections below describe the original idea-generation workflow for general content pipeline ideation. They remain valid for **general ideation** but are **NOT the process for GitHub issue-triggered idea generation**.
+
+When a GitHub issue says "IDEA GENERATION REQUIRED", use the **Critical Rules** section above instead.
+
+---
+
+## 1. Idea Triggers — What Sparks a Good Idea? (General Ideation)
 
 Ideas come from multiple sources. Train your thinking to recognize these signals:
 

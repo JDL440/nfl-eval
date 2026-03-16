@@ -354,4 +354,23 @@ CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-li
 - Depth Level 2 panels (4 agents each) hit the sweet spot: enough perspectives for tension without redundancy
 - The "competing emergencies" framing (e.g., EDGE vs. OT at #27 for SF) creates natural article tension better than single-issue prompts
 
+### Batch Issue Creation — Remaining Divisions (2026-03-16)
+
+Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond NFC West, using the same template as #40–#42. Labels: `squad`, `squad:lead`, `article`. All include `IDEA GENERATION REQUIRED` at Depth Level 2.
+
+**Issues by division:**
+- **AFC East:** BUF #43, MIA #44, NYJ #45 (skipped NE — already generated per Joe)
+- **AFC North:** BAL #46, CIN #47, CLE #48, PIT #49
+- **AFC South:** HOU #50, IND #51, JAX #52, TEN #53
+- **AFC West:** DEN #54, KC #55, LAC #56, LV #57
+- **NFC East:** DAL #58, NYG #59, PHI #60, WAS #61
+- **NFC North:** CHI #62, DET #63, GB #64, MIN #65
+- **NFC South:** ATL #66, CAR #67, NO #68, TB #69
+
+**Skipped teams:**
+- **NE** — Joe confirmed already generated
+- **SEA** — Home team; not included in NFC West batch (#40–42) either; gets dedicated treatment
+
+**Pattern:** GH CLI batch creation via Python loop with 0.5s delay works cleanly for 28 issues. Template string substitution (ABBR + full name) keeps formatting consistent. All old-format issues (#9–39, closed) are superseded by these generic pipeline starters.
+
 

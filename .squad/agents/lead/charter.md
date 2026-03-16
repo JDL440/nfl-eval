@@ -54,6 +54,33 @@ When Lead is assigned a GitHub issue with the `article` label (or any issue whos
 ### Protocol
 
 1. **Read the issue.** Extract: working title, angle/tension, primary team, depth level, suggested agents, target date, data context.
+   
+   **Step 1b: Idea Generation (when issue says "IDEA GENERATION REQUIRED")**
+   
+   If the issue body contains "IDEA GENERATION REQUIRED" (no pre-written angle), Lead must:
+   
+   1. **Read `.squad/skills/idea-generation/SKILL.md` first** (mandatory — contains current-data requirements)
+   2. **Fetch current data** for the team using web_fetch and web_search:
+      - Over the Cap: `https://overthecap.com/team/{team-slug}` (cap data, free agents)
+      - ESPN Roster: `https://www.espn.com/nfl/team/roster/_/name/{abbr}`
+      - News search: `web_search "{team name} 2026 offseason priorities"`
+   3. **Generate the best angle** using current 2026 offseason context (not training data alone)
+   4. **Post a comment** on the issue with the generated idea before proceeding:
+      ```
+      💡 Idea generated for {TEAM}:
+      **Title:** {title}
+      **Angle:** {angle}
+      **Key data:** 
+      - {data point 1 with source}
+      - {data point 2 with source}
+      - {data point 3 with source}
+      
+      Proceeding with pipeline...
+      ```
+   5. **Continue with pipeline** using the generated idea (no user input required)
+   
+   **Model for idea generation step: ALWAYS `claude-opus-4.6`** (non-negotiable — stale idea risk with cheaper models)
+
 2. **Post a kick-off comment** on the issue:
    ```
    🏗️ Lead picked up — starting article pipeline.
@@ -79,16 +106,23 @@ When Lead is assigned a GitHub issue with the `article` label (or any issue whos
 5. **Close the issue** once the Substack draft URL is posted.
 6. **Update pipeline.db** and `content/article-ideas.md` as normal.
 
-### Pipeline Comments (post at each major stage gate)
+### Pipeline Comments (post frequently — no silent gaps)
 
-Post a brief GitHub comment at each stage transition so progress is visible:
+Post a GitHub comment at EVERY meaningful step so the pipeline never feels like a black box. Err on the side of more comments, not fewer.
 
-| Stage | Comment |
-|-------|---------|
-| Stage 2 done | `📋 Discussion prompt written. Panel: {agents}. Starting panel discussion...` |
-| Stage 4 done | `💬 Panel complete ({N} positions). Starting draft...` |
-| Stage 5 done | `✍️ Draft complete ({word_count} words). Editor reviewing...` |
+| Moment | Comment |
+|--------|---------|
+| Kick-off | `🏗️ Lead picked up — starting article pipeline. Depth: {level}. Panel: {agents}. Est: ~15–25 min` |
+| Stage 2 done | `📋 Discussion prompt written. Spawning panel: {agents}...` |
+| Each panel agent spawned | `🔬 {Agent} starting research...` (post once per agent at spawn time) |
+| Each panel agent complete | `✅ {Agent} done — {1-line summary of their position}` |
+| All panel agents done | `💬 Panel complete ({N} positions). Synthesizing discussion → handing to Writer...` |
+| Writer spawned | `✍️ Writer drafting (~2000–3500 words)...` |
+| Stage 5 done | `✍️ Draft complete ({word_count} words). Spawning Editor...` |
 | Stage 6 done | `🔍 Editor review done. Verdict: {APPROVED/REVISE/REJECT}. {Count} flags.` |
+| Images generating | `🖼️ Generating 2 inline images...` |
+| Images done | `🖼️ Images complete. Publishing to Substack...` |
+| Pipeline complete | `✅ Done. Substack draft: {URL}` |
 
 ### Error Handling
 

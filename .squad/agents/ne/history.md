@@ -344,3 +344,15 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-14): Signed Romeo Doubs (WR, 4yr/$68-80M). Released Diggs. WR room completely turned over — Doubs is new WR1 for Drake Maye. Update offensive projections.
+
+📌 Article fact-check (2026-03-14): Corrected `ne-maye-year2-offseason/draft.md` — article was written with 2024 (Year 1) data but Maye just finished Year 2 (2025). Key findings from fact-check:
+- **Maye 2025 stats (verified):** 72.0% comp, 4,394 yds, 31 TD, 8 INT, 113.5 rating, 77.1 QBR (#1 in NFL), 450 rush yds, 4 rush TDs. 2nd-team All-Pro. MVP candidate.
+- **2025 record:** 14-3, AFC #1 seed, lost Super Bowl LX to SEA 29-13
+- **Draft pick corrected:** #4 was the 2025 pick (used on Will Campbell). 2026 pick is #31.
+- **OL transformation:** PFF ranking went from 32nd (2024) to ~6th (2025) after Campbell (LT), AVT (LG), Wilson (C) additions.
+- **Cap space:** ~$43.9M remaining per OTC (post-Doubs/AVT/Jones/Byard signings). $44M in article is accurate.
+- **2027 projected cap:** $92.1M per OTC, could be $110M+ with rollover.
+- **Coaching confirmed:** Vrabel (HC, Year 2), McDaniels (OC, 3rd stint).
+- **AFC East confirmed:** MIA released Tua ($99.2M dead), full rebuild. NYJ 3-14, rebuilding. BUF fired McDermott, hired Joe Brady.
+- **All draft prospects verified as real:** Bailey, Mauigoa, Tate, Reese (top-tier); Proctor, Miller, Freeling, Parker (NE-range at #31).
+- **No [UNVERIFIED] flags needed** — all stats, names, and figures confirmed via web search and OTC data.

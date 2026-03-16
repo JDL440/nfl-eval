@@ -92,6 +92,21 @@ Every idea in `content/article-ideas.md` needs:
 - [ ] Status is 💡 Proposed
 - [ ] Joe has reviewed (ideas auto-advance to ✅ Approved only with Joe's explicit go-ahead)
 
+### GitHub Issue-Triggered Idea Generation (NEW)
+
+When GitHub issues are created with **"IDEA GENERATION REQUIRED"** (no pre-written angle), Lead runs idea generation as **Step 1b of the pipeline** (see Lead charter).
+
+**Process:**
+1. Lead reads `.squad/skills/idea-generation/SKILL.md` (mandatory)
+2. Lead fetches current data for the team (OTC cap page, ESPN roster, news search)
+3. Lead generates the idea using current 2026 offseason context
+4. Lead posts the generated idea as a comment on the issue
+5. Pipeline continues using the generated idea — no further approval needed unless Joe requests it
+
+**Model requirement:** ALWAYS use **`claude-opus-4.6`** for this step (non-negotiable — cheaper models produce stale angles)
+
+**Rationale:** The 30-team issue batch revealed that pre-written angles (generated up front without current research) were stale by at least one season. Idea generation MUST happen in real-time with current data.
+
 ---
 
 ## Depth Levels
