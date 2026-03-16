@@ -438,4 +438,29 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 
 **Extension fix needed:** Add `draft_bylines: []` to the `createSubstackDraft` payload in `.github/extensions/substack-publisher/extension.mjs`.
 
+### AFC East Batch — Issues #43 (BUF), #44 (MIA), #45 (NYJ) — 2026-03-16
+
+**Batch approach:** Processed 3 generic "IDEA GENERATION REQUIRED" issues in one session. Used web_search for real-time research per team (cap, roster, season results, coaching, draft picks), generated ideas with current 2026 offseason data, then advanced the strongest article.
+
+**Ideas generated (all scored 8+):**
+
+| Issue | Team | Article Slug | Score | Stage Reached |
+|-------|------|-------------|-------|---------------|
+| #43 | BUF | `buf-2026-offseason` | 10/12 | idea |
+| #44 | MIA | `mia-tua-dead-cap-rebuild` | 12/12 | panel-ready |
+| #45 | NYJ | `nyj-two-firsts-qb-decision` | 11/12 | idea |
+
+**MIA advanced furthest:** The $99.2M dead cap story scored a perfect 12/12 — historic event, unprecedented constraints, new regime, broad NFL interest. Discussion prompt written with 4 paths (Rams/Texans/GB/Hail Mary models) and data anchors (dead cap comps table, cap landscape, draft capital, young core). Panel composed: Cap + MIA + Draft (3 agents, Level 2).
+
+**What worked:**
+- Batching 3 issues in one session is efficient — parallel research, shared context on AFC East dynamics
+- web_search produces enough current data for idea generation without needing web_fetch on OTC/ESPN pages directly
+- Creating pipeline stage labels (`stage:idea`, `stage:discussion-prompt`, `stage:panel-ready`) makes the board much more readable than relying only on `go:*` labels
+- Scoring ideas (10, 12, 11) made the "which to advance?" decision obvious — MIA was clearly the strongest
+
+**What to watch:**
+- BUF and NYJ still need discussion prompts — they're at `stage:idea` with `go:yes`
+- MIA panel is ready to run (3 agents, all prompts written) — next session should spawn the panel
+- The 4-path structure for MIA (Rams/Texans/GB/Hail Mary) gives the panel concrete options to evaluate, not vague "rebuild" talk
+
 
