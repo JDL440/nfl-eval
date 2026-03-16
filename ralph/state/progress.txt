@@ -1,7 +1,8 @@
 iteration: 5
-status: not_started
-current_item: none
-completed_items: []
-last_stage: none
+status: in_progress
+current_item: 44
+completed_items: [44:stage:review]
+last_stage: stage:review
 follow_on_issue: none
 follow_on_target_date: none
+notes: Completed Stage 6 (Editor Pass) for MIA issue #44. Editor issued 🟡 REVISE verdict, all required fixes applied (LAR dead cap data corrected, Calais Campbell age fixed, 2 image placeholders added). Article ready for Stage 7 (Publisher Pass).
