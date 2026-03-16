@@ -76,7 +76,7 @@ Everything here converts cleanly to Substack format.
 
 ### Tables
 
-Standard markdown tables do **not** survive as native HTML tables in this workflow. The publisher converts them into structured lists so the content stays readable inside Substack:
+Standard markdown tables do **not** survive as native HTML tables in this workflow. The publisher only converts short, scannable tables into structured lists so the content stays readable inside Substack:
 
 ```markdown
 | Priority | Position | Current State | Severity |
@@ -85,7 +85,9 @@ Standard markdown tables do **not** survive as native HTML tables in this workfl
 | 2 | WR — No separator | Douglas (slot), thin boundary corps, no vertical threat | 🔴 HIGH |
 ```
 
-For denser or more visual tables, use the `render_table_image` extension to create a deterministic local PNG and embed that instead of relying on inline conversion. The renderer writes assets under `content/images/{slug}/`, and article references from `draft.md` should typically resolve as `../../images/{slug}/file.png`.
+Dense or layout-sensitive tables now fail at publish time instead of silently flattening into a bad inline list. When that happens, use the `render_table_image` extension to create a deterministic local PNG and embed that instead. This repo-native renderer is the core MVP path for dense tables because it preserves visual hierarchy and email fidelity without depending on interactive embeds. The renderer writes assets under `content/images/{slug}/`, and article references from `draft.md` should typically resolve as `../../images/{slug}/file.png`.
+
+Datawrapper is a **secondary / optional** tool, not the default implementation path. It may still be useful for special hosted cases, but it is explicitly de-prioritized for MVP table publishing because interactivity is not required and dense tables now have a deterministic in-repo rendering path.
 
 ### Images
 
@@ -231,8 +233,9 @@ Discovered by inspecting real Substack drafts via the API:
 - Use `![alt|caption](./images/file.jpg)` for local images — just drop the file next to the article or in an `images/` subfolder
 - Use `![alt|caption](https://url)` for remote images — any public URL works
 - Use `::youtube VIDEO_ID` for video embeds
-- Use markdown tables for short, scannable inline conversions
-- Use `render_table_image` when a table's layout carries editorial meaning or needs stronger visual impact
+- Use markdown tables for short ranking, checklist, or label/value tables only
+- Use `render_table_image` when a table is dense, comparison-heavy, or its layout carries editorial meaning
+- Treat Datawrapper as optional only; do not make it the default table workflow
 - Don't worry about cover image — Joe handles that in the editor
 
 ### Editor

@@ -407,12 +407,15 @@ async function markdownToProseMirror(markdown, uploadImage) {
 
         // Table (rows starting with |)
         if (trimmed.startsWith("|")) {
+            const tableStartLine = i + 1;
             const tableLines = [];
             while (i < lines.length && lines[i].trim().startsWith("|")) {
                 tableLines.push(lines[i]);
                 i++;
             }
-            const table = parseTable(tableLines);
+            const parsedTable = parseMarkdownTableLines(tableLines);
+            assertInlineTableAllowed(parsedTable, tableStartLine);
+            const table = parseTable(parsedTable);
             if (table) {
                 if (Array.isArray(table)) content.push(...table);
                 else content.push(table);
@@ -576,13 +579,208 @@ function buildParagraph(content) {
     };
 }
 
+function stripTableMarkdown(value) {
+    return String(value || "")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/(^|[\s(])\*([^*\n]+)\*(?=[$\s).,;:!?]|$)/g, "$1$2")
+        .replace(/(^|[\s(])_([^_\n]+)_(?=[$\s).,;:!?]|$)/g, "$1$2")
+        .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+        .trim();
+}
+
 function normalizeTableHeader(value) {
-    return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    return stripTableMarkdown(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function isDetailTableHeader(value) {
     const normalized = normalizeTableHeader(value);
     return /^(current state|severity|status|budget|aav|year 1 cap hit|cap hit|comp range|draft range|profile|school|notes?)$/.test(normalized);
+}
+
+function isDenseTableHeader(value) {
+    const normalized = normalizeTableHeader(value);
+    return (
+        /^(aav|budget|range|comp range|comparison range|draft range|cap hit|year \d+ cap hit|dead cap|cash|cost|price|bonus|guaranteed|guaranteed money|signing bonus)$/.test(normalized) ||
+        normalized.includes("cap hit") ||
+        normalized.includes("dead cap") ||
+        normalized.includes("comp range") ||
+        normalized.includes("comparison range") ||
+        normalized.endsWith(" range")
+    );
+}
+
+function splitMarkdownTableRow(line) {
+    let working = String(line || "").trim();
+    if (working.startsWith("|")) working = working.slice(1);
+    if (working.endsWith("|")) working = working.slice(0, -1);
+
+    const cells = [];
+    let current = "";
+
+    for (let i = 0; i < working.length; i++) {
+        const char = working[i];
+        const next = working[i + 1];
+
+        if (char === "\\" && (next === "|" || next === "\\")) {
+            current += next;
+            i += 1;
+            continue;
+        }
+
+        if (char === "|") {
+            cells.push(current.trim());
+            current = "";
+            continue;
+        }
+
+        current += char;
+    }
+
+    cells.push(current.trim());
+    return cells;
+}
+
+function isMarkdownTableSeparatorRow(row) {
+    return row.length > 0 && row.every((cell) => /^:?-{3,}:?$/.test(String(cell || "").trim()));
+}
+
+function normalizeTableCells(row, length, fill = "") {
+    return Array.from({ length }, (_, index) => row[index] ?? fill);
+}
+
+function parseMarkdownTableLines(lines) {
+    const tableLines = lines
+        .map((line) => String(line || "").trim())
+        .filter(Boolean)
+        .filter((line) => line.startsWith("|"));
+
+    if (tableLines.length === 0) return null;
+
+    const rawRows = tableLines.map(splitMarkdownTableRow);
+    const hasSeparator = rawRows.length > 1 && isMarkdownTableSeparatorRow(rawRows[1]);
+    const headerRow = rawRows[0];
+    const bodyRows = rawRows
+        .slice(hasSeparator ? 2 : 1)
+        .filter((row) => row.some((cell) => stripTableMarkdown(cell) !== ""));
+    const columnCount = Math.max(headerRow.length, ...bodyRows.map((row) => row.length), 0);
+
+    return {
+        headerRow: normalizeTableCells(headerRow, columnCount),
+        bodyRows: bodyRows.map((row) => normalizeTableCells(row, columnCount)),
+        columnCount,
+        rowCount: bodyRows.length,
+    };
+}
+
+function looksNumericTableCell(value) {
+    const normalized = stripTableMarkdown(value)
+        .replace(/[$,%~≈]/g, "")
+        .replace(/[()]/g, "")
+        .replace(/[–—]/g, "-")
+        .replace(/\s+/g, "")
+        .replace(/m$/i, "")
+        .replace(/aav$/i, "");
+
+    return normalized !== "" && /^[-+]?\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?$/.test(normalized);
+}
+
+function classifyMarkdownTableForInline(table) {
+    if (!table) return { allowInline: true };
+
+    const normalizedHeaders = table.headerRow.map(normalizeTableHeader);
+    const firstHeader = normalizedHeaders[0] || "";
+    const orderedRowCount = table.bodyRows.filter((row) => /^\d+$/.test((row[0] || "").trim())).length;
+    const looksOrdered =
+        /^(priority|rank|ranking|order|no|number)$/.test(firstHeader) ||
+        (table.rowCount > 0 && (orderedRowCount / table.rowCount) >= 0.8);
+    const checklistHeaderCount = normalizedHeaders.filter((header) => isDetailTableHeader(header)).length;
+    const denseHeaders = [...new Set(table.headerRow.filter((header) => isDenseTableHeader(header)))];
+    const nonEmptyCells = table.bodyRows
+        .flat()
+        .map((cell) => stripTableMarkdown(cell))
+        .filter((cell) => cell !== "");
+    const totalCellLength = nonEmptyCells.reduce((sum, cell) => sum + cell.length, 0);
+    const avgCellLength = nonEmptyCells.length > 0 ? totalCellLength / nonEmptyCells.length : 0;
+    const maxCellLength = nonEmptyCells.length > 0 ? Math.max(...nonEmptyCells.map((cell) => cell.length)) : 0;
+
+    const numericComparisonColumns = table.headerRow.reduce((count, _, index) => {
+        if (looksOrdered && index === 0) return count;
+
+        const columnValues = table.bodyRows
+            .map((row) => stripTableMarkdown(row[index] || ""))
+            .filter((value) => value !== "" && value !== "—");
+
+        if (columnValues.length === 0) return count;
+
+        const numericRatio = columnValues.filter(looksNumericTableCell).length / columnValues.length;
+        return count + (numericRatio >= 0.6 ? 1 : 0);
+    }, 0);
+
+    const densityScore =
+        table.columnCount +
+        (numericComparisonColumns * 2) +
+        (denseHeaders.length * 2.5) +
+        (Math.max(0, avgCellLength - 18) / 12) +
+        (Math.max(0, maxCellLength - 72) / 24);
+
+    const isLabelValueTable = table.columnCount <= 2;
+    const isChecklistTable =
+        table.columnCount <= 4 &&
+        (looksOrdered || checklistHeaderCount > 0) &&
+        denseHeaders.length === 0 &&
+        numericComparisonColumns <= 1 &&
+        avgCellLength <= 70;
+    const isShortScannableTable =
+        table.columnCount <= 3 &&
+        denseHeaders.length === 0 &&
+        numericComparisonColumns <= 1 &&
+        avgCellLength <= 32 &&
+        maxCellLength <= 90;
+
+    return {
+        allowInline:
+            isLabelValueTable ||
+            isChecklistTable ||
+            isShortScannableTable ||
+            densityScore < 7.5,
+        densityScore,
+        avgCellLength,
+        numericComparisonColumns,
+        denseHeaders,
+    };
+}
+
+function assertInlineTableAllowed(table, lineNumber) {
+    const classification = classifyMarkdownTableForInline(table);
+    if (classification.allowInline) return;
+
+    const reasons = [];
+    if (table.columnCount >= 5) reasons.push(`${table.columnCount} columns`);
+    if (classification.denseHeaders.length > 0) {
+        reasons.push(`comparison/finance headers like ${classification.denseHeaders.map((header) => `"${header}"`).join(", ")}`);
+    }
+    if (classification.numericComparisonColumns >= 2) {
+        reasons.push(`${classification.numericComparisonColumns} numeric comparison columns`);
+    }
+    if (classification.avgCellLength >= 36) {
+        reasons.push(`average cell length of ${Math.round(classification.avgCellLength)} characters`);
+    }
+    if (reasons.length === 0) {
+        reasons.push(`density score ${classification.densityScore.toFixed(1)}`);
+    }
+
+    const headerPreview = table.headerRow
+        .map((header) => stripTableMarkdown(header))
+        .filter(Boolean)
+        .slice(0, 4)
+        .join(" | ");
+
+    throw new Error(
+        `Dense markdown table blocked near body line ${lineNumber}${headerPreview ? ` (${headerPreview})` : ""}. ` +
+        `Substack's inline list conversion would likely lose layout meaning (${reasons.join(", ")}). ` +
+        "Render it with render_table_image first, then replace the markdown table with the returned image markdown before publishing."
+    );
 }
 
 function buildLabeledTableParagraph(label, value) {
@@ -660,19 +858,11 @@ function buildTableListItem(row, headerRow, ordered) {
 
 // Substack has no reliable HTML-table path for this workflow, so we transform
 // markdown tables into structured lists that keep label/value pairs scannable.
-function parseTable(lines) {
-    // Filter out separator rows (|---|---|)
-    const dataRows = lines.filter((l) => !l.match(/^\|[\s\-:|]+\|$/));
-    if (dataRows.length < 1) return null;
+function parseTable(input) {
+    const table = Array.isArray(input) ? parseMarkdownTableLines(input) : input;
+    if (!table) return null;
 
-    const cells = dataRows.map((row) =>
-        row
-            .split("|")
-            .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
-            .map((c) => c.trim().replace(/\*\*/g, ""))
-    );
-
-    const [headerRow, ...bodyRows] = cells;
+    const { headerRow, bodyRows } = table;
     if (bodyRows.length === 0) {
         return buildParagraph([
             { type: "text", text: headerRow.join(" · "), marks: [{ type: "bold" }] },

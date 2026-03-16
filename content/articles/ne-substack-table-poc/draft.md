@@ -73,3 +73,4 @@ The likely long-term answer is mixed:
 - use improved inline conversion for short ranking or checklist-style tables
 - use rendered images for denser tables where layout and contrast carry meaning
 - pair image tables with a one-paragraph takeaway so they remain accessible and skimmable
+- keep Datawrapper out of the core MVP path; it is optional for special cases, but email fidelity and deterministic local rendering are the default priorities
