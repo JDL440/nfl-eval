@@ -2119,3 +2119,65 @@ The extension guard is correct and catches the error safely. But it catches at t
 **Secondary Recommendation:**
 Update publisher-pass.md on successful \publish_to_substack\ call to reflect actual outcome (draft URL, timestamp, any errors). Consider adding "Step 5a — Update publisher-pass.md on success" to Publisher skill.
 
+
+---
+
+## 2026-03-16: Dense Table Cleanup Moves Earlier in Pipeline (IMPLEMENTED)
+
+**By:** Lead (Lead / GM Analyst)
+**Date:** 2025-07-25 (original) / 2026-03-16 (Phase 2 completion)
+**Status:** ✅ Implemented — All Stage 7 drafts cleaned
+**Affects:** All articles, Writer skill, Editor skill, Publisher Pass, Ralph workflow
+
+### Context
+
+Dense markdown tables (financial comparisons, multi-column cap data) were only caught at publish time by the Substack publisher's density classifier. This caused two problems:
+1. Dense tables blocked publishing — publish_to_substack throws an error, requiring manual intervention
+2. No local preview — simple tables that pass the density check get silently converted to bullet lists on Substack, with no way to see the result before publishing
+
+### Decision
+
+Table density auditing and remediation now happen **before Stage 7 publish**, not during it.
+
+**Pipeline Tools:**
+- 
+ode audit-tables.mjs — Classify all tables in Stage 7 drafts before publish attempt
+- 
+ode fix-dense-tables.mjs — Batch-render all blocked tables to PNG
+- 
+ode audit-tables.mjs --slug {slug} — Single-article audit during writing/editing
+
+**Classification Tiers:**
+- ✅ OK (density < 5.5): Will inline as bullet/ordered list
+- ⚠️ Borderline (density 5.5–7.4): Will inline but may look rough — pre-render for editorial quality
+- 🚫 Blocked (density ≥ 7.5): Must be rendered to PNG before publishing
+
+**Stage Placement:**
+1. Writer (Stage 5): Use ender_table_image for any dense table during drafting
+2. Editor (Stage 6): Run udit-tables.mjs --slug {slug} to flag remaining dense tables
+3. **Pre-Publish (Stage 7):** Run ix-dense-tables.mjs as batch safety net before publish_to_substack
+4. Publisher Extension (Stage 7): Density guard as final backstop
+
+### Implementation Phases
+
+**Phase 1 (prior session):** BLOCKED tables
+- 25 blocked tables across 11 Stage 7 articles rendered and replaced
+- udit-tables.mjs and ix-dense-tables.mjs committed to repo root
+- Both tools use same density classifier as Substack publisher extension
+- ix-dense-tables.mjs imports enderer-core.mjs directly (no SDK dependency)
+
+**Phase 2 (2026-03-16):** BORDERLINE tables — COMPLETED
+- Lowered ix-dense-tables.mjs threshold from ≥ 7.5 to ≥ 5.5
+- 20 borderline tables across 14 articles rendered and replaced
+- Post-fix audit: **0 borderline, 0 blocked** across all 22 Stage 7 articles
+- Table image count: 40 → 60 total rendered images
+- All remaining 108 inline tables are low-density and will convert cleanly
+
+**Articles Fixed (Phase 2):**
+jsn-extension-preview (1), buf-2026-offseason (1), ari-2026-offseason (2), car-2026-offseason (1), dal-2026-offseason (2), den-2026-offseason (1), gb-2026-offseason (1), hou-2026-offseason (3), jax-2026-offseason (1), lar-2026-offseason (1), ne-maye-year2-offseason (1), nyg-2026-offseason (2), sf-2026-offseason (1), wsh-2026-offseason (2)
+
+### Impact
+
+✅ All Stage 7 drafts are table-safe for publishing
+✅ No blocked or borderline cases remain in backlog
+✅ Publisher skill can reference table cleanup as pre-publish prerequisite

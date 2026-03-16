@@ -25,6 +25,24 @@
 
 ---
 
+## Stage 7 Table Cleanup — Phase 2 Complete (2026-03-16)
+
+**Outcome:** Dense table cleanup for all 22 Stage 7 drafts completed successfully.
+
+**What was done:**
+- Lowered `fix-dense-tables.mjs` threshold from density ≥ 7.5 (BLOCKED only) to ≥ 5.5 (BORDERLINE + BLOCKED)
+- Batch-processed all 22 Stage 7 articles
+- Fixed 20 borderline tables across 14 articles
+- Post-fix audit: 0 borderline, 0 blocked — all 108 remaining inline tables are clean (< 5.5 density)
+
+**Key change:** Table cleanup moved **earlier in pipeline** — now a pre-publish local step via `fix-dense-tables.mjs` (Stage 7), not a post-audit catch. This ensures drafts are always table-safe before Publisher Pass.
+
+**Articles affected (Phase 2):** jsn-extension-preview, buf-2026-offseason, ari-2026-offseason, car-2026-offseason, dal-2026-offseason, den-2026-offseason, gb-2026-offseason, hou-2026-offseason, jax-2026-offseason, lar-2026-offseason, ne-maye-year2-offseason, nyg-2026-offseason, sf-2026-offseason, wsh-2026-offseason
+
+**Impact:** Decision `.squad/decisions/inbox/lead-stage7-tables.md` fully implemented. All Stage 7 drafts ready for publishing. No blocked or borderline cases remain.
+
+---
+
 ## Learnings
 
 **Article:** `jsn-extension-preview` — "Jaxon Smith-Njigba's Contract Is Coming. Here Are the 4 Paths Seattle Can Take."
