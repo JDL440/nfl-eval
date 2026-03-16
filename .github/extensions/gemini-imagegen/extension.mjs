@@ -45,12 +45,13 @@ function loadEnv() {
 
 // ─── Gemini API ──────────────────────────────────────────────────────────────
 
-// Model priority: Imagen 4 for highest quality editorial images.
-// Falls back to Gemini Flash if Imagen unavailable.
-// Note: Gemini Flash tends to produce better athlete likenesses; Imagen 4 is
-// higher quality for abstract/atmospheric shots. Both produce people fine.
-const IMAGEN_MODEL = "imagen-4.0-generate-001";
-const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview";
+// Model priority: Imagen 4 Ultra for highest quality editorial images.
+// Falls back to Gemini 3 Pro Image if Imagen unavailable.
+// Available Imagen tiers: ultra (best quality), standard, fast.
+// Available Gemini image models: gemini-3-pro-image-preview (best),
+//   gemini-3.1-flash-image-preview, gemini-2.5-flash-image.
+const IMAGEN_MODEL = "imagen-4.0-ultra-generate-001";
+const GEMINI_IMAGE_MODEL = "gemini-3-pro-image-preview";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 async function generateWithImagen3(prompt, apiKey, count, aspectRatio) {
@@ -137,12 +138,14 @@ function buildImagePrompt(imageType, context) {
     const playerStr = players?.length ? `featuring ${players.join(", ")}` : "";
 
     const styleGuide = [
-        "Editorial sports photography style.",
-        "High contrast, dramatic lighting.",
+        "Photorealistic photograph, not an illustration or digital art.",
+        "High contrast, dramatic natural lighting.",
         "NFL football aesthetic — stadium atmosphere, team colors, intensity.",
-        "No text, logos, watermarks, or numbers overlaid on the image.",
+        "No text, logos, watermarks, or numbers anywhere in the image.",
         "Cinematic composition, widescreen feel.",
-        "Professional quality suitable for a sports blog header.",
+        "Professional quality suitable for a sports editorial publication.",
+        "Shot on a full-frame DSLR. Natural color grading, realistic film grain.",
+        "No oversaturation, no neon glow, no fantasy lighting.",
     ].join(" ");
 
     if (imageType === "cover") {
@@ -152,7 +155,7 @@ function buildImagePrompt(imageType, context) {
             `Subject: ${teamStr} ${playerStr}.`,
             styleGuide,
             "Wide aspect ratio. Hero image that captures the emotional core of the article.",
-            "Abstract or atmospheric interpretation encouraged — not literal.",
+            "Abstract or atmospheric interpretation — not literal. No people or faces visible.",
         ].filter(Boolean).join(" ");
     }
 
@@ -162,7 +165,8 @@ function buildImagePrompt(imageType, context) {
             `Context: ${articleSummary || articleTitle}.`,
             `Subject: ${teamStr} ${playerStr}.`,
             styleGuide,
-            "Wide 16:9 landscape format. Banner-style image that breaks up body text without overwhelming it on mobile.",
+            "Wide 16:9 landscape format. Banner-style image that breaks up body text.",
+            "No people or faces visible. Focus on atmosphere, environment, and objects.",
         ].filter(Boolean).join(" ");
     }
 
