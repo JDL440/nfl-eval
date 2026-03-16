@@ -1,8 +1,8 @@
-iteration: 5
+iteration: 7
 status: in_progress
 current_item: 44
-completed_items: [44:stage:review]
-last_stage: stage:review
-follow_on_issue: none
-follow_on_target_date: none
-notes: Completed Stage 6 (Editor Pass) for MIA issue #44. Editor issued 🟡 REVISE verdict, all required fixes applied (LAR dead cap data corrected, Calais Campbell age fixed, 2 image placeholders added). Article ready for Stage 7 (Publisher Pass).
+completed_items: [44:stage:published]
+last_stage: stage:published
+follow_on_issue: 45
+follow_on_target_date: 2026-03-19
+notes: Completed Stage 7 (Publisher Pass) for MIA issue #44. Article "$99 Million Ghost: How Miami Rebuilds With the Largest Dead Cap Hit in NFL History" is documented as ready for Stage 8 (Joe's manual publish). Publisher pass checklist completed and saved to publisher-pass.md. Follow-on issue #45 (NYJ - Jets' #2 and #16 picks QB decision) confirmed with target publish date Thursday 2026-03-19. GitHub issue #44 updated to stage:published.
