@@ -337,3 +337,25 @@ _Last updated: 2026-03-13_
 📌 Media update (2026-03-13): Maxx Crosby trade to BAL **VOIDED** (failed physical). Crosby remains on roster but trade market reopens. Signed Jalen Nailor (3yr/$35M WR), Connor Heyward (2yr TE/FB).
 
 📌 Media update (2026-03-14): Signed Tyler Linderbaum (C, 3yr/$81M) + Dareke Young (WR). Traded Geno Smith + Taron Johnson to NYJ. OL rebuild around expected #1 pick Mendoza.
+
+---
+
+### Session Log — 2026-03-16: Issue #57 Idea Generation
+
+**Task:** Generated article angle for LV 2026 offseason article (issue #57).
+
+**Angle chosen:** "The Crosby Paradox — How a Voided Trade Rewrote the Raiders' Entire Rebuild"
+- Core tension: Is keeping Crosby actually worse for a rebuilding franchise than losing him?
+- Score: 12/12. Suggested panel: Cap + LV + Defense.
+
+**Key findings during research:**
+6. **Crosby trade voided — confirmed:** Failed physical with BAL due to meniscus surgery (Jan 2026). Crosby remains on roster. BAL signed Trey Hendrickson as replacement. Trade calls from other teams are ongoing but compensation likely lower.
+7. **Draft capital loss is real:** No #14 pick (2026) and no 2027 R1. Drops from ~11 picks to ~9, and from two first-rounders to one. Only #1 overall remains as a premium asset.
+8. **Cap squeeze confirmed:** Crosby's $35.8M cap hit back on books. Cap space ~$37-51M (source-dependent) but significantly tighter than planned. Still manageable but constrains additional moves.
+9. **Paye signing creates roster redundancy:** Signed 3yr/$48M as Crosby replacement BEFORE trade voided. Now the Raiders have both at combined $47M+ in edge rusher cap hits — unusual for a rebuilding team.
+10. **Tom Brady involvement noted:** Multiple sources mention Tom Brady's role in the Raiders ownership/front office structure. Monitor for article relevance.
+11. **Kubiak scheme still fits Mendoza:** Confirmed by current reporting — play-action, zone-run, bootleg offense designed around Mendoza's strengths. Linderbaum signing is scheme-critical.
+
+**Stage reached:** Stage 1 (Idea Generation) → ✅ Complete
+**Artifact:** `content/articles/lv-2026-offseason/idea.md`
+**Next step:** Stage 2 (Discussion Prompt) — Lead writes structured brief with panel questions.
