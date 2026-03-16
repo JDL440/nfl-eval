@@ -267,4 +267,91 @@ CONTENT CONSTRAINT (2026-03-15): Politically divisive topics are strictly off-li
 
 **Decision filed:** `.squad/decisions/inbox/lead-article-process-guards.md`
 
+### Idea Generation Process Fix — Current Data Required (2026-03-15)
+
+**Problem:** The 30 NFL team issues were created with pre-written stale angles. Root cause: Lead was doing idea generation UP FRONT without current research, baking in assumptions from training data (at least one season out of date).
+
+**Example failures:**
+- QB situations referenced wrong year (e.g., treating 2024 starters as current when coaching changes happened in 2025)
+- Cap figures from wrong offseason window
+- Angles framed around "Year N" player development when the player was actually in Year N+1
+
+**Root cause diagnosis:**
+1. Batch issue creation asked Lead to generate 30 ideas all at once
+2. Lead used a cheaper model (to save tokens) without fetching current data
+3. The model relied on training data (last updated mid-2025 at best)
+4. Stale angles got committed to GitHub issues, locking in wrong assumptions
+
+**The fix: Issues must be generic triggers, and idea generation must happen as the FIRST STEP of the pipeline using a top model with real research.**
+
+**Process updates implemented:**
+
+1. **`.squad/skills/idea-generation/SKILL.md`:**
+   - Updated to mandate **`claude-opus-4.6`** for all idea generation (non-negotiable)
+   - Added "Current Context — REQUIRED Before Generating Any Idea" section
+   - Specific data sources to fetch: OTC cap page, ESPN roster, news search for "{team} 2026 offseason"
+   - "Year Accuracy Gate" checklist — confirms 2026 offseason framing, 2025 season stats, 2026 cap year
+   - Clear distinction: NEW process (issue-triggered idea gen) vs. OLD process (general ideation)
+
+2. **`.squad/agents/lead/charter.md`:**
+   - Added "Step 1b: Idea Generation (when issue says 'IDEA GENERATION REQUIRED')" to GitHub Issue → Article Pipeline protocol
+   - Mandates reading idea-generation skill first
+   - Requires fetching current data before generating any angle
+   - Must post generated idea as GitHub comment before proceeding with pipeline
+   - Model requirement: ALWAYS `claude-opus-4.6` (non-negotiable)
+
+3. **`.squad/templates/team-article-issue.md`:**
+   - New template for generic team article issues
+   - Issue body contains "IDEA GENERATION REQUIRED" flag instead of pre-written angle
+   - Clear instruction: fetch current data, don't rely on training data alone
+   - Example issue for reference (Buffalo Bills)
+
+4. **`.squad/skills/article-lifecycle/SKILL.md`:**
+   - Added "GitHub Issue-Triggered Idea Generation (NEW)" subsection to Stage 1
+   - Documents the Step 1b process (read skill → fetch data → generate → comment → continue)
+   - Rationale: 30-team batch revealed stale angle problem
+   - Model requirement documented
+
+**Why this matters:**
+- Training data is ALWAYS at least one season behind for NFL content
+- QB changes, coaching staff turnover, cap situations, draft positions all shift every offseason
+- Pre-written angles lock in stale assumptions that can't be corrected mid-pipeline
+- Top-tier models are necessary for idea generation because cheaper models hallucinate plausible-sounding but factually wrong angles
+- Real-time research (OTC, ESPN, news) ensures current context
+
+**Pattern:** Idea generation is NOT a bulk batch task. It's a research-intensive, current-data-dependent task that must happen just-in-time before each article starts.
+
+**Decision filed:** `.squad/decisions/inbox/lead-idea-generation-skill.md`
+
+### NFC West Pipeline Batch — LAR + SF Discussion Panels (2026-03-16)
+
+**Articles advanced:** Two NFC West articles moved from idea-generation through full panel discussion in a single pass.
+
+**Article: LAR — `lar-2026-offseason` (Issue #41)**
+- **Angle:** Rams' record-breaking secondary overhaul (McDuffie $124M, Watson $51M, Curl $36M) as Stafford's last dance
+- **Panel:** LAR, Cap, Defense, Draft (4 agents, Depth 2, claude-opus-4.6)
+- **Consensus:** Unanimous Path 1 (Full Send). All four agents independently arrived at all-in.
+- **Key debate:** OT vs. EDGE at #13. Lead synthesis: EDGE (completes defensive feedback loop).
+- **Non-obvious findings:** Kingsbury hire targeting Seattle matchup; synchronized cap bomb (all three secondary contracts escalate in 2027 when Stafford exits); LB-deep class suppressing EDGE values at #13.
+- **Artifacts:** discussion-prompt.md, 4 position files, discussion-summary.md
+
+**Article: SF — `sf-2026-offseason` (Issue #42)**
+- **Angle:** 49ers' two-front rebuild — Bosa brothers reunion + Evans replacing entire WR corps
+- **Panel:** SF, Cap, Defense, Offense (4 agents, Depth 2, claude-opus-4.6)
+- **Consensus:** Unanimous sign Joey Bosa. Path 2 (Joey + draft EDGE insurance) from 3 of 4 agents.
+- **Key debate:** #27 pick — EDGE/IDL insurance vs. OT succession for Williams (38, $38M+).
+- **Non-obvious findings:** Morris' 3-4 scheme eases Bosa ACL return; Evans deal at $0 GTD is smartest contract of offseason; Jennings loss > Aiyuk loss for on-field impact; dead money clearing in 2027 is SF's lifeline.
+- **Artifacts:** discussion-prompt.md, 4 position files, discussion-summary.md
+
+**What worked:**
+- Running 8 panel agents in parallel (4 per article) kept wall time under ~4 minutes per panel
+- Both discussion prompts built with specific data anchors produced sharp, disagreement-generating positions
+- Per-panelist focus instructions prevented overlap (no duplicate analysis between Cap and team agents)
+- The skill template (article-discussion) held up across two different article structures
+
+**Pattern confirmed:**
+- Batch processing works for NFC West pipeline — running 2 articles simultaneously with parallel panels is efficient and produces quality output
+- Depth Level 2 panels (4 agents each) hit the sweet spot: enough perspectives for tension without redundancy
+- The "competing emergencies" framing (e.g., EDGE vs. OT at #27 for SF) creates natural article tension better than single-issue prompts
+
 
