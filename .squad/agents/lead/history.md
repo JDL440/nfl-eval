@@ -573,3 +573,16 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 ## Panel: seahawks-rb-pick64-v2 (Issue #71)
 
 📌 **Team update (2026-03-16T07:49:26Z):** RB at #64 evaluation complete. Consensus: Pass on RB due to CB/EDGE priority, despite scheme preference and manageable medical risk. Decision drivers: positional hierarchy (SEA), fair value not a steal (CollegeScout), insufficient medical urgency alone (Injury), scheme preference overridden (Offense).
+
+---
+
+## Session: Seahawks RB Pick #64 v2 — Discussion Summary
+**Date:** 2026-03-16
+**Task:** Synthesize Stage 4 panel discussion into discussion-summary.md for issue #71.
+**Panel:** SEA, Injury, CollegeScout, Offense (4 agents).
+**Outcome:** 1 firm no (SEA), 2 conditionals (Injury, CollegeScout), 1 firm yes (Offense). Lead called Path 2 hybrid — redirect #64 to EDGE/CB, address RB at #96 or veteran market. Core disagreement: need severity vs. scheme survival. v1's "steal" narrative debunked by CollegeScout (ADP risen to ~53-58). Writer handoff includes headline direction, narrative tension, overclaim guardrails, and 5 key takeaways.
+
+## Learnings
+- **Disagreement framing matters more than resolution.** The 3-vs-1 split was clear, but the article is stronger because Offense's dissent is preserved and respected. Don't flatten minority positions — they create the narrative tension Writer needs.
+- **v1→v2 regeneration benefits from explicitly killing dead narratives.** CollegeScout's correction of the "first-round talent at a discount" framing was the panel's sharpest contribution. Writer needs explicit permission to abandon v1 claims.
+- **Medical timelines are the emotional engine, not the logical engine.** Injury's coin-flip framing (35-45% Week 1) creates urgency the reader feels, even though the Lead call is to address RB elsewhere. Let the urgency breathe in the article while the logic redirects the pick.

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [int]$MaxIterations = 10,
+    [int]$MaxIterations = 100,
     [int]$TimeoutSeconds = 900,
     [string]$TargetRepo = ""
 )
@@ -60,6 +60,28 @@ function Ensure-RequiredFiles {
         Write-Host "Error: Prompt file not found: $PromptFile" -ForegroundColor Red
         exit 1
     }
+}
+
+function Get-RenderedPrompt {
+    param(
+        [string]$PromptFile,
+        [string]$TargetRepo,
+        [string]$ProgressFile
+    )
+
+    $prompt = Get-Content -Path $PromptFile -Raw
+    $runtimeContext = @"
+Execution context (from ralph.ps1):
+- Repository root: $TargetRepo
+- Current working directory for this run: $TargetRepo
+- Progress file to read and update every iteration: $ProgressFile
+- Operate only inside this repository. Do not inspect or act in any other repository.
+"@.Trim()
+
+    $prompt = $prompt.Replace("{{TARGET_REPO}}", $TargetRepo)
+    $prompt = $prompt.Replace("{{PROGRESS_FILE}}", $ProgressFile)
+
+    return $runtimeContext + "`r`n`r`n" + $prompt
 }
 
 function Initialize-ProgressFile {
@@ -298,6 +320,7 @@ function Run-Iteration {
     param(
         [int]$Iteration,
         [int]$MaxIterations,
+        [string]$TargetRepo,
         [string]$ProgressFile,
         [string]$PromptFile,
         [int]$TimeoutSeconds
@@ -310,12 +333,13 @@ function Run-Iteration {
     Update-Iteration -ProgressFile $ProgressFile -Iteration $Iteration
     Reset-IterationMetadata -ProgressFile $ProgressFile
 
-    $prompt = Get-Content -Path $PromptFile -Raw
+    $prompt = Get-RenderedPrompt -PromptFile $PromptFile -TargetRepo $TargetRepo -ProgressFile $ProgressFile
     
     Write-Host "  Agent: $Agent" -ForegroundColor Cyan
     Write-Host "  Model: $Model" -ForegroundColor Cyan
+    Write-Host "  Repo cwd: $TargetRepo" -ForegroundColor Cyan
     Write-Host "  Prompt length: $($prompt.Length) characters" -ForegroundColor Cyan
-    Write-Host "  Mode: --yolo --agent $Agent (autonomous)" -ForegroundColor Cyan
+    Write-Host "  Mode: --yolo (autonomous)" -ForegroundColor Cyan
     Write-Host "  Timeout: $TimeoutSeconds seconds" -ForegroundColor Cyan
     Write-Host ""
 
@@ -325,10 +349,9 @@ function Run-Iteration {
         # Start process with output capture
         $processInfo = New-Object System.Diagnostics.ProcessStartInfo
         $processInfo.FileName = "copilot"
+        $processInfo.WorkingDirectory = $TargetRepo
         # Use ArgumentList to properly handle arguments with spaces
         $processInfo.ArgumentList.Add("--yolo")
-        $processInfo.ArgumentList.Add("--agent")
-        $processInfo.ArgumentList.Add($Agent)
         $processInfo.ArgumentList.Add("--model")
         $processInfo.ArgumentList.Add($Model)
         $processInfo.ArgumentList.Add("--prompt")
@@ -530,7 +553,7 @@ while ($iteration -le $MaxIterations) {
         exit 0
     }
 
-    if (-not (Run-Iteration -Iteration $iteration -MaxIterations $MaxIterations -ProgressFile $ProgressFile -PromptFile $PromptFile -TimeoutSeconds $TimeoutSeconds)) {
+    if (-not (Run-Iteration -Iteration $iteration -MaxIterations $MaxIterations -TargetRepo $TargetRepo -ProgressFile $ProgressFile -PromptFile $PromptFile -TimeoutSeconds $TimeoutSeconds)) {
         Write-Host "Iteration $iteration failed. Check logs and retry." -ForegroundColor Red
         exit 1
     }
