@@ -372,3 +372,33 @@ _Last updated: 2026-03-12_
 - McDaniel hiring is the most significant schematic change — expect dramatically different offense in 2026
 
 📌 Media update (2026-03-14): Signed Dalvin Tomlinson (DT, 1yr/$7.5M). Run-stuffing DL depth addition.
+
+---
+
+### Article Work — Issue #56
+
+#### 2026-03-16: Idea Generation (Stage 1) ✅
+
+**Issue:** #56 — Article: LAC - Los Angeles Chargers — 2026 Offseason
+**Stage reached:** Stage 1 — Idea Generated → `stage:idea` + `go:yes`
+
+**Chosen angle:** "The McDaniel Gambit: Can the Chargers Arm Herbert Before His Cap Hit Explodes?"
+
+**Core tension:** Herbert's escalating cap ($46M→$58M→$71M) creates a 2-3 year building window. McDaniel was hired to fix the offense that scored 3 pts in the WC loss. But no WR1 on roster, Oweh lost to WAS, only 5 draft picks. Meanwhile AFC West is the most open it's been in a decade (KC gutted secondary, DEN lost JFM, LV in full rebuild). Do they trade for A.J. Brown and go all-in or build through draft?
+
+**Idea score:** 12/12 — highest possible on rubric (relevance, timeliness, reader value, uniqueness all max)
+
+**Artifacts:**
+- Issue #56 body updated with angle, suggested panel, stage tracker
+- Detailed research comment posted with sourced data points
+- Labels: removed `go:needs-research`, added `stage:idea`, `go:yes`
+
+**Recommended panel:** LAC + Cap + Offense (3 agents, Depth Level 2)
+
+**Next step:** Stage 2 — Discussion Prompt (Lead builds structured brief)
+
+**Learnings:**
+- web_search is sufficient for idea generation research — produces current FA tracker, draft analysis, scheme breakdown, and division landscape without needing individual page fetches
+- Herbert's cap escalation is the single strongest framing device for any Chargers offseason article — it creates automatic urgency and a decision clock
+- The A.J. Brown trade rumors add a concrete "fork in the road" that gives readers a tangible decision to engage with
+- KC's secondary losses are the best AFC West comparison point — concrete, verifiable, and directly relevant to LAC's pass-first ambitions under McDaniel
