@@ -602,3 +602,27 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 2. Updated `.squad/identity/now.md` — session focus shifted from "interactive article creation" to "maximum-throughput Ralph pipeline."
 
 **Key learning:** The "one stage per iteration" rule was correct for initial pipeline validation but became the primary bottleneck once the pattern was proven. Parallel execution is cost-neutral (same total tokens) but cuts wall-clock time by 3-4×. The only real serialization constraint is intra-article stage ordering — cross-article work is always independent.
+
+### State/Reconciliation Core Implementation (2026-03-16)
+
+**Task:** Implement shared state layer + artifact-first reconciliation for article orchestration.
+
+**Architecture decisions:**
+- `content/pipeline_state.py` is the single write gateway for all pipeline.db mutations. Validates numeric stages (1-8), logs stage_transitions, handles editor reviews, publisher pass, and publish confirmation.
+- `content/article_board.py` infers true article stage from local artifacts using strict precedence: publisher-pass.md > editor-review.md > draft.md > discussion-summary > panel outputs > idea.md > DB fallback. Includes dry-run reconciliation and `--repair` mode.
+- Ralph prompt rewritten from one-at-a-time to sweep-all-unblocked-lanes. Uses artifact-first discovery, not label-first selection.
+- Labels remain visibility mirrors, not scheduler inputs.
+- Publisher extension writeback intentionally left as TODO — calling agent uses pipeline_state.py after extension returns. Avoids cross-process DB conflicts.
+
+**Key file paths:**
+- `content/pipeline_state.py` — shared DB write helper
+- `content/article_board.py` — artifact-first board reader + reconciler
+- `ralph/prompt.md` — autonomous sweep prompt (max-throughput)
+- `.github/workflows/squad-heartbeat.yml` — now includes pipeline reconciliation step
+
+**Reconciliation findings (dry-run):**
+- 38 discrepancies detected: 1 string-valued stage (jsn-extension-preview), 3 stage drifts (buf, mia, seahawks-rb-pick64-v2), 26 missing DB rows, 2 missing editor reviews
+- Board correctly infers stage for all 38 article directories
+- Editor verdict parsing covers: `## Verdict: [emoji] VERDICT`, `### [emoji] VERDICT`, `**VERDICT**` patterns
+
+**Pattern:** When building pipeline state helpers, separate reads (article_board.py) from writes (pipeline_state.py) and make the reader filesystem-first. This prevents the common failure mode where DB is stale but the system trusts it over actual artifacts.
