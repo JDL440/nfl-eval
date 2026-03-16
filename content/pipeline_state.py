@@ -55,7 +55,6 @@ class PipelineState:
         if not os.path.exists(self.db_path):
             raise FileNotFoundError(f"pipeline.db not found at {self.db_path}")
         self._conn = sqlite3.connect(self.db_path)
-        self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.row_factory = sqlite3.Row
 
     def close(self):

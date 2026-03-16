@@ -1080,11 +1080,16 @@ const session = await joinSession({
 
                     // Derive article slug from file path for writeback
                     // e.g. content/articles/jsn-extension-preview/draft.md → jsn-extension-preview
+                    //      content/articles/ari-2026-offseason.md → ari-2026-offseason
                     const pathParts = args.file_path.replace(/\\/g, "/").split("/");
                     const draftIdx = pathParts.indexOf("articles");
-                    const articleSlug = draftIdx >= 0 && draftIdx + 1 < pathParts.length
+                    let articleSlug = draftIdx >= 0 && draftIdx + 1 < pathParts.length
                         ? pathParts[draftIdx + 1]
                         : null;
+                    // Strip trailing .md for flat files
+                    if (articleSlug && articleSlug.endsWith(".md")) {
+                        articleSlug = articleSlug.slice(0, -3);
+                    }
 
                     // ── Pipeline DB writeback (Stage 7) ──────────────────
                     // The calling agent (Lead / Ralph) MUST update pipeline.db
