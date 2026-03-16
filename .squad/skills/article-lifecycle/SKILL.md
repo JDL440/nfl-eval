@@ -567,10 +567,25 @@ Every article has a row in `content/pipeline.db`. Agents MUST update it at each 
 
 ### Agent Write Pattern
 
+**Preferred:** Use the shared helper at `content/pipeline_state.py` for all DB writes. This validates numeric stages, logs transitions, and prevents drift.
+
 ```python
-import sqlite3, os
-conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), '../../content/pipeline.db'))
-# or from repo root:
+from content.pipeline_state import PipelineState
+
+ps = PipelineState()                           # auto-finds content/pipeline.db
+ps.advance_stage('slug', from_stage=3, to_stage=4, agent='Lead')
+ps.set_discussion_path('slug', 'content/articles/slug/discussion-summary.md')
+ps.set_article_path('slug', 'content/articles/slug/draft.md')
+ps.record_editor_review('slug', 'REVISE', errors=2, suggestions=3)
+ps.record_publisher_pass('slug', title_final=1, body_clean=1, tags_set=1)
+ps.record_publish('slug', 'https://nfllab.substack.com/p/slug')
+ps.close()
+```
+
+**Fallback (only if import unavailable):**
+
+```python
+import sqlite3
 conn = sqlite3.connect('content/pipeline.db')
 ```
 
@@ -589,7 +604,15 @@ conn = sqlite3.connect('content/pipeline.db')
 
 ### Stage transition helper
 
-Every stage change also inserts a row in `stage_transitions`:
+Every stage change also inserts a row in `stage_transitions`. Prefer `PipelineState.advance_stage()` which handles this automatically:
+
+```python
+from content.pipeline_state import PipelineState
+ps = PipelineState()
+ps.advance_stage(article_id, from_stage=5, to_stage=6, agent='Editor', notes='Editor review complete')
+```
+
+**Manual fallback** (only if helper unavailable):
 
 ```python
 # Use numeric stages (1-8) consistently
@@ -605,7 +628,9 @@ conn.execute(
 conn.commit()
 ```
 
-**Artifact-first discovery:** When determining the current state of an article, check local artifacts first (published proof > `publisher-pass.md` > `editor-review.md` > `draft.md` > discussion outputs), then reconcile DB state to match filesystem reality. The DB is the ledger; the filesystem is the source of truth for what work has been completed.
+**Artifact-first discovery:** When determining the current state of an article, use `python content/article_board.py actions` to get the prioritized next-action queue. The board checks local artifacts first (published proof > `publisher-pass.md` > `editor-review.md` > `draft.md` > discussion outputs), then reconciles DB state to match filesystem reality. The DB is the ledger; the filesystem is the source of truth for what work has been completed.
+
+**Reconciliation:** Run `python content/article_board.py reconcile` for a dry-run drift report. Use `python content/article_board.py --repair` to fix DB discrepancies (logs all repairs in `stage_transitions`).
 
 ### Visualization
 

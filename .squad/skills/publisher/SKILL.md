@@ -103,6 +103,25 @@ publish_to_substack(
 
 The tool returns a direct Substack editor URL.
 
+### Step 5b — Record Stage 7 in Pipeline DB
+
+After `publish_to_substack` returns successfully, record the publisher pass and stage transition:
+
+```python
+from content.pipeline_state import PipelineState
+
+ps = PipelineState()
+ps.advance_stage('{slug}', from_stage=6, to_stage=7, agent='Publisher',
+                 notes='Publisher pass complete. Draft URL: {url}')
+ps.record_publisher_pass('{slug}',
+    title_final=1, subtitle_final=1, body_clean=1,
+    section_assigned=1, tags_set=1, url_slug_set=1,
+    names_verified=1, numbers_current=1, no_stale_refs=1)
+ps.close()
+```
+
+**Note:** The `publish_to_substack` extension does NOT write back to pipeline.db. The calling agent (Lead or Publisher) is responsible for this step using the shared helper.
+
 ### Step 6 — Hand Off to Joe
 
 Post the following to the article thread:
