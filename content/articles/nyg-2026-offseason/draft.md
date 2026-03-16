@@ -47,6 +47,9 @@ The team expert on our panel kept coming back to the same tension: **the Giants 
 
 This is where the anti-Styles argument gets serious. The Giants are not entering the draft with a broken defense that desperately needs a blue-chip savior. They already used free agency to do the heavy lifting.
 
+![New York Giants Ravens South build — inline image 1|New York Giants offseason analysis](../../images/nyg-2026-offseason/nyg-2026-offseason-inline-1.jpg)
+
+
 | Defensive investment / structure | Why it matters |
 |----------------------------------|----------------|
 | **Paulson Adebo** | Gives New York a legitimate outside corner investment |
@@ -100,6 +103,9 @@ Cap's best framing was that **cap space is a melting ice cube**. In plain Englis
 ## The Styles Case Makes Sense Only if You Think Dart Can Wait
 
 To be fair to the defense-first argument, it is not stupid. It is coherent. It just comes with a hidden assumption.
+
+![New York Giants Ravens South build — inline image 2|New York Giants offseason analysis](../../images/nyg-2026-offseason/nyg-2026-offseason-inline-2.jpg)
+
 
 The case goes like this:
 

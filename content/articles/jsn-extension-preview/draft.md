@@ -35,7 +35,7 @@ The panel's positions:
 | **SEA** | Path 2 hybrid — Option + negotiate | $30–32M | $75–90M fully gtd | EDGE/safety come first; use option savings to fix the defense |
 | **Offense** | Path 1 at the right price | $28–32M | $75–85M fully gtd | Top-5-to-8 WR, not top-3; scheme-amplified but not scheme-dependent |
 
-![JSN — Four Paths to an Extension](../../images/jsn-extension-preview/jsn-extension-preview-inline.png)
+![JSN — Four Paths to an Extension](../../images/jsn-extension-preview/jsn-extension-preview-inline-1.png)
 
 *The four contract paths and their projected cap implications through 2030.*
 

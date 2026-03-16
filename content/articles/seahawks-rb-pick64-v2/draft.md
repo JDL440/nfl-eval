@@ -63,6 +63,9 @@ Seattle has four draft picks — #32, #64, #96, and approximately #188. The fewe
 
 Two injuries drive this entire article. Understanding what each one actually means is the difference between panic-drafting and planning.
 
+![Seattle Seahawks RB draft analysis — inline image 1|Seattle Seahawks offseason analysis](../../images/seahawks-rb-pick64-v2/seahawks-rb-pick64-v2-inline-1.jpg)
+
+
 ### Charbonnet's ACL: Not a Crisis, But Not a Plan
 
 Charbonnet tore his ACL during Seattle's playoff run, with surgery in late January 2025. Standard ACL recovery for running backs runs 10–12 months — longer than other positions because the position demands lateral cutting, explosive burst, and the psychological trust to hit a hole without hesitation. Our injury expert's Week 1 probability matrix:
@@ -139,6 +142,9 @@ If you told CollegeScout that Seattle could get Johnson at #96 — a zone-scheme
 ## The Dissent: Why Offense Says the Cost of Skipping RB Is Higher Than You Think
 
 This is where the panel fractures, and it fractures honestly.
+
+![Seattle Seahawks RB draft analysis — inline image 2|Seattle Seahawks offseason analysis](../../images/seahawks-rb-pick64-v2/seahawks-rb-pick64-v2-inline-2.jpg)
+
 
 Our offensive scheme expert doesn't dispute the defensive losses. He doesn't dispute the need hierarchy. What he disputes is the assumption that Seattle can paper over the running back problem without real consequences to the offense's identity.
 

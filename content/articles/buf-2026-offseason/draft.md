@@ -49,6 +49,9 @@ That's the key framing for the whole article. Buffalo isn't behaving like a brok
 
 Our cap expert's case is blunt: Buffalo can solve the paperwork problem, but solving the paperwork problem is not the same thing as solving the roster problem.
 
+![Buffalo Bills 2026 offseason analysis — inline image 1|Buffalo Bills offseason analysis](../../images/buf-2026-offseason/buf-2026-offseason-inline-1.jpg)
+
+
 Here's the cleanest cap waterfall:
 
 | Move | 2026 Effect | Running Total |
@@ -125,6 +128,9 @@ And the weak spot is obvious.
 ## The Defense Question: The Bills Can Survive the Exodus — If Milano Doesn't Leave With It
 
 Our defensive expert agrees that the losses are not equal. But unlike BUF, Defense thinks the hierarchy of those losses rewrites the offseason.
+
+![Buffalo Bills 2026 offseason analysis — inline image 2|Buffalo Bills offseason analysis](../../images/buf-2026-offseason/buf-2026-offseason-inline-2.jpg)
+
 
 The ranking is clear:
 

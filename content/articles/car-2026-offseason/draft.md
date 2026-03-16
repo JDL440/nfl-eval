@@ -56,6 +56,9 @@ And that, more than any headline number, is what makes the option decision so un
 
 The pro-Young case is easy to sell in montage form. The anti-Young case is harder because it requires watching the whole season.
 
+![Carolina Panthers Bryce Young fifth-year option — inline image 1|Carolina Panthers offseason analysis](../../images/car-2026-offseason/car-2026-offseason-inline-1.jpg)
+
+
 | Bryce Young 2025 split | What it suggests |
 |------------------------|------------------|
 | 448 yards, 3 TDs at Atlanta in a 30-27 OT win | The high-end processing and placement still flash like a No. 1 pick |
@@ -124,6 +127,9 @@ But this is where the cap case stops sounding cold and starts sounding honest. I
 ## The Scheme May Be Making the Evaluation Worse
 
 The most useful contribution from the Offense panelist is that they refuse to let this become a fake binary between "Young is the answer" and "Young is the problem."
+
+![Carolina Panthers Bryce Young fifth-year option — inline image 2|Carolina Panthers offseason analysis](../../images/car-2026-offseason/car-2026-offseason-inline-2.jpg)
+
 
 Their diagnosis is harsher than either of those.
 

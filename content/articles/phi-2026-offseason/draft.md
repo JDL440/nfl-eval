@@ -54,6 +54,9 @@ Washington has Jayden Daniels on a rookie deal and just added Odafe Oweh. Dallas
 
 If the Eagles trade Carter, the sales pitch writes itself in four lines:
 
+![Philadelphia Eagles pass rush crisis — inline image 1|Philadelphia Eagles offseason analysis](../../images/phi-2026-offseason/phi-2026-offseason-inline-1.jpg)
+
+
 | Trade-Carter argument | Why it sounds smart |
 |-----------------------|---------------------|
 | **Create immediate cap relief** | Carter's departure frees about $6.9M in 2026 space |
@@ -95,6 +98,9 @@ This is the point where the trade case starts to fall apart. Yes, the Eagles nee
 ## The Dead-Money Problem Is Real. It Just Doesn't Change the Answer.
 
 Cap's best point is also the most uncomfortable one: Philadelphia's biggest 2026 problem is not cap space in the abstract. It is **dead-money velocity**.
+
+![Philadelphia Eagles pass rush crisis — inline image 2|Philadelphia Eagles offseason analysis](../../images/phi-2026-offseason/phi-2026-offseason-inline-2.jpg)
+
 
 The Eagles are paying for old decisions before they can fully finance new ones.
 

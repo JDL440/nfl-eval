@@ -57,6 +57,9 @@ That's what makes this such a fascinating beat-level debate. Washington didn't i
 
 Our cap expert's position is the sharpest counterpunch in the entire discussion: the Commanders are acting like unused cap space is proof of discipline, when in practice it may be proof they're underusing the cheapest thing in football — a real quarterback on a rookie deal.
 
+![Washington Commanders offensive rebuild — inline image 1|Washington Commanders offseason analysis](../../images/wsh-2026-offseason/wsh-2026-offseason-inline-1.jpg)
+
+
 **Daniels** counts $10.3M against the cap in 2026. Market-rate quarterbacks live north of $55M. That's roughly a $45M annual surplus, and it exists for exactly two more seasons before extension math starts closing the cheat code. Washington has already spent aggressively in 2026 — just not where the offense needs it.
 
 > *"The offense is underfunded by approximately $30–35M relative to what the cap structure allows. Peters isn't being disciplined — he's leaving the single most valuable asset in football without the supporting infrastructure to develop."* — **Cap**
@@ -130,6 +133,9 @@ That doesn't mean Washington is doomed. It means the margin for leaving obvious 
 ## The #7 Pick Debate Is Really a Resource Allocation Fight in Disguise
 
 Once the panel moved from free agency to the draft, the conversation got even more interesting. Because the #7 pick looks like an easy solution right up until you remember what Washington doesn't have behind it.
+
+![Washington Commanders offensive rebuild — inline image 2|Washington Commanders offseason analysis](../../images/wsh-2026-offseason/wsh-2026-offseason-inline-2.jpg)
+
 
 The Commanders are missing second- and fourth-round capital after the **Laremy Tunsil** trade. That's why our WSH expert keeps coming back to the same answer: trade down.
 

@@ -55,6 +55,9 @@ And the NFC West isn't standing still. Seattle just beat San Francisco 41-6 in t
 
 Our **Cap** expert doesn't bury the lede. San Francisco enters 2026 with roughly $33M in effective space, $36.2M in dead money, and a 2027 projection of **negative $13.7M**. Every dollar committed this offseason is borrowed against a reckoning that's already on the calendar.
 
+![San Francisco 49ers one-year rebuild window — inline image 1|San Francisco 49ers offseason analysis](../../images/sf-2026-offseason/sf-2026-offseason-inline-1.jpg)
+
+
 The Bosa restructure tells the whole story. Nick's March 14 deal converted ~$17.2M of 2026 base salary into signing bonus, prorated across remaining years. His 2026 hit dropped from $41.6M to approximately $24.4M — the room universally understood as "Joey money." But that $17.2M didn't vanish. It shifted into 2027 and 2028 at roughly $5.7M per year. Add the restructure's deferred costs and you're looking at **negative $19M+ for 2027** before Joey even signs.
 
 > *"Every dollar committed to Joey today is borrowed against a 2027 reckoning that's coming regardless."* — **Cap**
@@ -108,6 +111,9 @@ But Defense isn't finished. The remaining holes are real: CB depth behind Lenoir
 ## Evans, Purdy, and the Offensive Identity Question
 
 Our **Offense** expert is the most honest voice in the room about the Mike Evans fit. Evans is not a Shanahan archetype receiver. Shanahan's system prizes YAC monsters — guys who catch at 12 yards and turn it into 22. Deebo Samuel, Brandon Aiyuk, Jauan Jennings all created value *after* the catch within a motion-heavy scheme that manufactures space pre-snap. Evans has never been that player.
+
+![San Francisco 49ers one-year rebuild window — inline image 2|San Francisco 49ers offseason analysis](../../images/sf-2026-offseason/sf-2026-offseason-inline-2.jpg)
+
 
 But what Evans brings is something Purdy has never had: a catch-point winner who goes up and takes the ball away in traffic. A contested-catch alpha who has posted 50/50 ball win rates among the best in NFL history. That's a fundamentally different weapon, and it forces Shanahan to evolve his concepts rather than abandon them.
 

@@ -56,6 +56,9 @@ That's the hidden wound here. The 2026 rebuild can still be explained away as a 
 
 Let's get specific, because the cap story gets sloppy fast when people start talking in vibes.
 
+![Las Vegas Raiders Maxx Crosby rebuild tension — inline image 1|Las Vegas Raiders offseason analysis](../../images/lv-2026-offseason/lv-2026-offseason-inline-1.jpg)
+
+
 The panel's Cap model starts with an OverTheCap baseline of roughly **$37.9M** in 2026 space. Subtract **Paye's $16M** annual value, and the usable room drops to about **$21.9M**. Then layer on the rookie class: roughly **$9.9M** for the No. 1 overall hold and about **$15M** in holds for the remaining eight picks.
 
 That leaves Las Vegas underwater in practical terms before it has solved a single remaining roster problem.
@@ -136,6 +139,9 @@ The Raiders can survive the first kind. The second kind resets the clock.
 ## The Scheme Case for Keeping Both Edge Rushers Is Real — and Incomplete
 
 This is where the panel had the sharpest disagreement.
+
+![Las Vegas Raiders Maxx Crosby rebuild tension — inline image 2|Las Vegas Raiders offseason analysis](../../images/lv-2026-offseason/lv-2026-offseason-inline-2.jpg)
+
 
 LV sees the Crosby/Paye overlap as a blessing disguised as an accounting error. In Rob Leonard's 3-4, the Raiders suddenly have **Crosby, Paye, Malcolm Koonce, and Tyree Wilson** cycling through two edge spots. That's a lot of pass-rush talent for a team that badly needs an identity, and LV argues Crosby may actually be cleaner as a stand-up outside linebacker in this structure than he was in a more traditional 4-3 role.
 

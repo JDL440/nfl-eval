@@ -50,6 +50,9 @@ The parallel is real. So is the gap. The 2021 Rams had the most disruptive defen
 
 Our cap analyst's assessment was blunt: the money *supports* all-in because the Rams *designed* it that way.
 
+![Los Angeles Rams secondary investment — inline image 1|Los Angeles Rams offseason analysis](../../images/lar-2026-offseason/lar-2026-offseason-inline-1.jpg)
+
+
 Stafford's $48.26 million cap hit consumes 16% of the $301.2 million salary cap — the second-highest quarterback allocation among competitive rosters behind only Tua Tagovailoa's $56.3 million in Miami. That leaves 84 cents of every cap dollar for the other 52 roster spots.
 
 | Year | Projected Cap | Est. Space | Key Dynamic |
@@ -115,6 +118,9 @@ One factor working in their favor: the Kansas City connection. McDuffie and Wats
 ## The #13 Pick: Where the Unanimity Breaks
 
 All four panelists arrived at the same destination: Path 1, Full Send. No hedging, no trade-back, no quarterback at 13. The consensus held across every other question. Then came pick #13, and the agreement shattered.
+
+![Los Angeles Rams secondary investment — inline image 2|Los Angeles Rams offseason analysis](../../images/lar-2026-offseason/lar-2026-offseason-inline-2.jpg)
+
 
 <!-- IMAGE: Draft board visualization showing the OT vs EDGE debate at #13
      Placement: inline

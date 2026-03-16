@@ -52,6 +52,9 @@ That's a much less glamorous assignment. It's also the honest one.
 
 Our cap expert's argument is the least emotional and probably the most important. The **Cowboys** don't just have a roster problem. They have a sequencing problem. The expensive offense everyone sees in 2026 becomes a much harsher math problem in 2027.
 
+![Dallas Cowboys defensive rebuild — inline image 1|Dallas Cowboys offseason analysis](../../images/dal-2026-offseason/dal-2026-offseason-inline-1.jpg)
+
+
 The cleanest way to see it is to isolate the names everyone already knows:
 
 | Contract Pressure | 2026 Cap Hit | 2027 Cap Hit | Change |
@@ -126,6 +129,9 @@ This is why the team expert's Year 1 ceiling hovers around the mid-20s. Parker c
 ## The Draft Board Says Dallas Should Be Less Romantic Than the Fan Base Wants
 
 If the cap section explains why Dallas must use these picks well, the draft section explains how narrow the margin is.
+
+![Dallas Cowboys defensive rebuild — inline image 2|Dallas Cowboys offseason analysis](../../images/dal-2026-offseason/dal-2026-offseason-inline-2.jpg)
+
 
 The consensus public script is neat: take a corner at **#12**, take an edge at **#20**, declare the **Parsons** trade morally justified, and move on. The draft expert's paper complicates that in useful ways.
 

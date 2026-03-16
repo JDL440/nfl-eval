@@ -60,6 +60,9 @@ The order is important. Houston can survive without solving running back right a
 
 For all the complexity in Houston's offseason, the panel found unusual clarity on one issue: **Stroud should be extended now**, not later.
 
+![Houston Texans draft urgency — inline image 1|Houston Texans offseason analysis](../../images/hou-2026-offseason/hou-2026-offseason-inline-1.jpg)
+
+
 Cap's argument is brutally straightforward. Waiting feels safe because the fifth-year option creates one more cheap-ish season. But if Stroud delivers another high-end year, the Texans are just choosing to negotiate from a worse market.
 
 | Stroud path | 2027 effect | 2028-2030 effect | Panel read |
@@ -113,6 +116,9 @@ Jacksonville magnifies all of it. A team that already won the division is not gi
 ## This Is Why the Draft Board Gets Weird at Pick 28
 
 Once the panel agreed that defensive tackle is the priority, the next disagreement arrived immediately: **what if the right defensive tackle isn't there when Houston picks?**
+
+![Houston Texans draft urgency — inline image 2|Houston Texans offseason analysis](../../images/hou-2026-offseason/hou-2026-offseason-inline-2.jpg)
+
 
 Draft's central claim is the most aggressive one in the whole packet:
 

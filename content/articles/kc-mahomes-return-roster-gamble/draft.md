@@ -56,6 +56,9 @@ The running back move is the cleanest upgrade. Walker changes the geometry of th
 
 The panel kept coming back to the same reality: this season is not about broad roster quality as much as it is about three specific variables.
 
+![Kansas City Chiefs Mahomes return — inline image 1|Kansas City Chiefs offseason analysis](../../images/kc-mahomes-return-roster-gamble/kc-mahomes-return-roster-gamble-inline-1.jpg)
+
+
 ### 1. Mahomes can return by Week 1. He probably can't return as *Mahomes* by Week 1.
 
 The offense expert is emphatic on this point. The timeline gets Mahomes onto the field. It does not guarantee the full version of his movement game.
@@ -125,6 +128,9 @@ What it probably can't do, at least early, is erase deficits the way older Chief
 ## The Cap Sheet Says 2026 Is the Shot
 
 If the football questions are uncomfortable, the financial ones are worse.
+
+![Kansas City Chiefs Mahomes return — inline image 2|Kansas City Chiefs offseason analysis](../../images/kc-mahomes-return-roster-gamble/kc-mahomes-return-roster-gamble-inline-2.jpg)
+
 
 Our cap expert doesn't really buy the "sustainable reload" framing. He sees a franchise that created short-term flexibility by pushing hard choices into the future — and is now approaching the future.
 

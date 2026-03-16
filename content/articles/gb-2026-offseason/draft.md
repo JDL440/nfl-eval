@@ -58,6 +58,9 @@ That is the real emotional temperature in Green Bay. Fans can sell themselves on
 
 The cleanest way to understand Green Bay's offseason is to compare what improved against what got thinner.
 
+![Green Bay Packers Micah Parsons trade window — inline image 1|Green Bay Packers offseason analysis](../../images/gb-2026-offseason/gb-2026-offseason-inline-1.jpg)
+
+
 | Area | 2026 Upgrade | 2026 Concern |
 |------|--------------|--------------|
 | Pass rush | Parsons + Brooks + LVN raises the ceiling dramatically | Parsons may miss early games; proven depth is gone |
@@ -120,6 +123,9 @@ Green Bay's cap situation isn't a disaster. It's more uncomfortable than it look
 ## Gannon's Scheme Makes Sense. The Timing Doesn't.
 
 Jonathan Gannon was the right kind of hire for what Green Bay wants to become. He runs a multiple 4-3 structure built around two-high shells, pattern-match coverage, and pressure that comes from coverage math instead of reckless blitz volume. In theory, Parsons is the perfect centerpiece for that world because he can be the disruption tool that makes the whole picture hold together.
+
+![Green Bay Packers Micah Parsons trade window — inline image 2|Green Bay Packers offseason analysis](../../images/gb-2026-offseason/gb-2026-offseason-inline-2.jpg)
+
 
 The problem is that the early-season version of Green Bay may have to live in that system **without him**.
 

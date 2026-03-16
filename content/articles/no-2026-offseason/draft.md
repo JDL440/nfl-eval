@@ -51,6 +51,9 @@ That "maybe" is the whole season.
 
 Cap's position is the cleanest argument in the room: the Saints are not making excuses when they call 2026 a bridge. The finances really do flip.
 
+![New Orleans Saints bridge year — inline image 1|New Orleans Saints offseason analysis](../../images/no-2026-offseason/no-2026-offseason-inline-1.jpg)
+
+
 | Year | Projected Cap | Dead Money | Draft Pool | Projected Available Space |
 |------|---------------|------------|------------|---------------------------|
 | **2026** | $301.2M | **$114.0M** | ~$14M | **~$8-12M** |
@@ -110,6 +113,9 @@ That line is probably the cleanest description of the Saints' real assignment. F
 ## The #8 Pick Is Really a Test of What the Saints Think 2026 Is For
 
 This is where the panel's fault lines show.
+
+![New Orleans Saints bridge year — inline image 2|New Orleans Saints offseason analysis](../../images/no-2026-offseason/no-2026-offseason-inline-2.jpg)
+
 
 Offense is unequivocal: draft a wide receiver, ideally **Carnell Tate**, and stop pretending the supporting cast is good enough as currently built. If Shough is the bet, then the Saints have to make the bet correctly. That means giving him a real WR2 opposite Olave instead of another season of bracket coverage, forced patience, and "maybe this depth piece becomes more than that" optimism.
 

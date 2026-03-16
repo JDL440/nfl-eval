@@ -60,6 +60,9 @@ Cap modeled four paths through 2028 and landed firmly on patience: accept the de
 
 Our draft expert was blunt: **there is no quarterback worth the #3 overall pick in the 2026 draft.** Mendoza goes #1 to Las Vegas. After that, the QB landscape drops off a cliff. Ty Simpson (Alabama, ~15 college starts) is a legitimate late-first talent. Taking him at #3 would be a 20+ pick reach — the kind of move that gets GMs fired.
 
+![Arizona Cardinals post-Murray rebuild — inline image 1|Arizona Cardinals offseason analysis](../../images/ari-2026-offseason/ari-2026-offseason-inline-1.jpg)
+
+
 So what IS at #3? An elite pass rusher staring Arizona in the face.
 
 | Prospect | Pos | School | Why at #3 |
@@ -122,6 +125,9 @@ The concern — and Draft was emphatic about this — is the sample size. Fiftee
 ## The Clock They Can't Ignore: Marvin Harrison Jr.'s Vanishing Window
 
 This is where the panel went from polite disagreement to genuine tension. Every expert circled the same number from a different angle: **41 receptions, 608 yards, 4 touchdowns.** That was Marvin Harrison Jr.'s 2025 season — a top-4 overall pick producing WR3 numbers in Year 2 before landing on injured reserve.
+
+![Arizona Cardinals post-Murray rebuild — inline image 2|Arizona Cardinals offseason analysis](../../images/ari-2026-offseason/ari-2026-offseason-inline-2.jpg)
+
 
 | Player | Year 2 Stats | Year 2 Team Record |
 |--------|-------------|-------------------|

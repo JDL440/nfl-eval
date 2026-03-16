@@ -56,6 +56,9 @@ Those are not the same strategy. Tennessee is pretending they are.
 
 There is a football reason the defense-first case is so strong. In **Gus Bradley's Cover-3 structure with Saleh's wide-9 overlay**, edge rush is not a luxury add-on. It is the engine.
 
+![Tennessee Titans Cam Ward draft identity — inline image 1|Tennessee Titans offseason analysis](../../images/ten-ward-vs-saleh-draft-identity/ten-ward-vs-saleh-draft-identity-inline-1.jpg)
+
+
 Bradley's shell is built to live with four-man pressure and seven-man coverage. That works when the edges win fast enough to disrupt quick-game timing. It gets ugly when the rush is merely fine. Offenses take the underneath throws, stress the flats, and turn your "bend but don't break" shell into death by eight-yard completions.
 
 | Current Titans edge picture | What Tennessee really has |
@@ -123,6 +126,9 @@ The key point here is not that wide receiver magically fixes protection. It is t
 ## The Board at No. 4 Is Good, Not Perfect
 
 Part of what makes this a real debate instead of an easy one is the shape of the draft itself. The board, as our Draft panelist lays it out, appears to have a tier break after the top three. That matters.
+
+![Tennessee Titans Cam Ward draft identity — inline image 2|Tennessee Titans offseason analysis](../../images/ten-ward-vs-saleh-draft-identity/ten-ward-vs-saleh-draft-identity-inline-2.jpg)
+
 
 If **Abdul Carter** or **Kelvin Banks Jr.** were sitting there at No. 4, the whole conversation changes. But if those names are gone, Tennessee is picking from the "very good, maybe not quite blue-chip" shelf.
 

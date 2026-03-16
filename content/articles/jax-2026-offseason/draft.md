@@ -51,6 +51,9 @@ Cap's framing is the hardest to ignore because it strips away the novelty. If th
 
 The Jaguars' team-side position is the least sexy and maybe the most adult one in the room: last season already showed them the upper bound.
 
+![Jacksonville Jaguars Travis Hunter deployment — inline image 1|Jacksonville Jaguars offseason analysis](../../images/jax-2026-offseason/jax-2026-offseason-inline-1.jpg)
+
+
 In seven games, Hunter put up 28 catches for 298 yards and a touchdown while also logging 15 tackles and three pass breakups. The number that matters most isn't any single stat line. It's the 103% total snap rate — a number that reads like a typo and, in hindsight, like a warning label.
 
 JAX's proposed fix is the kind of compromise coaches talk themselves into after watching a special player get hurt: **55% offense, 25% defense, 80% total workload.** In this model, Hunter stays a featured offensive player — WR2 opposite **Brian Thomas Jr.** in three-receiver sets, red-zone packages, and third downs — while becoming a defensive closer rather than a full-time CB1. Think dime, nickel, obvious passing downs, and leverage moments instead of base-down survival.
@@ -130,6 +133,9 @@ That analogy lands because it captures the real fear behind the Jaguars' comprom
 ## The Bill for the Trade Is Here, and the Cap Doesn't Care About the Romance
 
 This is where the article stops being theoretical. Hunter is entering Year 2 on a team that opened the offseason over the cap, is already short a first-round pick, and has already been forced into veteran restructures before it can solve the obvious holes.
+
+![Jacksonville Jaguars Travis Hunter deployment — inline image 2|Jacksonville Jaguars offseason analysis](../../images/jax-2026-offseason/jax-2026-offseason-inline-2.jpg)
+
 
 Cap's case is merciless because it turns every Hunter deployment decision into an opportunity-cost conversation. Jacksonville didn't just flirt with a cap problem; it opened the offseason roughly $15.9M over and already had to use restructures to regain operating room. The names that actually got touched tell the story: the Jaguars leaned on veterans such as **Jakobi Meyers**, **Robert Hainsey**, **Patrick Mekari**, **Eric Murray**, and **Jourdan Lewis** before they could seriously address the rest of the roster.
 
