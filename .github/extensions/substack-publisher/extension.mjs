@@ -4,8 +4,9 @@
  * Exposes a `publish_to_substack` tool that converts a markdown article file
  * to Substack's ProseMirror format and creates a draft ready for review.
  *
- * Auth: uses substack.sid + connect.sid session cookies stored as a base64
- * token in SUBSTACK_TOKEN (see .env.example for setup instructions).
+ * Auth: set SUBSTACK_TOKEN to the raw value of your substack.sid cookie
+ * (copy it directly from Chrome DevTools → Application → Cookies).
+ * Legacy base64-encoded JSON format is still accepted for backwards compatibility.
  */
 
 import { approveAll } from "@github/copilot-sdk";
@@ -66,21 +67,26 @@ async function lookupTeamFromDb(filePath, cwd) {
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 function makeHeaders(token) {
-    let decoded;
+    // Accept either:
+    //   1. Raw substack.sid cookie value (preferred — paste directly from Chrome)
+    //   2. Legacy: base64(JSON.stringify({ substack_sid, connect_sid }))
+    let substackSid, connectSid;
     try {
-        decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+        const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+        if (decoded.substack_sid) {
+            // Legacy base64 JSON format
+            substackSid = decoded.substack_sid;
+            connectSid = decoded.connect_sid || decoded.substack_sid;
+        } else {
+            throw new Error("missing substack_sid");
+        }
     } catch {
-        throw new Error(
-            "Invalid SUBSTACK_TOKEN: not valid base64-encoded JSON.\n" +
-            "Run the setup command in .env.example to generate a token."
-        );
+        // Not base64 JSON — treat as raw cookie value
+        substackSid = token.trim();
+        connectSid = token.trim();
     }
-    if (!decoded.substack_sid) {
-        throw new Error("Invalid SUBSTACK_TOKEN: missing substack_sid field.");
-    }
-    const connectSid = decoded.connect_sid || decoded.substack_sid;
     return {
-        Cookie: `substack.sid=${decoded.substack_sid}; connect.sid=${connectSid}`,
+        Cookie: `substack.sid=${substackSid}; connect.sid=${connectSid}`,
         Accept: "application/json",
         "Content-Type": "application/json",
         "User-Agent":
@@ -612,7 +618,7 @@ const session = await joinSession({
                         return {
                             textResultForLlm:
                                 "Error: SUBSTACK_TOKEN not found in .env.\n\n" +
-                                "Setup: open .env.example for instructions on generating your token from Chrome cookies.",
+                                "Setup: copy the value of your substack.sid cookie from Chrome DevTools → Application → Cookies → substack.com, then set SUBSTACK_TOKEN=<that value> in .env.",
                             resultType: "failure",
                         };
                     }
