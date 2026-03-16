@@ -119,3 +119,20 @@ The 2025 season was a catastrophic disappointment — the three-peat dream died,
 ## Learnings
 
 📌 Media update (2026-03-13): Signed Emari Demercado (1yr RB). Mahomes "way ahead of schedule" with 7hr daily rehab — Week 1 target realistic. Backup QB still needed (Minshew signed with ARI, not KC).
+
+📌 Issue #55 article work (2026-03-16): Completed Stages 1-3 for KC offseason article.
+- **Angle chosen:** "Mahomes Is Racing Back — But to What?" — the tension between Mahomes' ACL recovery and the unrecognizable roster he returns to. Reload vs. rebuild vs. dynasty twilight.
+- **Score:** 12/12 on idea-generation rubric
+- **Panel:** KC + Cap + Offense (3 agents, Level 2)
+- **Stage reached:** panel-ready (idea → discussion prompt → panel composition all complete)
+- **Artifacts:** `content/articles/kc-mahomes-return-roster-gamble/` (idea.md, discussion-prompt.md, panel-composition.md)
+- **Key research updates since last entry:**
+  - Alohi Gilman signed (3yr/$24.75M from BAL — safety depth)
+  - Khyiris Tonga signed (3yr/$21M from NE — interior DL)
+  - Tyquan Thornton re-signed (2yr/$11M — WR depth)
+  - Kader Kohou signed from MIA (CB reinforcement post-McDuffie trade)
+  - Chiefs cleared ~$98M total cap space through trades/cuts/restructures
+  - Rashee Rice: domestic abuse civil suit confirmed, 10-12 game suspension possible (Yahoo, Heavy)
+  - Mock draft consensus: WR at #9 (Carnell Tate or Makai Lemon most frequently projected)
+  - Mahomes recovery: 90° knee bend early in rehab, "sooner than" expected per Glazer
+- **Lesson:** The strongest KC article angle isn't any single move — it's the totality of the overhaul. The "what does Mahomes return to?" frame ties together cap, roster, scheme, and division context into one narrative.

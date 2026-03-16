@@ -345,3 +345,17 @@ _Last updated: 2026-03-12_
 ## Learnings
 
 📌 Media update (2026-03-13): Extended Alec Pierce (4yr/$116M — now WR1). Traded Michael Pittman Jr. to PIT (cap clearing). Daniel Jones on transition tag. WR room reshaped around Pierce as the centerpiece.
+
+📌 Research update (2026-03-16): Sauce Gardner played only 3 games for IND before Week 13 calf injury vs HOU — NOT season-ending (week-to-week, missed Weeks 14-16+). 10 total games in 2025 (7 NYJ + 3 IND). 33 tackles, 8 PBU before injury. Source: ESPN, Pro Football Network.
+
+📌 Research update (2026-03-16): Anthony Richardson and Colts have mutually agreed to seek a trade. Vikings and Packers top suitors. Expected return is modest (mid/late round pick). Richardson open to sitting behind a veteran. Source: NFL.com, Bleacher Report, SI.
+
+📌 Article work (2026-03-16): Completed Stages 1-3 for Issue #51 (IND offseason article).
+- **Chosen angle:** "The Colts Bet Two First-Round Picks on a 7-2 Start. They Finished 8-9. Now What?" — Sauce Gardner trade cascading consequences, cap-rich/draft-poor purgatory
+- **Score:** 12/12 (strongest possible)
+- **Panel:** Cap + IND + Defense (3 agents)
+- **Artifacts:** `content/articles/ind-sauce-gardner-gamble/` (idea.md, discussion-prompt.md, panel-composition.md)
+- **Stage reached:** panel-ready (Stages 1 + 2 + 3 complete)
+- **Next:** Panel discussion — spawn 3 agents in parallel
+
+📌 Process learning (2026-03-16): For issue-triggered idea generation, having deep team knowledge in history.md makes research phase much faster. The web search step is still essential — it uncovered two critical facts missing from my knowledge base: (1) Gardner played only 3 games for IND, (2) Richardson-Colts mutual trade agreement. Always verify with current sources even when knowledge base is comprehensive.
