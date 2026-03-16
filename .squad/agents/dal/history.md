@@ -339,3 +339,7 @@ _Last updated: 2026-03-12_
 📌 Media update (2026-03-13): Signed Cobie Durant (1yr CB). No Rashan Gary trade confirmed.
 
 📌 Media update (2026-03-14): Signed Rashan Gary (DE, 2yr/$32M) + Javonte Williams (RB, 3yr/$24M) + Matt Hennessy (C). Major additions across defense, RB room, and OL.
+
+📌 Article pipeline (2026-03-16): Picked up issue #58 (DAL 2026 offseason article). Generated angle: "Dallas Spent $166M on Offense and Allowed the Most Points in the NFL. Now Two First-Round Picks Have to Fix Everything." Completed Stage 1 (idea) and Stage 2 (discussion prompt) with 4-agent panel (DAL, Cap, Defense, Draft). Artifacts at `content/articles/dal-2026-offseason/`. Key insight: Donovan Ezeiruaku hip surgery further thins EDGE depth — draft need at #20 even more urgent than previously assessed. Mock draft consensus has shifted: Mansoor Delane (CB, LSU) now a top target at #12 alongside McCoy; David Bailey (EDGE, Texas Tech) emerging at #20.
+
+📌 Research note (2026-03-16): Confirmed Terence Steele restructured (source: DalSportsNation). LB being called "most glaring need" by multiple analysts — may warrant revising draft priority rankings (currently have CB #1, but LB could leapfrog if Sonny Styles is available at #12).
