@@ -183,19 +183,14 @@ async function getSectionId(subdomain, headers, teamName) {
 }
 
 async function createSubstackDraft({ subdomain, headers, title, subtitle, body, authorId, audience, sectionId }) {
-    if (!authorId) {
-        throw new Error(
-            "Could not resolve author ID from Substack. " +
-            "Ensure SUBSTACK_TOKEN is valid and SUBSTACK_PUBLICATION_URL points to a publication you own."
-        );
-    }
     const payload = {
         type: "newsletter",
         audience: audience || "everyone",
         draft_title: title,
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
-        draft_bylines: [{ id: authorId, is_guest: false }],
+        // Bylines are optional — Substack allows drafts without them (user can assign in the editor)
+        ...(authorId ? { draft_bylines: [{ id: authorId, is_guest: false }] } : {}),
         ...(sectionId ? { section_id: sectionId, draft_section_id: sectionId } : {}),
     };
 
