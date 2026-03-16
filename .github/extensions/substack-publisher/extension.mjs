@@ -195,8 +195,8 @@ async function createSubstackDraft({ subdomain, headers, title, subtitle, body, 
         draft_title: title,
         draft_subtitle: subtitle || "",
         draft_body: JSON.stringify(body),
-        // Bylines are optional — Substack allows drafts without them (user can assign in the editor)
-        ...(authorId ? { draft_bylines: [{ id: authorId, is_guest: false }] } : {}),
+        // draft_bylines is required — empty array works; populated when authorId resolves
+        draft_bylines: authorId ? [{ id: authorId, is_guest: false }] : [],
         ...(sectionId ? { section_id: sectionId, draft_section_id: sectionId } : {}),
     };
 
