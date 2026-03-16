@@ -385,6 +385,7 @@ Every article must pass three accuracy checks before moving to Stage 7 (Publishe
 **Owner:** Lead (calls `publish_to_substack` tool) → Joe reviews the draft URL
 **Input:** Editor-approved draft from `content/articles/{slug}.md`
 **Output:** Substack draft URL, ready for Joe to review and publish with one click
+**DB update:** Advance to `current_stage=7`, record `publisher_pass` details
 
 This stage is **automated** via the `publish_to_substack` Copilot extension. Lead (or any agent) calls the tool; the extension converts the article to Substack's format and creates a draft. Joe receives the editor URL, checks a short final checklist, then publishes.
 
@@ -445,9 +446,11 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 ### Done when
 
 - [ ] `publish_to_substack` called successfully — draft URL returned
+- [ ] DB updated: `current_stage=7`, `publisher_pass` row inserted, stage transition recorded
 - [ ] Lead posts the draft URL for Joe
 - [ ] Content checklist items confirmed
 - [ ] Joe has the URL and is ready to review/publish
+- [ ] **GitHub issue label updated** (optional visibility mirror): `stage:publisher-pass` or similar label added if it exists. Labels reflect state for human visibility; DB `current_stage` is the authoritative scheduler source of truth.
 
 ---
 
@@ -456,6 +459,7 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 **Owner:** Joe Robinson (human gate)
 **Input:** Draft URL from Stage 7 + completed Publisher Pass checklist
 **Output:** Live article on Substack
+**DB update:** Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`
 
 ### Process
 
@@ -468,7 +472,8 @@ Copy this to the article thread before calling the tool. Lead confirms content i
 | Task | How |
 |------|-----|
 | Update `content/article-ideas.md` | Change status to ✅ Published, add publish date |
-| Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`; insert `stage_transitions` row |
+| Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8` (numeric); insert `stage_transitions` row |
+| **GitHub issue label update** | Add `stage:published` label (optional visibility mirror). GitHub labels reflect pipeline state for human visibility; DB `current_stage` is the authoritative scheduler source of truth. |
 | Git commit | `git add . && git commit -m "Published: {article title}"` |
 | Content pipeline | Ensure "Next from the panel" tease at article end points to a real upcoming idea |
 | Follow-on issue | Create or confirm a GitHub idea issue for the teased next article, targeted for Thursday of the publication week (current default cadence) |
@@ -558,6 +563,8 @@ Lead reviews the recommendation and can override before spawning.
 
 Every article has a row in `content/pipeline.db`. Agents MUST update it at each stage transition. Use Python (always available) — no sqlite3 CLI required.
 
+**Stage semantics:** Use numeric integer values 1–8 for `current_stage` per the schema. String-valued stage names are deprecated — always write numeric stages.
+
 ### Agent Write Pattern
 
 ```python
@@ -569,22 +576,23 @@ conn = sqlite3.connect('content/pipeline.db')
 
 ### Required DB writes by stage
 
-| Stage | Agent | Required write |
-|-------|-------|----------------|
-| 1 | Anyone | `INSERT INTO articles` with id, title, primary_team, teams, status='proposed', current_stage=1 |
-| 2 | Lead | `INSERT INTO discussion_prompts`; advance article to current_stage=2, status='approved' |
-| 3 | Lead | `INSERT INTO article_panels` (one row per panelist); advance to current_stage=3 |
-| 4 | Lead | Mark `analysis_complete=1` in article_panels as each panelist returns; advance to current_stage=4 |
-| 5 | Writer | Set article_path; advance to current_stage=5, status='in_production' |
-| 6 | Editor | `INSERT INTO editor_reviews` with verdict + counts; advance to current_stage=6 |
-| 7 | Joe / Publisher | `INSERT INTO publisher_pass`; advance to current_stage=7 |
-| 8 | Joe | Set published_at, substack_url, status='published', current_stage=8 |
+| Stage | Agent | Required write | Notes |
+|-------|-------|----------------|-------|
+| 1 | Anyone | `INSERT INTO articles` with id, title, primary_team, teams, status='proposed', current_stage=1 | Numeric stage=1 |
+| 2 | Lead | `INSERT INTO discussion_prompts`; advance article to current_stage=2, status='approved' | Numeric stage=2 |
+| 3 | Lead | `INSERT INTO article_panels` (one row per panelist); advance to current_stage=3 | Numeric stage=3 |
+| 4 | Lead | Mark `analysis_complete=1` in article_panels as each panelist returns; set `discussion_path`; advance to current_stage=4 | Numeric stage=4; `discussion_path` field exists in schema |
+| 5 | Writer | Set `article_path`; advance to current_stage=5, status='in_production' | Numeric stage=5 |
+| 6 | Editor | `INSERT INTO editor_reviews` with verdict + counts; advance to current_stage=6 | Numeric stage=6 |
+| 7 | Lead / Publisher | `INSERT INTO publisher_pass`; advance to current_stage=7 | Numeric stage=7 |
+| 8 | Joe | Set published_at, substack_url, status='published', current_stage=8 | Numeric stage=8 (final) |
 
 ### Stage transition helper
 
 Every stage change also inserts a row in `stage_transitions`:
 
 ```python
+# Use numeric stages (1-8) consistently
 conn.execute(
     """INSERT INTO stage_transitions (article_id, from_stage, to_stage, agent, notes)
        VALUES (?,?,?,?,?)""",
@@ -596,6 +604,8 @@ conn.execute(
 )
 conn.commit()
 ```
+
+**Artifact-first discovery:** When determining the current state of an article, check local artifacts first (published proof > `publisher-pass.md` > `editor-review.md` > `draft.md` > discussion outputs), then reconcile DB state to match filesystem reality. The DB is the ledger; the filesystem is the source of truth for what work has been completed.
 
 ### Visualization
 
@@ -610,6 +620,8 @@ Opens a web UI at `http://localhost:8001` — browse all tables and the `pipelin
 Full schema: `content/schema.sql`
 Tables: `articles`, `stage_transitions`, `article_panels`, `discussion_prompts`, `editor_reviews`, `publisher_pass`
 View: `pipeline_board` (one row per article with stage name + sort by status)
+
+**GitHub labels as visibility mirrors:** `stage:*` labels on GitHub issues MAY be updated to reflect current article state for human visibility, but they are NOT the source of truth for scheduling or next-action determination. The scheduler reads `current_stage` from `pipeline.db` and artifact presence from `content/articles/`. Labels are optional documentation, not control-plane inputs.
 
 ---
 

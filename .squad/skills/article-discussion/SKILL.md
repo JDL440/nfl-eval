@@ -255,22 +255,29 @@ The synthesis is the artifact the Writer uses. It must be actionable.
 
 ## DB Integration
 
-After discussion completes, Lead must:
+After discussion completes, Lead must update `pipeline.db` with numeric stage and artifact path:
 
 ```python
 import sqlite3
 from datetime import datetime
 
 conn = sqlite3.connect('content/pipeline.db')
+# Update to numeric Stage 4 (panel_discussion) and record artifact path
 conn.execute(
-    "UPDATE articles SET current_stage = 'panel_discussion', updated_at = ? WHERE id = ?",
-    (datetime.now().isoformat(), article_id)
+    "UPDATE articles SET current_stage = 4, discussion_path = ?, updated_at = datetime('now') WHERE id = ?",
+    (f'content/articles/{article_id}/discussion-summary.md', article_id)
+)
+# Record stage transition
+conn.execute(
+    """INSERT INTO stage_transitions (article_id, from_stage, to_stage, agent, notes)
+       VALUES (?, 3, 4, 'Lead', 'Panel discussion complete')""",
+    (article_id,)
 )
 conn.commit()
 conn.close()
 ```
 
-⚠️ Note: The `articles` table does not yet have a `discussion_path` field to link artifacts back to the record. Decision filed at `.squad/decisions/inbox/lead-discussion-path-field.md`. Add this field when the schema is next updated.
+**Stage semantics:** Use numeric values 1–8 per the schema. The `discussion_path` field is part of the current schema (see `content/schema.sql`).
 
 ---
 

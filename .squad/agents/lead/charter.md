@@ -89,23 +89,26 @@ When Lead is assigned a GitHub issue with the `article` label (or any issue whos
    ⏱️ Estimated time: ~15–25 min
    ```
 3. **Run the pipeline** following `.squad/skills/article-lifecycle/SKILL.md` and `.squad/skills/article-discussion/SKILL.md`:
-   - **Stage 2:** Write discussion prompt → save to `content/articles/{slug}/discussion-prompt.md`
-   - **Stage 3:** Select panel using gpt-5-mini (per `.squad/config/models.json`)
-   - **Stage 4:** Spawn panel agents in parallel → save positions to `content/articles/{slug}/{agent}-position.md`
+   - **Stage 2 (numeric: 2):** Write discussion prompt → save to `content/articles/{slug}/discussion-prompt.md`, update DB `current_stage=2`
+   - **Stage 3 (numeric: 3):** Select panel using gpt-5-mini (per `.squad/config/models.json`), update DB `current_stage=3`
+   - **Stage 4 (numeric: 4):** Spawn panel agents in parallel → save positions to `content/articles/{slug}/{agent}-position.md`, update DB `current_stage=4` + `discussion_path`
    - **Synthesis:** Write discussion summary → `content/articles/{slug}/discussion-summary.md`
-   - **Stage 5:** Spawn Writer → draft saved to `content/articles/{slug}/draft.md`
-   - **Stage 6:** Spawn Editor (sync) → save review to `content/articles/{slug}/editor-review.md`
-   - **Stage 7:** Call `publish_to_substack` tool → get draft URL
+   - **Stage 5 (numeric: 5):** Spawn Writer → draft saved to `content/articles/{slug}/draft.md`, update DB `current_stage=5` + `article_path`
+   - **Stage 6 (numeric: 6):** Spawn Editor (sync) → save review to `content/articles/{slug}/editor-review.md`, update DB `current_stage=6`
+   - **Stage 7 (numeric: 7):** Call `publish_to_substack` tool → get draft URL, update DB `current_stage=7`
 4. **Post completion comment** on the issue with the Substack draft URL:
    ```
    ✅ Pipeline complete — Substack draft ready for review.
    📝 Draft URL: {url}
    🔴 Editor flags: {count} (see content/articles/{slug}/editor-review.md)
-   Next: Joe reviews in Substack editor → publishes
+   📊 DB: current_stage=7 (Publisher Pass complete)
+   Next: Joe reviews in Substack editor → publishes → updates DB to stage 8
    ```
-5. **Close the issue** once the Substack draft URL is posted.
+5. **Update GitHub issue label** to reflect current stage (optional — labels are visibility mirrors, not source of truth for scheduling):
+   - Add `stage:publisher-pass` or similar label if the label exists
+   - GitHub labels reflect pipeline state for human visibility; DB `current_stage` is the authoritative scheduler input
 6. **Update pipeline.db** and `content/article-ideas.md` as normal.
-7. **After live publish is confirmed, create or confirm the follow-on GitHub idea issue** for the article teased in "Next from the panel" and target Thursday of that publication week by default.
+7. **After live publish is confirmed (Joe updates DB to stage 8), create or confirm the follow-on GitHub idea issue** for the article teased in "Next from the panel" and target Thursday of that publication week by default.
 
 ### Pipeline Comments (post frequently — no silent gaps)
 

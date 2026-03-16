@@ -111,6 +111,11 @@ Editor reviews all images that appear inline in articles. Images ship alongside 
 - **Fake player jersey numbers/names** — AI generates NFL player images with invented names or jersey numbers that don't match real players on the team. A wrong number is a fact error baked into the image. Always reject if a jersey number or player name is visible and unverified.
 - **Embedded text with specific claims** — any AI image containing readable text with player names, dollar amounts, dates, or team names must be verified. If any value differs from the article, reject it.
 
+**Current image policy reminder:**
+- Articles should have **exactly 2 inline images** (no cover in markdown)
+- Cover is set manually in Substack editor by Joe at Stage 8
+- If the article has a cover image embedded in markdown, flag it as a policy violation
+
 ### Image Review Output
 
 Image review findings appear as a subsection of the standard Editor report:

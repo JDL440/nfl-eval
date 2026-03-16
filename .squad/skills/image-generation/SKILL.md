@@ -30,8 +30,8 @@ Writer saves draft → generate_article_images → Editor reviews text + images 
 ```
 
 Generate **exactly 2 inline images** per article:
-- **No cover/banner image** — the Substack post cover is set manually in the Substack editor by Joe. Do not embed a cover in the article body.
-- **2 inline images** (1:1, for body placement) — placed at the two best text breaks to keep mobile readers scrolling.
+- **No cover/banner image in markdown** — the Substack post cover is set manually in the Substack editor by Joe at Stage 8. Do not generate or embed a cover in the article body.
+- **2 inline images** (1:1 aspect ratio, rendered at `imageSize: "normal"`) — placed at the two best text breaks to keep mobile readers scrolling.
 
 ---
 
@@ -179,16 +179,16 @@ After generating multiple images for the same article:
 
 ---
 
-## Cover Image vs. Substack Cover
+## Cover Image Handling
 
-There are **two** cover image concepts — don't confuse them:
+**Current policy:** Do NOT generate a cover image for the article body. The Substack post cover (thumbnail shown in email/feed) is set manually by Joe in the Substack editor at Stage 8. Article markdown contains only inline images.
 
 | | What it is | Where it lives | Who sets it |
 |---|---|---|---|
-| **Article body cover** | Image embedded at top of article body | In the markdown, after the subtitle | Writer (via tool) |
+| **Article body cover** | NOT USED — policy removed | N/A | N/A |
 | **Substack post cover** | The thumbnail shown in email/feed | Set in Substack editor, not in markdown | Joe at Stage 8 |
 
-**Best practice:** Generate 2 cover images. Use the best one in the article body. Joe selects one (same or different) as the Substack post cover during the final editor review.
+If you need a hero image for an article, generate it as `inline-1` and place it early in the body. Joe can reuse that image as the Substack post cover if appropriate.
 
 ---
 
@@ -239,7 +239,7 @@ The tool tries Imagen 3 first and falls back automatically. Override with `use_m
   - Markdown references produced correctly
 
 - ❌ Don't generate images before the article draft exists — prompts need the article context
-- ❌ Don't generate a cover/banner image — Joe sets the Substack post cover manually
+- ❌ Don't generate a cover/banner image for the article body — current policy: cover is set manually in Substack editor at Stage 8
 - ❌ Don't generate more than 2 inline images per article — keeps costs down and mobile-friendly
 - ❌ Don't skip Editor image review — images can be off-brand or inappropriate
 - ❌ Don't leave `players: []` empty if the article is player-specific — names help guide both atmosphere and likeness

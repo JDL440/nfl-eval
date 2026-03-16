@@ -46,16 +46,20 @@ Open `content/articles/{slug}.md` and verify:
 
 ### Step 2 — Image Placement Verification
 
-**Image policy: exactly 2 inline images per article body. NO cover image in the article markdown — cover is set manually in the Substack editor (Stage 8). Images are rendered at `imageSize: "normal"` (text column width) — NOT full-bleed.**
+**Image policy (current):**
+- **Exactly 2 inline images** in article markdown body
+- **NO cover image** in article markdown — Substack post cover is set manually in the Substack editor by Joe at Stage 8
+- Images rendered at `imageSize: "normal"` (text column width), NOT full-bleed
 
-- [ ] **No cover image** in the article markdown body — covers are not rendered inline
-- [ ] **Exactly 2 inline images** present in the article body (per `copilot-directive-20260315-images.md`)
+**Checklist:**
+
+- [ ] **No cover image** in the article markdown body — cover is NOT rendered inline; it's set in Substack editor
+- [ ] **Exactly 2 inline images** present in the article body
 - [ ] Both inline images use correct syntax: `![alt text](../../images/{slug}/filename.png)`
 - [ ] Both inline images are named `{slug}-inline-1.png` and `{slug}-inline-2.png`
 - [ ] Both inline images have descriptive alt text (no empty `![]()`)
 - [ ] Both image files exist: verify `content/images/{slug}/` contains the referenced filenames
 - [ ] No broken image references (paths with typos, wrong extensions, missing files)
-- [ ] **No cover image files** need to be in `content/images/{slug}/` — cover is optional and set manually
 
 **Inline image placement guidelines:**
 - Place first inline image after the first major data table or argument (~line 35–40)

@@ -167,16 +167,17 @@ generate_article_images(
   article_summary: "{1-3 sentence summary of the article's core argument}",
   team: "{Primary NFL team, e.g. 'Seattle Seahawks'}",
   players: ["{Key players mentioned}"],
-  image_types: ["cover", "inline"],
+  image_types: ["inline"],
   count_per_type: 2
 )
 ```
 
 The tool saves images to `content/images/{slug}/` and returns markdown references to paste into the article.
 
-**Image placement:**
-- **Cover image:** Paste directly after the subtitle line (`*subtitle*`), before the `---` divider
-- **Inline images:** Place at natural section breaks — one per major section if relevant
+**Image policy (current):**
+- **NO cover image** in article markdown — cover is set manually in Substack editor by Joe at Stage 8
+- **Exactly 2 inline images** — placed at natural section breaks to keep mobile readers scrolling
+- Inline images use 1:1 aspect ratio, rendered at `imageSize: "normal"` (text column width)
 
 **Full guidance:** See [`image-generation` SKILL.md](../image-generation/SKILL.md) for prompting strategy, custom prompts, and Editor review format.
 
