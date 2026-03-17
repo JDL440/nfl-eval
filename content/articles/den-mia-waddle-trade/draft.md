@@ -3,7 +3,7 @@
 *The Broncos were one game short of the Super Bowl. Jaylen Waddle's $5M cap hit might be the cheapest ticket back — but the $57M bill coming in 2027 is where the real debate starts.*
 
 > **📋 TLDR:**
-> - Denver lost the AFC Championship 10-7 to New England with a backup QB and one reliable receiver. The offense had a ceiling problem, not a talent problem.
+> - Denver lost the AFC Championship 10-7 to New England — Bo Nix sidelined with a fractured ankle, Jarrett Stidham under center. The QB injury killed that game. But the receiver room had been capping the offense all season.
 > - The Broncos acquired **Jaylen Waddle** for a 1st (#30), 3rd (#94), and 4th (#130) — absorbing a contract that runs $5M in 2026 before jumping to $27M and $30M in the final two years.
 > - The panel's verdict: Denver wins this trade on process. The $5M Year 1 hit for a proven WR1 at 26 is the kind of move championship teams make. Miami's return is fair, not a heist.
 > - The central debate: Can Denver afford Waddle ($30M) and a Bo Nix extension ($50M+) simultaneously in 2028 — or does the cap math that looks brilliant today become an anchor in two years?
@@ -12,9 +12,9 @@
 
 **By: The NFL Lab Expert Panel**
 
-The score was 10-7. New England. AFC Championship Game. And **Bo Nix** was watching from the sideline in a walking boot, his fractured ankle ending Denver's best season in a decade one game short of the finish line. **Jarrett Stidham** couldn't muster more than ten points against New England's defense — and even he wasn't entirely to blame.
+The score was 10-7. New England. AFC Championship Game. And **Bo Nix** was watching from the sideline in a walking boot, his fractured ankle ending Denver's best season in a decade one game short of the finish line. **Jarrett Stidham** couldn't muster more than ten points against New England's defense. A backup quarterback in a conference championship — that was the biggest reason Denver's season ended.
 
-But here's the part Broncos fans don't want to hear: the ankle wasn't the only problem. Even before Nix went down in the Divisional Round, Denver's offense had been running into the same wall all season. **Courtland Sutton** drew bracket coverage. **Troy Franklin** showed flashes. And after that? Defenses loaded two-high shells and dared the Broncos to beat them underneath. The ceiling wasn't talent — it was geometry. Denver needed a second receiver who could change the math.
+But here's the part that matters for the offseason: the ankle wasn't the only problem. Even before Nix went down in the Divisional Round, Denver's offense had been running into the same wall all season. **Courtland Sutton** drew bracket coverage. **Troy Franklin** showed flashes. And after that? Defenses loaded two-high shells and dared the Broncos to beat them underneath. The ceiling wasn't talent — it was geometry. Denver needed a second receiver who could change the math.
 
 On the first Tuesday of free agency week, George Paton found one in Miami's fire sale.
 
@@ -54,7 +54,7 @@ Our Denver expert didn't mince words.
 
 > *"You don't mortgage the future when you're one game away — you buy the present. Denver just bought itself a Super Bowl-caliber receiver room for the price of a late first."* — **DEN Expert**
 
-The logic is straightforward, and it starts with the AFCCG loss. That 10-7 game against New England wasn't a defensive failure — the Broncos held the Patriots to ten points. It was an offensive ceiling problem. Sutton was the only receiver defenses had to respect, and they treated him accordingly: bracketed on the boundary, safeties sitting at 12-plus yards in two-high shells, and Nix forced into a diet of check-downs and contested intermediate throws.
+The logic is straightforward — and it doesn't start with the AFCCG. The ankle was the reason they lost that game; no amount of receiver talent saves a backup-QB situation in January. But rewind to the regular season, when Nix *was* healthy: Sutton was the only receiver defenses had to respect, and they treated him accordingly. Bracketed on the boundary, safeties sitting at 12-plus yards in two-high shells, Nix forced into a diet of check-downs and contested intermediate throws. That was the structural ceiling — and that's the problem George Paton chose to fix.
 
 **Waddle** breaks that geometry entirely. His 4.37 speed from the slot forces safeties to honor the deep threat, which opens Sutton for the iso-X fades and comeback routes that Sean Payton has been scheming since his New Orleans days. You can't bracket both. And Payton's 60-plus-percent pre-snap motion rate means Denver can diagnose which receiver is getting favorable leverage before the ball is snapped.
 
@@ -88,7 +88,7 @@ What makes Waddle particularly dangerous in this scheme:
 - **Motion and pre-snap shifts:** Waddle's versatility to align in the slot, as a wing, or as a reduced split gives Davis Webb pre-snap coverage tells while creating natural picks and rubs on crossers and shallow drags.
 - **Vertical constraint from the slot:** The 2025 offense lacked a credible go-ball threat inside. **Marvin Mims** had the speed but not the route discipline. Waddle's ability to win on post-corner routes and skinny posts means the safety *has* to honor him deep — and that single-high rotation is exactly what opens Sutton's boundary game.
 
-Before Waddle, the formula against Denver was simple. After Waddle, the math breaks:
+Here's what Nix faced during the regular season — and what changes with Waddle in the lineup. Before Waddle, the defensive formula against Denver was simple. After Waddle, the math breaks:
 
 | Defensive Shell | Pre-Waddle Result | Post-Waddle Result |
 |----------------|-------------------|-------------------|
@@ -205,7 +205,7 @@ Here's why:
 
 For Miami: fair trade, correct strategy. Two rational front offices getting what they each needed. The Dolphins executed a clean asset conversion that accelerates their rebuild timeline. No criticism from the panel — just acknowledgment that rebuilding teams never quite maximize return, and that's the nature of selling when everyone knows you're selling.
 
-**Waddle** moves Denver from "one piece short" to "complementary pieces short." That's meaningful progress. Whether it's enough to hoist a Lombardi depends on Bo Nix's ankle, George Paton's mid-round drafting, and whether Vance Joseph's defense can replicate its 2025 standard. But the receiver room — the thing that cost Denver a Super Bowl trip — is fixed.
+**Waddle** moves Denver from "one piece short" to "complementary pieces short." That's meaningful progress. Whether it's enough to hoist a Lombardi depends on Bo Nix's ankle, George Paton's mid-round drafting, and whether Vance Joseph's defense can replicate its 2025 standard. The ankle that cost Denver a Super Bowl trip is healing. The receiver room — the structural ceiling that capped the offense even before the injury — is fixed.
 
 For the first time since Peyton Manning's final ride, the Broncos have a receiver duo that defenses have to game-plan around. Two-high is dead in Denver. Pick your poison.
 
