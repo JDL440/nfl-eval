@@ -144,3 +144,7 @@ The 2025 season was a catastrophic disappointment — the three-peat dream died,
 - **Net talent change:** +3.5 wins over 2025 disaster roster (8-9 → 11-6 projection), but third-best in AFC West behind Chargers and rising Raiders
 - **Key insight:** The 2026 draft must produce THREE immediate starters (WR1, CB1, plus depth contributor) to offset 2027's Mahomes $85.25M + Jones $44.85M cap structure (40.9% of cap on two players). If draft doesn't hit, the dynasty is over.
 - **Artifact:** `content/articles/kc-mahomes-return-roster-gamble/kc-position.md`
+
+
+📌 Team update (2026-03-16T20:44Z): KC Fields trade evaluation — 2 inline editorial images generated (inline-1 hero-safe stadium, inline-2 dual-QB silhouette). Images ready for review. MD5 verified unique. — decided by Writer
+

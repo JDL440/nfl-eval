@@ -329,3 +329,7 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 
 
 📌 Team update (2026-03-17T00:37:26Z): imageCaption investigation session completed. Lead investigation synthesized with Editor analysis: extension.mjs has uncommitted imageCaption fix + pre-publish validation; batch-publish-prod.mjs (untracked) includes imageCaption but lacks pre-publish validation; stage7-prod-push.mjs absent from working tree. Witherspoon draft: 6 images (2 inline captioned, 4 table uncaptioned). Editor-to-Lead handoff proposed for parser hardening (dense table guard, pre-publish assertImageCaptions). — decided by Coordinator
+
+
+📌 Team update (2026-03-16T20:44Z): KC Fields trade evaluation — 2 inline editorial images generated (inline-1 hero-safe stadium, inline-2 dual-QB silhouette). Images ready for review. MD5 verified unique. — decided by Writer
+

@@ -106,3 +106,13 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
    - **Manifest pattern:** `stage7-prod-manifest.json` at repo root tracks all push results with slug, draftId, draftUrl, title, tags, status. Useful for audit and Joe's manual review queue.
    - **22 articles total at Stage 7** now have production draft URLs (20 from this push + 2 already on prod: mia-tua-dead-cap-rebuild, den-2026-offseason).
 
+
+📌 **KC Fields Trade Evaluation — Image Generation (2026-07-25)** — Generated 2 inline editorial images via Gemini API directly. Key learnings:
+   - **`generate_article_images` Copilot extension is not always available.** When the extension host isn't loaded, call the Gemini API directly using the extension source (`.github/extensions/gemini-imagegen/extension.mjs`) as reference. The key functions are `generateContent` for Gemini models and `predict` for Imagen models.
+   - **Model availability changes.** Models like `gemini-2.0-flash-exp` and `imagen-3.0-*` returned 404. Always list available models first via `GET /v1beta/models` and build a fallback chain. As of this session: `gemini-2.5-flash-image`, `gemini-3-pro-image-preview`, `gemini-3.1-flash-image-preview` (generateContent), and `imagen-4.0-generate-001/ultra/fast` (predict).
+   - **`imageDimension` is not a valid generationConfig field.** Use `aspectRatio` in Imagen predict params, or include "1:1 aspect ratio" in the prompt text for Gemini generateContent models.
+   - **`gemini-2.5-flash-image` worked reliably** for both atmospheric and silhouette prompts. Generated 1.6MB and 1.1MB images respectively — quality comparable to the extension's default `gemini-3-pro-image-preview`.
+   - **Hash verification pattern confirmed.** `Get-FileHash *.png -Algorithm MD5` catches duplicate images. Both hashes were unique (8E5E18CA vs DFD4A83B).
+
+📌 Session (2026-03-16T20:44Z): Generated 2 inline images for kc-fields-trade-evaluation via gemini-2.5-flash-image. inline-1 hero-safe atmospheric, inline-2 analytical dual-QB. MD5s unique. Extension tool unavailable — used direct Gemini API.
+

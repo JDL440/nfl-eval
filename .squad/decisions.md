@@ -3538,3 +3538,27 @@ The 20 articles from the Ralph batch were created on **`nfllabstage.substack.com
 **Recommend:** Clarify and document. Then implement Option A (move existing 20) + Option C (fix going forward).
 
 
+
+
+### 2026-03-16: KC Fields Trade Image Generation — Gemini Fallback
+**By:** Writer (Substack Content Writer)
+**Status:** EXECUTED
+**Affects:** kc-fields-trade-evaluation article, content/images/
+
+**What:**
+Generated 2 inline editorial images for kc-fields-trade-evaluation using Gemini API directly (gemini-2.5-flash-image model). Extension tool was unavailable; fell back to direct API call.
+
+| File | MD5 | Description |
+|------|-----|-------------|
+| inline-1.png | 8E5E18CAD47BA3BE3CF8CB07344BB172 | Hero-safe atmospheric Chiefs red/gold stadium |
+| inline-2.png | DFD4A83B00228FC9717C8C2E12B6096C | Dual-QB silhouette analytical image |
+
+**Why:**
+- Image-generation skill requires exactly 2 inline images, inline-1 hero-safe
+- Older Gemini model names (gemini-2.0-flash-exp, imagen-3.0-*) deprecated/404
+- Hash verification confirmed unique images
+
+**Impact:**
+Images ready for Editor review. Article markdown not yet updated with image references.
+
+---
