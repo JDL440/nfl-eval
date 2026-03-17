@@ -4,6 +4,43 @@
 
 ---
 
+### 2026-07-26: Issue #78 — Waddle Trade Article Pipeline Execution
+**By:** Lead
+**Status:** ✅ EXECUTED — Article published to prod Substack
+**Affects:** `content/articles/den-mia-waddle-trade/`, pipeline.db, issue #78
+
+**What:**
+Ran the full article pipeline (Stages 2→7) for issue #78 — "DEN/MIA — The Jaylen Waddle Trade." 4-agent panel (Cap, DEN, MIA, Offense) on `claude-opus-4.6`. Writer produced ~3,100 words. Editor caught two factual errors; both fixed. Published to `https://nfllab.substack.com/publish/post/191309007`.
+
+**Key decisions:**
+1. **Panel composition:** Cap + DEN + MIA + Offense — Panel Composition Matrix recommendation for trade evaluations. Produced genuine disagreement on valuation and cap sustainability.
+2. **Dense table simplification:** Three tables exceeded inline density threshold — simplified from 4-6 columns to 2-3 columns each (chose simplification over PNG rendering).
+3. **NYJ tease validation:** "Next from the panel" tease references NYJ two-firsts article, confirmed in pipeline.db at Stage 3.
+
+**Reusable patterns:**
+- For trade-reaction articles, the 4-agent panel (Cap + acquiring team + trading team + scheme) produces excellent structured disagreement. Recommend as default.
+- Dense table avoidance: tables matching `isDenseTableHeader()` patterns plus 2+ numeric columns will trigger blocker. Pre-simplify during drafting.
+- `.env` must be explicitly copied to git worktrees.
+
+---
+
+### 2026-07-26: Waddle Trade Article — Image Policy Verified
+**By:** Editor
+**Status:** ✅ APPROVED — images pass policy
+**Affects:** `content/articles/den-mia-waddle-trade/draft.md`, Stage 7→8 readiness
+
+**What:**
+Verified the repaired Waddle trade article satisfies the 2-inline-image / no-cover-in-markdown policy. Both image files exist on disk and were visually inspected for AI failure patterns (fabricated charts, fake jerseys, embedded text). No issues found.
+
+**Detail:**
+- **Inline 1** (`den-mia-waddle-trade-inline-1.jpg`): Stadium shot — Empower Field, dramatic sky, Broncos colors. Clean.
+- **Inline 2** (`den-mia-waddle-trade-inline-2.jpg`): Front-office desk — NFL football, Broncos jacket, open book. Clean.
+- **Not verified:** Substack draft rendering at the prod URL. Joe should confirm images render correctly during Stage 8 review.
+
+**Rationale:** Article text was already ✅ APPROVED in `editor-review-2.md`. This pass confirms the image repair is complete and introduces no new blockers. Article is clear for handoff.
+
+---
+
 ### 2026-07-26: Waddle Trade Article — Issue #78 Created
 **By:** Lead (issue creator)
 **Status:** ✅ ACCEPTED — Issue created, pipeline queued at Stage 2

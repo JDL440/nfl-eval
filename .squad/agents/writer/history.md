@@ -116,3 +116,5 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 📌 Session (2026-03-16T20:44Z): Generated 2 inline images for kc-fields-trade-evaluation via gemini-2.5-flash-image. inline-1 hero-safe atmospheric, inline-2 analytical dual-QB. MD5s unique. Extension tool unavailable — used direct Gemini API.
 
+
+📌 Team update (2026-03-17T15:13Z): Image generation is mandatory between Stage 5 (Writer) and Stage 6 (Editor). Issue #78 revealed that skipping `generate_article_images` causes prod drafts to publish without images. When running all stages in a single session, explicitly call image generation after the draft is saved. — decided by Lead

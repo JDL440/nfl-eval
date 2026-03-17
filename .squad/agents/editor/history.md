@@ -333,3 +333,18 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 
 📌 Team update (2026-03-16T20:44Z): KC Fields trade evaluation — 2 inline editorial images generated (inline-1 hero-safe stadium, inline-2 dual-QB silhouette). Images ready for review. MD5 verified unique. — decided by Writer
 
+📌 Waddle Trade (den-mia-waddle-trade) — IMAGE POLICY REVIEW (2026-07-26)
+- **File:** `content/articles/den-mia-waddle-trade/draft.md`
+- **Report saved:** `content/articles/den-mia-waddle-trade/editor-image-review.md`
+- **Scope:** Post-repair image policy verification — confirm 2 inline images, no cover in markdown, files exist, no AI failure patterns.
+- **Findings:**
+  - ✅ Exactly 2 inline images at lines 23 and 125. No cover image in markdown.
+  - ✅ Both `.jpg` files exist in `content/images/den-mia-waddle-trade/`.
+  - ✅ Inline 1: Empower Field at Mile High — empty stadium, dramatic sky, Broncos orange/blue. No text/chart/jersey issues.
+  - ✅ Inline 2: NFL football + Broncos jacket + open book on desk — front-office analysis atmosphere. Wilson/NFL branding is real product marking. No fabricated data visible.
+  - ✅ Alt text accurate for both images. Placement contextually appropriate.
+  - ❓ Substack draft rendering not verified (outside tooling scope — Joe confirms at Stage 8).
+- **Verdict: ✅ APPROVED** — images satisfy policy. No blockers.
+- **Lesson:** For trade articles with a clear team identity (DEN), stadium + front-office-desk is a reliable 2-image pairing that avoids all AI failure patterns (no players, no jerseys, no charts). Worth noting as a reusable image concept template.
+- **Recorded by:** Editor (2026-07-26)
+
