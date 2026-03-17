@@ -177,3 +177,24 @@ The Phase 2 Note extracted the most visceral elements from the draft article: th
 - Attachment registration (POST /api/v1/comment/attachment) is the critical middle step — omitting it breaks the link between CDN URL and Note
 
 **Next step:** Joe Robinson reviews the live stage Note. If approved, promote to production with same structure.
+
+
+## Branch Cleanup & Push (2026-03-18)
+
+**Objective:** Clean up the working tree from Notes validation scratch artifacts, commit durable work, reconcile with origin/main, and push.
+
+**Actions taken:**
+1. Audited git status: 7 modified tracked files + 7 untracked files; local main diverged from origin (6 local / 8 remote commits)
+2. Categorized files: 7 modified files + 1 untracked file (notes-phase2-candidate-jsn.md) classified as durable; 6 untracked files classified as scratch
+3. Deleted 6 scratch artifacts: phase1-notes-test.mjs, phase1-test-results.txt, delete-notes-api.mjs, check-jsn-notes.mjs, replace-jsn-note.mjs, tc3-notes-page.png
+4. Committed all durable changes (8 files, +524/-39 lines)
+5. Rebased 7 local commits onto origin/main - no conflicts
+6. Pushed successfully to origin/main
+
+**Commit:** a918351 - docs(notes): Phase 1-3 results, extension fixes, cleanup scratch artifacts
+
+## Learnings
+
+- **Divergence is normal on main in this repo** - feature branch merges (e.g., PR #77 mobiletable) land on origin while Notes work continues locally. git pull --rebase resolves cleanly when changes don't overlap.
+- **Scratch artifact pattern:** One-off test scripts (phase1-notes-test.mjs, delete-notes-api.mjs, etc.) should be deleted promptly after their learnings are captured in docs/notes-api-discovery.md. Letting them accumulate creates branch-cleanup overhead.
+- **Durable vs disposable heuristic:** If a file is referenced by agent history (e.g., Writer references content/notes-phase2-candidate-jsn.md), it's durable. If it's a standalone script with no references, it's scratch - unless it encodes reusable tooling.
