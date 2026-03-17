@@ -34,9 +34,27 @@ Normal article drafts go directly to prod (`nfllab.substack.com`) by default. Ex
 
 ---
 
+### 2026-03-17: Mobile Renderer Height/Width Estimation Must Be Font-Size-Aware
+**By:** Analytics (revision cycle owner, issue #75)
+**Status:** ✅ IMPLEMENTED — Revision complete
+**Affects:** `.github/extensions/table-image-renderer/renderer-core.mjs`, `fix-dense-tables.mjs`
+
+**What:**
+Issue #75 revision revealed that the mobile table renderer's pixel-based estimation constants (character widths, header heights) were calibrated at 17px desktop font but used unscaled at 22px mobile font. This caused canvas underestimation → content clipping.
+
+**Rules established:**
+1. All pixel-based estimation constants must scale with font size — use `layout.tableCellFontSize / 17` as multiplier.
+2. Header row height must be dynamically estimated via `estimateHeaderRowHeight()`, not a fixed pixel value.
+3. Always overestimate canvas dimensions — prefer generous `heightSafety` (150px) and rely on `trimBottomWhitespace` to crop. Underestimation is irrecoverable; overestimation costs trivial whitespace-trimming compute.
+4. Header CSS must include `overflow-wrap: anywhere` — `table-layout: fixed` forces column widths but without wrapping, text overflows boundaries.
+
+**Commits:** c3a3243, 907bfa4
+
+---
+
 ### 2026-03-17: Dense Table Images Illegible on Mobile — Dual-Render Implemented
 **By:** Lead (Team Lead Specialist)
-**Status:** ✅ IMPLEMENTED — Awaiting human review (issue #75)
+**Status:** ✅ IMPLEMENTED + REVISED — Clipping/collision defects fixed by Analytics (see above)
 **Affects:** `.github/extensions/table-image-renderer/renderer-core.mjs`, `fix-dense-tables.mjs`, `audit-tables.mjs`, `validate-mobile-tables.mjs`
 
 **What:**
