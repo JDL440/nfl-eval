@@ -1488,3 +1488,74 @@ The 20 articles from the Ralph batch were created on **`nfllabstage.substack.com
 3. Or is the multi-publication split intentional (staging for drafts, prod for review)?
 
 **Recommend:** Clarify and document. Then implement Option A (move existing 20) + Option C (fix going forward).
+
+---
+
+# Notes Operational Cadence — Team Decision
+
+**Date:** 2025-07-27
+**Author:** Writer
+**Requested by:** Joe Robinson
+**Decision Type:** Operational cadence, automation policy
+**Status:** Proposed
+
+---
+
+## Decision
+
+Substack Notes follow a **three-moment cadence** tied to the article lifecycle:
+
+1. **Draft teaser** (Stage 7 → nfllabstage) — text + image, no card. Auto-posted to stage when a prod draft is created. Joe reviews alongside the article draft.
+2. **Publish-day promotion** (Stage 8 → nfllab prod) — card-first: 1-2 sentence hook + image + auto-rendered article card. Posted within 1 hour of Joe publishing. Joe approves before prod post (v1).
+3. **Follow-up** (2-3 days post-publish → prod) — optional, manually triggered by Lead/Writer when engagement or news warrants.
+
+## Sweep Policy
+
+- **Frequency:** Daily, as part of Ralph's sweep cycle.
+- **Sweep action (v1):** Report-only. Lists articles missing expected Notes, with proposed copy. Does NOT auto-post to prod.
+- **Stage teasers:** Auto-post to nfllabstage (safe). No Joe gate required.
+- **Prod promotions:** Sweep proposes → Joe approves → post. No unattended prod Notes until ≥10 successful manual cycles.
+
+## Eligibility Rules
+
+**Teaser eligible:** `current_stage >= 7` + valid `substack_draft_url` + at least one inline image + no existing teaser Note.
+
+**Promotion eligible:** `current_stage = 8` + `status = 'published'` + valid `substack_url` + at least one inline image + no existing promotion Note with `target = 'prod'`.
+
+## Dedupe
+
+- **Primary key:** `(article_id, note_type, target)` in the `notes` table.
+- Skip if exists. If copy changed, DELETE old Note → POST new one → record new ID.
+- Standalone Notes are not deduplicated.
+
+## Copy Standard
+
+| Type | Pattern | Max Length |
+|------|---------|-----------|
+| Teaser | "[Data hook]. Full breakdown dropping soon." | ≤30 words |
+| Promotion | "[Data hook]. Our panel breaks [framework]." | ≤20 words |
+| Follow-up | "[Validation/reaction]. [Tease or question]." | ≤40 words |
+
+Image: Always article inline-1 (hero image). Card-first format for promotions (per Joe's approved model from JSN extension).
+
+## Rollout Order
+
+1. Manual promotion Notes for next 3-5 articles (current phase)
+2. Add sweep eligibility report to `article_board.py` (report-only)
+3. Semi-auto stage teasers (auto-post to nfllabstage on Stage 7)
+4. Semi-auto prod promotions (sweep proposes, Joe approves)
+5. Full auto (v2, gated on ≥10 successful manual cycles)
+
+## Rationale
+
+- Three moments cover the full article attention lifecycle: anticipation (teaser), launch (promotion), and sustain (follow-up).
+- Stage-first teasers give Joe a preview without subscriber risk.
+- Dedupe by `(article_id, note_type, target)` prevents double-posting while allowing intentional rewrites.
+- Report-before-post in v1 builds trust and catches edge cases before automation scales.
+- The card-first format is validated — Joe approved it on the JSN extension Note (Phase 3).
+
+## Related Decisions
+
+- `writer-jsn-short-note.md` — Feed-native card-first model (Joe approved)
+- `lead-notes-plan.md` — Original Notes feature plan
+- `docs/substack-notes-feature-design.md` — Full design doc

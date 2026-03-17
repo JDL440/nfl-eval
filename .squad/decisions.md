@@ -295,6 +295,657 @@ Phase 0 (API discovery, Playwright POST, and test note cleanup) is complete. `de
 
 ---
 
+# Editor Review: JSN Note Trim & Image-Led Rewrite
+
+**Date:** 2026-03-18  
+**Note ID (stage):** 229307547  
+**Current body word count:** ~370 words  
+**Requested action:** Identify what MUST stay vs. what can cut with an image present  
+**Requested by:** Joe Robinson  
+**Editor:** Editor (Editor team)
+
+---
+
+## Executive Summary
+
+The current live JSN Note (posted to nfllabstage) is **text-rich but image-optional**. With a 1:1 chart showing the four extension paths, the body text can drop to **150–180 words** while preserving all critical facts and narrative tension. The image carries the structural overhead; text should carry only the story and urgency.
+
+---
+
+## Must-Keep Facts (3 bullets)
+
+1. **The absurd gap:** "JSN earning $3.4M — 90% below market" — this is the *only* fact that justifies why-now. It explains why we're talking about this extension *today*, not next year.
+
+2. **The $33M cost of waiting:** This is the insight. One number. One sentence. It's the whole story: delay = inflation = cost. This is the thing that makes a reader click instead of scroll.
+
+3. **The extension clock is ticking:** Urgency. Injury risk. Market inflation. The Note doesn't name these—the image + card will show them—but the *frame* has to signal "this is urgent *now*."
+
+---
+
+## Safe Cuts / Compressions (5 bullets)
+
+1. **Delete the entire first paragraph** (~90 words on "JSN earning $3.4M, Shaheed $17M, Cap says $34M..."). The article card will show the headline and preview. Your text adds zero new information.
+
+2. **Cut the four paths explanation entirely.** The image shows them. The article explains them. The Note doesn't need to describe the structure—it needs to explain *why it matters right now*.
+
+3. **Remove all expert debate details** (Cap vs. Offense on $32M vs. $34M). The article has the full debate. The Note's job is to *interrupt the scroll*—not to preview the argument.
+
+4. **Cut PlayerRep injury language** (OBJ, Thomas, DK examples). Save this for the article. The Note's job is "why-now," not "here's the risk."
+
+5. **Delete the Shaheed deal paragraph entirely** (~50 words on negotiating leverage). The image and article will show the strategic moment. The Note only needs to signal urgency, not explain the move.
+
+---
+
+## Target Word-Count Range for Image-Led Version
+
+**Single headline + image + card.** Current pattern on Joe's account (Note c-228989056): "Check out my new post!" + image + auto-rendered article card. **No body text at all.**
+
+**Word target: 15–20 words MAX** (current: ~370)
+
+**Why:** Substack's article card auto-generates the headline, byline, and publication thumbnail. The Note's only job is to draw the eye and establish urgency. The image does the visual work. The card does the credibility/preview work. Text only needs to *frame* why-now.
+
+**The simplest pattern that works:**
+> One sentence (15–20 words) that answers: "Why should I stop scrolling *right now*?" + image + article card (auto-rendered).
+
+**Examples from Joe's feed:**
+- "Check out my new post!" (4 words) + image + card ✅
+- For JSN: Could be "JSN's extension clock just started ticking. 4 paths. $33M at stake." (13 words) + image + card
+
+---
+
+## Factual Traps to Avoid in Shorter Rewrite
+
+⚠️ **Trap 1: "JSN is earning $3.4M"** vs. **"JSN earned $3.4M in 2025"**  
+> The body text uses present tense ("is earning"), which implies ongoing 2026 salary. Verify with Cap expert: is the $3.4M the 2026 salary or the 2025 carry-forward? If unclear, use "came into 2026 earning" to be precise.
+
+⚠️ **Trap 2: "$33M more" vs. "$33M additional cost"**  
+> The current body says "waiting costs $33 million more in total contract value through 2030." Shorter version might compress to "$33M more" — but more *than what, exactly?* More than extending now. More than the 5th-year option. Make sure the comparison is explicit even in one sentence.
+
+⚠️ **Trap 3: Shaheed's $17M is "fully guaranteed"**  
+> The draft says "$17M AAV, $34.7M fully guaranteed." The Note teaser uses just "$17M/year" — confirm that's the relevant number for the pitch, not the total guarantee. If PlayerRep's argument hinges on "Seattle has cap space," then AAV is correct. If it's about intent-to-commit, maybe the $51M total matters. Current Note uses $17M — **keep it that way** (it's the per-year burden, which is the comp).
+
+⚠️ **Trap 4: "Cap consensus is $34M AAV"**  
+> The article text says Cap's starting point is Lamb's $34M, but Cap also acknowledges Jefferson's $35M and notes "anything below $32M is a laugh-out-loud." The Note currently says "$34M with front-loaded structure." In the trim, if you compress Cap's position to one sentence, make sure you're not overstating certainty. "Cap targets $34M" is defensible; "Cap says $34M" might be too narrow.
+
+---
+
+## Rewrite Recommendation (untested — for Joe's review)
+
+**Proposed pattern matching Joe's live Notes (c-228989056):**
+
+> JSN's extension clock just started. 4 paths. $33M at stake if Seattle waits.
+
+**Word count:** 13 words  
+**What the image does:** Shows the four paths, the timing/cost table, and gives the feed a visual hook.  
+**What the card does:** Auto-renders the article headline, byline, pub image, and date.  
+**What your text does:** Answer only "why should I care right now?"—not "here's the whole story."
+
+**Alternative framings (13–18 words):**
+- "JSN earns $3.4M. Waits 12 months? Cost goes up $33M. Here's why." (13 words)
+- "The Shaheed deal just set JSN's extension price. Now Seattle has to move." (14 words)
+- "Four experts. One clock. $33M on the table if the Seahawks blink." (13 words)
+
+---
+
+## Team Decision
+
+**Decision:** Proceed with **image-first Note design** using the target 150–180 word range. The current text-heavy Note works on-page (where readers have scrolling room), but Substack Notes feed is mobile-first and scan-hungry. An image front-and-center with 150-word supporting copy will outperform 370 words of text in social discovery.
+
+**Next step:** Joe reviews this editorial recommendation. If approved, rewrite the Note to the trim target, re-validate on nfllabstage with the image attachment, and capture the final Note ID for the Phase 3 production pass.
+
+---
+
+## Learnings for Editor History
+
+- **Substack Notes with an image + article card are *ultra-brief* interrupts.** The live pattern on Joe's account (Note c-228989056) uses just 4 words ("Check out my new post!") + image + auto-card. This eliminates everything except the hook. The 145-word version I recommended was *still* 10x too long.
+- **The image carries all structural complexity.** Don't describe the four paths, the timing table, or the expert positions in text. The image should do that. The article card preview should do that. Text only needs to answer: "Why am I reading this *right now* instead of later?"
+- **The "$33M at stake" framing is the keeper.** It's the only fact that creates urgency. Everything else (expert names, Shaheed comp, specific AAV targets) lives in the article preview or the full read. The Note's job is to signal *now, not later*.
+- **Lead with the absurd gap, signal the clock.** "JSN earns $3.4M" + image showing the market gap + one-sentence urgency frame ("clock just started," "Seattle has to move," "waits 12 months, cost goes up $33M"). That's the formula.
+- **Cut ruthlessly when both image and card are present.** If readers can see the article headline, byline, and preview in the card, your text adds zero value except emotional frame. Every word better explain *why now*.
+---
+
+# Editor's Review: Phase 2 JSN Promotion Note
+
+**Reviewer:** Editor (Article Editor & Fact-Checker)  
+**Date:** 2026-03-18  
+**Note Package:** Phase 2 Promotion Note — Jaxon Smith-Njigba Extension  
+**Status:** ✅ APPROVED
+
+---
+
+## Fact-Check Summary
+
+All substantive claims in the promotion note copy have been verified against the published article (jsn-extension-preview/draft.md) and the supporting expert position files. No factual errors found.
+
+### Verified Claims
+
+| Claim | Source | Status |
+|-------|--------|--------|
+| **JSN's $3.4M** | Article L14, Cap position | ✅ Confirmed (rookie deal year 3) |
+| **Lamb's $34M** | Article L40, Cap position (Lamb 4yr/$136M) | ✅ Confirmed (AAV) |
+| **Shaheed's $17M/year** | Article L93, Cap position | ✅ Confirmed (3yr/$51M deal in Feb 2026) |
+| **90% below market value** | Article L14, Cap position | ✅ Confirmed (market floor $32M+) |
+| **Four extension paths** | Article heading and "The Four Paths" section | ✅ Confirmed (extend now, 5th-year option, franchise tag, let him walk) |
+| **Waiting costs $33 million more** | Article L71, Cap position section | ✅ Confirmed ($33M more through 2030 vs. extending now) |
+| **Shaheed as negotiating weapon** | Article L91-98, PlayerRep quote | ✅ Confirmed (exact section title: "The Thing Nobody Outside the Building Is Talking About") |
+
+---
+
+## Tone & Voice Assessment
+
+The promotion note successfully captures the article's core tension and urgency:
+
+- ✅ **Data-forward opening** — Dollar figures ($3.4M vs $34M vs $17M) create immediate stakes
+- ✅ **Competitive tone** — "His agent just got a gift" reflects the PlayerRep position (Shaheed as unexpected leverage)
+- ✅ **Expert disagreement as the hook** — Each panelist's view surfaces in telegraphic language (Cap's financial precision, PlayerRep's guarantee-cash argument, SEA's defense-sequencing priority, Offense's system-amplified read)
+- ✅ **Urgency framing** — "One clock ticking" matches the article's injury-risk narrative
+- ✅ **Call-to-action alignment** — "Read the full breakdown" is implicit (not a generic "drop it in the comments"), consistent with NFL Lab's thought-leadership positioning
+
+**Tone consistency:** Matches Writer charter — informed but accessible, data-heavy, narrative-driven, no jargon.
+
+---
+
+## Structural & Flow Notes
+
+- ✅ **Opening hook works** — The three dollar figures immediately create curiosity: why is JSN's number so small relative to Lamb and Shaheed?
+- ✅ **Middle section builds tension** — Four extension paths + the $33M cost-of-waiting trap + the Shaheed variable = a reading experience that escalates
+- ✅ **Closing lands clean** — "Four experts. One clock ticking" is punchy and positions the reader to click through
+- ✅ **Link integration** — Implicit CTA (not aggressive) suits a Notes feed where readers expect discovery, not hard sell
+
+---
+
+## Image Consideration
+
+The note references `jsn-extension-preview-inline-1.png` (1024×1024 square format). This is appropriate:
+- **Source:** Article-approved inline image (already published-ready per article draft)
+- **Content:** Chart/graphic of the four extension paths (scannable, actionable)
+- **Aspect ratio:** 1:1 square format (optimal for Substack Notes social rendering and feed visibility)
+- **Relevance:** Directly supports the "four paths" teaser — visual reinforcement without added context needed
+
+---
+
+## 🟢 Minor Notes (Optional Polish)
+
+### Grammar/Flow
+- Line 55: "earning 90% below market value" — slightly awkward phrasing (typical phrasing is "earning 90% of market value" or "90% below market"). Current phrasing is defensible but could read as "earning, minus 90% of market" = slightly confusing. **Not a blocker** (article uses same phrasing on L14).
+- Line 56: "Seattle just signed Rashid Shaheed (WR2) for $17M/year." — The notation "(WR2)" is correct context but uncommon in Notes format. Acceptable but slightly formal. Alternative: "Seattle just signed Rashid Shaheed (deep threat) for $17M/year" to match the article's description on L93. **Optional refinement.**
+
+### Alignment with Published Article Voice
+- The note uses "PlayerRep says guaranteed cash today is the only real money" — this is a strong paraphrase of the full quote on Article L77. The exact quote is longer and more emphatic. However, the paraphrase is factually accurate and fits the Note's space constraints. **No change needed.**
+
+---
+
+## ✅ APPROVED — READY FOR PHASE 2 POSTING
+
+**Verdict:** The promotion note is factually safe, tonally consistent with the article, and reads as a compelling NFL Lab entry point. All key claims verify clean against published source material. The voice is urgent without being clickbait, data-driven without academic jargon, and the expert disagreement frames the reader's motivation to click through.
+
+**Go-ahead:** Proceed with dry-run smoke test and manual posting to nfllabstage.substack.com per Phase 2 validation checklist.
+
+---
+
+## Decision Recorded
+
+**Title:** Phase 2 JSN Note — Voice & Positioning Validated
+
+**Finding:** The promotion note demonstrates a reusable pattern for short-form teasers:
+1. Lead with the data absurdity (pay gap between JSN and comps)
+2. Surface one unexpected variable (Shaheed's deal as leverage)
+3. Signal expert disagreement in telegraphic form
+4. Close with urgency frame + implicit CTA
+
+This pattern is generalizable to any high-stakes decision article (trades, free agency, playoff scenarios) where multiple experts hold conflicting positions. The "one clock ticking" frame is especially effective for time-sensitive decisions.
+
+---
+
+*Editor — 2026-03-18*
+---
+
+---
+date: 2026-03-18T14:30Z
+decision_owner: Lead
+title: JSN Phase 2 Note Reframing — Text-First Review + Image-Backed Revision
+phase: Phase 2 Review → Phase 3 Prep
+---
+
+## Decision
+
+The JSN Phase 2 Note currently live on nfflabstage (Note ID 229307547) is **kept as-is for Joe review**. The revision to a shorter, image-led format will be staged and tested separately before Phase 3 production post.
+
+## Reasoning
+
+### Current Note Structure (Text-Only, ~120 Words)
+- ✅ **Strength:** Successfully posted (HTTP 200), readable, contains all expert voices and the critical $33M frame
+- ✅ **Proof:** This is the first real article-promotion Note from our panel system — validates ProseMirror assembly and link insertion at scale
+- ❌ **Gap:** Reads like compressed article summary, not a teaser. Too much narrative density for a Note feed where readers scan in 3 seconds
+
+### Recommended Revision: MUCH SHORTER + Image + Article Card
+**Reference example:** Joe Robinson's actual published Note (c-228989056) on the KC Fields article uses this minimal structure:
+- 1-line lead: "Check out my new post!"
+- 1 strong image (hero visual from the article)
+- Article card auto-renders below (Substack displays headline, subtitle, publication, pub date)
+- **Total user-visible text: 4 words** (image + article metadata do 95% of the work)
+
+**For JSN, apply the same pattern:**
+- **Lead (1 line, ~10–15 words max):** "Four paths. Four experts. One decision JSN can't delay."
+- **Image (1 required):** The four-paths chart (jsn-extension-preview-the-four-paths.png)
+- **Article link:** Substack card auto-renders with JSN headline, subtitle, cover, pub date
+- **Total visible text: ~15 words** (image + article card carry all context)
+
+**Why this pattern crushes longer versions:**
+- Readers see image first (decision chart is the hook, not text)
+- Headline + subtitle + card preview answer "why should I click?" before readers finish scanning
+- The article card already displays JSN's compelling subtitle ("Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid")
+- Text-first approach was inefficient — you had to read 120 words to understand four expert positions; image-first shows them instantly
+
+### Risk Mitigation
+- **Keep current Note live** during revision work — it's valid proof-of-concept
+- **Test image attachment separately** — HTTP 500 on image failures means we validate image upload/attachment before bundling into full Note POST
+- **Delete current Note cleanly** when image+text revision is ready (do not try in-place replacement)
+
+## Affected Workflows
+
+1. **Phase 2 Joe Review:** Review rendered Note on nfflabstage.substack.com/notes (current text-only version is the approved baseline for assessment)
+2. **Phase 2.5 Revision (New):** Craft shorter copy, validate image attachment via separate smoke test, then post new version to nfflabstage
+3. **Phase 3:** Use the approved short+image format for prod post to nfllab.substack.com
+
+## Files Changed
+- None (this is a staging decision; code changes recorded separately in Phase 2.5 execution)
+
+## Next Steps
+1. Joe reviews rendered Note on nfflabstage using the current text-only version
+2. Lead coordinates Phase 2.5 revision: 60-word copy + image attachment validation
+3. After Phase 2.5 approval, delete current Note and post revised version
+4. Phase 3 production uses the short+image approved format
+
+---
+
+## Note Template (Phase 2.5 Candidate)
+
+**Lead (1 line, ~10–15 words):**
+"Four paths. Four experts. One decision JSN can't delay."
+
+**Image (1 required):**
+jsn-extension-preview-the-four-paths.png (or inline-1.png if chart is simpler)
+
+**Article link (auto-renders):**
+https://nfflabstage.substack.com/publish/post/191168255
+
+Substack card will auto-display:
+- Headline: "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."
+- Subtitle: "*Our expert panel disagrees on the number. They all agree on the clock.*"
+- Cover image & pub date
+
+**Total visible text: ~15 words** (vs. current ~120 words + 0 images + 1 link)
+Image + article card handle 95% of the communication work.
+---
+
+# Decision: Notes Branch Cleanup & Push
+
+> **Date:** 2026-03-18
+> **Author:** Lead
+> **Status:** Executed
+
+## Context
+
+After completing Notes Phases 0–3 (API discovery, smoke tests, JSN card-first Note on nfllabstage), the working tree accumulated 6 scratch scripts and a test screenshot alongside durable code, docs, and content changes. Local main had diverged from origin/main by 6/8 commits due to concurrent PR #77 (mobiletable) merges.
+
+## Decision
+
+1. **Scratch artifacts deleted:** `phase1-notes-test.mjs`, `phase1-test-results.txt`, `delete-notes-api.mjs`, `check-jsn-notes.mjs`, `replace-jsn-note.mjs`, `tc3-notes-page.png` — all one-off validation scripts whose learnings are fully captured in `docs/notes-api-discovery.md`.
+2. **Durable content kept:** `content/notes-phase2-candidate-jsn.md` — structured Note copy template referenced by Writer history. All modified tracked files (extension.mjs, agent histories, now.md, pipeline.db, notes-api-discovery.md) committed.
+3. **Reconciliation:** Rebased 7 local commits onto origin/main (no conflicts), pushed cleanly.
+
+## Rationale
+
+- Scratch scripts should be cleaned up once their learnings are captured in permanent docs. Leaving them creates branch noise and merge risk.
+- The durable-vs-disposable heuristic: files referenced by agent histories or encoding reusable patterns are durable; standalone one-off scripts with no references are disposable.
+- Rebasing (not merging) keeps the commit history linear and readable.
+
+## Impact
+
+- Branch is clean and up-to-date with origin/main
+- Notes Phase 1–3 learnings preserved in docs and agent histories
+- No work lost — all scratch script learnings are in `docs/notes-api-discovery.md`
+---
+
+# Decision: Reusable Template for Extension/Contract Notes
+
+> **Date:** 2026-03-18  
+> **Author:** Writer  
+> **Status:** 🟢 Approved for use in Phase 2+ Notes  
+> **Applies to:** JSN Note (phase-2-candidate-jsn.md) and future salary/contract-decision articles
+
+---
+
+## Finding
+
+The JSN extension Note reveals a generalizable structure for contract negotiation articles. This template can be reused for any player extension, free agency decision, or salary cap pivot.
+
+---
+
+## Template Structure
+
+### Opening Hook (1-2 sentences)
+Present the absurd gap or central tension in dollar amounts.
+
+**Example:** JSN's $3.4M. Lamb's $34M. Shaheed's $17M.
+
+**Generalizable to:** Any contract comparison (current pay vs. market, vs. comparable signings, vs. ask)
+
+### Variable Introduction (1 sentence)
+Surface one non-obvious leverage point or context shift.
+
+**Example:** Seattle just signed Rashid Shaheed (WR2) for $17M/year. JSN's agent noticed.
+
+**Generalizable to:** Unexpected signings, coaching changes, front office moves, injury updates, or market events that shift leverage
+
+### Expert Positions (3-4 sentences, one per expert max)
+Thread each panelist's view into the narrative without quotes.
+
+**Example:** Cap says "trap." PlayerRep says "guaranteed cash." Offense says "system-amplified."
+
+**Generalizable to:** Any multi-expert article where disagreement is the product
+
+### Call-to-Action Frame (implicit)
+End with the decision or urgency that makes readers want the full analysis.
+
+**Example:** "One clock ticking." / "Four paths, one window." / "The choice determines everything."
+
+**Generalizable to:** Any frame that puts the decision front-and-center without generic "read more"
+
+---
+
+## Why This Works
+
+1. **Visual scanning:** Dollar amounts and proper nouns anchor the eye; readers latch onto numbers before reading full sentences
+2. **Panelist voice:** Threading expert positions (not quotes) maintains personality without dialogue heavy-lifting
+3. **Implicit urgency:** The decision frame (not an explicit CTA) creates pull; readers want to understand the stakes
+4. **Narrative arc:** The Note has a beginning (gap), middle (variable), and end (urgency) — it's a micro-essay, not a teaser
+
+---
+
+## Application Rules
+
+- **Use when:** Article is about salary/contract decisions, free agency, roster moves, or cap strategy where expert disagreement surfaces the core tension
+- **Image pairing:** Prefer charts/comparison tables from the article itself (already approved, reusable, scannable in feed)
+- **Expert count:** Best with 3-4 expert voices (more gets cluttered; fewer loses the "disagreement is the product" frame)
+- **Length:** 120-150 words (Note body, not headline) — longer than Phase 1 smoke tests but shorter than article snippets
+
+---
+
+## Files & References
+
+- **Phase 2 candidate (example):** `content/notes-phase2-candidate-jsn.md`
+- **Article:** `content/articles/jsn-extension-preview/draft.md`
+- **Writer history:** `.squad/agents/writer/history.md` (Phase 2 learnings recorded)
+
+---
+
+## Next Iterations
+
+Future contract/extension Notes (e.g., Seahawks RB evaluation, trade deadline decisions) can use this template. Adapt the opening gap, variable, and expert positions; keep the structure.
+---
+
+# JSN Extension Note — Reusable Decision: Feed-Native Image-Led Model
+
+**Date:** 2026-03-18  
+**Requester:** Joe Robinson  
+**Decision Type:** Voice pattern, structure optimization  
+**Update:** Revised toward feed-native model per Joe's example (https://substack.com/@joerobinson495999/note/c-228989056)
+
+---
+
+## Finding
+
+Joe clarified the target model: Notes should be **one short line + strong image + article card**. The article card (auto-rendered by Substack from the linked article) carries the headline, subtitle, publication date, and preview. Text should be 1-2 sentences max; image does the visual hook; card does the detail.
+
+This is fundamentally different from traditional teasers. It's feed-native: scroll, see image, read one-liner, card auto-expands with full article preview, click through.
+
+### Reusable Pattern
+
+- **Text:** 1-2 sentences (hook or CTA, not explanation)
+- **Image:** Strong visual (chart, comparison, visual anchor)
+- **Card:** Auto-rendered article metadata (headline, subtitle, date, preview)
+
+The **card carries all narrative detail**. Text just nudges.
+
+---
+
+## Three Options Generated (Revised)
+
+### Option A: Short — One Line (Pure CTA)
+
+**Check out my new post!**
+
+[Image + Article Card]
+
+---
+
+### Option B: Medium — One Hook Line (Data Point)
+
+**JSN's extension decision just changed. Check out my new post.**
+
+[Image + Article Card]
+
+---
+
+### Option C: Best-Balanced — Two Lines (Hook + Urgency)
+
+**JSN at 90% below market. Our panel breaks the extension paths.**
+
+[Image + Article Card]
+
+---
+
+## Recommendation
+
+**Use Option C (Best-Balanced).**
+
+**Why:**
+- Retains the data hook (90% below market) — makes the reader want to know more
+- Signals panelist disagreement without explaining it ("breaks the extension paths" = tension exists, go read)
+- Two lines is the maximum before it stops feeling like a Note and starts reading like a teaser
+- The article card will render the full headline, subtitle, and preview — that's where the panelist names and paths detail lives
+- Image (four-paths chart) provides visual context; card provides narrative detail; text provides urgency
+
+**Why not A or B:**
+- **A** is too generic. Loses the hook that makes JSN interesting vs. any other "check out my post" Note
+- **B** is closer, but "extension decision just changed" is vague. The data point (90% below market) is what makes a reader stop scrolling
+- **C** gives just enough to create click curiosity while letting the card do the heavy lifting
+
+---
+
+## Reusable Insights
+
+1. **Feed-native Notes = one-liner + visual + card.** The card is the real product (article preview). Text is the thumb-stop moment. Don't write article teasers in Notes; write feed hooks.
+
+2. **Data points are better thumb-stops than narrative.** "JSN at 90% below market" stops scrolling. "Extension decision changed" is abstract. Use one specific number + one implication.
+
+3. **"Our panel" + framework reference signals disagreement without detailing it.** Readers know what "breaks the paths" means in context (there are multiple options, and the experts don't align). No need to name each expert—the card will show they're quoted.
+
+4. **Image should be the visual decision-maker.** The four-paths chart tells the "what are we choosing between" story. Text just nudges toward clicking.
+
+5. **Article card auto-renders headline, subtitle, date, and publication preview.** That's the real teaser. Notes text is 1-2 sentences; everything else is visual (image) + card (metadata + excerpt).
+
+---
+
+## Model Reference
+
+Joe's example: https://substack.com/@joerobinson495999/note/c-228989056
+
+Pattern observed:
+- Text: One short sentence ("Check out my new post!")
+- Image: Strong visual that anchors the topic
+- Card: Article preview auto-renders below (title, subtitle, date, excerpt)
+
+This is the target format. JSN Note should follow the same structure.
+
+---
+
+## Related Patterns
+
+- **Feed-native Note formula** (new, 2026-03-18) — One-liner + image + card. Text is the hook, image is the visual anchor, card is the detail layer.
+
+- **Extension negotiation Note template** (2026-03-18, evolved) — Data point + framework signal. Let the card show the full headline and panel positions.
+
+---
+
+## Recorded In
+
+- Writer history: "Feed-native Notes model + JSN revision" (2026-03-18)
+- Team decisions: This file, for reuse on all future Notes
+---
+
+### 2026-03-17T21:37:00Z: User directive
+**By:** Joe Robinson (via Copilot)
+**What:** For article promotion Notes, we just want a card for the article; the note should be card-first and not text-heavy.
+**Why:** User request — captured for team memory
+---
+
+### 2026-03-17T21:32:40Z: User directive
+**By:** Joe Robinson (via Copilot)
+**What:** The JSN Phase 2 note should be shorter and should use an image; keep iterating on the image-backed version.
+**Why:** User request — captured for team memory
+---
+
+### 2026-03-17T14:57:15.7699594-07:00: User directive
+**By:** Joe Robinson (via Copilot)
+**What:** For Notes, tease articles as coming soon when the draft is published, follow up with Notes when the article is publicly published, and consider a daily or more frequent sweep to post Notes automatically.
+**Why:** User request — captured for team memory
+---
+
+---
+Date: 2026-03-17T13:24Z
+Agent: Lead
+---
+
+# Decision: Phase 2 Target = jsn-extension-preview
+
+## Selection
+
+**Article Slug:** `jsn-extension-preview`
+**Full Title:** Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid.
+
+**Current State:**
+- Pipeline DB Stage: 7 (Publisher Pass)
+- Publisher-pass artifact: COMPLETE (`content/articles/jsn-extension-preview/publisher-pass.md`)
+- Stage draft URL: `https://nfllabstage.substack.com/publish/post/191168255`
+- Published URL: NONE (not yet live to prod)
+
+## Why This Target
+
+1. **Highest production value** among Stage 7 candidates:
+   - 9 total images (2 inline, 5 tables, 2 decision matrices)
+   - Expert panel across 4 domains (Cap, PlayerRep, SEA offense specialist)
+   - Structured multi-path analysis (4 contract paths, 4 expert recommendations)
+
+2. **Ideal Note teaser structure:**
+   - Strong subtitle hook: "extension timing clock ticking"
+   - Clear stakeholder conflict (Cap's $34M vs PlayerRep's $36M, vs SEA's defense-first strategy)
+   - Built for promotion: each expert quote is standalone quotable
+
+3. **No URL drift:** Article is Stage 7 draft-only. No prod URL yet to conflict with stage URL, unlike `kc-fields-trade-evaluation` (which was crossed up with prod URL).
+
+4. **Publisher-pass ready:** All metadata locked, image count verified (2 inline), no revision lane — ready to promote.
+
+## URL Decision
+
+**Use stage draft URL:** `https://nfllabstage.substack.com/publish/post/191168255`
+
+- Phase 2 is nfflabstage-only; Note will link to stage draft
+- When article publishes to prod later, jsn will get a prod URL
+- **Caveat:** pipeline.db currently overwrites stage draft URL with prod URL. Phase 2 execution will reveal this as a pain point; recommend separate `substack_stage_draft_url` field for future stage-only workflows
+
+## Caveats & Notes
+
+1. **Stage-vs-prod URL tracking:** After Phase 2 execution, Lead should file a cleanup decision about persisting both stage and prod draft URLs in DB (see `lead-stage-draft-url-provenance.md` decision inbox entry from 2026-03-17).
+
+2. **Review timing:** The successful Phase 2 artifact should stay live on nfllabstage for Joe review. Do **not** delete a good Phase 2 Note unless it posts with an obviously bad artifact or a hard failure state.
+
+3. **Next execution:** Phase 2 is ready to execute immediately. Create teaser Note with promotion copy (headline + clock tension) + 1 inline image from jsn assets.
+
+---
+
+## Outcome
+
+- **Posted live:** 2026-03-17
+- **Note ID:** `229307547`
+- **Review feed:** `https://nfllabstage.substack.com/notes`
+- **Review permalink:** `https://substack.com/@joerobinson495999/note/c-229307547`
+- **Body shape that worked:** exact requested copy, emitted as line-by-line paragraphs
+- **Image note:** recommended asset was verified locally, but the live review artifact is text-only after exact-copy image attempts kept returning HTTP 500
+
+**Decision Status:** EXECUTED
+**Next Action:** Joe reviews the live nfllabstage Note, then Lead decides whether Phase 3 should reuse the text-only body or retry image attachment.
+---
+
+# Decision Inbox: Preserve stage draft URLs separately from prod draft URLs
+
+**Date:** 2026-03-17
+**Agent:** Lead
+
+## Context
+
+While running Notes Phase 1 TC2 on `nfllabstage`, the linked article (`kc-fields-trade-evaluation`) needed its real **stage** draft URL. The current `pipeline.db` row still exists and is Stage 7 / `in_production`, but `articles.substack_draft_url` now points to the **production** draft URL (`https://nfllab.substack.com/publish/post/191216376`), not the original stage draft.
+
+Lead recovered the stage URL (`https://nfllabstage.substack.com/publish/post/191214349`) from `.squad/decisions/archived-20260318-lead-fields-chiefs-trade.md` and completed the test successfully, but the lookup required historical grep rather than a canonical runtime source.
+
+## Proposed decision
+
+Persist stage and production draft URLs separately instead of overwriting the stage URL when a prod push happens. A dedicated `substack_stage_draft_url` field or an equivalent durable artifact/writeback would keep stage-only QA, Notes linking, and rollback/debug tasks from depending on decision-history recovery.
+
+## Why this matters
+
+- Stage-only Notes tests need a real stage draft link even after a prod push.
+- Historical grep is workable once, but brittle as an operational pattern.
+- Keeping both URLs would make draft provenance explicit and reduce future Lead friction.
+---
+
+# Decision Inbox: Use payload attachments for Substack Note images
+
+**Date:** 2026-03-17
+**Agent:** Lead
+
+## Context
+
+While running Notes Phase 1 TC3 on `nfllabstage`, Lead validated the final
+inline-image smoke case using the approved asset
+`content/images/kc-fields-trade-evaluation/kc-fields-trade-evaluation-inline-1.png`.
+
+The article-style approach — embedding the uploaded image inside Note
+`bodyJson` as `captionedImage` / `image2` content — returned **HTTP 500**
+(`{"error":""}`) from `POST /api/v1/comment/feed`.
+
+The successful payload kept `bodyJson` text-only and sent the uploaded image at
+the top level as:
+
+```json
+"attachments": [
+  { "url": "https://substack-post-media.s3.amazonaws.com/...", "type": "image" }
+]
+```
+
+That request succeeded with **HTTP 200**, created Note **229296344**, and
+cleanup was confirmed immediately via `DELETE /api/v1/notes/229296344` returning
+HTTP 404 on delete and re-check.
+
+## Proposed decision
+
+Treat Substack **Notes** image handling as a separate payload shape from
+Substack **articles**:
+
+1. Upload the asset with `POST /api/v1/image`
+2. Keep Note `bodyJson` text/richtext only
+3. Send images via payload-level `attachments`
+4. Do **not** reuse article `captionedImage` / `image2` nodes for Notes
+
+## Why this matters
+
+- Prevents future Lead/Writer/Publisher work from retrying the known-bad
+  `captionedImage` path and burning time on opaque HTTP 500s.
+- Clarifies that article ProseMirror rules do not transfer directly to Notes.
+- Gives the eventual `publish_note_to_substack` image implementation a precise,
+  validated contract from Phase 1 instead of an inferred one.
 ### 2026-03-17T05:35:20Z: Copilot Directive — Notes rollout staging order
 **By:** Joe Robinson (via Copilot)
 **What:** Roll out Substack Notes in stages: generic tests on nfllabstage, then structured NFL Lab-style Notes, and only after that make production updates.
@@ -2840,3 +3491,5 @@ Switched Scribe's default model from claude-haiku-4.5 to gpt-5.1-codex-mini. Joe
 **Files updated:**
 - `.squad/agents/scribe/charter.md` (Model line)
 - `.squad/team.md` (Agent Model note with Scribe exception)
+
+---

@@ -157,3 +157,7 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 
 
+## Notes Template & Cadence (2026-03-18)
+- Documented a reusable extension/contract Note template (gap hook + leverage variable + threaded expert positions + urgency frame) for any salary/contract decision.
+- Captured the feed-native Note pattern Joe uses: 1–2 sentence hook, inline image, auto-rendered article card, with Option C (data hook + panel disagreement + urgency) as the recommended voice.
+- Recorded the three-moment cadence policy (Stage 7 teaser auto-post, Stage 8 card-first promotion within an hour, optional follow-up) plus the sweep/duplication guardrails that report missing Notes before automating.

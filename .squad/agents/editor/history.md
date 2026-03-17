@@ -351,3 +351,6 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 
 📌 Team update (2026-03-16T20:44Z): KC Fields trade evaluation — 2 inline editorial images generated (inline-1 hero-safe stadium, inline-2 dual-QB silhouette). Images ready for review. MD5 verified unique. — decided by Writer
 
+## JSN Note Review Insights (2026-03-18)
+- Trimmed the JSN Phase 2 note to 150–180 words (image + article card supply structure) and kept only the must-have facts ($3.4M gap, $33M cost of waiting, ticking clock framing) before filing the recommendation.
+- Approved the Phase 2 promotion Note after a fact-check sweep; the reusable pattern is data hook + unexpected leverage point + expert disagreement + urgency frame, which the team can copy for future Notes.
