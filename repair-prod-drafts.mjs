@@ -401,6 +401,8 @@ function findUnknownNodeTypes(node, path = "root") {
 const ARTICLES = [
     { slug: "witherspoon-extension-v2", draftId: "191200944", team: "Seattle Seahawks" },
     { slug: "jsn-extension-preview",    draftId: "191200952", team: "Seattle Seahawks" },
+    { slug: "den-2026-offseason",       draftId: "191154355", team: "Denver Broncos" },
+    { slug: "mia-tua-dead-cap-rebuild", draftId: "191150015", team: "Miami Dolphins" },
 ];
 
 async function run() {
