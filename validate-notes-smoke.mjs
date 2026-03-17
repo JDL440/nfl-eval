@@ -403,31 +403,13 @@ async function run() {
             rawText = result.text;
             await browser.close();
         } catch (pwErr) {
-            console.error(`   ⚠️  Playwright failed: ${pwErr.message}`);
-            console.log("   Falling back to Node.js fetch…");
-
-            // Fallback: direct fetch (may fail due to Cloudflare)
-            const postHeaders = {
-                ...HEADERS,
-                Origin: `https://${notesHost}`,
-                Referer: `https://${notesHost}/publish/home`,
-                "sec-fetch-site": "same-origin",
-                "sec-fetch-mode": "cors",
-                "sec-fetch-dest": "empty",
-            };
-            try {
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: postHeaders,
-                    body: JSON.stringify(payload),
-                });
-                status = res.status;
-                rawText = await res.text();
-            } catch (fetchErr) {
-                console.error(`   ❌ Fetch also failed: ${fetchErr.message}`);
-                status = 0;
-                rawText = fetchErr.message;
-            }
+            // Playwright is required — Cloudflare blocks all server-side fetch()
+            // for the comment/feed write endpoint. No viable fallback exists.
+            console.error(`   ❌ Playwright failed: ${pwErr.message}`);
+            console.error("   Playwright is required for Notes POST (Cloudflare blocks server-side fetch).");
+            console.error("   Ensure playwright is installed: npm install --save-dev playwright");
+            status = 0;
+            rawText = pwErr.message;
         }
 
         console.log(`   HTTP ${status}`);

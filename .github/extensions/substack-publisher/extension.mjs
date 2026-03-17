@@ -418,7 +418,7 @@ function noteTextToProseMirror(text) {
  * ⚠️  STAGE-GATED: requires NOTES_ENDPOINT_PATH to be set in .env.
  *     Without it, the function throws to prevent accidental posts.
  */
-async function createSubstackNote({ headers, bodyJson, subdomain, token }) {
+async function createSubstackNote({ bodyJson, subdomain, token }) {
     const env = loadEnv();
     const endpointPath = process.env.NOTES_ENDPOINT_PATH || env.NOTES_ENDPOINT_PATH;
     if (!endpointPath) {
@@ -1954,7 +1954,7 @@ const session = await joinSession({
                     // is validated. Image upload is deferred.
                     try {
                         await session.log("Attempting to post Note…", { ephemeral: true });
-                        const noteResult = await createSubstackNote({ headers, bodyJson, subdomain, token });
+                        const noteResult = await createSubstackNote({ bodyJson, subdomain, token });
 
                         // ── Success response (reached only after gate is lifted) ──
                         // NOTE: when ungating, re-add image upload + captionedImage
