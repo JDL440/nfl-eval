@@ -8,6 +8,15 @@
 
 ## Recent Sessions
 
+### Substack imageCaption Incident Reopened (2026-03-16T174849Z)
+**Status:** 🔴 ACTIVE — All 4 review-target drafts still fail in Substack real editor (browser-level)
+- User (Joe Robinson) confirmed prior parser fix did NOT resolve failure path
+- Failure is **visible as popup + browser console errors** — client-side validation
+- All 4 drafts (witherspoon-v2, jsn-preview, den, mia) throw imageCaption errors on open
+- Lead launched re-diagnosis; true failure path unknown
+- Created incident orchestration log with full investigation scope
+- **Key distinction:** API validation ≠ browser validation; browser console is success criterion
+
 ### Parser Fix & Prod Draft Repair (2026-03-17T193500Z)
 Logged session for Substack imageCaption schema fix and prod draft repair.
 - Root cause: `buildCaptionedImage()` was generating incomplete ProseMirror nodes (only `image2` child, missing required `imageCaption`)

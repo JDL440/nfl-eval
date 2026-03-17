@@ -4,6 +4,44 @@
 
 ---
 
+### 2026-03-17: Durable Article Publish Rules — Subscribe Widgets & Hero Images
+**By:** Lead (Team Lead Specialist) / Joe Robinson (direction)
+**Status:** ACTIVE — Enforced in workflow
+**Affects:** All articles at publish time; batch-publish-prod.mjs, future article publishers
+
+**What:**
+Every article published must include:
+1. **Two subscribe-with-caption buttons** — one after the first opening paragraph, one near the end before closing notes. Writers may place explicit `::subscribe` markers; publisher injects missing widgets automatically at publish time.
+2. **First image must be hero-safe** — No charts, tables, or ambiguous placeholder content. First image becomes the social-share preview image and must be a genuine article image.
+
+**Why:**
+User request to durably enforce article growth UX (subscribe placement) and social-preview safety (hero image selection) in the workflow itself, not left to memory or manual review.
+
+**Implementation:**
+- Publisher-level validation at push time
+- Pre-publish schema check ensures compliance
+- Future batch publishes inherit these rules automatically
+
+---
+
+### 2026-03-17: Production Substack Section Cleanup — Complete
+**By:** Lead (Team Lead Specialist)
+**Status:** EXECUTED
+**Affects:** nfllab.substack.com (production)
+
+**What:**
+Removed all 32 unused NFL team sections from nfllab.substack.com. Sections were created early in the project but publishing has since moved to tags-based routing. Cleanup removes orphaned infrastructure.
+
+**Execution:**
+- Fixed `.env` token format mismatch: converted from URL-encoded to base64-encoded JSON per `.squad/skills/substack-publishing/SKILL.md` spec
+- Ran: `node create-nfl-sections.mjs --delete`
+- Result: All 32 sections deleted successfully (HTTP 200 on each)
+- Verified: Subsequent dry-run shows 0 sections on nfllab.substack.com
+
+**Sections removed:** Arizona Cardinals through Washington Commanders (all 32 NFL teams with custom team colors).
+
+---
+
 ### 2026-03-17: imageCaption Parse Error — Root Cause & Fix
 **By:** Lead (Team Lead Specialist)
 **Status:** EXECUTED

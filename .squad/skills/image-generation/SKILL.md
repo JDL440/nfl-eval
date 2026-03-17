@@ -58,7 +58,7 @@ generate_article_images(
   team: "Seattle Seahawks",
   players: ["Devon Witherspoon"],
   image_types: ["inline"],
-  count_per_type: 1,
+  count_per_type: 2,
   use_model: "gemini-flash"
 )
 ```
@@ -71,7 +71,10 @@ The tool:
 
 ### Inline image placement
 
-Insert inline images at natural content breaks — between major sections or to illustrate a key data point. A 3,000-word article typically benefits from 1–2 inline images.
+Insert inline images at natural content breaks — but keep `inline-1` early enough that it becomes the article's first body image.
+
+- **Inline 1:** Hero/editorial image placed after the opening setup and before any table/chart image
+- **Inline 2:** Secondary editorial image at a natural mid-article tension point
 
 ```markdown
 ## Section Heading

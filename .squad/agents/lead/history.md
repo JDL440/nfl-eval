@@ -727,3 +727,25 @@ Both articles have live production drafts:
 
 
 📌 Team update (2026-03-17T00:37:26Z): imageCaption investigation session completed. Coordinator verified: (1) extension.mjs has uncommitted fix adding imageCaption + pre-publish validation, (2) batch-publish-prod.mjs (untracked) includes imageCaption but lacks pre-publish validation, (3) stage7-prod-push.mjs referenced in docs but absent from working tree, (4) Witherspoon draft has 6 images (2 captioned via pipe syntax, 4 table images uncaptioned). Editor handoff drafted for parser hardening follow-up. — decided by Coordinator
+
+---
+
+## Subscribe + Hero Image Rules Hardened (2026-03-17)
+
+**Outcome:** Article publishing now hardens two new house rules at the workflow level instead of relying on manual draft discipline.
+
+**What changed:**
+- Publish-time subscribe enforcement now targets the **first substantive opening paragraph** and the **closing-notes/footer break**, instead of blindly keying off the first/last paragraph-like node.
+- Hero-image safety is treated as a publishing concern because Substack uses the **first body image** for social/email sharing.
+- Stage 6/7 drafts that opened with table renders but already contained a later hero image were reordered so reviewer-facing markdown now matches the intended published presentation.
+
+**Key learnings:**
+- "After the first paragraph" is too naive in this repo because drafts often begin with a byline, agent roll-call, and TLDR block before the true opening hook.
+- The first image rule is not just an image-generation preference; it is a distribution rule because Substack reuses that image for share surfaces.
+- Auto-swap logic is a good safety net, but moving obvious hero images earlier in near-publish drafts reduces reviewer confusion and keeps the markdown itself publish-shaped.
+
+## Learnings — Durable Article Publish Rules (2026-03-17)
+- publish_to_substack now understands ::subscribe and enforces exactly two subscribe-with-caption widgets even when a draft omits them.
+- The publisher now treats the first inline image as social-share critical and swaps later hero-safe images ahead of chart/table images when possible.
+- Source-draft hygiene still matters for publish-target articles: jsn-extension-preview, witherspoon-extension-v2, and den-2026-offseason were updated with explicit ::subscribe markers, and the first hero image was moved earlier in JSN and DEN source drafts.
+- Key files: .github/extensions/substack-publisher/extension.mjs, .squad/skills/substack-publishing/SKILL.md, .squad/skills/article-lifecycle/SKILL.md, .squad/skills/publisher/SKILL.md, .squad/skills/substack-article/SKILL.md, .squad/skills/image-generation/SKILL.md.
