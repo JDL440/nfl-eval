@@ -144,3 +144,10 @@
 - Cooper Kupp age-33 season — what to expect from historical comps
 - DeMarcus Lawrence at 34 — is this the last ride?
 - The Uchenna Nwosu injury concern — $20M for a guy who can't stay healthy?
+
+## 🚀 Cross-Team / Trade Articles — In Pipeline
+
+| # | Title | Angle | Agents | Stage | Depth |
+|---|-------|-------|--------|-------|-------|
+| T1 | **The Jaylen Waddle Trade: Denver's Bold Bet, Miami's Full Reset** | DEN acquires Waddle for 1st+3rd+4th. Dual-team trade reaction — Denver's window bet vs. Miami's rebuild math. | Cap, DEN, MIA, Offense | ✅ Stage 8 — Published | 2 — Beat |
+| T2 | **Two Bites at the Apple: The Jets' #2 and #16 Picks Could Define a Decade** | NYJ holds two 1sts. Franchise-defining QB decision — swing for the future or trade the house to guarantee it. | Cap, NYJ, Draft, Offense | Stage 3 — Panel composition (Issue #79) | 2 — Beat |

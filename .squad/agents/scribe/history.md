@@ -96,6 +96,16 @@ Logged Lead agent's dual-render implementation for mobile table legibility (GitH
 - decisions.md: ~193KB — all entries within 2-day window, no 30-day archival candidates
 - 40+ agent histories exceed 12KB threshold; batch summarization deferred (not related to this session's scope)
 
+### Issue #75 Merge Landing Session (2026-03-17T12:07Z)
+Logged Lead agent's merge/landing pass for issue #75 (PR #77 → main).
+- Created orchestration log: `20260317-1207-lead-merge.md`
+- Created session log: `20260317-1207-issue-75-merge.md`
+- Merged 1 decision inbox file: `lead-issue-75-merge.md` (new entry — merge/landing decision)
+- Deleted merged inbox file
+- Cross-agent update appended to Analytics history.md (revision landed on main)
+- decisions.md: ~191KB — all entries within recent window, no 30-day archival candidates
+- 40+ agent histories exceed 12KB threshold; batch summarization deferred to dedicated session
+
 ### KC Fields Stage Publish Session (2026-03-16T20:51Z)
 Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 - Created orchestration log: `20260316-205127-lead.md`

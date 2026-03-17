@@ -37,6 +37,105 @@ Adopted from Phase 3 learning (docs/notes-api-discovery.md §Phase 3):
 For stage Notes targeting articles published on prod, the card link must point to the **prod** published URL (`nfllab.substack.com/p/...`), not a stage draft URL. Stage draft URLs do not trigger card rendering. The Note itself is posted to stage for review, but the link inside it points to the live prod article.
 
 If the prod `/p/` URL is unknown (as with the two legacy articles below), the publisher or Lead should confirm the live URL before posting. Substack's default slug pattern is the article title, lowercased and hyphenated.
+### 2026-07-27: Issue #78 — Stage 8 Closeout (Waddle Trade Article Published)
+**By:** Lead (Lead / GM Analyst)
+**Status:** ✅ EXECUTED — Article live, issue closed, follow-on created
+**Affects:** Issue #78, pipeline.db, article-ideas.md, Issue #79
+
+**What:**
+Joe confirmed the Waddle trade article is live on Substack. Lead executed the Stage 8 closeout:
+
+1. **Pipeline DB:** `den-mia-waddle-trade` updated from Stage 7 → Stage 8, status `published`, `published_at` timestamp set. Stage transition record inserted.
+2. **Issue #78:** Closing comment posted, `stage:published` label applied, `go:needs-research` removed, issue closed as completed.
+3. **article-ideas.md:** T1 entry updated to "✅ Stage 8 — Published".
+4. **Follow-on issue #79:** Created for the NYJ two-firsts QB-decision piece teased in the article footer. Already at Stage 3 in pipeline.db. Target: Thursday of this publication week.
+
+**Reusable pattern:**
+Stage 8 closeout checklist:
+- [ ] Update pipeline.db: `current_stage=8`, `status='published'`, `published_at`
+- [ ] Insert `stage_transitions` record (agent=Joe)
+- [ ] Post closing comment on GitHub issue
+- [ ] Add `stage:published` label, remove stale labels
+- [ ] Close the issue
+- [ ] Create or confirm follow-on issue for teased article
+- [ ] Update `article-ideas.md` pipeline table
+
+---
+
+### 2026-07-26: Issue #78 — Waddle Trade AFCCG Framing Final Approval
+**By:** Editor
+**Status:** ✅ APPROVED — AFCCG framing corrected, article cleared for publish
+**Affects:** `content/articles/den-mia-waddle-trade/draft.md`, Substack prod draft 191309007
+
+**What:**
+Human editor flagged that the Waddle trade article anchored its receiver-room thesis to the AFC Championship Game — a game Bo Nix didn't play (fractured ankle; Stidham started). Editor re-review (review-3) issued 🟡 REVISE with 2 errors and 5 deliverables. Writer applied all 5 fixes. Editor final pass (review-4) issued ✅ APPROVED. Coordinator updated the prod Substack draft.
+
+**Fixes applied:**
+1. Line 57: No longer says logic "starts with the AFCCG loss" — pivots to regular-season tape
+2. Line 208: Ankle carries causal weight for Super Bowl exit; receiver room = structural ceiling
+3. TLDR: Two-sentence split — QB injury (acute) vs. receiver room (structural)
+4. Opening: Stidham called "the biggest reason Denver's season ended" — no hedging
+5. Table: Defensive-shell analysis explicitly labeled as regular-season data
+
+**Reusable pattern:**
+When an article uses a game as its narrative hook but the analytical argument covers a different timeframe, use **Disclaim → Anchor → Reframe**: (1) disclaim the hook event as evidence, (2) anchor to the correct timeframe, (3) reframe the closing to match. Verify the starting QB actually played the anchor game.
+
+---
+
+### 2026-07-26: Issue #78 — Waddle Trade Article Pipeline Execution
+**By:** Lead
+**Status:** ✅ EXECUTED — Article published to prod Substack
+**Affects:** `content/articles/den-mia-waddle-trade/`, pipeline.db, issue #78
+
+**What:**
+Ran the full article pipeline (Stages 2→7) for issue #78 — "DEN/MIA — The Jaylen Waddle Trade." 4-agent panel (Cap, DEN, MIA, Offense) on `claude-opus-4.6`. Writer produced ~3,100 words. Editor caught two factual errors; both fixed. Published to `https://nfllab.substack.com/publish/post/191309007`.
+
+**Key decisions:**
+1. **Panel composition:** Cap + DEN + MIA + Offense — Panel Composition Matrix recommendation for trade evaluations. Produced genuine disagreement on valuation and cap sustainability.
+2. **Dense table simplification:** Three tables exceeded inline density threshold — simplified from 4-6 columns to 2-3 columns each (chose simplification over PNG rendering).
+3. **NYJ tease validation:** "Next from the panel" tease references NYJ two-firsts article, confirmed in pipeline.db at Stage 3.
+
+**Reusable patterns:**
+- For trade-reaction articles, the 4-agent panel (Cap + acquiring team + trading team + scheme) produces excellent structured disagreement. Recommend as default.
+- Dense table avoidance: tables matching `isDenseTableHeader()` patterns plus 2+ numeric columns will trigger blocker. Pre-simplify during drafting.
+- `.env` must be explicitly copied to git worktrees.
+
+---
+
+### 2026-07-26: Waddle Trade Article — Image Policy Verified
+**By:** Editor
+**Status:** ✅ APPROVED — images pass policy
+**Affects:** `content/articles/den-mia-waddle-trade/draft.md`, Stage 7→8 readiness
+
+**What:**
+Verified the repaired Waddle trade article satisfies the 2-inline-image / no-cover-in-markdown policy. Both image files exist on disk and were visually inspected for AI failure patterns (fabricated charts, fake jerseys, embedded text). No issues found.
+
+**Detail:**
+- **Inline 1** (`den-mia-waddle-trade-inline-1.jpg`): Stadium shot — Empower Field, dramatic sky, Broncos colors. Clean.
+- **Inline 2** (`den-mia-waddle-trade-inline-2.jpg`): Front-office desk — NFL football, Broncos jacket, open book. Clean.
+- **Not verified:** Substack draft rendering at the prod URL. Joe should confirm images render correctly during Stage 8 review.
+
+**Rationale:** Article text was already ✅ APPROVED in `editor-review-2.md`. This pass confirms the image repair is complete and introduces no new blockers. Article is clear for handoff.
+
+---
+
+### 2026-07-26: Waddle Trade Article — Issue #78 Created
+**By:** Lead (issue creator)
+**Status:** ✅ ACCEPTED — Issue created, pipeline queued at Stage 2
+**Affects:** DEN agent, MIA agent, Cap agent, Offense agent, article pipeline
+
+**What:**
+Created issue #78 as a dual-team trade reaction article for the confirmed Jaylen Waddle trade (MIA → DEN). Used specific, fact-checked angle rather than generic "IDEA GENERATION REQUIRED" template.
+
+**Trade Details (verified):**
+- **To DEN:** WR Jaylen Waddle + MIA 2026 4th (No. 111)
+- **To MIA:** DEN 2026 1st (No. 30), 3rd (No. 94), 4th (No. 130)
+- **Contract:** 3yr/$84.75M extension (2024). Cap: $5M → $27M → $30M
+
+**Rationale:**
+Trade confirmed across ESPN, CBS Sports, SI, Pro Football Network. For confirmed events, write a specific angle immediately — saves one pipeline step. Expected panel: DEN, MIA, Cap, Offense.
+
+**Pattern:** For confirmed transactions (trades, signings, extensions), skip "IDEA GENERATION REQUIRED" template and write a specific angle with verified facts. Reserve the generic template for team-overview issues.
 
 ---
 
@@ -3613,3 +3712,30 @@ Switched Scribe's default model from claude-haiku-4.5 to gpt-5.1-codex-mini. Joe
 - `.squad/team.md` (Agent Model note with Scribe exception)
 
 ---
+
+
+### 🔴 Fixes Required (3):
+1. **"Ryan Havenstein" → "Rob Havenstein"** (line 116) — wrong first name
+2. **Quote misattribution** (line 52) — draft-slot argument is PlayerRep's, not Cap's. Split or rewrite the quote.
+3. **"Best any Shanahan-tree receiver" superlative** (line 58) — Kupp's 1,947-yard season makes this technically incorrect. Add qualifier.
+
+
+
+### 🟡 Top Recommendations:
+- Add JSN's 2025 stat specifics (catches, TDs, target share) — "1,800 yards" alone isn't enough for the central argument
+- Fix polished-paraphrase quotes presented as direct attribution (lines 87, 91, 165)
+- Add DK Metcalf's Pittsburgh AAV ($30M/yr per project data) for narrative context
+
+
+
+### What's Working:
+- Structure, voice, tables, and data accuracy are excellent
+- Four-path framework is compelling
+- Verdict ($32-33M) takes a clear, well-supported position
+- No political/tax content violations
+- 22/23 verifiable facts checked clean
+
+
+
+### Path to ✅ APPROVED:
+Fix the 3 🔴 items → address top 🟡 suggestions → resubmit for final sign-off.
