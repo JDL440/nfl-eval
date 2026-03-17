@@ -348,3 +348,23 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 - **Lesson:** For trade articles with a clear team identity (DEN), stadium + front-office-desk is a reliable 2-image pairing that avoids all AI failure patterns (no players, no jerseys, no charts). Worth noting as a reusable image concept template.
 - **Recorded by:** Editor (2026-07-26)
 
+📌 Waddle Trade (den-mia-waddle-trade) — AFCCG FRAMING RE-REVIEW (2026-07-26)
+- **File:** `content/articles/den-mia-waddle-trade/draft.md`
+- **Report saved:** `content/articles/den-mia-waddle-trade/editor-review-3.md`
+- **Scope:** Targeted re-review of AFCCG framing and argumentative fairness, requested by human editor. The article anchors its trade justification to the 10-7 AFCCG loss but Bo Nix didn't play that game (fractured ankle, Stidham started).
+- **Findings:**
+  - 🔴 **Line 57 — Internal contradiction:** Paragraph says trade logic "starts with the AFCCG loss" then describes "Nix forced into check-downs" in what reads as the championship game. But the article's own opening (line 15) says Nix was on the sideline in a walking boot. Places Nix in a game he didn't play.
+  - 🔴 **Line 208 — Causal misattribution:** "the receiver room — the thing that cost Denver a Super Bowl trip — is fixed." The backup QB was the primary factor in the 10-7 AFCCG loss. Attributing the playoff exit to the receiver room contradicts the article's own facts.
+  - 🟡 **Systemic AFCCG framing issue:** The article uses the AFCCG result as both emotional hook AND evidentiary base for the receiver-room argument. But a backup-QB game cannot isolate receiver limitations. The regular-season argument (Sutton drawing brackets all year) is the actual evidence and stands on its own — the AFCCG should be the hook, not the proof.
+  - 🟡 **TLDR bullet 1:** "The offense had a ceiling problem, not a talent problem" minimizes the backup QB as the dominant AFCCG factor.
+- **Verdict: 🟡 REVISE** — Previous ✅ APPROVED superseded. Five targeted passage edits needed. Core analysis (scheme fit, cap math, Miami rebuild) unaffected. Recommended next reviser: Writer.
+- **Lesson: When an article uses a specific game as its narrative anchor, verify that the argument matches who actually played in that game.** The article correctly reported Nix's absence but then built its case as if Nix's regular-season limitations were the AFCCG problem. This is a logic error, not a data error — and logic errors are harder to catch than wrong numbers because the individual facts are correct. Add to editorial checklist: **when a game result anchors an argument, verify the argument matches the personnel who played, not just the score.**
+- **Recorded by:** Editor (2026-07-26)
+
+
+📌 Waddle trade article — FINAL AFCCG-framing verification (editor-review-4)
+- **Scope:** Verified Writer's fixes to all 5 deliverables from editor-review-3: line 57 (AFCCG separation), line 208 (causal attribution), TLDR bullet 1 (acute vs structural), opening paragraph (Stidham framing), defensive-shell table (regular-season anchor).
+- **Findings:** All 5 fixes implemented correctly. The article now cleanly separates the AFCCG emotional hook from the regular-season evidentiary argument. Nix is no longer placed in the championship game. The closing thesis attributes the playoff exit to the ankle, not the receiver room. Image state unchanged from approved image review.
+- **Verdict: ✅ APPROVED** — Article is publish-ready. Substack draft at prod URL should be updated with revised text before Stage 8 review.
+- **Lesson:** Writer's fix pattern was effective: (1) explicit disclaimer ("it doesn't start with the AFCCG"), (2) temporal anchor ("rewind to the regular season, when Nix *was* healthy"), (3) causal reframing in closing ("The ankle that cost Denver a Super Bowl trip is healing. The receiver room — the structural ceiling that capped the offense even before the injury — is fixed."). This three-part pattern — disclaim, anchor, reframe — is a reusable template for any article where a narrative hook event and the actual evidentiary argument are different.
+- **Recorded by:** Editor (2026-07-26)

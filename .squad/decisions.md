@@ -4,6 +4,26 @@
 
 ---
 
+### 2026-07-26: Issue #78 — Waddle Trade AFCCG Framing Final Approval
+**By:** Editor
+**Status:** ✅ APPROVED — AFCCG framing corrected, article cleared for publish
+**Affects:** `content/articles/den-mia-waddle-trade/draft.md`, Substack prod draft 191309007
+
+**What:**
+Human editor flagged that the Waddle trade article anchored its receiver-room thesis to the AFC Championship Game — a game Bo Nix didn't play (fractured ankle; Stidham started). Editor re-review (review-3) issued 🟡 REVISE with 2 errors and 5 deliverables. Writer applied all 5 fixes. Editor final pass (review-4) issued ✅ APPROVED. Coordinator updated the prod Substack draft.
+
+**Fixes applied:**
+1. Line 57: No longer says logic "starts with the AFCCG loss" — pivots to regular-season tape
+2. Line 208: Ankle carries causal weight for Super Bowl exit; receiver room = structural ceiling
+3. TLDR: Two-sentence split — QB injury (acute) vs. receiver room (structural)
+4. Opening: Stidham called "the biggest reason Denver's season ended" — no hedging
+5. Table: Defensive-shell analysis explicitly labeled as regular-season data
+
+**Reusable pattern:**
+When an article uses a game as its narrative hook but the analytical argument covers a different timeframe, use **Disclaim → Anchor → Reframe**: (1) disclaim the hook event as evidence, (2) anchor to the correct timeframe, (3) reframe the closing to match. Verify the starting QB actually played the anchor game.
+
+---
+
 ### 2026-07-26: Issue #78 — Waddle Trade Article Pipeline Execution
 **By:** Lead
 **Status:** ✅ EXECUTED — Article published to prod Substack

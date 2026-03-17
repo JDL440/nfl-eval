@@ -118,3 +118,11 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 
 📌 Team update (2026-03-17T15:13Z): Image generation is mandatory between Stage 5 (Writer) and Stage 6 (Editor). Issue #78 revealed that skipping `generate_article_images` causes prod drafts to publish without images. When running all stages in a single session, explicitly call image generation after the draft is saved. — decided by Lead
+
+📌 **Waddle Trade — AFCCG Framing Revision (2026-07-26)** — Editor-review-3 flagged that the article anchored its receiver-room thesis to the AFC Championship Game, but Bo Nix didn't play that game (Stidham started). Five targeted edits applied:
+   - **TLDR bullet 1:** Now explicitly names the QB injury as the game-day cause and the receiver room as the season-long ceiling.
+   - **Opening paragraph:** "even he wasn't entirely to blame" replaced with "A backup quarterback in a conference championship — that was the biggest reason Denver's season ended." No more minimizing Stidham as the dominant AFCCG factor.
+   - **Line 57 (key paragraph):** Completely reframed. No longer says the trade logic "starts with the AFCCG loss." Now explicitly: "The ankle was the reason they lost that game... But rewind to the regular season, when Nix *was* healthy." Nix is only referenced in the context he actually played.
+   - **Defensive-shell table:** Added "Here's what Nix faced during the regular season" lead-in so readers don't conflate the table with the AFCCG.
+   - **Closing thesis:** "the thing that cost Denver a Super Bowl trip" → "The ankle that cost Denver a Super Bowl trip is healing. The receiver room — the structural ceiling that capped the offense even before the injury — is fixed."
+   - **Key learning:** When anchoring a trade justification to a specific game, verify the protagonist actually played in that game. The AFCCG was valid as an emotional hook but not as evidentiary support for the receiver thesis — the confounding variable (backup QB) overwhelms the signal. Separate the acute (injury) from the structural (coverage math) in any argument that spans both.
