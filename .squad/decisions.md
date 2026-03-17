@@ -4,6 +4,42 @@
 
 ---
 
+### 2026-07-28: Stage-Review Notes — Copy Pattern
+**Date:** 2026-07-28
+**By:** Writer
+**Status:** PROPOSED — awaiting Lead / Joe approval
+**Affects:** All future promotion Notes (stage and prod)
+
+## Context
+Two prod-published articles have no promotion Notes (flagged `STALE_PROMOTION` by `article_board.py notes-sweep`). Joe requested stage Notes using the prod-published articles so he can review the copy before they go live. The same sweep also highlighted that some legacy published articles in `pipeline.db` are missing `substack_url` values; the publisher or Lead should confirm each slug before posting.
+
+## Pattern: Card-First Caption
+Adopted from Phase 3 learning (docs/notes-api-discovery.md §Phase 3):
+1. **Caption ≤ 20 words.** One punchy line that surfaces the article's non-obvious insight or sharpest tension.
+2. **Markdown link on a second line** pointing to the published `/p/` URL. Substack auto-renders the article card (thumbnail + headline + publication name) from this link — the card does the heavy lifting.
+3. **No body paragraphs.** The card IS the content. Extra text competes with the card preview.
+4. **Image attachment optional.** Only attach an image when the article's hero or a key chart adds context the card thumbnail doesn't provide.
+
+### Template
+```
+{caption — ≤ 20 words, ends with period or question mark}
+[Read the full breakdown →](https://nfllab.substack.com/p/{slug})
+```
+
+## Copy Rules (durable)
+- **Lead with tension, not summary.** The caption should make the reader feel they're missing something, not that they already got the point.
+- **Use numbers when they surprise.** "$22M apart" hits harder than "they disagree on money."
+- **No hashtags, no emojis.** NFL Lab voice is clean and direct.
+- **One caption per Note.** Don't stack multiple hooks — pick the sharpest one.
+- **CTA is the link, not a sentence.** "Read the full breakdown →" is the only CTA needed; the card does the rest.
+
+## Stage-Review Note: Published URL Caveat
+For stage Notes targeting articles published on prod, the card link must point to the **prod** published URL (`nfllab.substack.com/p/...`), not a stage draft URL. Stage draft URLs do not trigger card rendering. The Note itself is posted to stage for review, but the link inside it points to the live prod article.
+
+If the prod `/p/` URL is unknown (as with the two legacy articles below), the publisher or Lead should confirm the live URL before posting. Substack's default slug pattern is the article title, lowercased and hyphenated.
+
+---
+
 ### 2026-07-25: Article Footer Boilerplate — "War Room" Brand (Option A)
 **By:** Lead; approved by Joe Robinson
 **Status:** ✅ APPROVED + IMPLEMENTED — Forward-looking rollout
@@ -833,6 +869,51 @@ This is the target format. JSN Note should follow the same structure.
 
 - Writer history: "Feed-native Notes model + JSN revision" (2026-03-18)
 - Team decisions: This file, for reuse on all future Notes
+---
+
+### 2026-03-18: Stage Review Notes with Prod Published URLs
+**Date:** 2026-03-18
+**Author:** Lead
+**Status:** Executed
+
+## Context
+Phase 3 investigation confirmed article cards require links to production published `/p/` URLs. Previous stage Notes used draft URLs which don't trigger card rendering. Joe requested stage review Notes using real prod URLs so the Lead could confirm the copy before Joe's review.
+
+## Decision
+Posted 5 card-first stage review Notes on nfllabstage linking to production published article URLs. Used the "card-first body" pattern: teaser paragraph + ProseMirror link mark paragraph pointing to the prod `/p/` URL.
+
+## Articles Used
+| Pipeline Slug | Prod URL | Note ID |
+|---|---|---|
+| jsn-extension-preview | https://nfllab.substack.com/p/jaxon-smith-njigbas-extension-is | 229372212 |
+| kc-fields-trade-evaluation | https://nfllab.substack.com/p/justin-fields-to-kansas-city-the | 229372239 |
+| den-2026-offseason | https://nfllab.substack.com/p/the-broncos-missing-joker-why-denvers | 229372275 |
+| mia-tua-dead-cap-rebuild | https://nfllab.substack.com/p/99-million-ghost-how-miami-rebuilds | 229372305 |
+| witherspoon-extension-cap-vs-agent | https://nfllab.substack.com/p/cap-says-27m-the-agent-demands-33m-d00 | 229372344 |
+
+## Technical Pattern
+```javascript
+{
+  type: "doc",
+  attrs: { schemaVersion: "v1" },
+  content: [
+    { type: "paragraph", content: [{ type: "text", text: "Teaser hook..." }] },
+    { type: "paragraph", content: [{
+      type: "text", text: "Read the full analysis →",
+      marks: [{ type: "link", attrs: { href: "https://nfllab.substack.com/p/slug" } }]
+    }] }
+  ]
+}
+```
+
+## Key Finding
+- `noteTextToProseMirror()` creates plain text paragraphs with NO link marks — insufficient for cards
+- Explicit link marks to `/p/` URLs are required for card rendering
+- Prod archive API (`GET /api/v1/archive`) is a reliable source for published article URL discovery
+
+## Cleanup
+After Joe's review, use `delete-notes-api.mjs` to remove the stage review Notes. Note IDs: 229372212, 229372239, 229372275, 229372305, 229372344.
+
 ---
 
 ### 2026-03-17T21:37:00Z: User directive

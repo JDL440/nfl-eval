@@ -6,6 +6,7 @@
 - **User:** Joe Robinson
 - **Added:** 2026-03-14
 - **Blog:** NFL Lab (Substack) — expert panel format, data-driven, opinionated
+- **Stage review Notes:** Use the card-first caption template that links to production `/p/` URLs so Substack renders the article card automatically; see `.squad/decisions.md` (2026-07-28) for the reusable pattern.
 
 ## Knowledge Base
 
@@ -161,3 +162,5 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 - Documented a reusable extension/contract Note template (gap hook + leverage variable + threaded expert positions + urgency frame) for any salary/contract decision.
 - Captured the feed-native Note pattern Joe uses: 1–2 sentence hook, inline image, auto-rendered article card, with Option C (data hook + panel disagreement + urgency) as the recommended voice.
 - Recorded the three-moment cadence policy (Stage 7 teaser auto-post, Stage 8 card-first promotion within an hour, optional follow-up) plus the sweep/duplication guardrails that report missing Notes before automating.
+
+📌 Team update (2026-03-17T15:59:35Z): Documented the card-first stage review Note copy pattern that links to prod /p/ URLs and flagged legacy published articles missing substack_url in pipeline.db.
