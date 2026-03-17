@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Repair Prod Drafts — Fix imageCaption parse error
+ * Repair Prod Drafts — Fix caption node type
  *
- * Re-pushes witherspoon-extension-v2 and jsn-extension-preview prod drafts
- * with corrected ProseMirror structure (adds missing imageCaption child nodes
- * inside captionedImage nodes).
+ * Re-pushes prod drafts with corrected ProseMirror structure.
+ * The caption child inside captionedImage must use type "caption"
+ * (not "imageCaption" which is not a valid Substack node type).
  *
  * Usage: node repair-prod-drafts.mjs [--dry-run]
  */
@@ -110,7 +110,7 @@ async function updateDraft(draftId, title, subtitle, body, tags) {
     return await res.json();
 }
 
-// ─── Markdown → ProseMirror (with imageCaption fix) ─────────────────────────
+// ─── Markdown → ProseMirror (with caption fix) ─────────────────────────
 
 function parseInline(text) {
     const parts = [];
@@ -147,7 +147,7 @@ function buildCaptionedImage(src, alt, caption) {
                 isProcessing: false, align: null, offset: false,
             },
         }, {
-            type: "imageCaption",
+            type: "caption",
             content: caption ? [{ type: "text", text: caption }] : [],
         }],
     };
@@ -382,7 +382,7 @@ function extractMetaFromMarkdown(markdown) {
 const KNOWN_NODE_TYPES = new Set([
     "doc", "paragraph", "text", "heading", "horizontal_rule",
     "blockquote", "bullet_list", "ordered_list", "list_item",
-    "captionedImage", "image2", "imageCaption",
+    "captionedImage", "image2", "caption",
     "youtube2", "table", "table_row", "table_cell", "table_header",
     "hard_break", "code_block",
 ]);
@@ -406,7 +406,7 @@ const ARTICLES = [
 ];
 
 async function run() {
-    console.log(`\n🔧 Repair Prod Drafts — imageCaption fix`);
+    console.log(`\n🔧 Repair Prod Drafts — caption node type fix`);
     console.log(`   Target: ${SUBDOMAIN}.substack.com`);
     console.log(`   Mode: ${DRY_RUN ? "DRY RUN (no API calls)" : "LIVE"}\n`);
 
@@ -443,14 +443,14 @@ async function run() {
             if (node.type === "captionedImage") {
                 imageCount++;
                 const types = (node.content || []).map(c => c.type);
-                if (!types.includes("imageCaption")) {
-                    console.log(`   ⚠️  captionedImage missing imageCaption child!`);
+                if (!types.includes("caption")) {
+                    console.log(`   ⚠️  captionedImage missing caption child!`);
                 }
             }
             if (Array.isArray(node.content)) node.content.forEach(countImages);
         }
         countImages(body);
-        console.log(`   ✅ Validation passed — ${imageCount} images, all with imageCaption`);
+        console.log(`   ✅ Validation passed — ${imageCount} images, all with caption`);
         console.log(`   📄 Title: ${title}`);
 
         if (DRY_RUN) {

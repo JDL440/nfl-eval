@@ -27,36 +27,44 @@
 
 ## Substack Parser Fix: imageCaption Schema Error (2026-03-17)
 
-**Outcome:** Root cause identified, fixed, and verified across all 4 affected prod drafts. Pre-publish validation added to prevent recurrence.
+**Outcome:** ~~Root cause identified, fixed, and verified across all 4 affected prod drafts.~~ **SUPERSEDED** — see below.
 
 **What happened:**
 Four prod drafts (witherspoon-v2, jsn-preview, den, mia) could not be opened in Substack editor — all threw `RangeError: Unknown node type: imageCaption`. Investigation revealed `buildCaptionedImage()` in the publisher extension was generating incomplete ProseMirror nodes.
 
-**Root cause:**
-Substack's editor schema requires `captionedImage` nodes to contain **two** children: `image2` + `imageCaption` (enforced by content expression `image2 imageCaption`). The parser was emitting only `image2`, leaving `imageCaption` missing. When Substack's editor tried to instantiate these nodes, the schema validation failed.
+**Root cause (INCORRECT):**
+~~Substack's editor schema requires `captionedImage` nodes to contain **two** children: `image2` + `imageCaption`.~~ This was wrong. See re-opened incident below.
+
+---
+
+## imageCaption Fix Re-opened: True Root Cause (2026-03-17, round 2)
+
+**Outcome:** True root cause found and fixed. All 4 prod drafts re-pushed.
+
+**What happened:**
+Joe confirmed all 4 draft URLs still threw `RangeError: Unknown node type: imageCaption` in the actual Substack browser editor, despite the prior fix passing API verification. API read-back does NOT validate ProseMirror schema — only the browser editor does.
+
+**True root cause:**
+The node type name `"imageCaption"` does not exist in Substack's ProseMirror schema. The correct type is **`"caption"`**. Per canonical Substack doc format (`can3p/substack-api-notes`), `captionedImage` must contain `[image2, caption]` — not `[image2, imageCaption]`. Our code invented a non-existent node type.
 
 **Fixes applied:**
-1. **`.github/extensions/substack-publisher/extension.mjs`** — Modified `buildCaptionedImage()` to emit both `image2` and `imageCaption` children in every `captionedImage` node. If a caption exists, `imageCaption` contains it; otherwise it's an empty node.
-2. **`batch-publish-prod.mjs`** — Applied identical fix to the duplicated `buildCaptionedImage()` function.
-3. **Pre-publish validation** — Added `validateProseMirrorBody()` to the extension handler. Scans the entire output doc before any draft publish for unknown node types against the known Substack schema. Blocks publish if validation fails.
-4. **`.squad/skills/substack-publishing/SKILL.md`** — Updated documentation with schema requirements.
-5. **`repair-prod-drafts.mjs`** — Created one-time repair script to fix all 4 affected drafts via authenticated API.
+1. **`.github/extensions/substack-publisher/extension.mjs`** — Changed `"imageCaption"` → `"caption"` in `buildCaptionedImage()`. Updated `KNOWN_SUBSTACK_NODE_TYPES`. Added structural validation for `captionedImage` children.
+2. **`batch-publish-prod.mjs`** — Same `"imageCaption"` → `"caption"` fix.
+3. **`repair-prod-drafts.mjs`** — Same fix + ran live to re-push all 4 drafts.
+4. **`.squad/skills/substack-publishing/SKILL.md`** — Updated docs.
 
-**Prod drafts repaired & verified:**
+**Prod drafts re-pushed:**
 | Article | Draft ID | Images | Status |
 |---------|----------|--------|--------|
-| witherspoon-extension-v2 | 191200944 | 6 | ✅ Fixed & verified |
-| jsn-extension-preview | 191200952 | 7 | ✅ Fixed & verified |
-| den-2026-offseason | 191154355 | 6 | ✅ Fixed & verified |
-| mia-tua-dead-cap-rebuild | 191150015 | 4 | ✅ Fixed & verified |
+| witherspoon-extension-v2 | 191200944 | 6 | ✅ Re-pushed with `caption` |
+| jsn-extension-preview | 191200952 | 7 | ✅ Re-pushed with `caption` |
+| den-2026-offseason | 191154355 | 6 | ✅ Re-pushed with `caption` |
+| mia-tua-dead-cap-rebuild | 191150015 | 4 | ✅ Re-pushed with `caption` |
 
-All verified via authenticated API read-back confirming `captionedImage` structure is now correct.
-
-**Scope:**
-- ~20 other articles from the earlier rolled-back batch will auto-fix on next push (no manual repair needed).
-- Future batch pushes protected by pre-publish validator.
-
-**Key learning:** Schema completeness matters. Partial node structures can pass database storage but fail editor instantiation. Must validate against full schema, not just node type presence.
+**Key learnings:**
+1. API acceptance ≠ editor compatibility. Substack's REST API does not validate ProseMirror node types — only the browser editor does.
+2. Node type names must be exact. `"caption"` is valid; `"imageCaption"` is not. Always cross-reference `can3p/substack-api-notes`.
+3. API read-back verification is insufficient. Manual browser open is the only reliable test until browser automation is added.
 
 ---
 ## Stage 7 → Prod Draft Promotion — ROLLED BACK (2026-03-16)

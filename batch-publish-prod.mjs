@@ -452,7 +452,7 @@ function buildCaptionedImage(src, alt, caption) {
                 isProcessing: false, align: null, offset: false,
             },
         }, {
-            type: "imageCaption",
+            type: "caption",
             content: caption ? [{ type: "text", text: caption }] : [],
         }],
     };

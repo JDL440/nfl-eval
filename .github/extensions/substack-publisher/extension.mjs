@@ -558,7 +558,7 @@ async function markdownToProseMirror(markdown, uploadImage) {
 const KNOWN_SUBSTACK_NODE_TYPES = new Set([
     "doc", "paragraph", "text", "heading", "horizontal_rule",
     "blockquote", "bullet_list", "ordered_list", "list_item",
-    "captionedImage", "image2", "imageCaption",
+    "captionedImage", "image2", "caption",
     "youtube2", "table", "table_row", "table_cell", "table_header",
     "hard_break", "code_block",
 ]);
@@ -582,17 +582,41 @@ function findUnknownNodeTypes(node, path = "root") {
 
 /**
  * Validate ProseMirror body before sending to Substack.
+ * Checks both unknown node types AND structural requirements:
+ * - captionedImage must contain exactly [image2, caption]
  * Returns { valid: true } or { valid: false, issues: [...] }.
  */
 function validateProseMirrorBody(body) {
+    const issues = [];
+
+    // Check unknown node types
     const unknowns = findUnknownNodeTypes(body);
-    if (unknowns.length === 0) return { valid: true, issues: [] };
-    return {
-        valid: false,
-        issues: unknowns.map(u =>
-            `Unknown node type "${u.type}" at ${u.path}`
-        ),
-    };
+    for (const u of unknowns) {
+        issues.push(`Unknown node type "${u.type}" at ${u.path}`);
+    }
+
+    // Structural check: captionedImage children
+    function walkStructure(node, path) {
+        if (node.type === "captionedImage") {
+            const childTypes = (node.content || []).map(c => c.type);
+            if (childTypes[0] !== "image2") {
+                issues.push(`captionedImage at ${path} missing image2 as first child (got: ${childTypes[0] || "nothing"})`);
+            }
+            if (childTypes[1] !== "caption") {
+                issues.push(`captionedImage at ${path} missing caption as second child (got: ${childTypes[1] || "nothing"})`);
+            }
+            if (childTypes.length !== 2) {
+                issues.push(`captionedImage at ${path} has ${childTypes.length} children (expected 2: image2 + caption)`);
+            }
+        }
+        if (Array.isArray(node.content)) {
+            node.content.forEach((child, i) => walkStructure(child, `${path}.content[${i}]`));
+        }
+    }
+    walkStructure(body, "root");
+
+    if (issues.length === 0) return { valid: true, issues: [] };
+    return { valid: false, issues };
 }
 
 function buildCaptionedImage(src, alt, caption) {
@@ -620,10 +644,9 @@ function buildCaptionedImage(src, alt, caption) {
         },
     };
     // Substack's ProseMirror schema requires captionedImage to contain both
-    // image2 AND imageCaption children. Omitting imageCaption causes
-    // "RangeError: Unknown node type: imageCaption" when the editor loads.
+    // image2 AND caption children. The node type is "caption" (not "imageCaption").
     const captionNode = {
-        type: "imageCaption",
+        type: "caption",
         content: caption
             ? [{ type: "text", text: caption }]
             : [],
