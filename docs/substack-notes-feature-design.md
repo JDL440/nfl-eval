@@ -600,7 +600,11 @@ Once rolled out, Notes follow a **three-moment cadence** tied to the article lif
 
 **Rollout order:**
 1. Manual promotion Notes for next 3-5 articles (current)
-2. Add sweep eligibility report to `article_board.py` (report only)
+2. ✅ Add sweep eligibility report to `article_board.py` (report only) — **SHIPPED**
+   - `python content/article_board.py notes-sweep` — CLI report
+   - `python content/article_board.py notes-sweep --json` — machine-readable
+   - Detects: MISSING_TEASER (stage 7+), MISSING_PROMOTION (stage 8), STALE_PROMOTION (>48h)
+   - Severity: urgent / warning / info — sorted for operator triage
 3. Semi-auto stage teasers (auto-post to stage on Stage 7)
 4. Semi-auto prod promotions (sweep proposes, Joe approves)
 5. Full auto (v2, gated on ≥10 successful manual cycles)
@@ -709,3 +713,4 @@ The exact top-level field name (`bodyJson` vs `body` vs something else) and any 
 | 2025-07-27 | Notes use ProseMirror `bodyJson`, not plain-text content | Consistent with article draft format; confirmed via third-party API references |
 | 2025-07-27 | Final POST gated until Phase 0 browser interception | Avoids shipping a tool that calls an unverified endpoint; all scaffolding except the POST is validated |
 | 2025-07-27 | Shipped dry-run tool + smoke harness + DB support ahead of Phase 0 | De-risks Phase 1 — once the endpoint is captured, only the gate needs to be lifted |
+| 2025-07-28 | Notes sweep report shipped in `article_board.py notes-sweep` | Report-only detection of missing teaser/promotion Notes; no auto-posting. Reuses existing board CLI surface. Rollout step 2 of Phase 5 cadence. |

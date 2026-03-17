@@ -198,3 +198,50 @@ The Phase 2 Note extracted the most visceral elements from the draft article: th
 - **Divergence is normal on main in this repo** - feature branch merges (e.g., PR #77 mobiletable) land on origin while Notes work continues locally. git pull --rebase resolves cleanly when changes don't overlap.
 - **Scratch artifact pattern:** One-off test scripts (phase1-notes-test.mjs, delete-notes-api.mjs, etc.) should be deleted promptly after their learnings are captured in docs/notes-api-discovery.md. Letting them accumulate creates branch-cleanup overhead.
 - **Durable vs disposable heuristic:** If a file is referenced by agent history (e.g., Writer references content/notes-phase2-candidate-jsn.md), it's durable. If it's a standalone script with no references, it's scratch - unless it encodes reusable tooling.
+## Phase 3 Investigation & Correction (2026-03-17T21:00Z)
+
+**Joe's Critical Feedback:** Note 229347247 shows "short caption + image, but NO article card" — and this is NOT the desired outcome.
+
+**Investigation Results:**
+
+1. **Examined reference Notes:**
+   - c-228989056 (Joe's working note on KC Fields) → Has clickable card with thumbnail, headline, publication
+   - c-229342260 (example provided) → Image-only, no card
+   - c-229347247 (our Note) → Image-only, no card
+
+2. **Root Cause Identified:**
+   Article cards in Notes are NOT triggered by image attachments. They are triggered by links.
+   - **Card trigger:** Link in Note body pointing to published article URL (\/p/...\)
+   - **c-228989056 mechanism:** Contains markdown link \[text](https://nfllab.substack.com/p/justin-fields-...)\
+   - **Our Note (229347247) lacks:** Any link mark in the ProseMirror body
+
+3. **Why this happened:**
+   - replace-jsn-note.mjs buildNoteBody() created text-only paragraphs
+   - No markdown link syntax was included in the caption
+   - Image was attached via \ttachmentIds\ field (correct, but insufficient for card)
+   - Stage draft URL (\/publish/post/...\) is unusable anyway (draft URLs don't render cards)
+
+4. **Stage vs. Production Blocker:**
+   - JSN article is Stage 7 (not published yet)
+   - Only stage draft URL available: https://nfflabstage.substack.com/publish/post/191168255
+   - Draft URLs don't trigger card rendering
+   - Published article URL pattern: https://nfllab.substack.com/p/jsn-extension-preview (does NOT exist yet)
+   - **Therefore:** Cannot create working card-first Note until JSN is published to production
+
+**Immediate Action:**
+- Do NOT delete Note 229347247 (it's a useful learning artifact showing image + caption pattern)
+- Wait for JSN article publication to production
+- Create new Note with published /p/ link in body: \[Read the analysis →](https://nfllab.substack.com/p/jsn-extension-preview)\
+
+**Key Learning:**
+Images + attachmentIds are supplementary. Article cards are ONLY triggered by links to published articles in the Note body. This is the minimum viable payload for a card-first Note.
+
+**Misconception Corrected:**
+"Card-first" does not mean "image first" — it means "article card first" (the preview of the full article). The pattern should be: short hook text + link to published article + optional image. The link triggers the card; the image provides supplementary visual interest.
+
+- **Notes sweep report shipped (2025-07-28):** Added `notes-sweep` command to `article_board.py` — detects Stage 7+ articles missing teaser Notes, Stage 8 published articles missing promotion Notes, and stale (>48h) published articles without promotion Notes. Report-only, no auto-posting. Severity triage: urgent/warning/info. Integrated cross-reference into `reconcile` output. JSON mode via `--json` flag. This is rollout step 2 of the Phase 5 cadence from `docs/substack-notes-feature-design.md`. Next slice: semi-auto stage teasers (step 3).
+## Notes Cleanup & Phase 2 Cadence (2026-03-17/18)
+- Picked `jsn-extension-preview` as the Phase 2 Notes target, keeping the stage draft URL (`https://nfllabstage.substack.com/publish/post/191168255`) live for Joe's review before any prod publish.
+- Reframed the Phase 2 note workflow: leave the current text-first note up for inspection, stage a much shorter image-first rewrite (≈15 words + auto-card) for the production push, and capture this plan in `.squad/decisions.md`.
+- Cleaned the Notes branch (removed scratch scripts, rebased, and pushed clean commits) once durable docs captured the learnings.
+- Locked down the Note image payload: keep `bodyJson` text-only, send the uploaded image via payload-level `attachments`, and track stage vs prod draft URLs separately so smoke-test references never disappear.

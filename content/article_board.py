@@ -9,6 +9,8 @@ Usage from repo root:
     python content/article_board.py                  # dry-run reconciliation
     python content/article_board.py --json           # machine-readable output
     python content/article_board.py --repair          # actually fix DB drift
+    python content/article_board.py notes-sweep       # report missing Notes
+    python content/article_board.py notes-sweep --json # machine-readable notes report
 """
 
 import json
@@ -16,7 +18,7 @@ import os
 import re
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Allow running from repo root: python content/article_board.py
 _CONTENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -659,6 +661,13 @@ def _cli_reconcile(repair=False):
             _safe_print(f"Notes: {len(all_notes)} total ({linked} article-linked, {standalone} standalone)")
         else:
             _safe_print("Notes: 0")
+
+        # Cross-reference: note gaps count
+        gaps = notes_sweep()
+        urgent = sum(1 for g in gaps if g.get("severity") == "urgent")
+        if gaps:
+            hint = f" ({urgent} urgent)" if urgent else ""
+            _safe_print(f"Notes gaps: {len(gaps)}{hint} -- run 'notes-sweep' for details")
     except (sqlite3.OperationalError, FileNotFoundError):
         pass  # notes table may not exist yet; degrade gracefully
 
@@ -676,8 +685,182 @@ def _cli_actions():
         _safe_print(f"{a['slug']:<45} {a['stage']:>5}  {na}{verdict_tag}")
 
 
+# ── Notes sweep (report-only) ───────────────────────────────────────────────
+
+_STALE_HOURS = 48  # published articles missing a promotion Note after this are flagged
+
+
+def notes_sweep():
+    """
+    Detect articles that are missing expected Substack Notes.
+
+    Rules:
+      - Stage 7+ articles should have at least one teaser Note.
+      - Stage 8 (published) articles should have a promotion Note.
+      - Published articles older than 48 hours without a promotion Note are stale.
+
+    Returns a list of gap dicts:
+        slug, stage, status, gap_type, severity, detail
+    where gap_type is one of:
+        MISSING_TEASER    — stage 7+ with no teaser/promotion Note
+        MISSING_PROMOTION — stage 8 published with no promotion Note
+        STALE_PROMOTION   — published >48h with no promotion Note
+    and severity is one of: info, warning, urgent
+    """
+    try:
+        ps = PipelineState()
+    except FileNotFoundError:
+        return [{"slug": "*", "gap_type": "ERROR", "detail": "pipeline.db not found"}]
+
+    articles = ps.get_all_articles()
+
+    # Build a lookup of note types per article
+    note_types_by_article = {}
+    try:
+        rows = ps._conn.execute(
+            "SELECT article_id, note_type, target FROM notes WHERE article_id IS NOT NULL"
+        ).fetchall()
+        for r in rows:
+            key = r["article_id"]
+            note_types_by_article.setdefault(key, []).append(
+                {"note_type": r["note_type"], "target": r["target"]}
+            )
+    except sqlite3.OperationalError:
+        pass  # notes table may not exist
+
+    now = datetime.now(timezone.utc)
+    gaps = []
+
+    for a in articles:
+        slug = a["id"]
+        stage = a["current_stage"]
+        status = a.get("status", "")
+
+        if not isinstance(stage, int):
+            continue  # skip corrupt rows
+
+        article_notes = note_types_by_article.get(slug, [])
+        has_teaser = any(
+            n["note_type"] in ("promotion", "follow_up") for n in article_notes
+        )
+        has_prod_promotion = any(
+            n["note_type"] == "promotion" and n["target"] == "prod"
+            for n in article_notes
+        )
+
+        # Stage 7+ without any teaser/promotion Note
+        if stage >= 7 and not has_teaser:
+            gaps.append({
+                "slug": slug,
+                "stage": stage,
+                "status": status,
+                "gap_type": "MISSING_TEASER",
+                "severity": "info",
+                "detail": f"Stage {stage} — no teaser or promotion Note exists",
+            })
+
+        # Stage 8 (published) without a prod promotion Note
+        if stage == 8 and status == "published" and not has_prod_promotion:
+            published_at = a.get("published_at")
+            hours_since = None
+            if published_at:
+                try:
+                    pub_dt = datetime.fromisoformat(
+                        published_at.replace("Z", "+00:00")
+                        if "T" in published_at
+                        else published_at + "T00:00:00+00:00"
+                    )
+                    hours_since = (now - pub_dt).total_seconds() / 3600
+                except (ValueError, TypeError):
+                    pass
+
+            if hours_since is not None and hours_since > _STALE_HOURS:
+                gaps.append({
+                    "slug": slug,
+                    "stage": stage,
+                    "status": status,
+                    "gap_type": "STALE_PROMOTION",
+                    "severity": "urgent",
+                    "detail": (
+                        f"Published {hours_since:.0f}h ago — still no prod promotion Note"
+                    ),
+                })
+            else:
+                gaps.append({
+                    "slug": slug,
+                    "stage": stage,
+                    "status": status,
+                    "gap_type": "MISSING_PROMOTION",
+                    "severity": "warning",
+                    "detail": (
+                        f"Published but no prod promotion Note"
+                        + (f" ({hours_since:.0f}h ago)" if hours_since else "")
+                    ),
+                })
+
+    ps.close()
+
+    # Sort: urgent first, then warning, then info
+    severity_order = {"urgent": 0, "warning": 1, "info": 2}
+    gaps.sort(key=lambda g: (severity_order.get(g["severity"], 9), g["slug"]))
+    return gaps
+
+
+def _cli_notes_sweep(as_json=False):
+    """CLI output for the notes sweep report."""
+    gaps = notes_sweep()
+
+    if as_json:
+        print(json.dumps(gaps, indent=2, default=str))
+        return
+
+    _safe_print("=== Notes Sweep Report ===\n")
+
+    if not gaps:
+        _safe_print("OK All Stage 7+ articles have expected Notes coverage.")
+        return
+
+    if gaps[0].get("gap_type") == "ERROR":
+        _safe_print(f"  ERROR: {gaps[0]['detail']}")
+        return
+
+    severity_icons = {"urgent": "!!!", "warning": " ! ", "info": "   "}
+    _safe_print(f"{'SEV':>3}  {'SLUG':<45} {'STG':>3}  {'GAP TYPE':<20} DETAIL")
+    _safe_print("-" * 110)
+
+    counts = {"urgent": 0, "warning": 0, "info": 0}
+    for g in gaps:
+        sev = g["severity"]
+        counts[sev] = counts.get(sev, 0) + 1
+        icon = severity_icons.get(sev, "   ")
+        detail = g["detail"].replace("\u2192", "->")
+        _safe_print(
+            f"{icon}  {g['slug']:<45} {g['stage']:>3}  {g['gap_type']:<20} {detail}"
+        )
+
+    _safe_print("")
+    parts = []
+    if counts["urgent"]:
+        parts.append(f"{counts['urgent']} urgent")
+    if counts["warning"]:
+        parts.append(f"{counts['warning']} warning")
+    if counts["info"]:
+        parts.append(f"{counts['info']} info")
+    _safe_print(f"Total: {len(gaps)} gaps ({', '.join(parts)})")
+    _safe_print("")
+    _safe_print("Next steps:")
+    if counts["urgent"]:
+        _safe_print("  - STALE_PROMOTION: These published articles need a promotion Note ASAP.")
+    if counts["warning"]:
+        _safe_print("  - MISSING_PROMOTION: Create and post promotion Notes (requires Joe approval).")
+    if counts["info"]:
+        _safe_print("  - MISSING_TEASER: Consider drafting teaser Notes for upcoming articles.")
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "board"
+    json_flag = "--json" in sys.argv[2:] if len(sys.argv) > 2 else False
+
     if cmd == "board":
         _cli_board()
     elif cmd == "reconcile":
@@ -686,7 +869,11 @@ if __name__ == "__main__":
         _cli_reconcile(repair=True)
     elif cmd == "actions":
         _cli_actions()
+    elif cmd == "notes-sweep":
+        _cli_notes_sweep(as_json=json_flag)
     elif cmd == "--json":
         print(json.dumps(scan_articles(), indent=2, default=str))
     else:
-        print("Usage: python content/article_board.py [board|reconcile|--repair|actions|--json]")
+        print("Usage: python content/article_board.py [board|reconcile|--repair|actions|notes-sweep|--json]")
+        print("  notes-sweep          Report articles missing expected Notes")
+        print("  notes-sweep --json   Machine-readable notes gap report")
