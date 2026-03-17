@@ -551,6 +551,50 @@ async function markdownToProseMirror(markdown, uploadImage) {
     return { type: "doc", attrs: { schemaVersion: "v1" }, content };
 }
 
+// ─── Post-conversion validation ──────────────────────────────────────────────
+
+// Node types known to be accepted by Substack's ProseMirror editor.
+// Anything outside this set will likely cause a RangeError on draft open.
+const KNOWN_SUBSTACK_NODE_TYPES = new Set([
+    "doc", "paragraph", "text", "heading", "horizontal_rule",
+    "blockquote", "bullet_list", "ordered_list", "list_item",
+    "captionedImage", "image2", "imageCaption",
+    "youtube2", "table", "table_row", "table_cell", "table_header",
+    "hard_break", "code_block",
+]);
+
+/**
+ * Recursively walk a ProseMirror JSON tree and return any node types
+ * not in the KNOWN_SUBSTACK_NODE_TYPES set.
+ */
+function findUnknownNodeTypes(node, path = "root") {
+    const issues = [];
+    if (node.type && !KNOWN_SUBSTACK_NODE_TYPES.has(node.type)) {
+        issues.push({ type: node.type, path });
+    }
+    if (Array.isArray(node.content)) {
+        node.content.forEach((child, i) => {
+            issues.push(...findUnknownNodeTypes(child, `${path}.content[${i}]`));
+        });
+    }
+    return issues;
+}
+
+/**
+ * Validate ProseMirror body before sending to Substack.
+ * Returns { valid: true } or { valid: false, issues: [...] }.
+ */
+function validateProseMirrorBody(body) {
+    const unknowns = findUnknownNodeTypes(body);
+    if (unknowns.length === 0) return { valid: true, issues: [] };
+    return {
+        valid: false,
+        issues: unknowns.map(u =>
+            `Unknown node type "${u.type}" at ${u.path}`
+        ),
+    };
+}
+
 function buildCaptionedImage(src, alt, caption) {
     const imageNode = {
         type: "image2",
@@ -575,8 +619,16 @@ function buildCaptionedImage(src, alt, caption) {
             offset: false,
         },
     };
-    const captionedContent = [imageNode];
-    return { type: "captionedImage", attrs: {}, content: captionedContent };
+    // Substack's ProseMirror schema requires captionedImage to contain both
+    // image2 AND imageCaption children. Omitting imageCaption causes
+    // "RangeError: Unknown node type: imageCaption" when the editor loads.
+    const captionNode = {
+        type: "imageCaption",
+        content: caption
+            ? [{ type: "text", text: caption }]
+            : [],
+    };
+    return { type: "captionedImage", attrs: {}, content: [imageNode, captionNode] };
 }
 
 function extractYouTubeId(input) {
@@ -1200,6 +1252,20 @@ const session = await joinSession({
                     const uploadImage = (localPath) =>
                         uploadImageToSubstack(subdomain, headers, localPath, articleDir);
                     const body = await markdownToProseMirror(bodyMarkdown, uploadImage);
+
+                    // Pre-publish validation: catch unknown node types before sending to Substack
+                    const validation = validateProseMirrorBody(body);
+                    if (!validation.valid) {
+                        return {
+                            textResultForLlm:
+                                `🛑 BLOCKED: ProseMirror validation failed — the draft body contains node types ` +
+                                `that Substack's editor may not recognize:\n\n` +
+                                validation.issues.map(i => `  • ${i}`).join("\n") +
+                                `\n\nThis would cause a "RangeError: Unknown node type" when opening the draft. ` +
+                                `Fix the markdown or the conversion logic before retrying.`,
+                            resultType: "failure",
+                        };
+                    }
 
                     // Create or update draft
                     let draft;

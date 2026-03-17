@@ -242,7 +242,7 @@ Discovered by inspecting real Substack drafts via the API:
 | markdown table block | `\| col \| col \|` | Converted to ordered/bullet lists, not native tables |
 | `bullet_list` / `list_item` | `- item` | |
 | `ordered_list` / `list_item` | `1. item` | |
-| `captionedImage` + `image2` | `![alt](./local.jpg)` or `![alt](https://url)` | Local files auto-uploaded to S3 |
+| `captionedImage` → `image2` + `imageCaption` | `![alt](./local.jpg)` or `![alt](https://url)` | Local files auto-uploaded to S3 |
 | `youtube2` | `::youtube ID` | Native player embed |
 | `twitter2` | Manual in editor | Paste tweet URL |
 | `vimeo` | Manual in editor | Paste Vimeo URL |

@@ -722,6 +722,42 @@ Created 28 generic article issues (#43–#69) for all remaining NFL teams beyond
 1. Decision proposal: `.squad/decisions/inbox/lead-ralph-max-throughput.md` — full operating spec with 6 concrete principles (fan-out by stage, saturate downstream lanes, serialize only on real dependencies, batch same-stage work, no agent cap, multi-article iteration accounting).
 2. Updated `.squad/identity/now.md` — session focus shifted from "interactive article creation" to "maximum-throughput Ralph pipeline."
 
+---
+
+## imageCaption Parser Investigation (2026-03-17)
+
+**Issue:** Witherspoon v2 prod draft (ID 191200944) fails to open in Substack editor with `RangeError: Unknown node type: imageCaption`. The error was captured via Datadog RUM — `datadog-rum.js:1 Failed to parse JSON for post [191200944]`.
+
+**Root cause:** `buildCaptionedImage()` in `.github/extensions/substack-publisher/extension.mjs` (line 554-579) and `batch-publish-prod.mjs` (line 442-456) creates `captionedImage > [image2]` only. Caption text is stored in `image2.attrs.title` (HTML tooltip attribute). When Substack's backend or editor processes this, it injects an `imageCaption` child node for the visible caption — but the editor's ProseMirror schema either doesn't define `imageCaption` consistently, or the serialized round-trip introduces it without proper registration, causing the `RangeError`.
+
+**Impact:**
+- Any draft with `![alt|caption](url)` or `![alt](url "caption")` syntax risks this error when opened in Substack editor
+- Witherspoon v2 has 2 captioned inline images (lines 62, 177) — both use pipe syntax
+- 4 table-image references have no captions (empty `caption` param), so those are unaffected
+- Same bug exists in `batch-publish-prod.mjs` (the standalone batch script)
+
+**Handled node types (parser whitelist):**
+- Block: heading (1-3), horizontal_rule, blockquote, TLDR (special blockquote), bullet_list, ordered_list, captionedImage, youtube2, paragraph
+- Table: converted to bullet_list/ordered_list via `parseTable()` — NOT native ProseMirror table nodes
+- Inline marks: bold, italic, bold+italic, link
+- NOT handled: code blocks, inline code, footnotes, nested lists, task lists
+
+**Fix (proposed by Editor, validated by Lead):** Add `imageCaption` child node to `captionedImage` when caption text exists. Both files need the same change. Low risk — articles without captions are unaffected, and if Substack rejects it, the error surfaces immediately at publish time (fail-fast).
+
+**Post-publish validation opportunities identified:**
+1. Image URL check (verify S3 URLs, catch silent upload failures) — priority 1
+2. Caption presence parity check — priority 2 (after fix ships)
+3. Node count parity (expected vs actual top-level nodes) — nice-to-have
+4. Title/subtitle echo check — nice-to-have
+5. Draft accessibility probe (HTTP GET on draft URL) — nice-to-have
+
+**Key files:**
+- Parser: `.github/extensions/substack-publisher/extension.mjs` (lines 554-579, 364-551)
+- Batch copy: `batch-publish-prod.mjs` (lines 442-456, 467-540)
+- Witherspoon draft: `content/articles/witherspoon-extension-v2/draft.md`
+- Editor's analysis: `.squad/decisions/inbox/editor-imagecaption-handoff.md`
+- This investigation: `.squad/decisions/inbox/lead-imagecaption-investigation.md`
+
 **Key learning:** The "one stage per iteration" rule was correct for initial pipeline validation but became the primary bottleneck once the pattern was proven. Parallel execution is cost-neutral (same total tokens) but cuts wall-clock time by 3-4×. The only real serialization constraint is intra-article stage ordering — cross-article work is always independent.
 
 ### State/Reconciliation Core Implementation (2026-03-16)
@@ -1011,3 +1047,21 @@ Both articles have live production drafts:
 - The safe prod push workflow is: (1) verify artifact state, (2) create publisher-pass.md, (3) run reconcile dry-run, (4) run --repair, (5) publish to prod, (6) verify DB. Never batch-push from DB stage alone.
 
 **Stage 7 board after this session:** DEN, MIA, witherspoon-v2, JSN — all awaiting Joe Stage 8 review.
+---
+
+## imageCaption Parse Error — Fixed (2026-07-25)
+
+**Outcome:** Witherspoon and JSN prod drafts repaired; pipeline hardened with pre-publish validation.
+
+**Root cause:** `buildCaptionedImage()` in both `extension.mjs` and `batch-publish-prod.mjs` produced `captionedImage` nodes with only an `image2` child. Substack's ProseMirror schema requires both `image2` AND `imageCaption` children. The missing node caused `RangeError: Unknown node type: imageCaption` in the Substack editor.
+
+**What was done:**
+- Fixed `buildCaptionedImage()` in both files to emit `imageCaption` as second child of `captionedImage`
+- Added `validateProseMirrorBody()` pre-publish gate to `extension.mjs` — blocks unknown node types before API call
+- Re-pushed both prod drafts (witherspoon draft 191200944, JSN draft 191200952) with corrected structure
+- Dry-run confirmed: 6 images (witherspoon) + 7 images (JSN), all with proper `imageCaption` nodes
+
+**Key lessons:**
+- Substack's ProseMirror schema is strict about child node structure. `captionedImage` must contain exactly `image2` + `imageCaption`.
+- `batch-publish-prod.mjs` duplicates core conversion logic from the extension — both must be updated together. Consider DRY refactor.
+- Pre-publish schema validation is essential; adding it would have caught this on first push.
