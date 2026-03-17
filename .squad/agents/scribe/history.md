@@ -8,6 +8,12 @@
 
 ## Recent Sessions
 
+### Notes Card Render Fix & URL Backfill Logging (2026-03-17T16:28Z)
+**Status:** ✅ LOGGED — Memory refreshed for the card-first directive
+- Recorded Joe’s directive about article cards and kept the active decision `2026-03-18: Backfill Published URLs + Fix Note Card Rendering` in place.
+- Wrote new orchestration logs for Lead, Coordinator, and Scribe, plus the session log describing the fix, decision merge status, and verification steps.
+- Appended the same summary to Lead’s history so downstream agents can trace the pipeline/db updates and link-mark guard.
+
 ### Model Trial: gpt-5.1-codex-mini Double Write (2026-03-17T105753Z)
 **Status:** ✅ LOGGED — Verified the codex 5.1 mini logging path
 - Created `.squad/log/20260317T105753Z-scribe-model-trial-codex-mini.md` with a `model-trial/verification` marker.

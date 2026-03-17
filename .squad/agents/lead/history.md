@@ -27,6 +27,12 @@
 
 ## Recent Sessions
 
+### Notes Card Render Fix & URL Backfill Verification (2026-03-17T16:28Z)
+**Status:** ✅ LOGGED — Session artifacts captured by Scribe
+- Backfilled `substack_url` for `seahawks-rb1a-target-board` and `witherspoon-extension-cap-vs-agent`, then replaced the five broken stage-review Notes so they include the new link-marked bodies.
+- Documented the `parseNoteInline()` helper that wraps inline URLs in ProseMirror link marks and linked the resulting Lead decision with Joe’s article-card directive.
+- Coordinator verification confirmed pipeline.db now stores the live `/p/` URLs and the `parseNoteInline()` change yields card-able payloads, so cards remain durable across future Notes postings.
+
 ### Notes workflow consolidation (2026-03-17 to 2026-03-18)
 - Selected `jsn-extension-preview` as the Phase 2 Notes target and preserved the stage draft URL for Joe's review before any production posting.
 - Reframed the Notes rollout toward shorter card-first bodies, with explicit ProseMirror link marks for article-card rendering and payload-level attachments for images.

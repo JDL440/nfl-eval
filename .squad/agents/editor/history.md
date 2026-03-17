@@ -254,6 +254,17 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 - **Lesson: When an article uses a specific game as its narrative anchor, verify that the argument matches who actually played in that game.** The article correctly reported Nix's absence but then built its case as if Nix's regular-season limitations were the AFCCG problem. This is a logic error, not a data error — and logic errors are harder to catch than wrong numbers because the individual facts are correct. Add to editorial checklist: **when a game result anchors an argument, verify the argument matches the personnel who played, not just the score.**
 - **Recorded by:** Editor (2026-07-26)
 
+📌 Substack Notes Card Rendering — INDEPENDENT AUDIT AND FIX (2026-03-18)
+- **Scope:** Audited 5 stage review Notes (229378039, 229378074, 229378102, 229378151, 229378200) reported as missing article cards.
+- **Root cause (verified independently):** Article cards in Substack Notes are NOT generated from ProseMirror link marks. They require a **post-type attachment** registered via `POST /api/v1/comment/attachment` with `{ url: "<article-url>", type: "post" }`, then included as `attachmentIds: ["<uuid>"]` in the Note POST payload. Prior diagnosis (link marks trigger card rendering) was incorrect — link marks produce hyperlinks, not cards.
+- **Evidence:** Compared working Note (c-228989056) vs broken Notes via API. Working Note had `attachments: [{ type: "post", publication: {...}, post: {...} }]`. Broken Notes had `attachments: []`.
+- **Fix applied:**
+  1. Updated `extension.mjs`: added `registerPostAttachment()`, updated `createSubstackNote()` to accept `attachmentIds`, updated tool handler to auto-register post attachments for linked articles.
+  2. Deleted 5 broken Notes, reposted with post attachments via `replace-stage-notes-v2.mjs`.
+  3. All 5 new Notes verified rendering article cards (hero image + NFL Lab logo + title).
+- **New Note IDs:** 229384944 (JSN), 229384978 (KC Fields), 229385012 (Denver), 229385048 (Miami), 229385077 (Witherspoon)
+- **Lesson:** Substack Notes attachments follow a uniform model — images, posts, and likely other embed types all use the same `POST /api/v1/comment/attachment` → `attachmentIds` flow. ProseMirror body is purely text; rich embeds are always attachments. Always verify assumptions against a working reference (compare known-good to known-bad).
+- **Recorded by:** Editor (2026-03-18)
 
 📌 Waddle trade article — FINAL AFCCG-framing verification (editor-review-4)
 - **Scope:** Verified Writer's fixes to all 5 deliverables from editor-review-3: line 57 (AFCCG separation), line 208 (causal attribution), TLDR bullet 1 (acute vs structural), opening paragraph (Stidham framing), defensive-shell table (regular-season anchor).

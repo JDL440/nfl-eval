@@ -424,6 +424,42 @@ function parseNoteInline(line) {
 }
 
 /**
+ * Register an article URL as a post attachment for Notes card rendering.
+ *
+ * POST /api/v1/comment/attachment with { url, type: "post" } returns an
+ * attachment UUID. Include that UUID in `attachmentIds` when creating the
+ * Note to trigger Substack's rich article card (hero image + title + pub).
+ *
+ * NOT Cloudflare-blocked — works via plain fetch().
+ */
+async function registerPostAttachment({ articleUrl, subdomain, token }) {
+    let substackSid;
+    try {
+        const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+        substackSid = decoded.substack_sid;
+    } catch { substackSid = token.trim(); }
+
+    const host = `${subdomain}.substack.com`;
+    const resp = await fetch(`https://${host}/api/v1/comment/attachment`, {
+        method: "POST",
+        headers: {
+            Cookie: `substack.sid=${substackSid}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        },
+        body: JSON.stringify({ url: articleUrl, type: "post" }),
+    });
+    if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`Post attachment registration failed: HTTP ${resp.status} — ${text.slice(0, 200)}`);
+    }
+    const data = await resp.json();
+    return data.id; // attachment UUID
+}
+
+/**
  * Create a Note on Substack.
  *
  * Endpoint: POST https://{subdomain}.substack.com/api/v1/comment/feed
@@ -439,7 +475,7 @@ function parseNoteInline(line) {
  * ⚠️  STAGE-GATED: requires NOTES_ENDPOINT_PATH to be set in .env.
  *     Without it, the function throws to prevent accidental posts.
  */
-async function createSubstackNote({ bodyJson, subdomain, token }) {
+async function createSubstackNote({ bodyJson, subdomain, token, attachmentIds }) {
     const env = loadEnv();
     const endpointPath = process.env.NOTES_ENDPOINT_PATH || env.NOTES_ENDPOINT_PATH;
     if (!endpointPath) {
@@ -459,6 +495,7 @@ async function createSubstackNote({ bodyJson, subdomain, token }) {
         tabId: "for-you",
         surface: "feed",
         replyMinimumRole: "everyone",
+        ...(attachmentIds?.length ? { attachmentIds } : {}),
     };
 
     // Extract raw session cookie for Playwright injection
@@ -1969,6 +2006,19 @@ const session = await joinSession({
                     // ── Assemble ProseMirror body ────────────────────
                     const bodyJson = noteTextToProseMirror(noteBody);
 
+                    // ── Register post attachment for article card ───
+                    const attachmentIds = [];
+                    if (linkedArticleUrl && /substack\.com\/p\//.test(linkedArticleUrl)) {
+                        try {
+                            await session.log("Registering article as post attachment for card rendering…", { ephemeral: true });
+                            const attId = await registerPostAttachment({ articleUrl: linkedArticleUrl, subdomain, token });
+                            attachmentIds.push(attId);
+                            await session.log(`Post attachment registered: ${attId}`, { ephemeral: true });
+                        } catch (attErr) {
+                            await session.log(`⚠️ Post attachment registration failed (Note will post without card): ${attErr.message}`, { ephemeral: true });
+                        }
+                    }
+
                     // ── Post the Note ─────────────────────────────
                     // createSubstackNote() requires NOTES_ENDPOINT_PATH in .env.
                     // If not set, it throws with instructions. Everything above
@@ -1976,7 +2026,7 @@ const session = await joinSession({
                     // is validated. Image upload is deferred.
                     try {
                         await session.log("Attempting to post Note…", { ephemeral: true });
-                        const noteResult = await createSubstackNote({ bodyJson, subdomain, token });
+                        const noteResult = await createSubstackNote({ bodyJson, subdomain, token, attachmentIds });
 
                         // ── Success response (reached only after gate is lifted) ──
                         // NOTE: when ungating, re-add image upload + captionedImage

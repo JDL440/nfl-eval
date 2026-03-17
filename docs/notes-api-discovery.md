@@ -657,3 +657,64 @@ Images are supplementary visual content. Article cards are triggered exclusively
 **Also backfilled:** `substack_url` in pipeline.db for both Stage 8 published articles:
 - `seahawks-rb1a-target-board` → `https://nfllab.substack.com/p/the-6-million-backfield-how-seattle`
 - `witherspoon-extension-cap-vs-agent` → `https://nfllab.substack.com/p/cap-says-27m-the-agent-demands-33m-d00`
+
+---
+
+## Phase 5 — Post Attachment Discovery (2026-03-18)
+
+> **CORRECTION:** Phase 4's diagnosis was wrong. ProseMirror link marks do NOT produce article cards — they only create clickable hyperlinks. Article cards require explicit post-type attachment registration.
+
+**Problem:** All 5 Phase 4 Notes (with link marks) still rendered as plain hyperlinks, no article cards.
+
+**Investigation method:** Fetched API data for working Note (c-228989056, created via Substack UI) and broken Note (c-229378039, created via extension) using `GET /api/v1/reader/comment/{id}`.
+
+**Key discovery:**
+
+```
+Working Note (228989056):
+  attachments: [{ id: "e6734b84...", type: "post", publication: {...}, post: {...} }]
+
+Broken Note (229378039):
+  attachments: []  // empty — only link marks in body_json
+```
+
+**The attachment API:**
+
+```
+POST /api/v1/comment/attachment
+Content-Type: application/json
+Cookie: substack.sid=<token>
+
+{ "url": "https://nfllab.substack.com/p/<slug>", "type": "post" }
+
+Response 200:
+{ "id": "<uuid>", "type": "post", "publication": {...}, "post": {...} }
+```
+
+- NOT Cloudflare-blocked — works via plain `fetch()` with cookie auth
+- Both `type: "post"` and `type: "link"` resolve Substack URLs to post attachments
+- The UUID is then passed as `attachmentIds: ["<uuid>"]` in the Note creation payload
+
+**Fix applied:**
+1. Added `registerPostAttachment(page, url)` to `extension.mjs`
+2. Updated `createSubstackNote()` to accept and pass `attachmentIds`
+3. Updated tool handler to auto-register post attachments for `linkedArticleUrl` containing `substack.com/p/`
+4. Deleted 5 Phase 4 Notes, reposted with post attachments
+
+**New Note IDs (Phase 5, with article cards):**
+
+| Article | Phase 4 Note ID | Phase 5 Note ID | Permalink |
+|---------|-----------------|-----------------|-----------|
+| JSN Extension | 229378039 | 229384944 | https://substack.com/@joerobinson495999/note/c-229384944 |
+| KC Fields Trade | 229378074 | 229384978 | https://substack.com/@joerobinson495999/note/c-229384978 |
+| Denver Offseason | 229378102 | 229385012 | https://substack.com/@joerobinson495999/note/c-229385012 |
+| Miami Dead Cap | 229378151 | 229385048 | https://substack.com/@joerobinson495999/note/c-229385048 |
+| Witherspoon Extension | 229378200 | 229385077 | https://substack.com/@joerobinson495999/note/c-229385077 |
+
+**All 5 Notes verified rendering article cards** — hero image, NFL Lab publication logo, and article title.
+
+**Attachment model (corrected understanding):**
+- Substack Notes attachments are a uniform system: images (`type: "image"`), posts (`type: "post"`), and other embeds all flow through `POST /api/v1/comment/attachment` → `attachmentIds`
+- ProseMirror body is purely for text content
+- Rich embeds (cards, images, etc.) are ALWAYS separate attachments, never inline ProseMirror content
+- The Substack web UI handles attachment registration transparently when you paste a URL into the Notes composer
