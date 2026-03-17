@@ -4,7 +4,35 @@
 
 ---
 
+### 2026-03-17: imageCaption Parse Error — Root Cause & Fix
+**By:** Lead (Team Lead Specialist)
+**Status:** EXECUTED
+**Affects:** substack-publisher extension, batch-publish-prod.mjs, all 4 prod drafts (witherspoon-v2, jsn-preview, den, mia)
 
+**Root Cause:**
+`buildCaptionedImage()` in the Substack publisher produced a `captionedImage` ProseMirror node containing only an `image2` child. Substack's editor schema requires `captionedImage` to contain both `image2` AND `imageCaption` children (content expression: `image2 imageCaption`). The missing `imageCaption` node caused `RangeError: Unknown node type: imageCaption` when the Substack editor tried to validate the document structure on draft open.
+
+**Fix Applied:**
+1. **extension.mjs** — `buildCaptionedImage()` now emits an `imageCaption` node as the second child of every `captionedImage`. If a caption exists, it contains the caption text; otherwise it has an empty content array.
+2. **batch-publish-prod.mjs** — Same fix applied to the duplicated `buildCaptionedImage()`.
+3. **Pre-publish validation** — Added `validateProseMirrorBody()` to the extension handler. Before any draft is created or updated, the converter's output is checked against a known-good set of Substack node types. If unknown types are found, the publish is blocked with a clear error message.
+4. **All 4 prod drafts repaired** via `repair-prod-drafts.mjs`:
+   - witherspoon-extension-v2 (draft 191200944): 6 images — fixed
+   - jsn-extension-preview (draft 191200952): 7 images — fixed
+   - den-2026-offseason (draft 191154355): 6 images — fixed
+   - mia-tua-dead-cap-rebuild (draft 191150015): 4 images — fixed
+5. All 4 drafts verified via authenticated API read-back: every `captionedImage` has correct `image2 + imageCaption` structure.
+
+**Scope Check:**
+- The ~20 other articles from the earlier rolled-back batch will use the fixed conversion on next push.
+
+**Files changed:**
+- `.github/extensions/substack-publisher/extension.mjs` (imageCaption fix + validation)
+- `batch-publish-prod.mjs` (imageCaption fix)
+- `.squad/skills/substack-publishing/SKILL.md` (docs updated)
+- `repair-prod-drafts.mjs` (one-time repair script, can be deleted after verification)
+
+---
 
 ### 2026-03-17: Witherspoon + JSN Publisher Pass and Prod Push
 **By:** Lead (Team Lead Specialist)

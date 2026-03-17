@@ -6,6 +6,18 @@
 - **Data Sources:** overthecap.com, spotrac.com, ESPN/NFL.com, PFR, PFF, The Athletic, mock draft sites
 - **Rumor Mode:** Dual-track (⚠️ RUMOR inline + separate track)
 
+## Recent Sessions
+
+### Parser Fix & Prod Draft Repair (2026-03-17T193500Z)
+Logged session for Substack imageCaption schema fix and prod draft repair.
+- Root cause: `buildCaptionedImage()` was generating incomplete ProseMirror nodes (only `image2` child, missing required `imageCaption`)
+- Fixes: Updated extension.mjs and batch-publish-prod.mjs; added pre-publish validator; created repair script
+- Prod drafts repaired & verified: witherspoon-v2 (191200944), jsn-preview (191200952), den (191154355), mia (191150015)
+- Created orchestration log: `2026-03-17T193500Z-lead-parser-fix.md`
+- Created session log: `2026-03-17T193500Z-parser-fix-repair.md`
+- Merged decision inbox file into decisions.md
+- Propagated cross-agent update to Lead history
+
 ## Learnings
 
 ### Stage 7 Push Audit (2026-03-17)

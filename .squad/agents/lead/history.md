@@ -25,6 +25,40 @@
 
 ---
 
+## Substack Parser Fix: imageCaption Schema Error (2026-03-17)
+
+**Outcome:** Root cause identified, fixed, and verified across all 4 affected prod drafts. Pre-publish validation added to prevent recurrence.
+
+**What happened:**
+Four prod drafts (witherspoon-v2, jsn-preview, den, mia) could not be opened in Substack editor — all threw `RangeError: Unknown node type: imageCaption`. Investigation revealed `buildCaptionedImage()` in the publisher extension was generating incomplete ProseMirror nodes.
+
+**Root cause:**
+Substack's editor schema requires `captionedImage` nodes to contain **two** children: `image2` + `imageCaption` (enforced by content expression `image2 imageCaption`). The parser was emitting only `image2`, leaving `imageCaption` missing. When Substack's editor tried to instantiate these nodes, the schema validation failed.
+
+**Fixes applied:**
+1. **`.github/extensions/substack-publisher/extension.mjs`** — Modified `buildCaptionedImage()` to emit both `image2` and `imageCaption` children in every `captionedImage` node. If a caption exists, `imageCaption` contains it; otherwise it's an empty node.
+2. **`batch-publish-prod.mjs`** — Applied identical fix to the duplicated `buildCaptionedImage()` function.
+3. **Pre-publish validation** — Added `validateProseMirrorBody()` to the extension handler. Scans the entire output doc before any draft publish for unknown node types against the known Substack schema. Blocks publish if validation fails.
+4. **`.squad/skills/substack-publishing/SKILL.md`** — Updated documentation with schema requirements.
+5. **`repair-prod-drafts.mjs`** — Created one-time repair script to fix all 4 affected drafts via authenticated API.
+
+**Prod drafts repaired & verified:**
+| Article | Draft ID | Images | Status |
+|---------|----------|--------|--------|
+| witherspoon-extension-v2 | 191200944 | 6 | ✅ Fixed & verified |
+| jsn-extension-preview | 191200952 | 7 | ✅ Fixed & verified |
+| den-2026-offseason | 191154355 | 6 | ✅ Fixed & verified |
+| mia-tua-dead-cap-rebuild | 191150015 | 4 | ✅ Fixed & verified |
+
+All verified via authenticated API read-back confirming `captionedImage` structure is now correct.
+
+**Scope:**
+- ~20 other articles from the earlier rolled-back batch will auto-fix on next push (no manual repair needed).
+- Future batch pushes protected by pre-publish validator.
+
+**Key learning:** Schema completeness matters. Partial node structures can pass database storage but fail editor instantiation. Must validate against full schema, not just node type presence.
+
+---
 ## Stage 7 → Prod Draft Promotion — ROLLED BACK (2026-03-16)
 
 **Outcome:** Broad prod push was INCORRECT. Only DEN and MIA are truly Stage 7 per artifact scan. The other 20 articles have inflated DB stages (actually Stage 5 or 6). Prod URLs rolled back to staging URLs; orphan drafts left on nfllab.substack.com (invisible, non-destructive).
