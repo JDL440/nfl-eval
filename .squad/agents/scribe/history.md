@@ -8,6 +8,15 @@
 
 ## Recent Sessions
 
+### Mobile Chart/Table Rendering Investigation Kickoff (2026-03-18)
+**Status:** 🚀 LAUNCHED — Lead agent investigating
+- Joe Robinson initiated deep-dive on mobile chart/table rendering on Substack
+- Issue: Mobile rendering too crunched/small; desktop rendering acceptable
+- Focus: Investigate alternatives and recommend next implementation step
+- Related todo: mobile-chart-rendering-issue
+- Created orchestration log: `.squad/orchestration-log/2026-03-18T-KICKOFF-mobile-chart-rendering.md`
+- Task: Investigation, alternatives analysis, GitHub issue creation/update
+
 ### Substack imageCaption Incident Reopened (2026-03-16T174849Z)
 **Status:** 🔴 ACTIVE — All 4 review-target drafts still fail in Substack real editor (browser-level)
 - User (Joe Robinson) confirmed prior parser fix did NOT resolve failure path
@@ -52,3 +61,14 @@ Logged session for imageCaption investigation across parser and stage7 publishin
 - Archived 6 decisions older than 30 days to decisions-archive.md
 - Propagated cross-agent updates to Lead and Editor histories
 - decisions.md: 166 blocks, 184KB (all within 30-day window)
+
+### KC Fields Stage Publish Session (2026-03-16T20:51Z)
+Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
+- Created orchestration log: `20260316-205127-lead.md`
+- Created session log: `20260316-205127-kc-fields-stage-publish.md`
+- Decision inbox: empty (nothing to merge)
+- Knowledge inbox: empty (nothing to process)
+- Summarized Lead history.md: 56KB → 4.7KB (condensed to Core Context + durable learnings)
+- Cross-agent update appended to KC history.md
+- decisions.md: 189KB — all entries within 5 days, no 30-day archival candidates
+- ⚠️ NOTE: 30+ agent histories exceed 12KB threshold; needs batch summarization in future session

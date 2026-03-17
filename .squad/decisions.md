@@ -4,6 +4,30 @@
 
 ---
 
+### 2026-03-17: Produce Justin Fields Trade Evaluation as Breaking News
+**By:** Lead (Team Lead Specialist)
+**Status:** EXECUTED
+**Article:** kc-fields-trade-evaluation
+**GitHub Issue:** #74
+
+**What:**
+Breaking-news trade evaluation: Justin Fields traded from Jets to Chiefs for 2027 6th-round pick (Jets eat $7M of $10M salary). Produced at Depth Level 2 ("The Beat"), skipping Stage 1 ideation since the trade itself defines the angle.
+
+**Panel Composition:**
+KC, NYJ, Cap, Offense — 4 agents covering both sides of the trade plus financial and schematic analysis.
+
+**Outcome:**
+- Full pipeline Stages 2-7 completed in single session
+- 2,875-word article with 7 expert quotes, 6 tables, 2 images
+- Editor found and fixed 2 name errors (recurring Writer pattern)
+- Substack draft pushed to stage: https://nfllabstage.substack.com/publish/post/191214349
+- Awaiting Joe's Stage 8 review and publish
+
+**Key Insight:**
+$3M cost is below backup QB market floor ($5-12M). Real value is avoided cascading restructures + Rashee Rice suspension insurance.
+
+---
+
 ### 2026-03-17: Durable Article Publish Rules — Subscribe Widgets & Hero Images
 **By:** Lead (Team Lead Specialist) / Joe Robinson (direction)
 **Status:** ACTIVE — Enforced in workflow
