@@ -283,18 +283,16 @@ _Last updated: 2026-03-12_
 
 ## Learnings
 
-📌 Media update (2026-03-14): Re-signed J.K. Dobbins (RB, 2yr/$20M) + Jaleel McLaughlin (RB). RB room set: Dobbins + McLaughlin + RJ Harvey = three-headed backfield.
+> Summarized by Scribe on 2026-07-26. Full details in `.squad/log/` session logs.
 
-📌 Article workflow (2026-03-16): Completed Stages 1-2 for issue #54 (DEN 2026 offseason article). Chose **TE Joker crisis** as the strongest angle — connects Payton's coaching DNA to roster construction, Engram's failed experiment (50/461/1, $14.2M hit), draft dilemma at #30 (Sadiq vs Allen), and Webb playcalling shift. Score: 12/12. Artifacts: `content/articles/den-2026-offseason/idea.md` + `discussion-prompt.md`. Decision filed to inbox.
+**Article Pipeline (2026-03-14 through 2026-03-16):**
+- Re-signed Dobbins (2yr/$20M) + McLaughlin; RB room set (Dobbins/McLaughlin/Harvey)
+- Completed Stages 1-2 for issue #54 (TE Joker crisis angle, score 12/12)
+- Engram deep-dive: 50/461/1, drop issues, coaching tension. Cut saves ~$3.8M
+- Davis Webb named playcaller — first time Payton won't call plays in 20yr HC career
+- TE draft targets: Sadiq (Oregon) top prospect; R2 options Endries/Klare/Stowers; consensus R1 pick CJ Allen (LB)
+- Workflow: follow BUF #43 / HOU #50 convention for issue-triggered idea generation; can advance through Stage 2 in same session
+- Panel composition: issue #54 advanced to panel-ready with 3-agent panel (DEN, Cap, Offense)
+- Panel position: advocated Sadiq at #30 over CJ Allen — TE as championship ceiling vs ILB as urgent need
 
-📌 Research update (2026-03-16): Engram 2025 deep-dive confirmed — 50 catches, 461 yards, 1 TD. Reports of drop issues, coaching tension, erratic usage. Payton initially called him the "Joker" (Jimmy Graham comparison) but scheme marginalized him in 11-personnel. Sporting News calls it an "easy $11M decision." Cut saves ~$3.8M. Post-June 1 designation possible.
-
-📌 Research update (2026-03-16): Davis Webb officially named playcaller at 2026 NFL Combine. First time Payton won't call plays in 20-year HC career. Payton: "I would only do that if I felt like it would help our team. He has a gift." Webb was previously QB coach → passing game coordinator → promoted after Lombardi's departure. Impressed calling plays in 2025 preseason win vs ARI.
-
-📌 Research update (2026-03-16): TE draft targets refined — Kenyon Sadiq (Oregon) is the top TE prospect, a combine riser described as "freak athlete." Multiple mocks have DEN "thrilled" if he falls to #30. Other R2 options: Jack Endries (Texas), Max Klare (Ohio State), Eli Stowers (Vanderbilt). Consensus R1 pick remains CJ Allen (LB, Georgia).
-
-📌 Workflow learning (2026-03-16): For issue-triggered idea generation, follow BUF #43 / HOU #50 convention exactly — idea comment format, label transitions (remove `go:needs-research`, add `go:yes` + `stage:idea` → `stage:discussion-prompt`), artifact placement at `content/articles/{team}-2026-offseason/idea.md`. Can advance through Stage 2 in same session without waiting for approval.
-
-📌 Panel composition workflow (2026-03-16): Successfully advanced issue #54 from `stage:discussion-prompt` to `stage:panel-ready`. Created panel composition artifact at `content/articles/den-2026-offseason/panel-composition.md` with 3-agent panel (DEN, Cap, Offense). Format follows HOU/BUF templates: panel table with specific questions, rationale section explaining why each agent and why not others, coverage check, expected disagreements, and compliance table. Key label is `stage:panel-ready` (not `stage:panel-composition`). Panel composition confirms the panel identified in discussion-prompt rather than creating a new one — validates the strategic choices already made.
-
-📌 Panel position written (2026-03-15): Authored DEN panel position for issue #54 (TE Joker crisis article). Took aggressive stance advocating for Kenyon Sadiq at pick #30 over consensus CJ Allen (ILB). Core argument: TE is the difference-maker for championship ceiling even though ILB is the more urgent need. Hardest tradeoff: accepting thin ILB depth (relying on 32-year-old Singleton) to acquire the offensive weapon that transforms red zone efficiency. Key insight: Engram failed the scheme (61% catch rate, 14 drops, locker room indifference) rather than being schemed out — film shows Payton dialed up Graham-style routes but execution was absent. Position saved to `content/articles/den-2026-offseason/den-position.md`.
+📌 Trade acquisition (2026-07-26): **Jaylen Waddle acquired from MIA.** Trade: Waddle + MIA 2026 4th (#111) for DEN 2026 1st (#30), 3rd (#94), 4th (#130). Waddle carries 3yr/$84.75M extension (cap: $5M → $27M → $30M). Transforms WR room — Waddle is a proven WR1 who slots immediately alongside Sutton. Cost: three draft picks including R1 #30 (was expected to be CJ Allen ILB or Kenyon Sadiq TE). New article issue #78 created for trade analysis. Panel expected: DEN, MIA, Cap, Offense.

@@ -342,4 +342,6 @@ _Last updated: 2026-03-12 via spotrac.com_
 
 📌 Media update (2026-03-13): Signed Tutu Atwell (1yr WR). Tua Tagovailoa confirmed signed with ATL (1yr/$1.3M) — officially gone from MIA.
 
-📌 Media update (2026-03-14): Traded Minkah Fitzpatrick to NYJ. Signed Jalen Tolbert (WR) + Jamaree Salyer (OL). Full rebuild mode — lost Tua + Fitzpatrick. $67M dead cap.
+> Summarized by Scribe on 2026-07-26: Traded Minkah Fitzpatrick to NYJ. Signed Jalen Tolbert (WR) + Jamaree Salyer (OL). Full rebuild continues — lost Tua + Fitzpatrick. $67M dead cap (2026-03-14).
+
+📌 Trade departure (2026-07-26): **Jaylen Waddle traded to DEN.** Trade: Waddle + MIA 2026 4th (#111) sent to DEN for DEN 2026 1st (#30), 3rd (#94), 4th (#130). MIA loses its last proven WR weapon but gains three draft picks including a 1st-rounder — fueling the rebuild. Waddle's $84.75M extension off the books. WR room now has zero proven starters (Malik Washington, Tutu Atwell, Jalen Tolbert are depth pieces). Draft capital updated: R1 #11 (own), R1 #30 (from DEN), R3 picks, etc. New article issue #78 created for trade analysis. Panel expected: DEN, MIA, Cap, Offense.
