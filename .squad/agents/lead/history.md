@@ -25,25 +25,42 @@
 
 ---
 
-## Stage 7 → Prod Draft Promotion Complete (2026-03-16)
+## Stage 7 → Prod Draft Promotion — ROLLED BACK (2026-03-16)
 
-**Outcome:** All 22 Stage 7 articles now have production drafts on nfllab.substack.com.
+**Outcome:** Broad prod push was INCORRECT. Only DEN and MIA are truly Stage 7 per artifact scan. The other 20 articles have inflated DB stages (actually Stage 5 or 6). Prod URLs rolled back to staging URLs; orphan drafts left on nfllab.substack.com (invisible, non-destructive).
+
+**What happened:**
+- Batch-published all 22 DB-Stage-7 articles to prod based on pipeline.db
+- Post-audit via `article_board.py` revealed DB stage inflation: 12 articles at Stage 5, 8 at Stage 6
+- Rolled back: restored 20 articles' `substack_draft_url` to original staging URLs
+- DEN and MIA prod drafts confirmed correct and untouched
+
+**Key lesson:** ALWAYS cross-check `article_board.py` artifact-first truth before any prod promotion. pipeline.db stages can drift from actual artifact state. The DB is coordination state; artifacts are ground truth.
+
+**Orphan cleanup needed:** ~39 invisible draft posts on nfllab.substack.com (20 from writer-stage7-transform + 19 from Lead batch). Joe can bulk-delete from dashboard or leave them. Draft IDs documented in `stage7-prod-manifest.json` and decision file.
+
+**UPDATE:** `article_board.py --repair` run — 20 inflated stages corrected. Editor verdict incorporated as authoritative quality gate. See decision file for full tier breakdown.
+
+---
+## DB Reconciliation + Editor Verdict Incorporated (2026-03-16)
+
+**Outcome:** DB now matches artifact truth. Editor verdict establishes the authoritative quality gate for prod promotion.
 
 **What was done:**
-- Refreshed all 22 staging drafts on nfllabstage with final cleaned content
-- Created 19 new prod drafts on nfllab.substack.com
-- Updated DEN's existing prod draft (table cleanup changes)
-- Left MIA's prod draft untouched (no table cleanup changes)
-- witherspoon-extension-v2 independently promoted to Stage 8 with prod draft
-- All `substack_draft_url` fields in pipeline.db updated to prod URLs
+- Ran `article_board.py --repair` → 20 inflated DB stages corrected (Stage 7/8 → Stage 5/6)
+- DEN (Stage 7, PROD URL) and MIA (Stage 7, PROD URL) confirmed correct — no changes
+- Editor verdict integrated: DEN + witherspoon-extension-v2 = production-clear; MIA + JSN = approved-in-practice
+- 18 articles confirmed blocked (11 need Editor pass, 6 need REVISE corrections, 1 REJECT)
+- Decision file updated to RECONCILED status with full tier table
 
-**Key learnings:**
-- **Substack rate limiting:** ~10 API calls before 429s start. Need ≥3s delay between requests and retry logic with exponential backoff.
-- **Subdomain substring trap:** `nfllabstage` contains `nfllab` — must use full domain match (`nfllab.substack.com` vs `nfllabstage.substack.com`), not substring checks.
-- **Batch script approach:** `batch-publish-prod.mjs` reuses extension's markdown→ProseMirror logic directly, avoiding the need to call the Copilot extension tool in a loop. Much faster for bulk operations.
-- **Draft ID scoping:** Substack draft IDs are per-publication. A staging draft ID does NOT work on the prod subdomain. Must create new drafts when promoting from staging to prod.
+**Known issues:**
+- `article_board.py` sort bug: for articles with multiple `editor-review-*.md` files, the unnumbered `editor-review.md` sorts last in ASCII (so first in reverse), causing it to be read as "latest" when numbered files (e.g., `editor-review-3.md`) are actually newer. Affects JSN verdict detection.
+- witherspoon-extension-v2: `article_board.py` reports 0/2 images because `_count_images()` checks the article directory, not `content/images/{slug}/`. Images exist at correct location.
 
-**Decision filed:** `.squad/decisions/inbox/lead-prod-draft-push.md`
+**Next steps:**
+- witherspoon-extension-v2: publisher-pass → Stage 7 → prod push
+- JSN: reconcile editor verdict (address sort bug or manual artifact), then publisher-pass → prod push
+- 18 blocked: resume normal pipeline
 
 ---
 
@@ -942,3 +959,55 @@ publish_to_substack(file_path: "content/articles/mia-tua-dead-cap-rebuild/draft.
 ### Key Learning
 
 **artifact_board.py is authoritative, pipeline.db is not.** Batch operations (like table cleanup) that touch Stage 7 articles can inflate DB stage without completing the full Publisher checklist. Always run `article_board.py` before any deployment decision — it reads actual file artifacts, not DB labels.
+
+## 2026-03-17 — JSN & Witherspoon Production Draft Finalization (Lead Scribe Session)
+
+### Work Done
+- **article_board.py enhanced** with STATUS_DRIFT reconciliation: detects when status is inconsistent with current_stage (e.g., "in_discussion" at stage 6+)
+- **JSN status fixed**: "in_discussion" → "in_production" (was stale from early pipeline stages)
+- **Both articles confirmed at Stage 7**: witherspoon-extension-v2 and jsn-extension-preview both have editor ✅ APPROVED, publisher-pass.md, production draft URLs, inline images
+- **Production draft URLs verified**: witherspoon → 191200944, jsn → 191200952 (most recent batch push)
+
+### Learnings
+- **Status/stage coupling matters**: article_board.py only checked stage numbers and paths — missing status inconsistencies. The new STATUS_DRIFT check is conservative: only flags truly wrong states (not "in_production" at early stages, which is valid for active work)
+- **Multiple batch pushes create URL drift**: Both articles had 3 different production draft IDs from successive pushes. Always use highest draft ID (most recent) unless manifest explicitly supersedes
+- **JSN editor-review-3.md verdict pattern**: Uses ### ✅ APPROVED — All 🟡 Items Resolved which is correctly parsed by _parse_editor_verdict regex patterns
+- **_expected_status_for_stage() returns None for stages 2-4**: Both "in_discussion" and "in_production" are valid at these stages — avoids false positives
+
+### Key File Paths
+- content/article_board.py — artifact-first reconciliation with new status checks
+- .squad/decisions/inbox/lead-jsn-production-drafts.md — decision log for this session
+- content/articles/witherspoon-extension-v2/publisher-pass.md — publisher artifact
+- content/articles/jsn-extension-preview/publisher-pass.md — publisher artifact
+
+### Stage 8 Commands for Joe
+Both articles have live production drafts:
+1. **Witherspoon v2:** https://nfllab.substack.com/publish/post/191200944
+2. **JSN Extension:** https://nfllab.substack.com/publish/post/191200952
+
+---
+
+## Witherspoon + JSN Publisher Pass & Prod Push (2026-03-17)
+
+**Outcome:** Both articles successfully pushed to production Substack drafts. Three article_board.py bugs fixed.
+
+**What was done:**
+- Fixed `_parse_editor_verdict` sort bug: unnumbered `editor-review.md` sorted above numbered files in reverse ASCII. Now sorts by extracted numeric suffix (0 for unnumbered).
+- Fixed `_count_images` path bug: only checked article dir, not `content/images/{slug}/`. Now checks both locations.
+- Added missing `_expected_status_for_stage` helper used by reconciliation repair mode.
+- Cleaned witherspoon inline image alt text (removed "Placeholder for generated art:" production notes).
+- Created `publisher-pass.md` artifacts for both articles.
+- Ran `--repair` to sync DB stages (6 -> 7) and status fields.
+- Published both to prod Substack via API.
+
+**Prod draft URLs:**
+- witherspoon-extension-v2: https://nfllab.substack.com/publish/post/191200944
+- jsn-extension-preview: https://nfllab.substack.com/publish/post/191200952
+
+**Key lessons:**
+- `article_board.py` sort must use semantic ordering (numeric suffix), not ASCII, for editor-review files. The unnumbered file is the oldest, not the newest.
+- Image counting must check `content/images/{slug}/` as the canonical location. Article dirs rarely contain images directly.
+- Always test `--repair` mode after adding reconciliation logic; missing helpers only surface in repair path.
+- The safe prod push workflow is: (1) verify artifact state, (2) create publisher-pass.md, (3) run reconcile dry-run, (4) run --repair, (5) publish to prod, (6) verify DB. Never batch-push from DB stage alone.
+
+**Stage 7 board after this session:** DEN, MIA, witherspoon-v2, JSN — all awaiting Joe Stage 8 review.

@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 
 # Allow running from repo root: python content/article_board.py
 _CONTENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +25,30 @@ _ARTICLES_DIR = os.path.join(_CONTENT_DIR, "articles")
 sys.path.insert(0, _REPO_ROOT)
 
 from content.pipeline_state import PipelineState, STAGE_NAMES
+
+# ── Status / stage helpers ───────────────────────────────────────────────────
+
+def _utcnow():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _expected_status_for_stage(stage):
+    """
+    Return the canonical status for a given numeric stage, or None if
+    the current status is acceptable.  Conservative: only flags clear
+    inconsistencies (e.g., "in_discussion" at stage 5+ or "proposed"
+    at stage 2+).  "in_production" is valid at any active stage (2-7).
+    """
+    if stage == 1:
+        return "proposed"
+    if stage == 8:
+        return "published"
+    # Stages 2-7: "in_production" or "in_discussion" are valid for 2-4;
+    # but stage 5+ must be "in_production" — discussion is over.
+    if stage >= 5:
+        return "in_production"
+    # Stages 2-4: both "in_discussion" and "in_production" are acceptable
+    return None
 
 # ── Artifact detection helpers ───────────────────────────────────────────────
 
@@ -47,8 +72,14 @@ def _parse_editor_verdict(dirpath):
     Returns dict with keys: verdict, errors, suggestions, notes, review_file
     or None if no editor review found.
     """
+    def _editor_review_sort_key(filename):
+        """Return numeric key: editor-review.md → 0, editor-review-N.md → N."""
+        m = re.match(r"editor-review(?:-(\d+))?\.md$", filename)
+        return int(m.group(1)) if m and m.group(1) else 0
+
     files = sorted(
         [f for f in os.listdir(dirpath) if re.match(r"editor-review(-\d+)?\.md$", f)],
+        key=_editor_review_sort_key,
         reverse=True,
     )
     if not files:
@@ -102,10 +133,17 @@ def _has_discussion_summary(dirpath):
 
 
 def _count_images(dirpath):
-    """Count image files (png, jpg, webp) in the article directory."""
-    if not os.path.isdir(dirpath):
-        return 0
-    return len([f for f in os.listdir(dirpath) if re.match(r".*\.(png|jpe?g|webp)$", f, re.IGNORECASE)])
+    """Count image files (png, jpg, webp) in the article dir or content/images/{slug}/."""
+    count = 0
+    # Check the article directory itself
+    if os.path.isdir(dirpath):
+        count += len([f for f in os.listdir(dirpath) if re.match(r".*\.(png|jpe?g|webp)$", f, re.IGNORECASE)])
+    # Also check the canonical images directory: content/images/{slug}/
+    slug = os.path.basename(dirpath)
+    images_dir = os.path.join(_CONTENT_DIR, "images", slug)
+    if os.path.isdir(images_dir) and os.path.normpath(images_dir) != os.path.normpath(dirpath):
+        count += len([f for f in os.listdir(images_dir) if re.match(r".*\.(png|jpe?g|webp)$", f, re.IGNORECASE)])
+    return count
 
 
 def _infer_discussion_path(slug):
@@ -462,6 +500,27 @@ def reconcile(dry_run=True):
                     "detail": f"Editor review artifact exists (verdict={item['editor_verdict']}) but no DB row",
                 })
         
+        # ── Status reconciliation ────────────────────────────────────────────
+        # Stage 5+ articles should be "in_production"; stage 2-4 → "in_discussion"
+        db_status = db_row.get("status")
+        if db_status not in ("published", "archived"):
+            expected_status = _expected_status_for_stage(artifact_stage)
+            if expected_status and db_status != expected_status:
+                discrepancies.append({
+                    "slug": slug,
+                    "artifact_stage": artifact_stage,
+                    "db_stage": db_stage,
+                    "db_stage_type": db_type,
+                    "action": "STATUS_DRIFT",
+                    "detail": f"status: DB='{db_status}' → expected='{expected_status}' for stage {artifact_stage}",
+                })
+                if not dry_run:
+                    ps._conn.execute(
+                        "UPDATE articles SET status = ?, updated_at = ? WHERE id = ?",
+                        (expected_status, _utcnow(), slug),
+                    )
+                    ps._conn.commit()
+
         # ── Path reconciliation ──────────────────────────────────────────────
         # Check discussion_path for stage 4+ articles with discussion artifacts
         if artifact_stage >= 4:
