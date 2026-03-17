@@ -109,6 +109,23 @@ async function createDraft(title, subtitle, body) {
     return await res.json();
 }
 
+async function updateDraft(draftId, title, subtitle, body) {
+    const res = await fetch(`https://${SUBDOMAIN}.substack.com/api/v1/drafts/${draftId}`, {
+        method: "PUT",
+        headers: HEADERS,
+        body: JSON.stringify({
+            draft_title: title,
+            draft_subtitle: subtitle,
+            draft_body: JSON.stringify(body),
+        }),
+    });
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Update draft failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+    }
+    return await res.json();
+}
+
 // ─── Markdown → ProseMirror (minimal, image-aware) ──────────────────────────
 
 function parseInline(text) {
@@ -225,8 +242,13 @@ let ARTICLE_DIR = resolve(ROOT, "content", "articles", SLUG);
 const DRAFT_PATH = resolve(ARTICLE_DIR, "draft.md");
 
 async function main() {
+    const draftIdArg = process.argv.find(a => a.startsWith("--draft-id="));
+    const existingDraftId = draftIdArg ? draftIdArg.split("=")[1] : null;
+
     console.log(`\n🚀 Publishing to nfllabstage: ${SLUG}`);
-    console.log(`   Target: ${SUBDOMAIN}.substack.com\n`);
+    console.log(`   Target: ${SUBDOMAIN}.substack.com`);
+    if (existingDraftId) console.log(`   Updating existing draft: ${existingDraftId}`);
+    console.log("");
 
     if (!existsSync(DRAFT_PATH)) {
         console.error(`Draft not found: ${DRAFT_PATH}`);
@@ -240,15 +262,25 @@ async function main() {
     console.log("📝 Converting markdown to ProseMirror...\n");
     const body = await markdownToProseMirror(markdown);
 
-    console.log("\n📨 Creating draft on Substack...");
-    const draft = await createDraft(title, subtitle, body);
-    const draftUrl = `https://${SUBDOMAIN}.substack.com/publish/post/${draft.id}`;
-
-    console.log(`\n${"═".repeat(60)}`);
-    console.log(`✅ Draft created successfully!`);
-    console.log(`   Draft URL: ${draftUrl}`);
-    console.log(`   Draft ID:  ${draft.id}`);
-    console.log(`${"═".repeat(60)}\n`);
+    if (existingDraftId) {
+        console.log("\n📨 Updating existing draft on Substack...");
+        await updateDraft(existingDraftId, title, subtitle, body);
+        const draftUrl = `https://${SUBDOMAIN}.substack.com/publish/post/${existingDraftId}`;
+        console.log(`\n${"═".repeat(60)}`);
+        console.log(`✅ Draft updated successfully!`);
+        console.log(`   Draft URL: ${draftUrl}`);
+        console.log(`   Draft ID:  ${existingDraftId}`);
+        console.log(`${"═".repeat(60)}\n`);
+    } else {
+        console.log("\n📨 Creating draft on Substack...");
+        const draft = await createDraft(title, subtitle, body);
+        const draftUrl = `https://${SUBDOMAIN}.substack.com/publish/post/${draft.id}`;
+        console.log(`\n${"═".repeat(60)}`);
+        console.log(`✅ Draft created successfully!`);
+        console.log(`   Draft URL: ${draftUrl}`);
+        console.log(`   Draft ID:  ${draft.id}`);
+        console.log(`${"═".repeat(60)}\n`);
+    }
 }
 
 main().catch(err => {

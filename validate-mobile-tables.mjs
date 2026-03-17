@@ -145,7 +145,7 @@ async function run() {
         const mobileScale = mobileMetrics ? parseFloat(mobileMetrics.scaleFactor) : 0;
         // At 2x DPR, the CSS font size is half the pixel font size, and scaling
         // is relative to natural (pixel) width. Effective CSS font estimation:
-        const baseFontPx = isMobile ? 20 : 17;
+        const baseFontPx = isMobile ? 22 : 17;
         const effectiveFontAtMobile = mobileMetrics
             ? (baseFontPx * (mobileMetrics.renderedWidth / (mobileMetrics.naturalWidth / 2))).toFixed(1)
             : "?";

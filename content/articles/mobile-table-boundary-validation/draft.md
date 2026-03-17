@@ -17,7 +17,7 @@ Each section below exercises a different column count, density tier, and templat
 
 ## Test 2: 4-Column Priority List (Borderline tier)
 
-![Test 2: 4-Column Priority List (Borderline tier). 5 rows and 4 columns. Columns include Priority, Position, Top Target, and more. First row: 1.](../../images/mobile-table-boundary-validation/mobile-table-boundary-validation-test-2-4-column-priority-list-borderline-tier-mobile.png)
+![Test 2: 4-Column Priority List (Borderline tier). 5 rows and 4 columns. Columns include Priority, Position, Top Target, and more. First row: EDGE rusher.](../../images/mobile-table-boundary-validation/mobile-table-boundary-validation-test-2-4-column-priority-list-borderline-tier-mobile.png)
 
 ---
 

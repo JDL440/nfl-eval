@@ -91,15 +91,15 @@ const MOBILE_RENDER_LAYOUT = Object.freeze({
     canvasPadding: 6,
     tableRadius: 10,
     tableHeaderHeight: 50,
-    tableHeadFontSize: 16,
+    tableHeadFontSize: 17,
     tableHeadLineHeight: 1.18,
-    tableCellFontSize: 20,
+    tableCellFontSize: 22,
     tableCellLineHeight: 1.36,
     tableCellPaddingX: 10,
     tableCellPaddingY: 10,
     tableFirstRowMinHeight: 52,
     tableRowMinHeight: 48,
-    heightSafety: 72,
+    heightSafety: 150,
 });
 
 function clamp(value, min, max) {
@@ -458,8 +458,9 @@ function chooseCanvasWidth(columnCount, templateName) {
 function chooseMobileCanvasWidth(columnCount) {
     if (columnCount <= 3) return 500;
     if (columnCount <= 4) return 560;
-    if (columnCount <= 5) return 620;
-    return 660;
+    if (columnCount <= 5) return 660;
+    if (columnCount <= 6) return 720;
+    return 740;
 }
 
 function inferColumnRoles(table, templateName) {
@@ -625,6 +626,7 @@ function buildAutoTitle(table, templateName) {
 
 function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_LAYOUT) {
     const usableWidth = canvasWidth - (layout.canvasPadding * 2);
+    const fontScale = layout.tableCellFontSize / 17;
     let maxLines = 1;
 
     row.forEach((cell, index) => {
@@ -636,7 +638,7 @@ function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_
             Math.floor(
                 (widthPx - (layout.tableCellPaddingX * 2) - 10) /
                 (
-                    column.role === "number"
+                    (column.role === "number"
                         ? 9.2
                         : column.role === "notes"
                             ? 8.4
@@ -645,6 +647,7 @@ function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_
                                 : column.role === "title"
                                     ? 8.6
                                     : 8.1
+                    ) * fontScale
                 )
             )
         );
@@ -658,6 +661,24 @@ function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_
         minHeight,
         Math.round((layout.tableCellPaddingY * 2) + (maxLines * lineHeightPx))
     );
+}
+
+function estimateHeaderRowHeight(headers, columns, canvasWidth, layout) {
+    const usableWidth = canvasWidth - (layout.canvasPadding * 2);
+    const charWidth = layout.tableHeadFontSize * 0.62;
+    let maxLines = 1;
+
+    for (let i = 0; i < headers.length; i++) {
+        const text = stripMarkdown(headers[i] || "").toUpperCase();
+        const colWidth = usableWidth * ((columns[i]?.widthPercentage || 10) / 100);
+        const availWidth = colWidth - (layout.tableCellPaddingX * 2) - 10;
+        const cpl = Math.max(4, Math.floor(availWidth / charWidth));
+        const lines = estimateWrappedLineCount(text, cpl);
+        maxLines = Math.max(maxLines, lines);
+    }
+
+    const lineHeightPx = layout.tableHeadFontSize * layout.tableHeadLineHeight;
+    return Math.max(layout.tableHeaderHeight, Math.round(24 + (maxLines * lineHeightPx)));
 }
 
 function createRenderModel(table, options = {}) {
@@ -676,7 +697,7 @@ function createRenderModel(table, options = {}) {
         estimatedHeight: estimateRowHeight(cells, columns, canvasWidth, index, layout),
         isSummary: isSummaryRow(cells),
     }));
-    const tableHeaderHeight = layout.tableHeaderHeight;
+    const tableHeaderHeight = estimateHeaderRowHeight(table.headers, columns, canvasWidth, layout);
     const tableBodyHeight = rows.reduce((sum, row) => sum + row.estimatedHeight, 0);
     const canvasHeight = Math.max(
         220,
@@ -749,6 +770,8 @@ function buildTableBodyHtml(model) {
 function buildHtml(table, options = {}) {
     const model = createRenderModel(table, options);
     const { preset, layout } = model;
+    const isMobile = !!options.mobile;
+    const headerLetterSpacing = isMobile ? '0.02em' : '0.08em';
 
     const columnGroup = model.columns
         .map((column) => `<col style="width:${column.widthPercentage}%">`)
@@ -810,8 +833,10 @@ function buildHtml(table, options = {}) {
       font-size: ${layout.tableHeadFontSize}px;
       line-height: ${layout.tableHeadLineHeight};
       font-weight: 800;
-      letter-spacing: 0.08em;
+      letter-spacing: ${headerLetterSpacing};
       text-transform: uppercase;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .table-head-cell--right { text-align: right; }
     .table-head-cell--center { text-align: center; }
