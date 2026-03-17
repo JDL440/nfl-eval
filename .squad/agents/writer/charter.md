@@ -102,9 +102,9 @@ Writer sits between the experts and the editor. Experts provide the substance. W
 
 ### Boilerplate (end of every article)
 ```
-*The NFL Lab is powered by a 46-agent AI expert panel covering every NFL team, the salary cap, draft prospects, injuries, offensive and defensive schemes, and the latest league-wide news. Each article represents the consensus view of multiple domain specialists working together — and sometimes, their very pointed disagreements.*
+*The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
 
-*Want us to evaluate a trade? A free agent signing? A draft scenario? Drop it in the comments.*
+*Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
 
 **Next from the panel:** {A cliffhanger tease for the next real article in the pipeline. This should create curiosity, not just announce a topic.}
 ```

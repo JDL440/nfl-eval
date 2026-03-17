@@ -458,6 +458,174 @@ function buildCaptionedImage(src, alt, caption) {
     };
 }
 
+const DEFAULT_SUBSCRIBE_CAPTION =
+    "Thanks for reading NFL Lab! Subscribe for free to receive new posts and support our work.";
+
+const FOOTER_PARAGRAPH_PATTERNS = [
+    /\bThe NFL Lab\b/i,
+    /\bAbout the NFL Lab Expert Panel\b/i,
+    /\bWant us to evaluate\b/i,
+    /\bDrop (?:it|your take) in the comments\b/i,
+    /^\s*Next from the panel:/i,
+    // New "War Room" brand footer (2026-07-25)
+    /\bvirtual front office\b/i,
+    /\bWelcome to the War Room\b/i,
+    /\bwant us to break down\b/i,
+];
+
+const PANEL_ROLLCALL_RE = /^(?:[A-Z][A-Za-z]+|[A-Z]{2,})(?:\s*[·•]\s*(?:[A-Z][A-Za-z]+|[A-Z]{2,}))+$/;
+
+const CHART_TABLE_IMAGE_PATH_RE =
+    /(?:^|[-_/])(table|chart|data|decision|priority|comparison|breakdown|salary|contract|depth-chart|matrix|targets|snapshot|blueprint|paths|question-vs|panelist-vs|year-vs|expert-vs|prospect-vs|path-vs|model-vs|move-vs|deployment-model|dead-cap-comparison|engram-decision|pick-30-options)(?:[-_.\\/]|$)/i;
+const CHART_TABLE_IMAGE_TEXT_RE =
+    /\b(rows?|columns?|table|comparison|decision matrix|blueprint|depth chart|cap hit|dead cap|projected cap|draft targets|question vs|panelist vs|path vs|year vs|expert vs)\b/i;
+
+function buildSubscribeWidget(captionText) {
+    return {
+        type: "subscribeWidget",
+        attrs: { url: "%%checkout_url%%", text: "Subscribe", language: "en" },
+        content: [{
+            type: "ctaCaption",
+            content: [{ type: "text", text: captionText || DEFAULT_SUBSCRIBE_CAPTION }],
+        }],
+    };
+}
+
+function getNodeText(node) {
+    if (!node) return "";
+    if (node.type === "text") return node.text || "";
+    if (!Array.isArray(node.content)) return "";
+    return node.content.map(getNodeText).join("");
+}
+
+function isBylineParagraph(node) {
+    return node?.type === "paragraph" && /\bBy:\s*The NFL Lab Expert Panel\b/i.test(getNodeText(node).trim());
+}
+
+function isPanelRollCallParagraph(node) {
+    if (node?.type !== "paragraph") return false;
+    const text = getNodeText(node).trim();
+    return text.length <= 80 && PANEL_ROLLCALL_RE.test(text);
+}
+
+function isTldrParagraph(node) {
+    return node?.type === "paragraph" && /\bTL;?DR\b/i.test(getNodeText(node).trim());
+}
+
+function isFooterParagraph(node) {
+    if (node?.type !== "paragraph") return false;
+    const text = getNodeText(node).trim();
+    return FOOTER_PARAGRAPH_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function findOpeningParagraphIndex(content) {
+    for (let i = 0; i < content.length; i++) {
+        const node = content[i];
+        if (node?.type !== "paragraph") continue;
+        const text = getNodeText(node).trim();
+        if (!text) continue;
+        if (isBylineParagraph(node) || isPanelRollCallParagraph(node) || isTldrParagraph(node) || isFooterParagraph(node)) {
+            continue;
+        }
+        return i;
+    }
+    return -1;
+}
+
+function findClosingNotesInsertIndex(content) {
+    for (let i = 0; i < content.length; i++) {
+        if (!isFooterParagraph(content[i])) continue;
+        return i > 0 && content[i - 1].type === "horizontal_rule" ? i - 1 : i;
+    }
+
+    for (let i = content.length - 1; i >= 0; i--) {
+        if (content[i].type === "horizontal_rule") return i;
+    }
+
+    return content.length;
+}
+
+function ensureSubscribeButtons(doc) {
+    const content = doc.content;
+    if (!Array.isArray(content) || content.length === 0) return doc;
+
+    const subscribeIndices = [];
+    for (let i = 0; i < content.length; i++) {
+        if (content[i].type === "subscribeWidget") subscribeIndices.push(i);
+    }
+    if (subscribeIndices.length >= 2) return doc;
+
+    const openingParaIdx = findOpeningParagraphIndex(content);
+    const closingNotesIdx = findClosingNotesInsertIndex(content);
+    const midpoint = Math.floor(content.length / 2);
+
+    const hasEarlyWidget = openingParaIdx >= 0
+        ? subscribeIndices.some((idx) => idx >= openingParaIdx && idx <= openingParaIdx + 2)
+        : subscribeIndices.some((idx) => idx <= midpoint);
+    const hasLateWidget = closingNotesIdx >= 0
+        ? subscribeIndices.some((idx) => idx >= Math.max(0, closingNotesIdx - 2))
+        : subscribeIndices.some((idx) => idx >= midpoint);
+
+    const insertions = [];
+    if (!hasLateWidget && closingNotesIdx >= 0) insertions.push(closingNotesIdx);
+    if (!hasEarlyWidget && openingParaIdx >= 0) insertions.push(openingParaIdx + 1);
+
+    insertions
+        .sort((a, b) => b - a)
+        .forEach((index) => content.splice(Math.min(index, content.length), 0, buildSubscribeWidget()));
+
+    return doc;
+}
+
+function getImageDescriptor(node) {
+    const img = (node.content || []).find((child) => child.type === "image2");
+    const caption = (node.content || []).find((child) => child.type === "caption");
+    return {
+        src: img?.attrs?.src || "",
+        alt: img?.attrs?.alt || "",
+        caption: getNodeText(caption).trim(),
+    };
+}
+
+function ensureHeroFirstImage(doc) {
+    const content = doc.content;
+    if (!Array.isArray(content)) return { safe: true };
+
+    const imageIndices = [];
+    for (let i = 0; i < content.length; i++) {
+        if (content[i].type === "captionedImage") imageIndices.push(i);
+    }
+    if (imageIndices.length === 0) return { safe: true };
+
+    function looksLikeChart(node) {
+        const { src, alt, caption } = getImageDescriptor(node);
+        const text = `${alt} ${caption}`.trim();
+        return CHART_TABLE_IMAGE_PATH_RE.test(src) || CHART_TABLE_IMAGE_TEXT_RE.test(text);
+    }
+
+    const firstIdx = imageIndices[0];
+    if (!looksLikeChart(content[firstIdx])) return { safe: true };
+
+    const safeCandidates = imageIndices
+        .slice(1)
+        .filter((idx) => !looksLikeChart(content[idx]))
+        .sort((a, b) => {
+            const aSrc = getImageDescriptor(content[a]).src;
+            const bSrc = getImageDescriptor(content[b]).src;
+            const aInline = /inline-\d+/i.test(aSrc) ? 0 : 1;
+            const bInline = /inline-\d+/i.test(bSrc) ? 0 : 1;
+            return aInline - bInline || a - b;
+        });
+
+    if (safeCandidates.length === 0) {
+        return { safe: false, warning: "No hero-safe image available to move into first position." };
+    }
+
+    const swapIdx = safeCandidates[0];
+    [content[firstIdx], content[swapIdx]] = [content[swapIdx], content[firstIdx]];
+    return { safe: true, warning: `Swapped first image with position ${swapIdx} for hero safety.` };
+}
+
 function extractYouTubeId(input) {
     if (/^[A-Za-z0-9_-]{11}$/.test(input)) return input;
     const short = input.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
@@ -494,6 +662,12 @@ async function markdownToProseMirror(markdown, uploadImage) {
         if (ytLine) {
             const videoId = extractYouTubeId(ytLine[1].trim());
             if (videoId) content.push({ type: "youtube2", attrs: { videoId, startTime: null, endTime: null } });
+            i++; continue;
+        }
+
+        const subLine = trimmed.match(/^::subscribe(?:\s+(.+))?$/i);
+        if (subLine) {
+            content.push(buildSubscribeWidget(subLine[1] || DEFAULT_SUBSCRIBE_CAPTION));
             i++; continue;
         }
 
@@ -580,7 +754,7 @@ async function markdownToProseMirror(markdown, uploadImage) {
             i < lines.length && lines[i].trim() !== "" &&
             !/^#{1,3}\s/.test(lines[i].trim()) && !lines[i].trim().startsWith("> ") &&
             !lines[i].trim().startsWith("|") && !/^(-{3,}|\*{3,}|_{3,})$/.test(lines[i].trim()) &&
-            !/^::youtube\s/i.test(lines[i].trim()) && !/^\s*[-*+]\s/.test(lines[i]) &&
+            !/^::(?:youtube|subscribe)\s/i.test(lines[i].trim()) && !/^\s*[-*+]\s/.test(lines[i]) &&
             !/^\s*\d+\.\s/.test(lines[i]) && !/^!\[[^\]]*\]\(/.test(lines[i].trim())
         ) { paraLines.push(lines[i]); i++; }
         if (paraLines.length > 0) content.push({ type: "paragraph", content: parseInline(paraLines.join(" ")) });
@@ -638,6 +812,8 @@ async function publishArticle(article, target) {
 
     const uploadImage = (localPath) => uploadImageToSubstack(subdomain, localPath, articleDir);
     const body = await markdownToProseMirror(bodyMarkdown, uploadImage);
+    ensureSubscribeButtons(body);
+    ensureHeroFirstImage(body);
 
     // Determine if we should update an existing draft or create a new one
     let draftUrl = null;

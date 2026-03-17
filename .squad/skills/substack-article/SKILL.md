@@ -136,9 +136,9 @@ Use the team's current situation to create urgency.}
 
 ---
 
-*{Boilerplate: about the expert panel, what it does, invite engagement}*
+*The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
 
-*Want us to evaluate a {trade/signing/scenario}? Drop it in the comments.*
+*Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
 
 ---
 
@@ -235,7 +235,7 @@ The tool auto-creates a Substack draft and returns an editor URL. Hand the URL t
 - **Disagreements:** Highlight, don't hide. Expert disagreement IS the content.
 - **Length:** 2,000-4,000 words (8-15 min read). Long enough to be substantive, short enough to finish.
 - **Emoji:** Use sparingly for risk ratings (🟢🟡🔴) and section markers, not decoration
-- **Boilerplate:** Every article ends with the expert panel description + engagement CTA + a cliffhanger-style next article tease
+- **Boilerplate:** Every article ends with the "War Room" footer (virtual front office + human editor + War Room brand) + engagement CTA + a cliffhanger-style next article tease
 
 ## Anti-Patterns
 
