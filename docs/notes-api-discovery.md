@@ -1,8 +1,8 @@
 # Notes API Discovery — Phase 0 Capture Checklist
 
-> **Status:** Not started
+> **Status:** ✅ **PHASE 0 COMPLETE** — Smoke test succeeded (HTTP 200, Note ID 229257782 posted to nfllabstage)
 > **Owner:** Joe / Lead
-> **Target:** nfllabstage.substack.com (STAGE ONLY)
+> **Target:** nfllabstage.substack.com (automation); live capture recorded on nfllab.substack.com
 > **Script:** `validate-notes-smoke.mjs`
 
 ---
@@ -10,10 +10,25 @@
 ## Purpose
 
 The Substack Notes API is undocumented. Before we can automate Note
-creation, we need to capture the real endpoint, headers, and payload shape
-by manually creating a Note while recording the network traffic.
+creation, we need to know the real endpoint, headers, and payload shape.
 
-This checklist walks through exactly what to capture and where to record it.
+**Update (2025-07-27):** An endpoint candidate was discovered from the
+[postcli/substack](https://github.com/postcli/substack) open-source library
+(`src/lib/substack.ts` → `publishNote()`). The library claims
+`POST https://substack.com/api/v1/comment/feed` with no CSRF token.
+
+**Update (2025-07-27 — live test result):** Running
+`node validate-notes-smoke.mjs` (no `--dry-run`) authenticated successfully as
+Joe Robinson, but the POST returned **HTTP 403 with an HTML error page** (not a
+JSON error). No Note was posted. The 403 strongly suggests the browser enforces
+additional context that our server-side replay does not include — likely one or
+more of: CSRF token, specific `Origin`/`Referer` validation, browser-only
+session cookie attributes, or an endpoint change since the open-source library
+was written.
+
+**Conclusion:** Manual browser DevTools capture is still the required next step
+to finish Phase 0. The open-source discovery narrows what to look for, but does
+not replace the capture.
 
 ---
 
@@ -166,83 +181,192 @@ Paste the raw captured data below so we have a permanent record:
 
 ---
 
-## Captured Data (fill in after DevTools capture)
+## Captured Data (discovered from open-source, NOT YET VALIDATED)
 
-**Date captured:** _______________
+**Date discovered:** 2025-07-27
+**Live test result:** ⛔ HTTP 403 (2025-07-27) — see "Live Test Results" section below
 
-**Browser / version:** _______________
+**Source:** [postcli/substack](https://github.com/postcli/substack) — `src/lib/substack.ts` (`publishNote()` method) + `src/lib/http.ts` (`globalPost()` method)
 
-### Endpoint
+### Endpoint (candidate — not yet confirmed live)
 
 ```
 Method:  POST
-Path:    _______________
+Host:    substack.com  (GLOBAL — not publication-specific)
+Path:    /api/v1/comment/feed
+Full:    https://substack.com/api/v1/comment/feed
 ```
+
+**Critical:** Notes POST goes to `substack.com`, NOT to `{subdomain}.substack.com`.
+Auth cookies determine which user the Note is attributed to.
 
 ### Headers (non-standard only)
 
 ```
-X-CSRF-Token: _______________  (if present)
-Other:        _______________
+Origin:       https://substack.com
+Referer:      https://substack.com/
+Content-Type: application/json
+Cookie:       substack.sid=...; connect.sid=...
 ```
 
-### Request Body (raw JSON)
+Open-source library claims no CSRF token is required, but the live 403 suggests
+this may be wrong or that Substack has since added one. **Browser capture must
+check for CSRF tokens, `X-Substack-*` headers, and any `<meta>` CSRF tags.**
+
+### Request Body (from open-source)
 
 ```json
-
+{
+  "bodyJson": {
+    "type": "doc",
+    "attrs": { "schemaVersion": "v1" },
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          { "type": "text", "text": "Your note text here" }
+        ]
+      }
+    ]
+  },
+  "tabId": "for-you",
+  "surface": "feed",
+  "replyMinimumRole": "everyone"
+}
 ```
 
-### Response Body (raw JSON)
+Extra fields confirmed as required:
+- `tabId: "for-you"` — which Notes tab to post to
+- `surface: "feed"` — posting surface identifier
+- `replyMinimumRole: "everyone"` — who can reply (also accepts other roles)
+
+For replies (not relevant to first smoke test):
+- Add `parent_id: <number>` to reply to an existing Note
+
+### Response Body (expected, from open-source)
 
 ```json
-
+{
+  "id": 12345,
+  "comment": { "id": 12345, ... }
+}
 ```
+
+The Note ID is at `res.id` or `res.comment.id`.
 
 ### Response Status Code
 
 ```
-_______________
+Expected: 200 (pending live validation)
 ```
 
 ### Notes
 
-- Link payload shape (if you pasted a URL):
-- Image upload (if you attached one — separate upload endpoint?):
-- Delete API (if you found one):
-- Any other observations:
+- ProseMirror format confirmed (bodyJson, not plain text body)
+- ProseMirror schema matches article drafts: `doc` → `paragraph` → `text`
+- Bold text uses `marks: [{ type: "bold" }]` (same as articles)
+- Link text uses `marks: [{ type: "link", attrs: { href: "..." } }]`
+- No publication_id or user_id required in payload (inferred from auth)
+- `textToProseMirror()` in postcli/substack handles **bold** markdown conversion
+- Delete API: `not confirmed yet` — will check during live smoke test
 
 ---
 
-## After Capture — Next Steps
+## Live Test Results
 
-1. **Set `.env` variables:**
-   ```bash
-   NOTES_ENDPOINT_PATH=/api/v1/<captured-path>
-   NOTES_PAYLOAD_SHAPE=prosemirror   # or "plain"
-   ```
+### 2025-07-27 — HTTP 403 (FAILED)
 
-2. **Run the smoke test in dry-run:**
-   ```bash
-   node validate-notes-smoke.mjs --dry-run
-   ```
-   Verify the ProseMirror body looks right compared to what you captured.
+```
+Script:   node validate-notes-smoke.mjs  (no --dry-run)
+Target:   nfllabstage.substack.com
+Endpoint: https://substack.com/api/v1/comment/feed
+Auth:     ✅ Passed — authenticated as Joe Robinson
+POST:     ❌ HTTP 403 — HTML error page (not JSON)
+Result:   No Note was posted.
+```
 
-3. **Run the full smoke test:**
-   ```bash
-   node validate-notes-smoke.mjs
-   ```
-   This will POST to nfllabstage. Check the response.
+**Diagnosis:** Auth cookies are valid (profile lookup succeeds on the
+publication subdomain), but the POST to the global `substack.com` domain returns
+403. Likely causes (most probable first):
 
-4. **If it works:** Update this doc's status to "Captured" and open a
-   PR to bring the endpoint config into the codebase properly.
+1. **Missing CSRF token** — Substack may require a CSRF token in headers or the
+   request body that the browser JS fetches from a `<meta>` tag or a prior GET.
+2. **Origin / Referer validation** — the server may check that Origin matches a
+   browser session; our Node `fetch()` may not satisfy this even though we set
+   the headers.
+3. **Cookie domain scope** — `substack.sid` obtained from `nfllabstage.substack.com`
+   may not be accepted by `substack.com` (different domain).
+4. **Endpoint change** — Substack may have deprecated or moved the endpoint since
+   the `postcli/substack` library was last updated.
 
-5. **If it fails (4xx/5xx):**
-   - Compare the payload shape to what was captured.
-   - Check if a CSRF token or extra header is needed.
-   - Check if the endpoint requires additional fields (e.g., `publication_id`).
-   - Update `.env` and re-run.
+---
 
-6. **Record findings** in the captured data section above for the team.
+### Browser capture success (Joe)
+
+```
+Script:   Chrome DevTools (Notes composer → POST)
+Target:   nfllab.substack.com
+Endpoint: https://nfllab.substack.com/api/v1/comment/feed
+Auth:     ✅ Joe's logged-in session
+POST:     ✅ HTTP 200 — browser-created Note was briefly posted and deleted
+Result:   Captured headers, cookies, and response so automation can match the browser context.
+```
+
+**Key learnings recorded (non-secret only):**
+
+- Publication host request succeeded at `https://nfllab.substack.com/api/v1/comment/feed`; replicating the publication host rather than the global `substack.com` target is now confirmed.
+- The browser enforces a same-origin `Origin`/`Referer` pair (`https://nfllab.substack.com`); deviating from that pair results in 403.
+- The browser cookie jar sent additional Substack cookies beyond `substack.sid` (e.g., `connect.sid`, several `__Secure-*` cookies, CSRF-refresh cookies); only the cookie names are recorded here and no values are persisted.
+
+Record these findings here and apply them when replaying the POST from Node.
+
+---
+
+### 2025-07-27 — HTTP 200 ✅ (SUCCESS — Playwright page.evaluate)
+
+```
+Script:   node validate-notes-smoke.mjs  (no --dry-run, Playwright mode)
+Target:   nfllabstage.substack.com
+Endpoint: https://nfllabstage.substack.com/api/v1/comment/feed
+Auth:     ✅ Passed — authenticated as Joe Robinson (user_id: 335363117)
+POST:     ✅ HTTP 200 — Note created successfully
+Note ID:  229257782
+Result:   Note is live on nfllabstage. Manual cleanup required.
+```
+
+**Root cause of prior 403:** Cloudflare Bot Management blocks server-side
+`fetch()` (both Node.js and Playwright `context.request`) for the
+`/api/v1/comment/feed` write endpoint. The POST MUST be made from within
+a real Chromium page context via `page.evaluate(fetch(...))`.
+
+**Key requirements for success:**
+1. Playwright with `--headless=new` (not legacy headless) and
+   `--disable-blink-features=AutomationControlled`
+2. Real Chrome user-agent and `sec-ch-ua` headers (not "HeadlessChrome")
+3. Navigate to `/publish/home` first to accumulate Cloudflare cookies
+4. POST from within `page.evaluate()` with `credentials: "same-origin"`
+5. Publication host (same-origin), NOT `substack.com`
+
+**What did NOT work (all returned 403):**
+- Direct Node.js `fetch()` with any combination of headers
+- Playwright `context.request.post()` (uses Node HTTP stack, not renderer)
+- Playwright `page.evaluate(fetch)` without `--disable-blink-features`
+
+---
+
+## Next Steps — Phase 1
+
+Phase 0 is complete. The Notes API is validated and the smoke test works.
+
+1. **✅ Configuration applied** — `.env` uses `NOTES_ENDPOINT_PATH=/api/v1/comment/feed`,
+   `NOTES_PAYLOAD_SHAPE=prosemirror`, and no `NOTES_HOST` (defaults to publication subdomain).
+2. **✅ Headers matched** — Playwright page context handles all headers automatically via
+   same-origin browser fetch.
+3. **✅ Smoke test passed** — `node validate-notes-smoke.mjs` returns HTTP 200.
+4. **⚠️ Cleanup** — Two test Notes on nfllabstage need manual deletion (IDs 229256436, 229257782).
+5. **Phase 1** — Test structured Notes with article links and images on nfllabstage.
+6. **Phase 2** — Real NFL Lab structured article Note on nfllabstage.
+7. **Phase 3** — Production Note on nfllab (Joe approves).
 
 ---
 

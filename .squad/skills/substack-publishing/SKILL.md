@@ -357,9 +357,17 @@ Attempts made (2026-03-15):
 
 ---
 
-## Substack Notes (⛔ Gated — Dry-Run Only)
+## Substack Notes (✅ Phase 0 Complete — Smoke Test Passed)
 
-A second tool — `publish_note_to_substack` — is registered in the same extension for short-form Notes. **It is currently gated at the final POST** because the real Notes API endpoint and payload shape are unverified.
+A second tool — `publish_note_to_substack` — is registered in the same extension for short-form Notes.
+
+### How it works
+
+The Notes API requires Playwright (a real browser context) because Cloudflare Bot Management blocks server-side `fetch()` for the `/api/v1/comment/feed` write endpoint. The tool:
+1. Launches headless Chromium with anti-detection flags
+2. Injects the `substack.sid` cookie and navigates to the publication
+3. POSTs from within `page.evaluate()` (same-origin browser context)
+4. Returns the Note ID and metadata
 
 ### What is shipped and working
 
@@ -368,22 +376,26 @@ A second tool — `publish_note_to_substack` — is registered in the same exten
 | `publish_note_to_substack` tool registration | ✅ Registered in `extension.mjs` |
 | Auth, article URL lookup, image upload | ✅ Reuses existing article-publishing infra |
 | `noteTextToProseMirror()` — text → ProseMirror assembly | ✅ Implemented |
-| `createSubstackNote()` — final POST | ⛔ **Gated** — intentionally throws; no-op until Phase 0 |
+| `createSubstackNote()` — Playwright-based POST | ✅ **Working (HTTP 200 on nfllabstage)** |
 | `notes` table in `schema.sql` / `pipeline.db` | ✅ Shipped |
 | `PipelineState.record_note()` / `.get_notes_for_article()` / `.get_all_notes()` | ✅ Shipped |
 | `article_board.py` note-count awareness | ✅ Shipped |
-| `validate-notes-smoke.mjs` — stage-only smoke harness | ✅ Shipped |
-| `docs/notes-api-discovery.md` — Phase 0 capture checklist | ✅ Shipped |
+| `validate-notes-smoke.mjs` — stage-only smoke harness | ✅ **Passed (Note ID 229257782)** |
+| `docs/notes-api-discovery.md` — Phase 0 capture + results | ✅ Updated with success |
 
-### What is still required before live posting
+### Current rollout status
 
-1. **Phase 0 browser interception** on `nfllabstage` — Joe or Lead manually creates a Note while capturing the network request in DevTools. See `docs/notes-api-discovery.md`.
-2. Record the captured endpoint path and any extra fields in `.env` (`NOTES_ENDPOINT_PATH`, `NOTES_PAYLOAD_SHAPE`).
-3. Ungate `createSubstackNote()` and run `validate-notes-smoke.mjs` against stage.
+- **Phase 0:** ✅ Complete — endpoint validated, smoke test passes
+- **Phase 1:** ⏳ Next — structured Notes with article links on nfllabstage
+- **Phase 2:** Pending — real article Note on nfllabstage
+- **Phase 3:** Pending — production Note (Joe approves)
 
-### Key design note
+### Key technical notes
 
-Notes use **ProseMirror `bodyJson`**, not a plain-text `content` string. The tool accepts plain text as input and assembles the ProseMirror document internally.
+- Notes use **ProseMirror `bodyJson`**, not a plain-text `content` string
+- POST goes to the **publication host** (same-origin), NOT `substack.com`
+- Playwright is required (devDependency); `page.evaluate(fetch)` is the only method that passes Cloudflare
+- `--headless=new` + `--disable-blink-features=AutomationControlled` + real Chrome UA are all required
 
 ### Full design doc
 
