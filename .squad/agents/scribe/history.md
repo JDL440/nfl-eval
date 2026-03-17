@@ -141,3 +141,10 @@ Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 - Pattern noted: Decision and knowledge inboxes deal only with non-code entries; if both directories hold nothing but `.gitkeep`, no merges or routing are required.
 - User preference recorded: Backend (Squad Agent) expects new orchestration logs, session logs, and history appends before any `.squad` commit.
 - Key files for this flow: `.squad/log/*scribe-memory-maintenance*.md`, `.squad/orchestration-log/*-scribe.md`, `.squad/decisions.md`, and `.squad/agents/scribe/history.md`.
+### Notes Attachment Card Fix Session (2026-03-17T16:35:14Z)
+**Status:** ✅ LOGGED
+- Logged orchestration entries for Editor and Coordinator verification, both timestamped 20260317T163514Z, to capture their roles in the notes-attachment-card-fix effort.
+- Created the 
+otes-attachment-card-fix session log summarizing context, actions, and key learnings for the multi-agent story.
+- Merged .squad/decisions/inbox/editor-note-card-audit.md into .squad/decisions.md, deleting the inbox file after the attachment-based diagnosis was preserved.
+- Appended cross-agent history updates for Editor and Scribe, and prepared a new Coordinator history snippet so the verification work is durably recorded.

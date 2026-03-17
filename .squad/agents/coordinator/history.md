@@ -1,0 +1,1 @@
+- **2026-03-18 — notes-attachment-card-fix verification:** Performed an independent verification pass on the attachment-card fix. Reviewed the extension for `registerPostAttachment()` and `attachmentIds`, fetched a fresh Note permalink to confirm the rendered behavior, and recorded the tidemark so this fix has a clean validation trail for future reference.
