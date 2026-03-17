@@ -147,6 +147,13 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
     - **Recommendation:** Option C (Best-Balanced, 2 lines): "JSN at 90% below market. Our panel breaks the extension paths." + image + article card. This is the feed-native format.
     - **Recorded decision in `.squad/decisions/inbox/writer-jsn-short-note.md`** for reuse on all future Notes (feed-native model is team-wide).
 
+📌 **Notes Operational Cadence Plan (2025-07-27)** — Designed the three-moment Notes cadence tied to article lifecycle. Key learnings:
+   - **Three moments, not one.** Teaser (Stage 7, stage-only), Promotion (Stage 8, prod), and Follow-up (days later, optional). Each serves a different engagement function: anticipation, launch, and sustain.
+   - **Stage teasers are free testing.** Auto-posting to nfllabstage when a draft is created lets Joe preview the Note alongside the article without subscriber risk. The teaser is text + image only (no card, because the article isn't public yet).
+   - **Dedupe on `(article_id, note_type, target)`.** This is the minimum key that prevents double-posting while allowing intentional rewrites (DELETE old → POST new). Standalone Notes skip dedupe entirely.
+   - **Report-before-post builds trust.** v1 sweep outputs a report of missing Notes with proposed copy. No auto-posting to prod until ≥10 successful manual cycles establish the pattern.
+   - **Copy generation follows the data-hook pattern.** Subtitle → disagreement stat → cap number, in priority order. The card-first format means the Note text is a thumb-stop hook, not a teaser paragraph.
+   - **Decision recorded in `.squad/decisions/inbox/writer-notes-cadence.md`** for team-wide adoption.
 
 
 

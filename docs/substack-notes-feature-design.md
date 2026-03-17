@@ -579,14 +579,35 @@ Before signing off on the Notes feature for production:
 
 ---
 
-### Phase 5: Ongoing Operation
+### Phase 5: Ongoing Operation — Notes Cadence
 
-Once rolled out:
-- Lead prompts Note creation after every article publish (Stage 8).
-- Joe approves or skips.
-- Media agent can trigger standalone Notes for breaking news.
-- Notes table provides an audit trail.
-- Future: batch Notes, scheduling, analytics integration.
+Once rolled out, Notes follow a **three-moment cadence** tied to the article lifecycle:
+
+| Moment | Trigger | Target | Format | Note Type |
+|--------|---------|--------|--------|-----------|
+| **Draft teaser** | Draft pushed to Substack (Stage 7) | `stage` | Text + image (no card) | `teaser` |
+| **Publish-day promotion** | Article published by Joe (Stage 8) | `prod` | Card-first: 1-2 sentence hook + image + article card | `promotion` |
+| **Follow-up** | 2-3 days post-publish or engagement spike | `prod` | Text or image + card | `follow_up` |
+
+**Automated sweep (daily, part of Ralph cycle):**
+- Checks for Stage 7+ articles missing teaser Notes → auto-posts to nfllabstage (safe).
+- Checks for Stage 8 published articles missing promotion Notes → proposes to Joe (no auto-post to prod in v1).
+- Staleness warning: flags articles at Stage 8 for >48 hours without a promotion Note.
+
+**Eligibility:** Article needs valid Substack URL (draft or public), at least one inline image, and no existing Note of that type in the `notes` table.
+
+**Dedupe key:** `(article_id, note_type, target)` in the `notes` table. Skip if exists; DELETE + re-POST if copy changed.
+
+**Rollout order:**
+1. Manual promotion Notes for next 3-5 articles (current)
+2. Add sweep eligibility report to `article_board.py` (report only)
+3. Semi-auto stage teasers (auto-post to stage on Stage 7)
+4. Semi-auto prod promotions (sweep proposes, Joe approves)
+5. Full auto (v2, gated on ≥10 successful manual cycles)
+
+**Copy standard:** Card-first format per Joe's approved model. Text is ≤20 words (promotion) or ≤30 words (teaser). Data hook from subtitle or panel disagreement stat. Image is article inline-1 (hero).
+
+See `.squad/decisions/inbox/writer-notes-cadence.md` for the full decision record.
 
 ---
 
