@@ -8,7 +8,15 @@
 
 ## Learnings
 
-_No learnings recorded yet. This section will grow as Scribe works on the project._
+### Stage 7 Push Audit (2026-03-17)
+When audit scope mismatches arise (1-article push executed vs. 20-article manifest recorded), always diff the canonical evidence sources:
+- Editor decision files (what was approved)
+- Execution manifests (what actually happened)
+- Current repo state (what is now true)
+
+**Key lesson:** A manifest timestamp does not prove scope. Cross-check with session logs and database state transitions. In this case, the manifest's 20-article scope conflicted with the editor's 4-article clearance AND the current Stage 7/8 distribution. Database reconciliation is the tiebreaker when execution reports are ambiguous.
+
+**Outcome:** Created `STAGE7-PUSH-AUDIT.md` as the corrected, factual record. The misleading execution report was preserved but flagged. Joe now has a clear path to reconciliation.
 
 
 📌 Charter update (2026-03-15T21:45:00Z): Step 4 added — Knowledge Inbox Processing. Agents now drop cross-team knowledge to .squad/knowledge/inbox/ with Target field. Scribe routes per target (agent:X, team.md, charter:X, decisions.md). Charter-flags mechanism for proposed charter updates. Recorded by: Lead (Joe Robinson directive)

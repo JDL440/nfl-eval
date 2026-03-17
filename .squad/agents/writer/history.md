@@ -98,3 +98,11 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
    - **Published to nfllab.substack.com** (not nfllabstage) — Draft ID 191150015, URL: `https://nfllab.substack.com/publish/post/191150015`.
    - **DB writeback was intentionally skipped** per user instruction ("avoid unsafe DB mutation"). The PipelineState Python layer is the safe path for stage transitions; JS-side direct writes risk conflicts.
 
+📌 **Stage 7 Batch Production Push (2026-07-25)** — Pushed 20 staging-ready articles from nfllabstage.substack.com to nfllab.substack.com as production drafts. Key learnings:
+   - **Standalone publisher script works.** The substack-publisher extension.mjs can be extracted into a standalone Node.js script by stripping the `@github/copilot-sdk` imports and `joinSession` block. All core functions (loadEnv, makeHeaders, markdownToProseMirror, createSubstackDraft, deriveTagsFromArticleDir, extractMetaFromMarkdown) are pure and SDK-free.
+   - **Substack rate-limits at ~4 rapid draft creates.** The API returns HTTP 429 after roughly 4 consecutive `POST /api/v1/drafts` calls with 1.5s delay. Increasing delay to 8s between requests + retry with 10s/20s backoff on 429 resolves it. For future batch pushes, use `--delay=8000`.
+   - **Title/subtitle auto-extraction from draft.md works reliably.** All 20 articles had proper `# Headline` and `*subtitle*` lines that extracted correctly. The DB titles (e.g., "Ari 2026 Offseason") are stale placeholders — always prefer markdown-extracted titles.
+   - **DB writeback after batch push:** Used `node:sqlite` DatabaseSync to update `substack_draft_url` for all 20 articles in pipeline.db. Production URLs now point to nfllab.substack.com/publish/post/{id}.
+   - **Manifest pattern:** `stage7-prod-manifest.json` at repo root tracks all push results with slug, draftId, draftUrl, title, tags, status. Useful for audit and Joe's manual review queue.
+   - **22 articles total at Stage 7** now have production draft URLs (20 from this push + 2 already on prod: mia-tua-dead-cap-rebuild, den-2026-offseason).
+

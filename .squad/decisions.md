@@ -27,6 +27,107 @@ After the overbroad Stage 7 prod push was rolled back (only DEN and MIA confirme
 
 ---
 
+### 2026-03-17: JSN & Witherspoon Production Draft Finalization
+**By:** Lead (Team Lead Specialist)
+**Date:** 2026-03-17
+**Status:** Implemented
+**Affects:** jsn-extension-preview, witherspoon-extension-v2; article_board.py
+
+**What:**
+Both `jsn-extension-preview` and `witherspoon-extension-v2` had oscillating DB state — bouncing between stage 6 and 7 across reconciliation runs. JSN also had stale status of "in_discussion" despite being well past discussion phase (editor-approved after 3 review passes).
+
+1. **article_board.py status reconciliation added** — New STATUS_DRIFT check flags articles where status is inconsistent with current_stage. Conservative rules: only flags `in_discussion` at stage 5+ (should be `in_production`) and `proposed` at stage 2+. Does NOT downgrade `in_production` at early stages.
+2. **Production draft URLs restored to most recent push** — Both articles had three different production draft IDs from successive batches. Highest draft IDs (191200944 / 191200952) represent most recent push and were restored as canonical `substack_draft_url`.
+3. **Both articles confirmed at Stage 7** — Both have: editor ✅ APPROVED, publisher-pass.md artifact, production draft URLs on nfllab.substack.com, 2+ inline images, all paths reconciled.
+
+**Why:** article_board.py now catches status/stage inconsistencies that previously went undetected. JSN status corrected from "in_discussion" → "in_production". Both articles unblocked for Joe's final review and publish.
+
+---
+
+### 2026-03-16: Stage 7 → Prod Draft Promotion — ROLLED BACK + RECONCILED
+**By:** Lead (Team Lead Specialist)
+**Date:** 2026-03-16
+**Status:** ✅ RECONCILED — DB repaired, Editor verdict incorporated
+**Affects:** All 22 Stage 7 articles; pipeline.db; nfllab.substack.com drafts
+
+**What:**
+Batch-published all 22 DB-Stage-7 articles to nfllab.substack.com as prod drafts, based on pipeline.db stating all 22 were Stage 7. Post-audit via `article_board.py` artifact scan revealed **only DEN and MIA are truly Stage 7.** The other 20 have inflated DB stages — artifacts show they are actually at Stage 5 (12 articles) or Stage 6 (8 articles).
+
+**Cleanup performed:**
+1. DB restored — 20 incorrect articles' `substack_draft_url` fields reverted to original nfllabstage staging URLs.
+2. DEN and MIA untouched — prod draft URLs remain correct.
+3. witherspoon-extension-v2 restored to staging URL (was independently at Stage 6 per artifact truth).
+4. Ran `article_board.py --repair` — 20 inflated DB stages corrected to match artifact truth.
+
+**Orphan prod drafts on nfllab.substack.com:** ~39 orphan drafts exist from two independent batch pushes (20 from writer-stage7-transform, 19 from Lead batch). All invisible to readers (unpublished drafts only). Joe can bulk-delete from Substack dashboard or leave them (no public impact).
+
+**Root cause:** pipeline.db `current_stage` was inflated for 20 articles, likely from bulk stage transitions outrunning artifact production.
+
+**Lesson for future:** Never batch-promote to prod based solely on pipeline.db stage. Run `article_board.py` first and use its output as gate. DB is coordination aid; artifacts are ground truth.
+
+---
+
+### 2026-03-16: Stage 7 Production-Readiness — Editor Quality Gate Results
+**By:** Editor (Article Editor & Fact-Checker)
+**Date:** 2026-03-16
+**Status:** Proposed
+**Affects:** Lead, Ralph pipeline, all Stage 7 articles, Joe (publication decisions)
+
+**What:**
+Stage 7 final draft push verification: confirm image/table fixes present in staging-ready artifacts and identify remaining quality blockers before production Substack drafts.
+
+**Findings:**
+- ✅ Image Fixes: COMPLETE — 94/94 image references valid, 0 broken references
+- ✅ Table Fixes: COMPLETE — 0 blocked/borderline tables, 60 table-image PNGs rendered, 108 inline-safe
+- ⚠️ Quality Blockers:
+  | Tier | Count | Status | Action |
+  |------|-------|--------|--------|
+  | Production-ready | 2 | den, witherspoon — APPROVED | Push to prod |
+  | DB stale | 2 | mia, jsn — APPROVED in history, DB shows REVISE | Reconcile DB, then push |
+  | REVISE pending | 6 | ari, seahawks-rb, hou, lv, ne-maye, jax | Writer fixes → re-review |
+  | REJECTED | 1 | buf — stale premise | Back to Stage 4/5 |
+  | Never reviewed | 11 | car, dal, gb, kc, lar, no, nyg, phi, sf, ten, wsh | Complete Stage 6 first |
+
+**Decision (Proposed):**
+1. Push to prod: den and witherspoon (clear).
+2. Reconcile + push: mia and jsn (DB updates needed).
+3. Do NOT push 18 others until editor review loop completes.
+4. Reconcile pipeline.db — editor_reviews table stale for mia/jsn at minimum.
+
+---
+
+### 2026-03-17: Witherspoon Extension v2 — Editor Review Verdict
+**By:** Editor (Article Editor & Fact-Checker)
+**Date:** 2026-03-17
+**Article:** content/articles/witherspoon-extension-v2/draft.md
+**Status:** ✅ APPROVED for publication (pending image generation)
+
+**What:**
+- Draft ready for Phase 4b (image generation) and Phase 7 (publisher pass)
+- Zero factual errors across 70+ verified data points
+- 4 🟡 suggestions filed (Cap quote attribution, one-fifth precision, Woolen/Bryant sourcing, image placeholders) — none are publication blockers
+- v2 article supersedes v1 Witherspoon extension — Lead should confirm v1 archival
+
+**Pattern to watch:** Polished-synthesis quote pattern (Cap quote at line 122 is Writer-crafted, not verbatim). Same issue flagged in JSN review. Team should decide house rule: (a) all blockquotes verbatim from position files, or (b) editorial paraphrasing acceptable with disclosure.
+
+---
+
+### 2026-03-17: Extension writeback stays Python-side
+**By:** Lead (Team Lead Specialist)
+**Date:** 2026-03-17
+**Scope:** `.github/extensions/substack-publisher/extension.mjs` stage-7 writeback
+
+**What:**
+Substack publisher extension (Node.js/MCP) creates drafts but needs to update `pipeline.db` for stage-7 transition. Decision: Option 2 — extension returns article slug and concrete `PipelineState` code block. Calling agent (Lead/Ralph) executes writeback in Python.
+
+**Rationale:**
+- `PipelineState` is single source of truth for DB writes
+- Extension opens DB read-only for team lookup only
+- Mixing JS writes with Python's WAL-mode connection risks journal conflicts
+- Writeback instruction is machine-parseable by calling LLM agent
+
+---
+
 ### 2026-03-12: User directive — Model override
 **By:** Joe Robinson (via Copilot)
 **What:** All agents should use claude-opus-4.6 model. No exceptions.
