@@ -316,3 +316,16 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 - The real blockers are: (a) 11 articles with no editor review, (b) 7 articles with unresolved REVISE/REJECT, (c) 19 articles with incomplete publisher-pass fact checks
 - **Recorded by:** Editor (2025-07-25)
 
+📌 Technical handoff: imageCaption & parser analysis (2025-07-25)
+- **Scope:** Full audit of `markdownToProseMirror()` parser in both `batch-publish-prod.mjs` and `.github/extensions/substack-publisher/extension.mjs`.
+- **Key finding:** `buildCaptionedImage()` emits `captionedImage > [image2]` only. Caption text goes into `image2.attrs.title` (tooltip), but no `imageCaption` child node is created. Captions from `![alt|caption](url)` syntax silently vanish in rendered Substack articles.
+- **Fix proposed:** Add `imageCaption` node with text content when caption is non-empty. Low risk — articles without captions unaffected. Both files need the same fix.
+- **Parser node coverage:** 9 block-level node types handled (heading, horizontal_rule, blockquote, TLDR, bullet_list, ordered_list, captionedImage, youtube2, paragraph) plus table→list conversion. 4 inline marks (bold, italic, bold+italic, link). NOT handled: code blocks, inline code, footnotes, nested lists, task lists.
+- **Dense table guard:** `assertInlineTableAllowed()` fail-fast is working as designed. All 108 remaining markdown tables in Stage 7 pass the classifier. 60 dense tables already rendered as PNGs.
+- **Post-publish validation:** 5 opportunities identified (image URL check, caption presence, node count parity, title/subtitle echo, draft accessibility). Image URL check recommended first.
+- **Decision written:** `.squad/decisions/inbox/editor-imagecaption-handoff.md`
+- **Recorded by:** Editor (2025-07-25)
+
+
+
+📌 Team update (2026-03-17T00:37:26Z): imageCaption investigation session completed. Lead investigation synthesized with Editor analysis: extension.mjs has uncommitted imageCaption fix + pre-publish validation; batch-publish-prod.mjs (untracked) includes imageCaption but lacks pre-publish validation; stage7-prod-push.mjs absent from working tree. Witherspoon draft: 6 images (2 inline captioned, 4 table uncaptioned). Editor-to-Lead handoff proposed for parser hardening (dense table guard, pre-publish assertImageCaptions). — decided by Coordinator

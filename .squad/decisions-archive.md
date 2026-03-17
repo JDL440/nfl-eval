@@ -309,3 +309,288 @@ Detroit should treat safety depth as **MODERATE urgency** in offseason planning.
 
 🟡 MODERATE — based on public injury timelines, not private medical access
 
+
+
+## Archived 2026-03-17
+
+### 2026-03-16: Tua Publish Retro — Process Fixes
+**Filed by:** Lead
+**Date:** 2025-07-25
+**Article:** mia-tua-dead-cap-rebuild
+**Status:** Proposed
+
+**What:**
+Three process fixes identified from Miami Tua Substack publish flow:
+1. **Persist draft URL automatically** — Extension returns Substack draft URL only in ephemeral tool response. Should write URL to canonical artifact (publisher-pass.md or publish-proof.md) and pipeline.db (substack_url field) to survive session loss.
+2. **Pre-flight table check before publish** — Add validation step flagging dense markdown tables (>3 columns or >5 rows) as Substack-incompatible. Either convert to images before publish_to_substack call, or have extension auto-render them.
+3. **Remove "tool unavailable" escape hatch** — Publisher-pass.md template lets agents bail with "tool was unavailable" workaround. Now that extension works reliably, this path should be eliminated. Agents should retry or escalate instead.
+
+**Why:**
+- **Gap #1 (URL):** Without persistent draft URL, Joe can't locate Substack draft without manual Substack dashboard search. Extension already derives slug and URL — just not persisting.
+- **Gap #2 (Table check):** ProseMirror parser in Substack chokes on dense tables. Failure happens after all editorial work is done and human is waiting for draft link — wasted attempt. Heuristics exist in extension.mjs but invisible to upstream Editor/Writer.
+- **Gap #3 (Template):** Stale language causes confusion on future articles. If auth fails, system should clearly require retry or escalation, not accept a manual workaround as final state.
+
+**First Fix to Implement:**
+URL persistence (#1) — highest-risk gap. Update Publisher skill to make substack_url persistence a hard gate before marking Stage 7 complete. publisher-pass artifact must contain a \## Substack Draft\ section with live URL.
+
+**Decision Needed:**
+Approve three fixes; prioritize #1 for immediate implementation.
+
+
+### Editor → Lead Handoff: imageCaption Fix & Parser Hardening
+
+**By:** Editor
+**Date:** 2025-07-25
+**Status:** Proposed
+**Affects:** `.github/extensions/substack-publisher/extension.mjs`, `batch-publish-prod.mjs`, substack-publishing skill
+
+---
+
+## 1. THE PARSER ERROR (Dense Table Guard)
+
+`assertInlineTableAllowed()` (batch-publish-prod.mjs:367, extension.mjs:~500) is a
+deliberate fail-fast, not a bug. It throws when a markdown table exceeds density
+thresholds: ≥5 columns, financial/comparison headers (AAV, Cap Hit, etc.), high
+average cell length, or density score ≥7.5.
+
+**Why it matters:** This error only surfaces at publish time — after all editorial
+work is done. The pre-flight table density check added to the Publisher skill
+(decisions.md 2026-03-16) is the upstream mitigation, but it depends on agents
+running the check. A missed dense table still blocks publish.
+
+**Current state:** 108 markdown tables across 22 Stage 7 articles all pass the
+classifier. 60 dense tables already rendered as PNGs. No active blockers.
+
+---
+
+## 2. HANDLED NODE TYPES (Markdown → ProseMirror)
+
+The `markdownToProseMirror()` parser (identical in both files) handles:
+
+  Block nodes:
+    heading          # / ## / ###             → { type: "heading", level: 1-3 }
+    horizontal_rule  --- / *** / ___          → { type: "horizontal_rule" }
+    blockquote       > text                   → { type: "blockquote" }
+    TLDR block       > **TLDR** + bullet list → paragraph + bullet_list (special case)
+    bullet_list      - item / * item          → { type: "bullet_list" }
+    ordered_list     1. item                  → { type: "ordered_list" }
+    captionedImage   ![alt](url)              → { type: "captionedImage" } + image2
+    youtube2         ::youtube ID             → { type: "youtube2" }
+    paragraph        (default)                → { type: "paragraph" }
+    table            | col | col |            → converted to bullet_list or ordered_list
+
+  Inline marks:
+    bold             **text**                 → { type: "bold" }
+    italic           *text* or _text_         → { type: "italic" }
+    bold+italic      ***text***               → both marks
+    link             [text](url)              → { type: "link" }
+
+  NOT handled (would need additions for future articles):
+    code blocks      ```lang ... ```
+    inline code      `code`
+    footnotes
+    nested lists
+    task lists       - [ ] / - [x]
+
+---
+
+## 3. SUGGESTED imageCaption FIX
+
+**Problem:** `buildCaptionedImage()` emits `captionedImage > [image2]` only. When
+a caption is provided via `![alt|caption](url)` or `![alt](url "caption")`, the
+caption text is stored in `image2.attrs.title` (HTML tooltip) but no visible
+`imageCaption` node is created. Captions silently vanish in the rendered article.
+
+**Both files affected:**
+  - `.github/extensions/substack-publisher/extension.mjs` line 554-579
+  - `batch-publish-prod.mjs` line 442-456
+
+**Current code (both files):**
+```js
+function buildCaptionedImage(src, alt, caption) {
+    return {
+        type: "captionedImage", attrs: {},
+        content: [{ type: "image2", attrs: { src, alt, title: caption, ... } }],
+    };
+}
+```
+
+**Proposed fix:**
+```js
+function buildCaptionedImage(src, alt, caption) {
+    const nodes = [{
+        type: "image2",
+        attrs: { src, alt: alt || null, title: caption || null, /* ...rest */ },
+    }];
+    if (caption) {
+        nodes.push({
+            type: "imageCaption",
+            content: [{ type: "text", text: caption }],
+        });
+    }
+    return { type: "captionedImage", attrs: {}, content: nodes };
+}
+```
+
+**Risk:** Low. Adding `imageCaption` only when caption text exists means articles
+without captions are unaffected. If Substack's schema rejects `imageCaption`,
+the API error will surface immediately on the next publish — fail-fast, no silent
+corruption.
+
+**Validation approach:** Publish one article with a caption to nfllabstage and
+inspect the draft in Substack editor to confirm caption renders below the image.
+
+---
+
+## 4. POST-PUBLISH VALIDATION OPPORTUNITIES
+
+After `createSubstackDraft()` or `updateSubstackDraft()` returns, the response
+JSON contains the full draft state. Currently unused for validation. Opportunities:
+
+  A. IMAGE URL CHECK
+     Verify all image2.attrs.src values start with
+     `https://substack-post-media.s3.amazonaws.com/` (confirms upload succeeded).
+     If any still reference local paths, the upload silently failed.
+
+  B. CAPTION PRESENCE (after imageCaption fix)
+     Count `imageCaption` nodes in response. Should match the number of captions
+     in the source markdown. If zero when captions were provided, the fix didn't
+     take or schema rejected it.
+
+  C. NODE COUNT PARITY
+     Compare expected vs actual top-level content nodes. Major discrepancy
+     (e.g., 45 expected, 30 in response) indicates the parser silently dropped
+     elements. Won't catch every issue but catches catastrophic drops.
+
+  D. TITLE/SUBTITLE ECHO
+     Verify response.draft_title and draft_subtitle match what was sent.
+     Catches encoding issues or Substack character limits.
+
+  E. DRAFT ACCESSIBILITY PROBE
+     After receiving the draft URL, optionally fetch the Substack editor URL
+     to confirm it's reachable (HTTP 200). Catches auth/permission issues.
+
+**Recommendation:** Start with A (image URL check) as it addresses a known
+silent-failure path. Add B after the imageCaption fix ships. C-E are nice-to-have
+and can be added incrementally.
+
+---
+
+## PRIORITY ORDER
+
+1. imageCaption fix (section 3) — captions are actively broken for all articles
+2. Post-publish image URL check (section 4A) — catch silent upload failures
+3. Document unhandled node types (section 2) — future-proofing for when articles
+   need code blocks or nested lists
+
+
+### 2025-07-25: Research spike — nflverse data integration
+**By:** Lead (Lead Orchestrator & GM Analyst)
+**Status:** Proposed
+**Priority:** MEDIUM
+**Affects:** Analytics, CollegeScout, Offense, Defense, all team agents, Lead
+
+**What:**
+Open a research spike to evaluate integrating nflverse open data (play-by-play, player stats, advanced metrics like EPA/CPOE/WP, draft combine data) into the article-analysis pipeline. nflverse is a free, file-based, nightly-updated ecosystem — not a live API. A full proposal is filed at `docs/nflverse-data-integration-proposal.md` and a GitHub issue tracks the research.
+
+**Key points:**
+1. Our articles are currently cap-and-contract strong but analytically thin — no play-level efficiency data backs panel agent arguments.
+2. nflverse provides play-by-play since 1999, precomputed EPA/WP/CPOE, weekly/seasonal stats, rosters, draft picks/combine, and team schedules — all reproducible, versioned files.
+3. Access via `nfl_data_py` (Python), direct GitHub release files, or `nflreadr` (R).
+4. Important limitations: not live, not NGS tracking, not injury/odds — suited for post-game analysis and trend pieces, not breaking news.
+5. First phase: proof-of-concept with one season of play-by-play + player stats, minimal data helper, test against one existing article topic.
+6. Analytics agent is the primary beneficiary; CollegeScout benefits from combine/draft data.
+
+**Why:**
+Closing the analytical depth gap is the single biggest quality improvement available. Every top-tier NFL outlet cites EPA, CPOE, and efficiency metrics — our panel agents currently can't. This also aligns with Phase 2 automation (deterministic file-based inputs) and strengthens the competitive moat (harder to replicate than web scraping).
+
+**Decision needed:** Approve the research spike and allocate 1–2 sessions to Phase 1A (proof of concept).
+
+---
+date: 2025-07-25
+author: Lead
+status: Proposed
+scope: Ralph loop, prompt.md, all pipeline agents
+supersedes: "One stage per iteration" rule (prompt.md Rule 1)
+evidence:
+  - "NFC West Parallel Panel Execution Pattern (2026-03-16, Approved)"
+  - "AFC North batch — 4 ideas in ~15 min via parallel research (history.md)"
+  - "NFC West publish wave routing — Writer + Editor + Panel simultaneously (2026-03-17)"
+  - "User directive 2026-03-16T04:32:24Z — max out parallel throughput, no artificial caps"
+---
+
+
+# Decision: Dense Table Cleanup Moves Earlier in Pipeline
+
+**Date:** 2025-07-25
+**By:** Lead (Lead / GM Analyst)
+**Status:** Implemented
+**Affects:** All articles, Writer skill, Editor skill, Publisher Pass, Ralph workflow
+
+## Context
+
+Dense markdown tables (financial comparisons, multi-column cap data) were only caught at publish time by the Substack publisher's density classifier. This caused two problems:
+
+1. **Dense tables blocked publishing** — `publish_to_substack` throws an error, requiring manual intervention
+2. **No local preview** — simple tables that pass the density check get silently converted to bullet lists on Substack, with no way to see the result before publishing
+
+## Decision
+
+Table density auditing and remediation now happen **before Stage 7 publish**, not during it.
+
+
+### State/Reconciliation Core — Architecture Decision
+
+**By:** Lead (via Copilot)
+**Date:** 2025-07-25
+**Status:** Implemented
+**Affects:** All agents writing to pipeline.db, Ralph, heartbeat workflow, publisher extension
+
+**What:**
+
+1. **All pipeline.db writes must go through `content/pipeline_state.py`.** Direct SQL in ad-hoc scripts or inline agent code is deprecated. The helper validates numeric stages (1–8), logs `stage_transitions`, and handles editor reviews, publisher passes, and publish confirmations.
+
+2. **Article stage discovery is artifact-first.** `content/article_board.py` infers true stage from local files, not labels or DB. Precedence: published proof > publisher-pass.md > editor-review.md > draft.md > discussion outputs > idea > DB fallback. Ralph and heartbeat now use this.
+
+3. **GitHub `stage:*` labels are visibility mirrors, not scheduler inputs.** Update them to reflect reality after state changes, but never use them to determine what to do next.
+
+4. **Publisher extension does NOT write back to pipeline.db.** The calling agent (Lead) records the draft URL and stage transition using `pipeline_state.py` after the extension returns. This avoids cross-process DB conflicts.
+
+5. **Ralph's prompt was rewritten for max-throughput sweep.** All unblocked lanes execute in parallel per iteration. One-stage-per-iteration is retired.
+
+**Why:** The pipeline was stalling because three competing state systems (labels, artifacts, DB) drifted independently and nothing reconciled them. This creates a single source of write truth (pipeline_state.py) and a single source of read truth (article_board.py — filesystem-first).
+
+
+# Decision: Research Substack Notes Integration
+
+**Date:** 2025-07-25
+**Author:** Lead
+**Requested by:** Joe Robinson
+**Status:** Filed as GitHub Issue #72
+**Link:** https://github.com/JDL440/nfl-eval/issues/72
+
+## Context
+
+We publish articles to Substack but do not use Substack Notes — the short-form social feed feature. Notes is Substack's primary organic discovery channel and we're leaving growth on the table by not using it.
+
+## Decision
+
+Filed a research issue (#72) to investigate incorporating Substack Notes into the article workflow. The issue proposes five timing strategies (pre-publish teaser, launch-day link, post-publish discussion, compound campaign, standalone Notes) and a concrete experiment plan with metrics.
+
+## Key Points
+
+- This is **research only** — no implementation or pipeline changes yet.
+- Owner: Lead (research + recommendation), Joe (final call on strategy).
+- Priority: Medium. Not blocking article production.
+- The issue includes a definition-of-done checklist: API feasibility, timing recommendation, 4-article experiment plan, example Notes drafts, and a follow-up implementation issue if automation is viable.
+
+## Labels Applied
+
+- `enhancement`, `squad`, `squad:lead`
+
+## Next Steps
+
+- Pick up the research when bandwidth allows.
+- If Substack Notes API exists, file a follow-up implementation issue.
+- If manual-only, create a Notes template/checklist for the publisher workflow.
+

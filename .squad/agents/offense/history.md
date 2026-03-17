@@ -242,13 +242,10 @@ Sean Payton Tree:
 
 ## Learnings
 
-### KC Mahomes Offense Panel Position (2026-03-16)
-- **Post-ACL QB adaptation:** Mahomes will start Week 1 but won't have full functional mobility until 2027. Reid must shift from backyard-football improvisation to rhythm passing — a structure Mahomes has never run in the NFL.
-- **Kenneth Walker value:** The $43M RB signing is the right call because it provides play-action credibility Reid needs without Mahomes' scramble ability. Walker unlocks the quick-game structure.
-- **Rashee Rice as linchpin:** The offense has two completely different ceilings depending on Rice's availability. If suspended 10+ games, the receiving corps collapses to Kelce + Worthy + no proven depth.
-- **Kelce's declining separation:** At 36, Kelce is still excellent but no longer elite. His route speed and burst are declining, forcing Reid to manufacture separation through bunch formations and rub routes rather than expecting Kelce to win on his own.
-- **Offensive identity shift:** Expect more 12 personnel, more quick game, more pre-snap motion for coverage clarity, and significantly fewer deep shots early in the season. This is the 2018 Alex Smith offense with a better QB running it.
-- **Hardest constraint:** Receiving corps is too thin to survive even one injury. If Rice is suspended AND Worthy gets hurt, Kelce is the only proven pass-catcher. Zero margin for error.
+
+*(Earlier entries summarized for brevity)*
+
+- KC Mahomes Offense Panel Position (2026-03-16) — - **Post-ACL QB adaptation:** Mahomes will start Week 1 but won't have full functional mobility until 2027. Reid must sh
 
 ### DEN Broncos TE Panel Position (2026-03-16)
 - **Payton-to-Webb transition increases TE importance:** First-time playcaller needs structural support. Webb lacks 20 years of pattern recognition Payton has, making the Joker role a safety valve when coverage surprises him rather than a luxury.
