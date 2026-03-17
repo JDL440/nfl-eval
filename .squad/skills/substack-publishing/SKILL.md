@@ -32,13 +32,16 @@ The `publish_to_substack` Copilot extension converts the article markdown to Sub
 
 **Requires:** `SUBSTACK_TOKEN`, `SUBSTACK_PUBLICATION_URL` (prod), and `SUBSTACK_STAGE_URL` (stage) in `.env` (see `.env.example` for one-time setup).
 
-### Stage-First Workflow
+### Prod-First Workflow
 
-Always publish to **stage** (`nfllabstage.substack.com`) first to verify formatting, images, and table rendering. Only promote to **prod** (`nfllab.substack.com`) after Joe reviews the stage draft.
+Articles publish directly to **prod** (`nfllab.substack.com`) by default. Use **stage** (`nfllabstage.substack.com`) only when explicitly testing new functionality (e.g. table rendering, mobile layout, new ProseMirror features).
 
 ```
-Stage target (default)  →  Joe reviews on nfllabstage  →  Prod target  →  Joe reviews + publishes
+Default (prod target)  →  Joe reviews on nfllab  →  Joe publishes
+Stage target (opt-in)  →  Joe reviews on nfllabstage  →  Prod target  →  Joe reviews + publishes
 ```
+
+**When to use stage:** Only when deploying changes to the publisher extension, testing new table/image rendering, or validating mobile layout changes. Pass `target: "stage"` explicitly.
 
 ---
 
@@ -47,7 +50,7 @@ Stage target (default)  →  Joe reviews on nfllabstage  →  Prod target  →  
 ```
 publish_to_substack(
   file_path: "content/articles/{slug}.md",
-  target: "stage",                   ← "stage" (default) or "prod"
+  target: "prod",                    ← "prod" (default) or "stage" (opt-in for testing)
   title: "Final headline",           ← optional: auto-extracted from first # heading
   subtitle: "One-line hook",         ← optional: auto-extracted from first *italic* line
   audience: "everyone"               ← "everyone" (default) or "only_paid"
@@ -61,8 +64,8 @@ Title and subtitle are auto-extracted from the markdown if not provided:
 - **Subtitle** → first line that is `*wrapped in single asterisks*` (the standard subheadline format)
 
 The `target` parameter controls which Substack publication receives the draft:
-- **`"stage"`** (default) → `SUBSTACK_STAGE_URL` (nfllabstage.substack.com)
-- **`"prod"`** → `SUBSTACK_PUBLICATION_URL` (nfllab.substack.com)
+- **`"prod"`** (default) → `SUBSTACK_PUBLICATION_URL` (nfllab.substack.com)
+- **`"stage"`** (opt-in) → `SUBSTACK_STAGE_URL` (nfllabstage.substack.com) — use only when testing new functionality
 
 If `SUBSTACK_STAGE_URL` is not set, the tool falls back to the production URL with a warning.
 

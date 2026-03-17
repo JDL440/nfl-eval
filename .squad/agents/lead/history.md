@@ -54,3 +54,5 @@
 - Parallel execution is cost-neutral (same tokens) but 3-4× faster wall-clock. Only real serialization: intra-article stage ordering.
 - Substack subtitle limit ~256 chars (HTTP 400 if exceeded).
 - Multiple batch pushes create URL drift — always use highest draft ID (most recent).
+- Table image renders at 960–1160px are desktop-optimized; on mobile (~375px) they shrink to ~36% size and become illegible. Issue #75 tracks alternatives — dual-render (desktop + mobile variants) is the recommended first approach.
+- **Prod-default publishing (2025-07-25):** Extension default changed from `"stage"` to `"prod"`. Normal articles go directly to nfllab.substack.com. Stage is opt-in via `target: "stage"` — use only when testing new publisher/rendering functionality. Decision: `.squad/decisions/inbox/lead-prod-default-publish.md`.

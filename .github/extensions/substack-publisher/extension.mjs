@@ -540,7 +540,7 @@ async function markdownToProseMirror(markdown, uploadImage) {
             !lines[i].trim().startsWith("> ") &&
             !lines[i].trim().startsWith("|") &&
             !/^(-{3,}|\*{3,}|_{3,})$/.test(lines[i].trim()) &&
-            !/^::youtube\s/i.test(lines[i].trim()) &&
+            !/^::(?:youtube|subscribe)\s/i.test(lines[i].trim()) &&
             !/^\s*[-*+]\s/.test(lines[i]) &&
             !/^\s*\d+\.\s/.test(lines[i]) &&
             !/^!\[[^\]]*\]\(/.test(lines[i].trim())
@@ -1303,7 +1303,7 @@ const session = await joinSession({
             name: "publish_to_substack",
             description:
                 "Publishes a markdown article file to Substack as a draft ready for review and one-click publishing. " +
-                "Defaults to STAGE target (SUBSTACK_STAGE_URL) for safe preview; use target='prod' to publish to production. " +
+                "Defaults to PROD target (SUBSTACK_PUBLICATION_URL); use target='stage' only when testing new functionality. " +
                 "If a stored draft URL exists in pipeline.db for this article, updates the existing draft instead of creating a new one. " +
                 "Hard guard: refuses to operate on already-published articles (Stage 8). " +
                 "Reads auth from SUBSTACK_TOKEN in .env, and publication URLs from SUBSTACK_STAGE_URL / SUBSTACK_PUBLICATION_URL. " +
@@ -1352,9 +1352,10 @@ const session = await joinSession({
                     target: {
                         type: "string",
                         description:
-                            'Publication target: "stage" (default) publishes to the staging publication ' +
-                            "(SUBSTACK_STAGE_URL), \"prod\" publishes to production (SUBSTACK_PUBLICATION_URL). " +
-                            "Always use stage first to verify formatting before promoting to prod.",
+                            'Publication target: "prod" (default) publishes directly to production ' +
+                            "(SUBSTACK_PUBLICATION_URL). Use target='stage' only when explicitly testing " +
+                            "new functionality (e.g. table/mobile rendering changes) on the staging " +
+                            "publication (SUBSTACK_STAGE_URL).",
                         enum: ["stage", "prod"],
                     },
                 },
@@ -1366,8 +1367,8 @@ const session = await joinSession({
                     const env = loadEnv();
                     const token = process.env.SUBSTACK_TOKEN || env.SUBSTACK_TOKEN;
 
-                    // Resolve publication target: stage (default) or prod
-                    const target = args.target || "stage";
+                    // Resolve publication target: prod (default) or stage (opt-in for testing)
+                    const target = args.target || "prod";
                     let pubUrl;
                     if (target === "stage") {
                         pubUrl = process.env.SUBSTACK_STAGE_URL || env.SUBSTACK_STAGE_URL;

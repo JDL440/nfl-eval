@@ -121,12 +121,12 @@ Prepare the Substack metadata before calling the tool:
 
 ### Step 5 — Call publish_to_substack
 
-**Stage-first:** Always target `"stage"` first for formatting review, then `"prod"` once approved.
+**Prod-first:** Target `"prod"` by default. Only use `"stage"` when explicitly testing new functionality (e.g. table rendering, mobile layout).
 
 ```
 publish_to_substack(
   file_path: "content/articles/{slug}.md",
-  target: "stage",                   ← "stage" (default) or "prod"
+  target: "prod",                    ← "prod" (default) or "stage" (opt-in for testing)
   title: "{final headline}",
   subtitle: "{1-line hook for email preview}",
   audience: "everyone",
