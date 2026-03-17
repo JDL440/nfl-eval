@@ -749,3 +749,30 @@ Both articles have live production drafts:
 - The publisher now treats the first inline image as social-share critical and swaps later hero-safe images ahead of chart/table images when possible.
 - Source-draft hygiene still matters for publish-target articles: jsn-extension-preview, witherspoon-extension-v2, and den-2026-offseason were updated with explicit ::subscribe markers, and the first hero image was moved earlier in JSN and DEN source drafts.
 - Key files: .github/extensions/substack-publisher/extension.mjs, .squad/skills/substack-publishing/SKILL.md, .squad/skills/article-lifecycle/SKILL.md, .squad/skills/publisher/SKILL.md, .squad/skills/substack-article/SKILL.md, .squad/skills/image-generation/SKILL.md.
+
+## Learnings — KC Fields Trade Evaluation Stage Publish (2025-07-28)
+- `batch-publish-prod.mjs stage <slug>` is the fastest path for single-article stage publishes when the article is already at stage 7 in pipeline.db. No temp scripts needed.
+- The batch script auto-extracts title/subtitle from markdown headings, auto-detects team from pipeline.db `primary_team`, uploads local images, injects subscribe buttons, and enforces hero-safe first image — all the same logic as the Copilot extension.
+- After batch script runs, the calling agent must manually update `substack_draft_url` in pipeline.db — the batch script only does this for `prod` mode, not `stage` mode.
+- Draft URL: https://nfllabstage.substack.com/publish/post/191214349
+- Key files: batch-publish-prod.mjs, content/articles/kc-fields-trade-evaluation/draft.md, content/images/kc-fields-trade-evaluation/
+
+
+---
+
+## Breaking News Article Pipeline - Justin Fields Trade (2025-07-27)
+
+**Outcome:** Full 8-stage pipeline (Stages 1-7) completed in a single session for breaking trade news. GitHub Issue #74 created and tracked.
+
+**Article:** kc-fields-trade-evaluation
+**Draft URL:** https://nfllabstage.substack.com/publish/post/191214349
+**Pipeline Stage:** 7 (Publisher Pass complete, awaiting Joe Stage 8 review)
+
+**Key learnings:**
+1. **Breaking news skips idea generation.** When a confirmed transaction defines the angle, skip Stage 1 and start at Stage 2. The trade IS the angle.
+2. **Fact verification first, always.** Even when user says just traded, Lead must verify with multiple sources before treating as confirmed.
+3. **Trade evaluations need both teams.** The KC + NYJ dual-perspective panel was essential.
+4. **Editor caught the name pattern again.** Writer invented Chris McDuffie (should be Trent) and Justyn Watson - same first-name-invention pattern from prior articles.
+5. **Panel size of 4 is ideal for trade evaluations at Level 2.** KC, NYJ, Cap, Offense covered all angles without overlap.
+6. **Image generation works in parallel.** Generated 2 inline images while Editor reviewed.
+7. **The Rashee Rice insurance angle was the non-obvious insight.** KC agent surfaced this independently.
