@@ -138,5 +138,15 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
     - **Decision:** Extension negotiation Note (contract/salary decisions) template is reusable: absurd gap → unexpected variable → expert positions → implicit call-to-action. Recorded for future use.
     - **Artifact location:** `content/notes-phase2-candidate-jsn.md` — full structured package ready for dry-run validation and manual post to nfllabstage.
 
+📌 **JSN Extension Note — Image-Led Brevity Optimization (2026-03-18)** — Joe flagged the 120-word Phase 2 JSN Note as "a bit on the long side" and shared example (https://substack.com/@joerobinson495999/note/c-228989056). Key learnings:
+    - **Feed-native Notes follow a different pattern than article teasers.** One short line (1-2 sentences max) + image + article card. The card auto-renders the headline, subtitle, date, and preview—that's the detail layer. Text is just the thumb-stop moment.
+    - **Text should be 1-2 sentences, not paragraphs.** "Check out my new post!" or "JSN at 90% below market. Our panel breaks the extension paths." The card carries all narrative detail; text just nudges toward clicking.
+    - **Data points are better thumb-stops than narrative.** "JSN at 90% below market" stops scrolling better than "extension decision changed." Use one specific number + one implication.
+    - **Image is the visual decision-maker.** The four-paths chart tells the story; text just signals urgency. The card will show the full article (title, panelists quoted, etc.).
+    - **"Our panel breaks [framework]" signals disagreement without detailing it.** Readers infer multiple options + expert tension from context. No need to name each panelist—the card preview will show them quoted.
+    - **Recommendation:** Option C (Best-Balanced, 2 lines): "JSN at 90% below market. Our panel breaks the extension paths." + image + article card. This is the feed-native format.
+    - **Recorded decision in `.squad/decisions/inbox/writer-jsn-short-note.md`** for reuse on all future Notes (feed-native model is team-wide).
+
+
 
 

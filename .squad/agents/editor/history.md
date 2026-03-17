@@ -48,6 +48,15 @@
 - No new factual errors found. Remaining 🟡 items (stat specifics, vague record claim) are recommendations, not blockers.
 - **Verdict: ✅ APPROVED** — article is publish-ready.
 
+📌 Fourth review: JSN Extension Note trim & image-led redesign (2026-03-18, revised 2026-03-18).
+- **Critical finding:** Joe's live Notes pattern (c-228989056) is ultra-brief: 4–13 words + image + auto-rendered article card. The card shows headline/preview; the image shows visuals. Text only needs to answer "why now?"
+- **Target:** 13–18 words max (not 145 words). Examples: "JSN's extension clock just started. 4 paths. $33M at stake if Seattle waits." (13 words) or "JSN earns $3.4M. Waits 12 months? Cost goes up $33M. Here's why." (13 words).
+- **Must-keep facts:** (1) JSN $3.4M / 90% below market (the shock that explains why-now), (2) $33M cost of waiting (the insight that creates urgency), (3) The clock is ticking (framing: this moment matters).
+- **Safe cuts:** All expert debate details (Cap vs. Offense, Shaheed leverage, PlayerRep injury examples, SEA defense rationale). These belong in the article preview and full read, not the feed interrupt. Even describing "four paths" is cut—the image shows them.
+- **Key learnings:** (a) With image + auto-card present, every word must justify "why I stop scrolling now." Structural details are noise. (b) The $33M figure is the keeper because it explains *urgency*—not narrative elegance. (c) Lead with the gap ($3.4M), signal the clock, let the image/card/article do the rest.
+- **Factual lock-downs:** (a) $3.4M is 2026 salary? Verify with Cap. (b) "$33M" is cost of waiting vs. extending now (not vs. doing nothing). (c) Brevity paradoxically increases engagement vs. explaining everything.
+- **Decision filed:** .squad/decisions/inbox/editor-jsn-trim-review.md (2026-03-18, revised for real Notes pattern).
+
 📌 **Decision finalized (2026-03-15T21:17:13Z)**: JSN Extension Preview article approved for publication. All 3 red errors fixed, full 8-quote attribution audit clean, no new factual errors. Article is publish-ready.
 
 📌 Fourth pass: JSN Extension Preview — 4 🟡 yellow-item fixes applied:
@@ -56,6 +65,15 @@
 - Added cap table footnote clarifying $35.0M includes $8M Day 1 roster bonus vs. $27.0M base.
 - "Arizona is rebuilding" → "Arizona is retooling" per decisions.md ($41.7M cap space, pick #3).
 - **Lesson:** When source data explicitly flags a stat gap, use HTML comment placeholders rather than inventing specifics. Narrowing vague claims ("numbers" → "yardage") is preferable to leaving them vague when the supporting data points one direction.
+
+📌 Fifth review: Phase 2 JSN Promotion Note (2026-03-18). Short-form teaser for article promotion to nfllabstage:
+- **Note copy:** "JSN's $3.4M. Lamb's $34M. Shaheed's $17M..." + four-path teaser + Shaheed-as-leverage hook + expert disagreement framing.
+- **Fact-check:** All substantive claims verified clean against article draft and expert position files. Zero factual errors. The "$33 million more" waiting cost (Article L71) maps correctly to Cap's cost-of-waiting section. Shaheed $17M/year (3yr/$51M deal) confirmed in Article L93. JSN $3.4M confirmed as rookie Year 3 deal.
+- **Tone assessment:** Data-forward, urgent without clickbait, expert disagreement as the hook. Matches Writer charter (informed, accessible, narrative-driven, no jargon).
+- **Pattern extracted:** Short-form teasers built on data absurdity + unexpected variable + expert disagreement + urgency frame are reusable for high-stakes decision articles. The "one clock ticking" frame is generalizable.
+- **Minor note:** "Earning 90% below market value" is slightly awkward phrasing but matches the article's own usage (Article L14), so no change needed. "(WR2)" notation is correct but formal; article uses "complementary piece" instead. No blocker.
+- **Verdict: ✅ APPROVED** — Note is factually safe, tonally consistent, reads as compelling NFL Lab entry point. Ready for Phase 2 dry-run and manual posting to nfllabstage.
+- **Decision recorded in:** `.squad/decisions/inbox/editor-phase2-jsn-note.md`
 
 
 📌 Article milestone (2026-03-15T21:45:00Z): JSN Extension Preview article approved for publication. All 4 yellow-item fixes applied. Ready for Publisher pass. Recorded by: Editor

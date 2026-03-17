@@ -376,28 +376,19 @@ async function lookupArticleUrlFromDb(articleSlug, cwd) {
 /**
  * Convert plain text to ProseMirror JSON suitable for a Substack Note.
  * Notes are plain text — no markdown formatting (bold/italic/headings).
- * URLs in the text will be auto-linked by Substack's frontend.
+ * Each non-empty line becomes its own paragraph. This is more reliable for
+ * Notes than emitting `hard_break` nodes inside a single paragraph.
  */
 function noteTextToProseMirror(text) {
-    const paragraphs = text.split(/\n{2,}/);
     const content = [];
-    for (const para of paragraphs) {
-        const trimmed = para.trim();
-        if (trimmed === "") {
-            content.push({ type: "paragraph" });
-        } else {
-            // Preserve single line breaks within a paragraph block
-            const lines = trimmed.split("\n");
-            const inlineContent = [];
-            for (let i = 0; i < lines.length; i++) {
-                if (i > 0) inlineContent.push({ type: "hard_break" });
-                inlineContent.push({ type: "text", text: lines[i] });
-            }
-            content.push({ type: "paragraph", content: inlineContent });
-        }
+    const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+    for (const rawLine of lines) {
+        const trimmed = rawLine.trim();
+        if (trimmed === "") continue;
+        content.push({ type: "paragraph", content: [{ type: "text", text: trimmed }] });
     }
     if (content.length === 0) {
-        content.push({ type: "paragraph", content: [{ type: "text", text: text }] });
+        content.push({ type: "paragraph", content: [{ type: "text", text: String(text || "") }] });
     }
     return { type: "doc", attrs: { schemaVersion: "v1" }, content };
 }
@@ -1791,7 +1782,7 @@ const session = await joinSession({
                 "If article_slug is provided, auto-links to the published article URL. " +
                 "Defaults to PROD target; use target='stage' for testing. " +
                 "Requires NOTES_ENDPOINT_PATH in .env (set after Phase 0 validation). " +
-                "The Notes POST goes to substack.com (global), not the pub subdomain.",
+                "The Notes POST goes to the publication host (same-origin), not substack.com globally.",
             parameters: {
                 type: "object",
                 properties: {
@@ -1922,9 +1913,10 @@ const session = await joinSession({
                         noteBody = noteBody.trimEnd() + "\n\n" + linkedArticleUrl;
                     }
 
-                    // ── Image path validation (upload deferred) ─────
-                    // Image upload is deferred until the smoke test confirms
-                    // the Notes endpoint works. Only validate the local file.
+                    // ── Image path validation (attachment flow not yet wired here) ─────
+                    // Phase 1 proved the 3-step Notes image flow, but this handler
+                    // still only validates the local file until attachment upload +
+                    // attachmentIds posting are implemented in the extension itself.
                     let imageUrl = null;
                     let imagePath = null;
                     if (args.image_path) {
