@@ -124,3 +124,8 @@ Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 - Plan backdrop: Article state architecture refactor (8-phase) completed; `pipeline.db` baseline established. Current focus: smoke-note cleanup and backlog reconciliation validation.
 - No decisions pending merge — shared decisions remain current.
 - Lightweight session/orchestration note created for coordination.
+### Notes Card Render Fix + URL Backfill Session (2026-03-17T23:21:21Z)
+**Status:** ✅ LOGGED — decision merge, archive pass, and history maintenance complete
+- Merged pending inbox decisions into `.squad/decisions.md` and cleared `.squad/decisions/inbox/`.
+- Logged orchestration/session artifacts for the Lead + Scribe work around Note card rendering and URL backfill.
+- Ran oversized-history maintenance and archived stale decision blocks older than the 30-day window where applicable.

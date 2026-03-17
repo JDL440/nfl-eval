@@ -4,6 +4,51 @@
 
 ---
 
+### 2026-03-18: Backfill Published URLs + Fix Note Card Rendering
+
+**Date:** 2026-03-18
+**Author:** Lead
+**Status:** Executed
+
+## Context
+
+Phase 4 stage review Notes (5 total) were posted to nfllabstage with production article URLs, but rendered as plain links instead of article cards. Two Stage 8 published articles also had `substack_url = None` in pipeline.db.
+
+## Root Cause
+
+`noteTextToProseMirror()` in `extension.mjs` created plain text paragraphs — URLs were not wrapped in ProseMirror `link` marks. Substack requires explicit `marks: [{ type: "link", attrs: { href } }]` on URL text nodes to trigger article card rendering. Plain text URLs render as clickable links but do NOT generate the rich card preview (thumbnail + headline + publication name).
+
+## Actions Taken
+
+1. **Backfilled `substack_url`** for both Stage 8 articles:
+   - `seahawks-rb1a-target-board` → `https://nfllab.substack.com/p/the-6-million-backfield-how-seattle`
+   - `witherspoon-extension-cap-vs-agent` → `https://nfllab.substack.com/p/cap-says-27m-the-agent-demands-33m-d00`
+   - Source: `GET /api/v1/archive` on nfllab.substack.com
+
+2. **Fixed `noteTextToProseMirror()`** — added `parseNoteInline()` helper that auto-detects `https://` URLs in note text and wraps them in ProseMirror link marks. Future Notes posted through `publish_note_to_substack` will automatically get card-eligible link marks.
+
+3. **Replaced 5 broken stage Notes** with corrected versions containing proper link marks:
+   - JSN: c-229372212 → c-229378039
+   - KC Fields: c-229372239 → c-229378074
+   - Denver: c-229372275 → c-229378102
+   - Miami: c-229372305 → c-229378151
+   - Witherspoon: c-229372344 → c-229378200
+
+4. **Cleaned up** Phase 2 learning artifact Note (c-229307547) from pipeline.db.
+
+## Key Principle
+
+ProseMirror link marks are the ONLY trigger for Substack article cards in Notes. Neither plain-text URLs, image attachments, nor draft URLs produce card previews. The extension's Note builder must always apply link marks to any embedded URL.
+
+---
+
+### 2026-03-17T16:00:49.4038673-07:00: User directive
+**By:** Joe Robinson (via Copilot)
+**What:** Article-promotion Notes should use the article card behavior rather than a plain link when posting published article URLs.
+**Why:** User request — captured for team memory
+
+---
+
 ### 2026-07-28: Stage-Review Notes — Copy Pattern
 **Date:** 2026-07-28
 **By:** Writer
@@ -19,6 +64,8 @@ Adopted from Phase 3 learning (docs/notes-api-discovery.md §Phase 3):
 2. **Markdown link on a second line** pointing to the published `/p/` URL. Substack auto-renders the article card (thumbnail + headline + publication name) from this link — the card does the heavy lifting.
 3. **No body paragraphs.** The card IS the content. Extra text competes with the card preview.
 4. **Image attachment optional.** Only attach an image when the article's hero or a key chart adds context the card thumbnail doesn't provide.
+
+---
 
 ### Template
 ```
@@ -37,6 +84,9 @@ Adopted from Phase 3 learning (docs/notes-api-discovery.md §Phase 3):
 For stage Notes targeting articles published on prod, the card link must point to the **prod** published URL (`nfllab.substack.com/p/...`), not a stage draft URL. Stage draft URLs do not trigger card rendering. The Note itself is posted to stage for review, but the link inside it points to the live prod article.
 
 If the prod `/p/` URL is unknown (as with the two legacy articles below), the publisher or Lead should confirm the live URL before posting. Substack's default slug pattern is the article title, lowercased and hyphenated.
+
+---
+
 ### 2026-07-27: Issue #78 — Stage 8 Closeout (Waddle Trade Article Published)
 **By:** Lead (Lead / GM Analyst)
 **Status:** ✅ EXECUTED — Article live, issue closed, follow-on created
@@ -62,6 +112,8 @@ Stage 8 closeout checklist:
 
 ---
 
+---
+
 ### 2026-07-26: Issue #78 — Waddle Trade AFCCG Framing Final Approval
 **By:** Editor
 **Status:** ✅ APPROVED — AFCCG framing corrected, article cleared for publish
@@ -79,6 +131,8 @@ Human editor flagged that the Waddle trade article anchored its receiver-room th
 
 **Reusable pattern:**
 When an article uses a game as its narrative hook but the analytical argument covers a different timeframe, use **Disclaim → Anchor → Reframe**: (1) disclaim the hook event as evidence, (2) anchor to the correct timeframe, (3) reframe the closing to match. Verify the starting QB actually played the anchor game.
+
+---
 
 ---
 
@@ -102,6 +156,8 @@ Ran the full article pipeline (Stages 2→7) for issue #78 — "DEN/MIA — The 
 
 ---
 
+---
+
 ### 2026-07-26: Waddle Trade Article — Image Policy Verified
 **By:** Editor
 **Status:** ✅ APPROVED — images pass policy
@@ -116,6 +172,8 @@ Verified the repaired Waddle trade article satisfies the 2-inline-image / no-cov
 - **Not verified:** Substack draft rendering at the prod URL. Joe should confirm images render correctly during Stage 8 review.
 
 **Rationale:** Article text was already ✅ APPROVED in `editor-review-2.md`. This pass confirms the image repair is complete and introduces no new blockers. Article is clear for handoff.
+
+---
 
 ---
 
@@ -139,10 +197,15 @@ Trade confirmed across ESPN, CBS Sports, SI, Pro Football Network. For confirmed
 
 ---
 
+---
+
 ### 2026-07-25: Article Footer Boilerplate — "War Room" Brand (Option A)
 **By:** Lead; approved by Joe Robinson
 **Status:** ✅ APPROVED + IMPLEMENTED — Forward-looking rollout
 **Affects:** `.squad/skills/substack-article/SKILL.md`, `.squad/agents/writer/charter.md`, `.squad/skills/substack-publishing/SKILL.md`, `.squad/skills/publisher/SKILL.md`, `extension.mjs`, `batch-publish-prod.mjs`
+
+---
+
 ### 2026-07-25: Production-Default Publishing (Prod-First Workflow)
 **Date:** 2026-07-25
 **Decided by:** Lead, at Joe Robinson's direction
@@ -170,6 +233,8 @@ Trade confirmed across ESPN, CBS Sports, SI, Pro Football Network. For confirmed
 
 ---
 
+---
+
 ### 2026-07-26: Mass Document Update Feature — Batch Article Content Changes (Issue #76)
 **Date:** 2026-07-26
 **Author:** Lead
@@ -189,6 +254,8 @@ Trade confirmed across ESPN, CBS Sports, SI, Pro Football Network. For confirmed
 **Rationale:** Footer rollout is concrete precedent — this tooling would have saved manual work. Substack-first conflict resolution protects Joe's manual edits.
 
 **Impact:** No code changes yet — issue unassigned, awaiting prioritization. When implemented, will integrate with `pipeline_state.py`, `article_board.py`, and Substack publisher extension.
+
+---
 
 ---
 
@@ -214,6 +281,8 @@ The current footer reads like a spec sheet and misses the welcome article's virt
 - New articles adopt Option A via `.squad/skills/substack-article/SKILL.md`.
 - Existing published drafts remain untouched unless manually updated.
 - Quick-hit posts keep Option E when the full footer is too heavy.
+
+---
 
 ---
 
@@ -243,6 +312,8 @@ The current footer reads like a spec sheet and misses the welcome article's virt
 **Backward compatibility:** Old footer patterns are preserved in detection regex arrays. Subscribe widget placement and footer detection work with both old and new footer copy.
 
 **Existing articles:** 18 existing articles still use the old footer. They do not need manual retrofit — already published articles can be edited in Substack editor if desired. Unpublished drafts will naturally pick up the new footer if Writer revises them through the pipeline.
+
+---
 
 ---
 
@@ -277,6 +348,8 @@ Joe performs browser DevTools capture per `docs/notes-api-discovery.md`. Focus o
 
 ---
 
+---
+
 ### 2026-03-17: Notes API Endpoint Discovery (Phase 0 Shortcut)
 **By:** Lead (GM Analyst)
 **Status:** ATTEMPTED — Live 403 requires browser capture (see decision above)
@@ -299,6 +372,8 @@ The manual DevTools capture flow (originally Phase 0) was blocking all Notes pro
 
 **Status Update (after 403):**
 The shortcut **did not work**. See "Re-gate Notes POST After Live 403" decision above for resolution path.
+
+---
 
 ---
 
@@ -350,6 +425,8 @@ Phase 0 browser capture is **BLOCKED** awaiting Joe's DevTools capture. Once cap
 
 ---
 
+---
+
 ### 2026-03-17: Writer — Substack Notes Phase 1 Voice & Content Decisions
 **Date:** 2026-03-17
 **Status:** Proposal stage (awaiting Joe Robinson approval)
@@ -370,6 +447,8 @@ Phase 0 browser capture is **BLOCKED** awaiting Joe's DevTools capture. Once cap
 - `publish_note_to_substack()` accepts an optional `image_path` and uploads the asset via `uploadImageToSubstack()`; Writer/Lead vet images for editorial tone.
 - Editor or Lead spot-checks CTAs to ensure they are genuine questions.
 - Writer flags any Note that risks spoiling unpublished material so the Lead can redirect the plan.
+
+---
 
 ---
 
@@ -407,6 +486,8 @@ Joe's DevTools capture of `nfllab.substack.com/api/v1/comment/feed` succeeded wi
 
 ---
 
+---
+
 ### 2026-03-17: Advance Notes Integration to Phase 1
 **Date:** 2026-03-17
 **Decided by:** Lead
@@ -427,6 +508,8 @@ Phase 0 (API discovery, Playwright POST, and test note cleanup) is complete. `de
 **Key Learnings:**
 - Notes POST requires Playwright; DELETE works via Node `fetch()`.
 - Always clean up test artifacts before advancing phases.
+
+---
 
 ---
 
@@ -468,14 +551,13 @@ Implemented `notes-sweep` as a report-only CLI command under `content/article_bo
 **Follow-up**
 - Next slice (Step 3): semi-auto Stage 7 teaser workflow — auto-post teasers to nfllabstage while keeping prod writes report-only.
 
-
 # Editor Review: JSN Note Trim & Image-Led Rewrite
 
-**Date:** 2026-03-18  
-**Note ID (stage):** 229307547  
-**Current body word count:** ~370 words  
-**Requested action:** Identify what MUST stay vs. what can cut with an image present  
-**Requested by:** Joe Robinson  
+**Date:** 2026-03-18
+**Note ID (stage):** 229307547
+**Current body word count:** ~370 words
+**Requested action:** Identify what MUST stay vs. what can cut with an image present
+**Requested by:** Joe Robinson
 **Editor:** Editor (Editor team)
 
 ---
@@ -529,16 +611,16 @@ The current live JSN Note (posted to nfllabstage) is **text-rich but image-optio
 
 ## Factual Traps to Avoid in Shorter Rewrite
 
-⚠️ **Trap 1: "JSN is earning $3.4M"** vs. **"JSN earned $3.4M in 2025"**  
+⚠️ **Trap 1: "JSN is earning $3.4M"** vs. **"JSN earned $3.4M in 2025"**
 > The body text uses present tense ("is earning"), which implies ongoing 2026 salary. Verify with Cap expert: is the $3.4M the 2026 salary or the 2025 carry-forward? If unclear, use "came into 2026 earning" to be precise.
 
-⚠️ **Trap 2: "$33M more" vs. "$33M additional cost"**  
+⚠️ **Trap 2: "$33M more" vs. "$33M additional cost"**
 > The current body says "waiting costs $33 million more in total contract value through 2030." Shorter version might compress to "$33M more" — but more *than what, exactly?* More than extending now. More than the 5th-year option. Make sure the comparison is explicit even in one sentence.
 
-⚠️ **Trap 3: Shaheed's $17M is "fully guaranteed"**  
+⚠️ **Trap 3: Shaheed's $17M is "fully guaranteed"**
 > The draft says "$17M AAV, $34.7M fully guaranteed." The Note teaser uses just "$17M/year" — confirm that's the relevant number for the pitch, not the total guarantee. If PlayerRep's argument hinges on "Seattle has cap space," then AAV is correct. If it's about intent-to-commit, maybe the $51M total matters. Current Note uses $17M — **keep it that way** (it's the per-year burden, which is the comp).
 
-⚠️ **Trap 4: "Cap consensus is $34M AAV"**  
+⚠️ **Trap 4: "Cap consensus is $34M AAV"**
 > The article text says Cap's starting point is Lamb's $34M, but Cap also acknowledges Jefferson's $35M and notes "anything below $32M is a laugh-out-loud." The Note currently says "$34M with front-loaded structure." In the trim, if you compress Cap's position to one sentence, make sure you're not overstating certainty. "Cap targets $34M" is defensible; "Cap says $34M" might be too narrow.
 
 ---
@@ -549,9 +631,9 @@ The current live JSN Note (posted to nfllabstage) is **text-rich but image-optio
 
 > JSN's extension clock just started. 4 paths. $33M at stake if Seattle waits.
 
-**Word count:** 13 words  
-**What the image does:** Shows the four paths, the timing/cost table, and gives the feed a visual hook.  
-**What the card does:** Auto-renders the article headline, byline, pub image, and date.  
+**Word count:** 13 words
+**What the image does:** Shows the four paths, the timing/cost table, and gives the feed a visual hook.
+**What the card does:** Auto-renders the article headline, byline, pub image, and date.
 **What your text does:** Answer only "why should I care right now?"—not "here's the whole story."
 
 **Alternative framings (13–18 words):**
@@ -580,9 +662,9 @@ The current live JSN Note (posted to nfllabstage) is **text-rich but image-optio
 
 # Editor's Review: Phase 2 JSN Promotion Note
 
-**Reviewer:** Editor (Article Editor & Fact-Checker)  
-**Date:** 2026-03-18  
-**Note Package:** Phase 2 Promotion Note — Jaxon Smith-Njigba Extension  
+**Reviewer:** Editor (Article Editor & Fact-Checker)
+**Date:** 2026-03-18
+**Note Package:** Phase 2 Promotion Note — Jaxon Smith-Njigba Extension
 **Status:** ✅ APPROVED
 
 ---
@@ -590,6 +672,8 @@ The current live JSN Note (posted to nfllabstage) is **text-rich but image-optio
 ## Fact-Check Summary
 
 All substantive claims in the promotion note copy have been verified against the published article (jsn-extension-preview/draft.md) and the supporting expert position files. No factual errors found.
+
+---
 
 ### Verified Claims
 
@@ -640,9 +724,13 @@ The note references `jsn-extension-preview-inline-1.png` (1024×1024 square form
 
 ## 🟢 Minor Notes (Optional Polish)
 
+---
+
 ### Grammar/Flow
 - Line 55: "earning 90% below market value" — slightly awkward phrasing (typical phrasing is "earning 90% of market value" or "90% below market"). Current phrasing is defensible but could read as "earning, minus 90% of market" = slightly confusing. **Not a blocker** (article uses same phrasing on L14).
 - Line 56: "Seattle just signed Rashid Shaheed (WR2) for $17M/year." — The notation "(WR2)" is correct context but uncommon in Notes format. Acceptable but slightly formal. Alternative: "Seattle just signed Rashid Shaheed (deep threat) for $17M/year" to match the article's description on L93. **Optional refinement.**
+
+---
 
 ### Alignment with Published Article Voice
 - The note uses "PlayerRep says guaranteed cash today is the only real money" — this is a strong paraphrase of the full quote on Article L77. The exact quote is longer and more emphatic. However, the paraphrase is factually accurate and fits the Note's space constraints. **No change needed.**
@@ -687,10 +775,14 @@ The JSN Phase 2 Note currently live on nfflabstage (Note ID 229307547) is **kept
 
 ## Reasoning
 
+---
+
 ### Current Note Structure (Text-Only, ~120 Words)
 - ✅ **Strength:** Successfully posted (HTTP 200), readable, contains all expert voices and the critical $33M frame
 - ✅ **Proof:** This is the first real article-promotion Note from our panel system — validates ProseMirror assembly and link insertion at scale
 - ❌ **Gap:** Reads like compressed article summary, not a teaser. Too much narrative density for a Note feed where readers scan in 3 seconds
+
+---
 
 ### Recommended Revision: MUCH SHORTER + Image + Article Card
 **Reference example:** Joe Robinson's actual published Note (c-228989056) on the KC Fields article uses this minimal structure:
@@ -710,6 +802,8 @@ The JSN Phase 2 Note currently live on nfflabstage (Note ID 229307547) is **kept
 - Headline + subtitle + card preview answer "why should I click?" before readers finish scanning
 - The article card already displays JSN's compelling subtitle ("Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid")
 - Text-first approach was inefficient — you had to read 120 words to understand four expert positions; image-first shows them instantly
+
+---
 
 ### Risk Mitigation
 - **Keep current Note live** during revision work — it's valid proof-of-concept
@@ -784,9 +878,9 @@ After completing Notes Phases 0–3 (API discovery, smoke tests, JSN card-first 
 
 # Decision: Reusable Template for Extension/Contract Notes
 
-> **Date:** 2026-03-18  
-> **Author:** Writer  
-> **Status:** 🟢 Approved for use in Phase 2+ Notes  
+> **Date:** 2026-03-18
+> **Author:** Writer
+> **Status:** 🟢 Approved for use in Phase 2+ Notes
 > **Applies to:** JSN Note (phase-2-candidate-jsn.md) and future salary/contract-decision articles
 
 ---
@@ -799,12 +893,16 @@ The JSN extension Note reveals a generalizable structure for contract negotiatio
 
 ## Template Structure
 
+---
+
 ### Opening Hook (1-2 sentences)
 Present the absurd gap or central tension in dollar amounts.
 
 **Example:** JSN's $3.4M. Lamb's $34M. Shaheed's $17M.
 
 **Generalizable to:** Any contract comparison (current pay vs. market, vs. comparable signings, vs. ask)
+
+---
 
 ### Variable Introduction (1 sentence)
 Surface one non-obvious leverage point or context shift.
@@ -813,12 +911,16 @@ Surface one non-obvious leverage point or context shift.
 
 **Generalizable to:** Unexpected signings, coaching changes, front office moves, injury updates, or market events that shift leverage
 
+---
+
 ### Expert Positions (3-4 sentences, one per expert max)
 Thread each panelist's view into the narrative without quotes.
 
 **Example:** Cap says "trap." PlayerRep says "guaranteed cash." Offense says "system-amplified."
 
 **Generalizable to:** Any multi-expert article where disagreement is the product
+
+---
 
 ### Call-to-Action Frame (implicit)
 End with the decision or urgency that makes readers want the full analysis.
@@ -862,9 +964,9 @@ Future contract/extension Notes (e.g., Seahawks RB evaluation, trade deadline de
 
 # JSN Extension Note — Reusable Decision: Feed-Native Image-Led Model
 
-**Date:** 2026-03-18  
-**Requester:** Joe Robinson  
-**Decision Type:** Voice pattern, structure optimization  
+**Date:** 2026-03-18
+**Requester:** Joe Robinson
+**Decision Type:** Voice pattern, structure optimization
 **Update:** Revised toward feed-native model per Joe's example (https://substack.com/@joerobinson495999/note/c-228989056)
 
 ---
@@ -874,6 +976,8 @@ Future contract/extension Notes (e.g., Seahawks RB evaluation, trade deadline de
 Joe clarified the target model: Notes should be **one short line + strong image + article card**. The article card (auto-rendered by Substack from the linked article) carries the headline, subtitle, publication date, and preview. Text should be 1-2 sentences max; image does the visual hook; card does the detail.
 
 This is fundamentally different from traditional teasers. It's feed-native: scroll, see image, read one-liner, card auto-expands with full article preview, click through.
+
+---
 
 ### Reusable Pattern
 
@@ -887,6 +991,8 @@ The **card carries all narrative detail**. Text just nudges.
 
 ## Three Options Generated (Revised)
 
+---
+
 ### Option A: Short — One Line (Pure CTA)
 
 **Check out my new post!**
@@ -895,11 +1001,15 @@ The **card carries all narrative detail**. Text just nudges.
 
 ---
 
+---
+
 ### Option B: Medium — One Hook Line (Data Point)
 
 **JSN's extension decision just changed. Check out my new post.**
 
 [Image + Article Card]
+
+---
 
 ---
 
@@ -970,6 +1080,8 @@ This is the target format. JSN Note should follow the same structure.
 - Team decisions: This file, for reuse on all future Notes
 ---
 
+---
+
 ### 2026-03-18: Stage Review Notes with Prod Published URLs
 **Date:** 2026-03-18
 **Author:** Lead
@@ -1015,16 +1127,22 @@ After Joe's review, use `delete-notes-api.mjs` to remove the stage review Notes.
 
 ---
 
+---
+
 ### 2026-03-17T21:37:00Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** For article promotion Notes, we just want a card for the article; the note should be card-first and not text-heavy.
 **Why:** User request — captured for team memory
 ---
 
+---
+
 ### 2026-03-17T21:32:40Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** The JSN Phase 2 note should be shorter and should use an image; keep iterating on the image-backed version.
 **Why:** User request — captured for team memory
+---
+
 ---
 
 ### 2026-03-17T14:57:15.7699594-07:00: User directive
@@ -1165,6 +1283,9 @@ Substack **articles**:
 - Clarifies that article ProseMirror rules do not transfer directly to Notes.
 - Gives the eventual `publish_note_to_substack` image implementation a precise,
   validated contract from Phase 1 instead of an inferred one.
+
+---
+
 ### 2026-03-17T05:35:20Z: Copilot Directive — Notes rollout staging order
 **By:** Joe Robinson (via Copilot)
 **What:** Roll out Substack Notes in stages: generic tests on nfllabstage, then structured NFL Lab-style Notes, and only after that make production updates.
@@ -1172,10 +1293,14 @@ Substack **articles**:
 
 ---
 
+---
+
 ### 2026-03-17T05:23:28Z: Copilot Directive — Article footer
 **By:** Joe Robinson (via Copilot)
 **What:** Use the War Room footer copy and follow it with the CTA asking readers to drop trade, signing, or draft scenarios in the comments.
 **Why:** It aligns with the welcome article and the NFL Lab identity.
+
+---
 
 ---
 
@@ -1196,6 +1321,8 @@ Substack **articles**:
 
 ---
 
+---
+
 ### 2026-03-17: Publish Article Drafts to Production by Default
 **By:** Joe Robinson (user directive via Copilot)
 **Status:** ACTIVE — Enforced in workflow
@@ -1212,6 +1339,8 @@ Replaced misaligned footer boilerplate ("powered by a 46-agent AI expert panel..
 
 ---
 
+---
+
 ### 2026-07-25: Prod-Default Publishing
 **By:** Joe Robinson (directive), Lead (implementation)
 **Status:** ✅ ACCEPTED — Enforced in workflow
@@ -1223,6 +1352,8 @@ Normal article drafts go directly to prod (`nfllab.substack.com`) by default. Ex
 **Safety preserved:** Published-article guard, ProseMirror validation, hero-safe image check, dense table blocker, DB writeback requirement all still active.
 
 **Related todo:** prod-default-publishing
+
+---
 
 ---
 
@@ -1244,6 +1375,8 @@ Issue #75 revision revealed that the mobile table renderer's pixel-based estimat
 
 ---
 
+---
+
 ### 2026-03-17: Dense Table Images Illegible on Mobile — Dual-Render Implemented
 **By:** Lead (Team Lead Specialist)
 **Status:** ✅ IMPLEMENTED + REVISED — Clipping/collision defects fixed by Analytics (see above)
@@ -1261,6 +1394,8 @@ Table/chart images rendered at 960–1160px width were shrunk to ~375px on mobil
 1. 6–7 column mobile renders hit 10.4px effective font — borderline on low-DPR Android devices
 2. Email rendering untested — mobile PNGs should scale better but needs real email validation
 3. Future: Alternative E (text summaries) for low-complexity tables could complement this
+
+---
 
 ---
 
@@ -1288,6 +1423,8 @@ $3M cost is below backup QB market floor ($5-12M). Real value is avoided cascadi
 
 ---
 
+---
+
 ### 2026-03-17: Durable Article Publish Rules — Subscribe Widgets & Hero Images
 **By:** Lead (Team Lead Specialist) / Joe Robinson (direction)
 **Status:** ACTIVE — Enforced in workflow
@@ -1308,6 +1445,8 @@ User request to durably enforce article growth UX (subscribe placement) and soci
 
 ---
 
+---
+
 ### 2026-03-17: Production Substack Section Cleanup — Complete
 **By:** Lead (Team Lead Specialist)
 **Status:** EXECUTED
@@ -1323,6 +1462,8 @@ Removed all 32 unused NFL team sections from nfllab.substack.com. Sections were 
 - Verified: Subsequent dry-run shows 0 sections on nfllab.substack.com
 
 **Sections removed:** Arizona Cardinals through Washington Commanders (all 32 NFL teams with custom team colors).
+
+---
 
 ---
 
@@ -1356,6 +1497,8 @@ Removed all 32 unused NFL team sections from nfllab.substack.com. Sections were 
 
 ---
 
+---
+
 ### 2026-03-17: Witherspoon + JSN Publisher Pass and Prod Push
 **By:** Lead (Team Lead Specialist)
 **Status:** EXECUTED
@@ -1379,6 +1522,8 @@ After the overbroad Stage 7 prod push was rolled back (only DEN and MIA confirme
 
 ---
 
+---
+
 ### 2026-03-17: JSN & Witherspoon Production Draft Finalization
 **By:** Lead (Team Lead Specialist)
 **Date:** 2026-03-17
@@ -1393,6 +1538,8 @@ Both `jsn-extension-preview` and `witherspoon-extension-v2` had oscillating DB s
 3. **Both articles confirmed at Stage 7** — Both have: editor ✅ APPROVED, publisher-pass.md artifact, production draft URLs on nfllab.substack.com, 2+ inline images, all paths reconciled.
 
 **Why:** article_board.py now catches status/stage inconsistencies that previously went undetected. JSN status corrected from "in_discussion" → "in_production". Both articles unblocked for Joe's final review and publish.
+
+---
 
 ---
 
@@ -1416,6 +1563,8 @@ Batch-published all 22 DB-Stage-7 articles to nfllab.substack.com as prod drafts
 **Root cause:** pipeline.db `current_stage` was inflated for 20 articles, likely from bulk stage transitions outrunning artifact production.
 
 **Lesson for future:** Never batch-promote to prod based solely on pipeline.db stage. Run `article_board.py` first and use its output as gate. DB is coordination aid; artifacts are ground truth.
+
+---
 
 ---
 
@@ -1448,6 +1597,8 @@ Stage 7 final draft push verification: confirm image/table fixes present in stag
 
 ---
 
+---
+
 ### 2026-03-17: Witherspoon Extension v2 — Editor Review Verdict
 **By:** Editor (Article Editor & Fact-Checker)
 **Date:** 2026-03-17
@@ -1461,6 +1612,8 @@ Stage 7 final draft push verification: confirm image/table fixes present in stag
 - v2 article supersedes v1 Witherspoon extension — Lead should confirm v1 archival
 
 **Pattern to watch:** Polished-synthesis quote pattern (Cap quote at line 122 is Writer-crafted, not verbatim). Same issue flagged in JSN review. Team should decide house rule: (a) all blockquotes verbatim from position files, or (b) editorial paraphrasing acceptable with disclosure.
+
+---
 
 ---
 
@@ -1480,20 +1633,28 @@ Substack publisher extension (Node.js/MCP) creates drafts but needs to update `p
 
 ---
 
+---
+
 ### 2026-03-12: User directive — Model override
 **By:** Joe Robinson (via Copilot)
 **What:** All agents should use claude-opus-4.6 model. No exceptions.
 **Why:** User request — premium tier for maximum quality on NFL domain analysis.
+
+---
 
 ### 2026-03-12: User directive — Role-based agent names
 **By:** Joe Robinson (via Copilot)
 **What:** Rename specialist agents from Ocean's Eleven cast names to role-based names: Danny→Lead, Rusty→Cap, Livingston→Injury, Linus→Draft, Basher→Offense, Turk→Defense, Virgil→SpecialTeams. Easier to remember.
 **Why:** User request — role-based names are more intuitive for an NFL domain team.
 
+---
+
 ### 2026-03-12: User directive — 1M context fallback
 **By:** Joe Robinson (via Copilot)
 **What:** If agents hit context window limits or compaction, switch them to claude-opus-4.6-1m (1M context) model.
 **Why:** User request — agents doing heavy research may need larger context windows to avoid data loss.
+
+---
 
 ### 2026-03-12: NFC West 2026 Cap Landscape — Strategic Findings
 **By:** Cap (Salary Cap Specialist)
@@ -1508,6 +1669,8 @@ Substack publisher extension (Node.js/MCP) creates drafts but needs to update `p
 5. **Edge rusher market diverged** — Elite tier now $40M+ AAV. Bosa's $34M AAV aging well relative to market. SEA's Nwosu at $9.76M is below market.
 
 **Why:** Based on OTC and Spotrac data, cross-verified with ✅ confidence tags. 2027 projections from OTC multi-year models.
+
+---
 
 ### 2026-03-12: 2026 NFL Draft Class — NFC West Implications
 **By:** Draft (Draft Expert Specialist)
@@ -1524,6 +1687,8 @@ Substack publisher extension (Node.js/MCP) creates drafts but needs to update `p
 
 **Why:** Draft is April 23–25, 2026. Team agents need prospect-to-need mapping at their respective draft positions.
 
+---
+
 ### 2026-03-12: Data Source Strategy for Web Research
 **By:** Lead (Team Lead Specialist)
 **Status:** Proposed
@@ -1536,10 +1701,14 @@ Substack publisher extension (Node.js/MCP) creates drafts but needs to update `p
 
 **Why:** Probed 15+ URLs across 5 data sources on 2026-03-12. PFR blocks automated access. Documented in `.squad/skills/`.
 
+---
+
 ### 2026-03-13: User directive — Verify FA availability before recommending
 **By:** Joe Robinson (via Copilot)
 **What:** When trades/signings are reported by multiple outlets, consider them high confidence (🟢 Likely). Agents should check availability before recommending FA targets — don't suggest players who are already signed or traded.
 **Why:** User request — avoid recommending unavailable players. Accuracy over speculation.
+
+---
 
 ### 2026-03-13: FA Availability Alert — Seahawks targets revised
 **By:** Media (NFL Media & Rumors Specialist)
@@ -1551,6 +1720,8 @@ Substack publisher extension (Node.js/MCP) creates drafts but needs to update `p
 Of 20 players recommended in Seahawks FA analysis, 7 are confirmed unavailable (signed or traded). Key removals: Hendrickson (BAL), Koonce (LV re-sign), Awuzie (BAL), T. Johnson (traded LV), Kohou (KC), R. White (WSH), Deebo Samuel (contract voided — now UFA again). Still available: Bosa, Clowney, Von Miller, Calais Campbell, Lattimore, Douglas, Hobbs, Tre'Davious White, Najee Harris, Bobby Wagner, D.J. Reader, Jauan Jennings. EDGE, CB, and RB groups need revision.
 **Why:** FA market moves fast. Several recommendations were outdated within hours of publication. All future target boards must verify current availability.
 
+---
+
 ### 2026-03-13: Washington State Millionaires Tax changes Seattle's tax advantage
 **By:** PlayerRep (Player Advocate & CBA Expert)
 **Status:** Proposed
@@ -1560,6 +1731,8 @@ Of 20 players recommended in Seahawks FA analysis, 7 are confirmed unavailable (
 **What:**
 WA passed SB 6346 on 2026-03-12 — 9.9% income tax on all personal income over $1M/yr, effective 2028-01-01. Applies to W-2 salary and visiting-athlete jock tax. Constitutional challenge likely (40–60% chance struck down). For 2026–2027, Seattle retains zero-tax advantage. For 2028+, a $20M/yr SEA contract loses ~$1.88M/yr to state tax — dropping the "$20M in SEA = $23M in SF" narrative to approximately "$20M in SEA ≈ $20.8M in SF." Short-term deals unaffected; multi-year deals need front-loading. Rookie contracts under $1M/yr unaffected regardless.
 **Why:** Fundamentally changes Seattle's FA recruiting pitch for contracts extending past 2027. All prior analyses claiming zero-tax advantage need asterisks. TX/FL/TN/NV teams now have unambiguous tax edge over SEA.
+
+---
 
 ### 2026-03-13: Media Daily Sweep — FA Wave 1 (22+ signings, Crosby trade voided, Tua to ATL)
 **By:** Media (NFL Media & Rumors Specialist)
@@ -1576,6 +1749,8 @@ Full 24-hour sweep (March 12-13) during FA Wave 1. 22+ confirmed signings, 2 tra
 - Rumor resolutions: Tua confirmed, Crosby voided, Cousins released (not traded), Garrett Wilson trade debunked, ARI #3 pick trade cooling, Minshew to ARI (not KC).
 
 **Why:** Comprehensive free agency tracking ensures all agents have accurate, current roster data. 7 rumor resolutions prevent recommending unavailable players. Dashboard updated at `.squad/agents/media/history.md`.
+
+---
 
 ### 2026-03-14: Media Daily Sweep — FA Day 3 (24+ new moves, Rodgers downgrade, mega-deals)
 **By:** Media (NFL Media & Rumors Specialist)
@@ -1598,10 +1773,12 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 
 **Why:** Day 3 FA sweep ensures all agents have accurate rosters. Rodgers downgrade is biggest strategic shift — PIT win-now plan at risk. EDGE market ($120M Phillips, $100M Oweh) resets benchmarks. NYJ becoming dark horse via trades. MIA in full rebuild.
 
+---
+
 ### 2026-03-14: Article Lifecycle Skill — Architectural Decisions
 
-**By:** Lead  
-**Status:** Proposed  
+**By:** Lead
+**Status:** Proposed
 **Affects:** Lead, Writer, Editor, future Publisher agent, all panel-eligible agents
 
 **Decision 1: Discussion Prompt as a Required Pre-Panel Artifact**
@@ -1630,6 +1807,8 @@ Comprehensive 48-hour sweep (March 13-14) covering Day 2-3 of free agency. 24+ n
 - Stages 2, 3, 7 are new and untested
 - Promote to `medium` after one article passes through all 8 stages, to `high` after 3+ articles
 
+---
+
 ### 2026-03-15: Media Daily Sweep — FA Day 4 (50+ new moves, Rodgers upgraded, TEN $270M spree)
 **By:** Media (NFL Media & Rumors Specialist)
 **Status:** Proposed
@@ -1652,9 +1831,11 @@ Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed tr
 
 **Why:** Day 4 FA sweep ensures all agents have accurate rosters. Rodgers upgrade is biggest strategic shift — PIT win-now plan back on track. TEN $270M spree creates new AFC contender. NFC West arms race intensifying (Watson→LAR, Bosa restructure→SF, Shaheed/Jobe→SEA). 3 article candidates identified (TEN spree, SEA window, Rodgers decision).
 
+---
+
 ### 2026-03-15: README.md Structure and Tone
 
-**By:** Writer  
+**By:** Writer
 **Status:** Delivered
 
 **Structural Choices:**
@@ -1666,9 +1847,11 @@ Comprehensive Day 3-4 sweep (March 14-15) during FA Wave 1. 50+ new confirmed tr
 
 **Rationale:** Joe needs a doc answering "what is this, how do I use it" in under 2 minutes. Everything else is noise.
 
+---
+
 ### 2026-03-15: Add `discussion_path` Field to Articles Table
-**By:** Lead  
-**Status:** Proposed  
+**By:** Lead
+**Status:** Proposed
 **Affects:** pipeline.db schema, article lifecycle tooling, Scribe, Writer, Lead
 
 **What:**
@@ -1690,10 +1873,12 @@ Also update `content/schema.sql` to include this column in the `CREATE TABLE art
 
 **Priority:** Medium — non-blocking but foundational for automation.
 
+---
+
 ### 2026-03-15: Lead Intel Brief — Editorial Priority Changes
-**By:** Lead  
-**Status:** Proposed  
-**Priority:** HIGH  
+**By:** Lead
+**Status:** Proposed
+**Priority:** HIGH
 **Affects:** Writer, Editor, SEA, Cap, Defense, Draft, Media
 
 **What:**
@@ -1717,9 +1902,11 @@ Based on the March 14-15 Media sweep (50+ new transactions, 115+ total tracked),
 
 ---
 
+---
+
 ### 2026-03-15: Article Candidates from Daily News Sweep
-**By:** Media  
-**Status:** Proposed  
+**By:** Media
+**Status:** Proposed
 **Affects:** Lead, Writer, Editor
 
 **What:**
@@ -1744,10 +1931,12 @@ Five article candidates identified from March 14-15 news sweep, scored by signif
 
 ---
 
+---
+
 ### 2026-03-15: Media Intel Drop — League-Wide (50+ New Transactions)
-**By:** Media  
-**Status:** Proposed  
-**Priority:** HIGH  
+**By:** Media
+**Status:** Proposed
+**Priority:** HIGH
 **Affects:** All 32 team agents, all specialists
 
 **What:**
@@ -1772,10 +1961,12 @@ Comprehensive Day 3-4 free agency sweep (March 14-15). 50+ new confirmed transac
 
 ---
 
+---
+
 ### 2026-03-15: Media Intel Drop — SEA (Priority)
-**By:** Media  
-**Status:** Proposed  
-**Priority:** HIGH  
+**By:** Media
+**Status:** Proposed
+**Priority:** HIGH
 **Affects:** SEA team agent, Cap, Defense, Draft, Lead
 
 **What:**
@@ -1809,10 +2000,12 @@ Seahawks-focused intel from Day 3-4 sweep (March 14-15):
 
 ---
 
+---
+
 ### 2026-03-15: User directive — Avoid politically divisive topics
-**By:** Joe Robinson (via Copilot)  
-**Status:** Proposed  
-**Priority:** CRITICAL  
+**By:** Joe Robinson (via Copilot)
+**Status:** Proposed
+**Priority:** CRITICAL
 **Affects:** All agents, all content tracks
 
 **What:** Avoid politically divisive topics in all content. Specifically: do NOT reference or analyze state/federal tax legislation (e.g., WA SB 6346 millionaires tax), political bills, or any content that could be construed as taking a political stance. This applies to all article ideas, discussion prompts, panel discussions, article drafts, and agent analyses.
@@ -1832,17 +2025,17 @@ JSN panel discussion completed on 2026-03-15 before this directive was filed. Di
 - Document architectural decisions here
 - Keep history focused on work, decisions focused on direction
 
-
 Decision: All article content must avoid politically divisive topics. No tax legislation, political bills, or political angles. Applies to all stages: ideas, discussion prompts, panel positions, drafts, editor/publisher passes.
+
+---
 
 ### Editor Verdict: JSN Extension Preview — Re-Review
 
-
 # Editor Verdict: JSN Extension Preview — Re-Review
 
-**From:** Editor  
-**Date:** 2026-03-15  
-**Article:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."  
+**From:** Editor
+**Date:** 2026-03-15
+**Article:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."
 **Review:** Re-review (2nd pass) after Writer addressed 🟡 REVISE feedback
 
 ---
@@ -1866,26 +2059,25 @@ All three 🔴 errors from the first review are fixed correctly:
 
 *Full review saved to: `content/articles/jsn-extension-preview/editor-review-2.md`*
 
-### Editor Verdict: JSN Extension Preview Article
+---
 
+### Editor Verdict: JSN Extension Preview Article
 
 # Editor Verdict: JSN Extension Preview Article
 
-**Article:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."  
-**Date:** 2026-03-15  
+**Article:** "Jaxon Smith-Njigba's Extension Is Coming. Here Are the 4 Paths — and the $33 Million Mistake Seattle Must Avoid."
+**Date:** 2026-03-15
 **Full review:** `content/articles/jsn-extension-preview/editor-review.md`
 
 ---
 
 ## Verdict: 🟡 REVISE
 
-
-
 # Decision: JSN Extension Article Draft Complete — Ready for Editor Review
 
-**Date:** 2026-03-15  
-**Decider:** Writer  
-**Status:** ✅ Completed  
+**Date:** 2026-03-15
+**Decider:** Writer
+**Status:** ✅ Completed
 
 ---
 
@@ -1940,18 +2132,19 @@ The draft is ready for editorial review.
 
 ---
 
-**Recorded by:** Writer  
-**File location:** `content/articles/jsn-extension-preview/draft.md`  
+**Recorded by:** Writer
+**File location:** `content/articles/jsn-extension-preview/draft.md`
 **Editor handoff:** Ready now
+
+---
 
 ### Writer → Editor: JSN Extension Article — Revision Complete
 
-
 # Writer → Editor: JSN Extension Article — Revision Complete
 
-**From:** Writer  
-**To:** Editor  
-**Date:** 2026-03-15  
+**From:** Writer
+**To:** Editor
+**Date:** 2026-03-15
 **Re:** `content/articles/jsn-extension-preview/draft.md` — Revision pass complete, ready for re-review
 
 ---
@@ -1964,12 +2157,10 @@ All 3 🔴 must-fix errors have been corrected. Four 🟡 suggestions were addre
 
 ## 🔴 Fixes Made
 
-
-
 # Decision: JSN Yellow-Item Fixes — Editorial Standards
 
-**By:** Editor  
-**Date:** 2026-03-15  
+**By:** Editor
+**Date:** 2026-03-15
 **Affects:** Writer, Lead, all future articles
 
 ## What
@@ -1984,6 +2175,7 @@ When source material explicitly flags a data gap (e.g., "we don't have the speci
 
 The JSN article's 🟡 items all stemmed from the same root cause: the expert panel worked with "breakout season" as a given without nailing down the underlying numbers. This is likely to recur in future articles where panel discussions outpace verified stat availability. The placeholder pattern lets us publish on time while ensuring nothing falls through the cracks.
 
+---
 
 ---
 
@@ -2017,6 +2209,8 @@ Batch issue creation works cleanly for 28+ teams. Generic template enforces idea
 
 ---
 
+---
+
 ### 2026-03-16: NFC West Parallel Panel Execution Pattern
 **By:** Lead
 **Status:** Approved
@@ -2042,6 +2236,8 @@ When multiple articles in the same division are at the same pipeline stage, batc
 
 **Why:**
 Parallel execution is cost-neutral (no token discount) but saves wall-clock time significantly. Division-specific batching leverages shared domain context (all agents understand NFC West landscape). No context window pressure — agents are stateless and independent.
+
+---
 
 ---
 
@@ -2074,6 +2270,8 @@ Issues must be generic triggers. Idea generation must happen as the FIRST STEP o
 
 **Pattern Established:**
 **Idea generation is NOT a bulk batch task.** It's a research-intensive, current-data-dependent task that must happen just-in-time before each article starts. Never: "Generate 30 team ideas up front". Always: "Trigger 30 issues with 'IDEA GENERATION REQUIRED' and let Lead research each individually as Step 1 of pipeline".
+
+---
 
 ---
 
@@ -2122,6 +2320,8 @@ Temporal accuracy is non-negotiable. Readers who follow NFL closely will catch "
 
 ---
 
+---
+
 ### 2026-03-16: Substack Section Routing Fix — `section_chosen: true`
 **By:** Lead (debugging task from Joe Robinson)
 **Status:** Implemented
@@ -2141,6 +2341,8 @@ Substack's draft editor checks `section_chosen === true` before displaying secti
 
 **Verification:**
 Test draft 191082679 (NE Patriots, section 355520) confirmed via GET: `draft_section_id: 355520, section_chosen: true`.
+
+---
 
 ---
 
@@ -2191,6 +2393,8 @@ Article title remains accurate. Slug (`ne-maye-year2-offseason`) unchanged per i
 
 ---
 
+---
+
 ### 2026-03-16: Cardinals Article Draft Structure
 **By:** Writer
 **Article:** Arizona Cardinals 2026 Offseason (#40)
@@ -2207,6 +2411,8 @@ Structured the Cardinals article around the QB timing disagreement as central te
 
 **Editor Watch Items:**
 LaFleur's title chain (OC → HC), Simpson's start count, 2027 QB class eligibility, Harrison Jr. CBA extension timeline. Eight items flagged in writer notes.
+
+---
 
 ---
 
@@ -2238,10 +2444,12 @@ LaFleur's title chain (OC → HC), Simpson's start count, 2027 QB class eligibil
 
 **Affects:** Publisher extension, substack-publishing skill, publisher skill, substack-article skill, article-lifecycle skill
 
+---
+
 ### 2026-03-17: README.md Documentation Update — Publishing Behavior
 
-**Date:** 2026-03-17  
-**Decision Maker:** Lead (Joe Robinson directive)  
+**Date:** 2026-03-17
+**Decision Maker:** Lead (Joe Robinson directive)
 **Category:** Documentation Accuracy
 
 **Problem:**
@@ -2287,16 +2495,22 @@ New language (L139–L141):
 **Decision:**
 ✅ **APPROVED** — Update README to reflect current tag-based publishing behavior. Minimal, surgical change with high accuracy impact.
 
+---
+
 ### 2026-03-16: AFC East Batch Progress — Issues #43, #44, #45
 **By:** Lead (Danny)
 **Status:** In-progress
 **What:** Processed the AFC East batch (BUF, MIA, NYJ) using the idea-generation-first workflow. Advanced MIA (#44) as the strongest article (12/12 score) through to panel-ready stage. BUF (#43) and NYJ (#45) remain at `stage:idea`. Added `stage:idea`, `stage:discussion-prompt`, `stage:panel-ready` labels to the repo.
 **Why:** MIA's $99.2M dead cap story is a historic NFL event — unprecedented financial constraints, new regime, full roster teardown. It has natural tension and broad appeal. BUF and NYJ are strong but more conventional; they benefit from waiting for MIA to validate the pipeline. 3-agent panel (Cap + MIA + Draft) is tight and non-overlapping.
 
+---
+
 ### 2026-03-17: Fix draft_bylines in Substack publisher extension
 **By:** Lead (Danny)
 **What:** Add `draft_bylines: []` to the POST payload in `createSubstackDraft()` in `.github/extensions/substack-publisher/extension.mjs`. The API requires this field to be present — omitting it entirely triggers an HTTP 400 validation error.
 **Why:** Discovered during republishing of NE Patriots / Drake Maye article. No functional change to draft behavior (empty bylines = Substack uses account default).
+
+---
 
 ### 2026-03-17: Social Link Image — Backlog Tracking (Issue #70)
 **By:** Lead (Danny)
@@ -2305,11 +2519,15 @@ New language (L139–L141):
 **What:** Created GitHub issue #70 to track future work on social link image (Open Graph / `og:image`) generation and consistency across Substack articles. No `squad` labels — backlog only, unassigned. Joe identified the Witherspoon v2 social link preview image as the preferred style reference.
 **Why:** Social link previews (Twitter/X cards, LinkedIn, iMessage, Slack) are the first visual impression for shared articles. Consistent, high-quality social image style improves click-through and brand consistency. Future work — no immediate action required.
 
+---
+
 ### 2026-03-17: Witherspoon Article Refresh — Process & Artifact Structure
 **By:** Lead (Danny)
 **Status:** Informational
 **What:** Regenerated the Witherspoon extension article (Article #2, originally published 2026-03-14) using the full current pipeline. Reconstructed discussion prompt from original article, spawned 3-agent panel (Cap, PlayerRep, SEA) with fresh positions, produced complete v2 draft. All 6 artifacts saved to `content/articles/witherspoon-extension-v2/`. Original article preserved as archive. Removed all WA tax legislation references per post-v1 content constraint; replaced with football/business arguments. Panel convergence tighter than v1 ($30.5–32.5M range vs. original $27–33M).
 **Why:** Pre-pipeline articles can be retroactively structured. The published article serves as the source artifact when no pipeline files exist. Pattern established for future retroactive pipeline runs.
+
+---
 
 ### 2026-03-16: Houston Interior DL — Dual-Role Draft Strategy
 **By:** Defense (Defensive Scheme Expert)
@@ -2336,12 +2554,11 @@ When evaluating defensive needs, always map prospects to **specific scheme roles
 **Follow-Up:**
 Draft agent should build scheme-role-specific target boards for all teams with interior DL needs (not just generic "DT prospects"). Cap agent should model cost differential between drafting vs. FA patching for 1-tech anchors (rare and expensive in FA).
 
-
 # Defense Panel Position — Detroit Lions EDGE at #17
 
-**Date:** 2026-03-16  
-**Agent:** Defense  
-**Article:** Detroit Lions 2026 Offseason  
+**Date:** 2026-03-16
+**Agent:** Defense
+**Article:** Detroit Lions 2026 Offseason
 **Position Type:** Scheme Fit Analysis
 
 ---
@@ -2351,6 +2568,8 @@ Draft agent should build scheme-role-specific target boards for all teams with i
 Detroit should prioritize **EDGE at #17** over OT, with **Keldric Faulk (Auburn)** as the preferred target.
 
 ## Reasoning
+
+---
 
 ### 4. Branch/Joseph Uncertainty — Defensive Function Impact
 
@@ -2370,7 +2589,7 @@ The margin for error is too thin. Detroit's window is still open, but the path t
 
 ---
 
-**Confidence:** High  
+**Confidence:** High
 **Dependencies:** Faulk available at #17; no major FA EDGE signing before draft
 
 ---
@@ -2381,8 +2600,6 @@ stage: panel-discussion
 decision_type: panel-position-stance
 status: filed
 ---
-
-
 
 # Decision: DET Article Angle for Issue #63
 
@@ -2411,14 +2628,13 @@ DET agent generated the article angle for issue #63 (Detroit Lions 2026 Offseaso
 ## For Lead
 Panel composition is drafted in the discussion prompt. Ready for Lead to finalize and spawn agents for Stage 4.
 
-
 # Decision Record: HOU Panel Position — DT Talent Cliff Strategy
 
-**Date:** 2026-03-16  
-**By:** Draft (NFL Draft Expert)  
-**Article:** HOU - Houston Texans — 2026 Offseason  
-**Status:** Proposed  
-**Affects:** HOU team agent, Cap, Defense, Writer  
+**Date:** 2026-03-16
+**By:** Draft (NFL Draft Expert)
+**Article:** HOU - Houston Texans — 2026 Offseason
+**Status:** Proposed
+**Affects:** HOU team agent, Cap, Defense, Writer
 
 ---
 
@@ -2473,6 +2689,8 @@ Houston's 2026 draft strategy must account for a **DT talent cliff after pick 30
 
 **Recommendation:** Publish this decision to `.squad/decisions.md` after panel synthesis. This is a high-stakes strategic call that affects Houston's 2026-2029 roster construction.
 
+---
+
 ### 2026-03-16: Injury panel position — Seahawks RB Pick #64 v2
 **By:** Injury (Injury Analysis Expert)
 **Status:** Proposed
@@ -2491,8 +2709,6 @@ Houston's 2026 draft strategy must account for a **DT talent cliff after pick 30
 - SEA may deprioritize RB given CB/EDGE losses — Injury pushes back on underweighting a coin-flip RB1 timeline
 - CollegeScout may say Price won't be available at #64 if discount compresses — Injury agrees this is plausible
 - Offense may say Wilson/Holani can bridge — Injury says the insurance math doesn't support it for a defending champion
-
-
 
 # Decision: JAX Panel Position — Hunter Workload Framework
 
@@ -2590,8 +2806,6 @@ date: 2026-03-17
 status: filed
 ---
 
-
-
 # Decision: Three Coin Flips Framework for Roster Evaluation
 
 ## What I Decided
@@ -2640,6 +2854,8 @@ context: issue-56-stage-advancement
 status: implemented
 ---
 
+---
+
 ### 2026-03-17: Ralph board reconciliation rule
 **By:** Lead
 **Status:** Proposed
@@ -2652,6 +2868,8 @@ status: implemented
 
 **Why:**
 The board is lagging behind the filesystem. Several article issues still read as panel-stage work even though local folders already contain drafts and editor reviews. Using repo artifacts as ground truth prevents duplicate work while keeping closure conservative and accurate.
+
+---
 
 ### 2026-03-16: Article Versioning — Witherspoon v2 Published + RB v2 Tracked
 **By:** Lead (Lead Orchestrator)
@@ -2669,13 +2887,11 @@ The board is lagging behind the filesystem. Several article issues still read as
 
 **Convention established:** Article regenerations get a `-v2` directory suffix and a GitHub issue with "v2 Regeneration" in the title. Original files are never overwritten.
 
-
-
 # Decision: Issue #68 Panel Composition — Excluding Defense from Saints Bridge Year Article
 
-**Date:** 2026-03-16  
-**Agent:** NO (New Orleans Saints Expert)  
-**Issue:** #68 — "Bridge Year or Burial? The Saints' $114M Dead Money Gamble on Tyler Shough"  
+**Date:** 2026-03-16
+**Agent:** NO (New Orleans Saints Expert)
+**Issue:** #68 — "Bridge Year or Burial? The Saints' $114M Dead Money Gamble on Tyler Shough"
 **Decision Type:** Panel composition (team-relevant)
 
 ## Context
@@ -2696,7 +2912,7 @@ The Saints have clear defensive needs (CB2 after losing Alontae Taylor, EDGE aft
    - Can the Saints build around Shough while cap-strapped? (Cap's angle)
    - What's the realistic ceiling for this roster in 2026? (NO's angle)
    - Does Kellen Moore's offense need a WR at #8, or can it win with current weapons? (Offense's angle)
-   
+
    Defense doesn't answer any of these questions in a way that NO (depth chart gaps) or Draft (positional evaluation at #8) can't already cover.
 
 3. **Depth Level 2 = 3-4 agents max.** Adding Defense would push us to 4 core agents, crowding out the optional Draft spot. Draft is more valuable than Defense for this article because the #8 pick decision (WR vs. CB vs. EDGE) is a key 2026 move that determines whether the bridge year succeeds.
@@ -2720,7 +2936,7 @@ Panel composition follows established patterns:
 
 ---
 
-**Status:** Panel composition complete. Issue #68 advanced to `stage:panel-ready`.  
+**Status:** Panel composition complete. Issue #68 advanced to `stage:panel-ready`.
 **Next step:** Lead spawns 3-agent panel for Stage 4 discussion.
 
 ---
@@ -2731,8 +2947,6 @@ article_id: "nyg-2026-offseason"
 status: "approved-by-agent"
 created: "2026-03-15"
 ---
-
-
 
 # Decision: NYJ Panel Position — Two Bites at the Apple
 
@@ -2755,6 +2969,8 @@ Spending #2 overall on a non-consensus QB in a "thin" class — with full knowle
 
 - Teardown is 80% coherent but the Hall franchise tag ($14.3M) and Fitzpatrick acquisition ($15.6M) contradict rebuild logic
 - CB1 is a genuine scheme emergency — Glenn's press-man identity requires a corner the roster doesn't have
+
+---
 
 ---
 
@@ -2791,8 +3007,6 @@ agent: offense
 type: scheme-analysis
 status: proposed
 ---
-
-
 
 # Decision: Playcalling Delegation INCREASES Position Importance (Not Decreases)
 
@@ -2837,7 +3051,7 @@ When evaluating coaching transitions (OC hires, playcalling delegation, HC succe
 
 ---
 
-**Proposed by:** Offense  
+**Proposed by:** Offense
 **Needs review by:** Lead (for general applicability), DEN (for Denver-specific accuracy)
 
 ---
@@ -2846,8 +3060,6 @@ article: kc-mahomes-return-roster-gamble
 date: 2026-03-16
 decision_type: offensive-architecture
 ---
-
-
 
 # Decision: Offense Panel Position — SEA RB Pick #64 v2
 
@@ -2877,6 +3089,8 @@ Offense rates the scheme pull toward RB at #64 as **7/10** — Price is a schema
 
 ✅ Panel position delivered → `content/articles/seahawks-rb-pick64-v2/offense-position.md`
 
+---
+
 ### 2026-03-16: Publisher gate for NFC West batch drafts
 **By:** Publisher lane
 **Status:** Proposed
@@ -2893,14 +3107,12 @@ Offense rates the scheme pull toward RB at #64 as **7/10** — Price is a schema
 - The publisher and article-lifecycle skills both place Stage 7 after Editor approval.
 - This keeps batch publishing honest: only files that have crossed the editorial gate get draft URLs, and everything else is reported with a concrete missing artifact instead of wishful "almost ready" status.
 
-
-
 # Decision: SEA Panel Position — Seahawks RB Pick #64 (v2)
 
-**By:** SEA (Seattle Seahawks Expert)  
-**Date:** 2026-03-16  
-**Status:** Proposed  
-**Affects:** Lead, Writer, Offense, CollegeScout, Injury panelists on article #71  
+**By:** SEA (Seattle Seahawks Expert)
+**Date:** 2026-03-16
+**Status:** Proposed
+**Affects:** Lead, Writer, Offense, CollegeScout, Injury panelists on article #71
 
 ## What
 
@@ -2933,11 +3145,10 @@ status: "pending"
 priority: "high"
 ---
 
-
 # TB Decision — Issue #69 Mayfield Extension Article
 
-**Date:** 2026-03-16  
-**Agent:** TB (Tampa Bay Buccaneers Expert)  
+**Date:** 2026-03-16
+**Agent:** TB (Tampa Bay Buccaneers Expert)
 **Context:** Article pipeline Stage 4 (Panel Discussion)
 
 ## Decision Context
@@ -3040,6 +3251,8 @@ The collapse wasn't solely on Mayfield — but he's still the QB, and QBs get th
 
 — TB (Tampa Bay Buccaneers Expert)
 
+---
+
 ### 2026-03-15: TEN Panel Position — Ward vs. Saleh Draft Identity
 
 **By:** TEN (Tennessee Titans Expert)
@@ -3072,13 +3285,11 @@ Choosing EDGE at #4 means accepting Cam Ward enters Year 2 with a bottom-10 offe
 - Identify strategic timing signals (e.g., why a cut hasn't happened yet when it's cap-optimal)
 - Name the hardest tradeoff explicitly — don't smooth it over
 
-
-
 # Decision: Narrative Strategy for Unanimous Panel Consensus Articles
 
-**Date:** 2026-03-16  
-**Decided by:** Writer  
-**Context:** Miami Dolphins $99M dead cap rebuild article  
+**Date:** 2026-03-16
+**Decided by:** Writer
+**Context:** Miami Dolphins $99M dead cap rebuild article
 **Status:** Proposed (for team review)
 
 ## The Problem
@@ -3134,6 +3345,8 @@ This was the first unanimous-consensus article. Editor review will determine whe
 - `content/articles/mia-tua-dead-cap-rebuild/draft.md` — The consensus-structure article
 - `content/articles/mia-tua-dead-cap-rebuild/discussion-summary.md` — Lead's documentation of unanimous Path 3 recommendation
 
+---
+
 ### 2026-03-16: Witherspoon republish image placement
 **By:** Writer
 **Status:** Recorded
@@ -3152,20 +3365,22 @@ status: "approved"
 date: "2026-03-16"
 ---
 
+---
+
 ### 2026-03-16: Dense Table → PNG Rendering Before Substack Publish
 **By:** Writer
 **Date:** 2026-03-16
 **Context:** Miami Tua dead cap article (mia-tua-dead-cap-rebuild)
 
 **What:**
-When the Substack publisher's density classifier blocks a markdown table (≥5 columns with financial/comparison headers, or densityScore ≥ 7.5), render it as a PNG using the repo's 
+When the Substack publisher's density classifier blocks a markdown table (≥5 columns with financial/comparison headers, or densityScore ≥ 7.5), render it as a PNG using the repo's
 enderer-core.mjs table-image-renderer and replace the markdown table with the image reference before publishing.
 
 **Why:**
 The publisher extension's ssertInlineTableAllowed guard intentionally rejects dense tables because Substack's inline list conversion destroys layout meaning. The dead cap comparison table (6 columns: Team, Year, Dead Cap, Total Cap, Dead %, Recovery Timeline) triggered this guard. Rendering to PNG preserves the visual hierarchy that makes the data scannable.
 
 **Implementation:**
-1. Call 
+1. Call
 enderTableImage() from .github/extensions/table-image-renderer/renderer-core.mjs with the blocked table markdown
 2. Save the PNG to content/images/{slug}/
 3. Replace the markdown table in the article with ![alt|caption](../../images/{slug}/{filename}.png)
@@ -3176,6 +3391,8 @@ Applies to all future articles with dense comparison/financial tables. The cap-c
 
 **DB Writeback Note:**
 Pipeline DB stage transition was NOT performed because there's no clearly safe path from within a Writer/JS context. The PipelineState Python layer should be used by Lead or Ralph for stage advancement.
+
+---
 
 ### 2026-03-16: LAR 2026 Offseason Draft — Structural & Editorial Choices
 **Author:** Writer
@@ -3192,6 +3409,8 @@ Took Lead's synthesis position (EDGE at #13) for the verdict rather than flatten
 
 **Impact:**
 Editor should review whether the verdict leans too heavily EDGE given two of four panelists preferred OT. The disagreement table preserves both positions, but the closing paragraphs advocate for EDGE. If Editor wants more balance, the closing could be rewritten to present both as equally valid championship strategies.
+
+---
 
 ### 2026-03-16: Seahawks RB Pick #64 v2 Draft
 **Date:** 2026-03-16
@@ -3218,6 +3437,8 @@ Fact-check items to verify:
 - Coleman/Johnson/Singleton board positions at #96 range
 - Super Bowl LIX reference (Seattle as defending champions)
 
+---
+
 ### 2026-03-16: SF 2026 Offseason — Draft Structure
 **By:** Writer
 **Date:** 2026-03-16
@@ -3232,6 +3453,8 @@ Previous articles (ARI, MIA, Seahawks RB) all had at least one expert advocating
 **Impact:**
 Future articles with unanimous panels should look for the subordinate split — it's always there. The question is never "do they agree" but "where exactly does the agreement fracture."
 
+---
+
 ### 2026-03-16: Ralph Prompt.md — Principle-First Reorganization
 **By:** Writer
 **Status:** Implemented (not committed per user request)
@@ -3239,7 +3462,7 @@ Future articles with unanimous panels should look for the subordinate split — 
 **Affects:** Ralph orchestrator prompt, pipeline iteration behavior
 
 **What:**
-Rewrote 
+Rewrote
 alph/prompt.md to use the three operating principles as the structural backbone:
 1. **Artifact-First Discovery** — filesystem is authoritative; labels/DB are followers
 2. **Max-Parallel Scheduling** — every unblocked article moves every iteration, no lane caps
@@ -3256,6 +3479,8 @@ Previously these three ideas were scattered across Steps 1/2/4 and Rules 6/8. No
 
 **Why:**
 Backend requested the rewrite to reduce Ralph's tendency to consult labels before scanning artifacts, and to make max-parallel the default posture rather than an aspiration. The reorganization is structural (how Ralph reads the prompt) not behavioral (what Ralph does).
+
+---
 
 ### 2026-03-16: Editor Retro — Publisher Readiness Friction
 **By:** Editor
@@ -3279,7 +3504,7 @@ Dense table visibility gap causes preventable friction. The extension's \ssertI
 
 2. **Add to Editor skill review checklist (Stage 6):**
    - \\\
-   - [ ] Flag any markdown tables that look dense, comparative, or 5+ columns — 
+   - [ ] Flag any markdown tables that look dense, comparative, or 5+ columns —
          these will be blocked at publish time and need pre-rendering.
    - \\\
 
@@ -3288,7 +3513,6 @@ The extension guard is correct and catches the error safely. But it catches at t
 
 **Secondary Recommendation:**
 Update publisher-pass.md on successful \publish_to_substack\ call to reflect actual outcome (draft URL, timestamp, any errors). Consider adding "Step 5a — Update publisher-pass.md on success" to Publisher skill.
-
 
 ---
 
@@ -3299,49 +3523,61 @@ Update publisher-pass.md on successful \publish_to_substack\ call to reflect act
 **Status:** ✅ Implemented — All Stage 7 drafts cleaned
 **Affects:** All articles, Writer skill, Editor skill, Publisher Pass, Ralph workflow
 
+---
+
 ### 2026-03-16T07:40:16Z: User directive
 **By:** Backend (Squad Agent) (via Copilot)
 **What:** Ralph should look at prior history and update the process to push maximum parallel throughput like previous runs.
 **Why:** User request — captured for team memory
+
+---
 
 ### 2026-03-16T17:09:11Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** If an article has a stored draft URL, repost/update the existing draft rather than creating a new one; add a guard so published articles cannot be updated accidentally.
 **Why:** User request — captured for team memory
 
+---
+
 ### 2026-03-16T18:26:25Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** Test Substack changes against `nfllabstage.substack.com` first using the same credentials, and consider a separate stage setting before promoting to production. Also add backlog work to remove existing Substack sections if possible.
 **Why:** User request — captured for team memory
+
+---
 
 ### 2026-03-16T18:27:22Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** Keep the existing MIA and DEN drafts on production where they already live; do not reroute this repair to staging.
 **Why:** User request — captured for team memory
 
+---
+
 ### 2026-03-16T18:27:53Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** `nfllabstage` is only for testing Substack API changes before doing them in production.
 **Why:** User request — captured for team memory
+
+---
 
 ### 2026-03-16T18:41:41Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** Improve article image generation for professional blog quality, prioritizing better content/prompting over higher resolution; create new local review versions for MIA and DEN before updating published drafts.
 **Why:** User request — captured for team memory
 
+---
+
 ### 2026-03-16T18:59:08Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** Gemini image variants are preferred over the current alternatives for MIA and DEN; make that choice permanent, clean up the superseded old images, and then update the existing Substack drafts.
 **Why:** User request — captured for team memory
 
-
-
 # Decision: Editor Review — Seahawks RB Pick #64 v2
 
-**Author:** Editor  
-**Date:** 2026-03-16  
-**Scope:** Article review verdict  
-**Article:** `content/articles/seahawks-rb-pick64-v2/draft.md`  
+**Author:** Editor
+**Date:** 2026-03-16
+**Scope:** Article review verdict
+**Article:** `content/articles/seahawks-rb-pick64-v2/draft.md`
 **Issue:** #71
 
 ---
@@ -3350,18 +3586,14 @@ Update publisher-pass.md on successful \publish_to_substack\ call to reflect act
 
 **Verdict: 🟡 REVISE** — Article requires 1 mandatory fix before approval.
 
-
-
 # Stage 7 Production-Draft Verification Mismatch
 
-**Timestamp:** 2026-03-17T23:55:00Z  
+**Timestamp:** 2026-03-17T23:55:00Z
 **By:** Editor
 
 ## Observation
 
 Stage 7 verification revealed a **repo-state mismatch** between the production manifest and publisher-pass documentation:
-
-
 
 # Decision: Draft URL Persistence + Published-Article Guard
 
@@ -3375,8 +3607,6 @@ Stage 7 verification revealed a **repo-state mismatch** between the production m
 When re-publishing an article after edits, the extension was creating duplicate Substack drafts. Joe needed a way to update an existing draft and a guard to prevent accidentally overwriting already-published articles.
 
 ## Decisions
-
-
 
 # Decision: Gemini 3 Pro Image as Default Image Generator
 
@@ -3393,6 +3623,8 @@ The `generate_article_images` extension previously defaulted to Imagen 4 Ultra (
 ## Decision
 
 Changed the default image model from `"auto"` (Imagen 4 primary) to `"gemini"` (Gemini 3 Pro Image primary) in `.github/extensions/gemini-imagegen/extension.mjs`.
+
+---
 
 ### Lead Investigation: imageCaption Parser Bug — Root Cause, Impact, and Hardening Plan
 
@@ -3489,6 +3721,8 @@ function buildCaptionedImage(src, alt, caption) {
 
 Currently, the publishing workflow has zero post-publish validation. The API response is used only to extract the draft ID/URL. Opportunities to harden:
 
+---
+
 ### Lead Decision: imageCaption Parse Error — Root Cause & Fix
 
 **By:** Lead (Team Lead Specialist)
@@ -3518,8 +3752,6 @@ Currently, the publishing workflow has zero post-publish validation. The API res
 - `batch-publish-prod.mjs` (imageCaption fix)
 - `.squad/skills/substack-publishing/SKILL.md` (docs updated)
 - `repair-prod-drafts.mjs` (one-time repair script, can be deleted after verification)
-
-
 
 # Decision: MIA & DEN Draft Repair — Inline Images + Table Rendering
 
@@ -3581,14 +3813,12 @@ Performed a full audit-and-repair cycle:
 
 Both remain at Stage 7 (draft). Stage 8 (publish) is Joe's manual action.
 
-
-
 # Decision: Seahawks RB Pick #64 v2 — Panel Synthesis
 
-**Author:** Lead  
-**Date:** 2026-03-16  
-**Issue:** #71  
-**Scope:** Article direction for seahawks-rb-pick64-v2  
+**Author:** Lead
+**Date:** 2026-03-16
+**Issue:** #71
+**Scope:** Article direction for seahawks-rb-pick64-v2
 
 ## Decision
 
@@ -3611,8 +3841,6 @@ Both remain at Stage 7 (draft). Stage 8 (publish) is Joe's manual action.
 ## Status
 
 Active — applies to Writer draft (Stage 5) and beyond.
-
-
 
 # Decision: Stage 7 Final Draft Push Audit Results
 
@@ -3642,17 +3870,17 @@ Audited all Stage 7 articles for production Substack deployment readiness. Found
 - 20 articles need continued pipeline work before they reach true Stage 7
 - Ralph pipeline should resume after DB repair to advance the backlog
 
-
-
 # Investigation: Why Draft Articles Are Not Visible in Substack
 
-**Date:** 2026-03-16 (Post-Ralph Batch Publish Run)  
-**Requestor:** Project Lead (via investigation)  
+**Date:** 2026-03-16 (Post-Ralph Batch Publish Run)
+**Requestor:** Project Lead (via investigation)
 **Status:** Root Cause Identified + Remediation Plan Ready
 
 ---
 
 ## Current State
+
+---
 
 ### 2026-07-25: Stage 7 Batch Production Push — 20 articles promoted to nfllab.substack.com
 **By:** Writer (Substack Content Writer)
@@ -3668,6 +3896,8 @@ Built a standalone Node.js script (adapted from `.github/extensions/substack-pub
 - Markdown-extracted titles are the source of truth; DB titles are stale placeholders for most articles.
 
 **Why:** All 20 articles were editor-approved and sitting at Stage 7 on staging only. Joe needs production draft URLs on nfllab.substack.com to proceed with Stage 8 review and publish.
+
+---
 
 ### 2026-03-16: KC Fields Trade Image Generation — Gemini Fallback
 **By:** Writer (Substack Content Writer)
@@ -3694,6 +3924,8 @@ Images ready for Editor review. Article markdown not yet updated with image refe
 
 ---
 
+---
+
 ### 2026-03-17: Scribe Model → gpt-5.1-codex-mini (permanent)
 **By:** Lead (approved), Scribe (proposed & tested)
 **Status:** APPROVED — permanent
@@ -3713,20 +3945,21 @@ Switched Scribe's default model from claude-haiku-4.5 to gpt-5.1-codex-mini. Joe
 
 ---
 
+---
 
 ### 🔴 Fixes Required (3):
 1. **"Ryan Havenstein" → "Rob Havenstein"** (line 116) — wrong first name
 2. **Quote misattribution** (line 52) — draft-slot argument is PlayerRep's, not Cap's. Split or rewrite the quote.
 3. **"Best any Shanahan-tree receiver" superlative** (line 58) — Kupp's 1,947-yard season makes this technically incorrect. Add qualifier.
 
-
+---
 
 ### 🟡 Top Recommendations:
 - Add JSN's 2025 stat specifics (catches, TDs, target share) — "1,800 yards" alone isn't enough for the central argument
 - Fix polished-paraphrase quotes presented as direct attribution (lines 87, 91, 165)
 - Add DK Metcalf's Pittsburgh AAV ($30M/yr per project data) for narrative context
 
-
+---
 
 ### What's Working:
 - Structure, voice, tables, and data accuracy are excellent
@@ -3735,7 +3968,7 @@ Switched Scribe's default model from claude-haiku-4.5 to gpt-5.1-codex-mini. Joe
 - No political/tax content violations
 - 22/23 verifiable facts checked clean
 
-
+---
 
 ### Path to ✅ APPROVED:
 Fix the 3 🔴 items → address top 🟡 suggestions → resubmit for final sign-off.

@@ -14,87 +14,17 @@
 
 ---
 
-## �� Key Dates & Deadlines
+## Summarized History (2026-03-17)
 
-| Date | Event | Impact |
-|------|-------|--------|
-| March 12, 2026 | FA officially opened | ✅ Complete — Wave 1 frenzy |
-| March 14, 2026 | **TODAY — Day 3** | Wave 1 winding down. Wave 2 (value) starting. |
-| March 31, 2026 | Franchise tag deadline (long-term deals) | Teams must sign tagged players to extensions or play under tag |
-| April 1, 2026 | Offseason workout programs begin | New coaches install systems |
-| April 23-25, 2026 | **2026 NFL Draft** | Draft-night trades, rookie signings |
-| May 2026 | UDFA signing window | Post-draft roster assembly |
-| June 2026 | Mandatory minicamp | Rodgers decision final deadline? |
-| July 2026 | Training camp opens | Final roster construction |
-| Sept 2026 | 53-man roster cuts | Final roster decisions |
+> Condensed by Scribe on 2026-03-17T23:21:21Z. Older details moved to `history-archive.md`.
 
----
+- Algorithm Overview
+- Archived section: �� Key Dates & Deadlines
+- Archived section: Data Sources
+- Archived section: Reporter Reliability Tiers
+- Archived section: Implementation: Media Sweep JSON Generator
 
-## Data Sources
-
-| Source | Status | Notes |
-|--------|--------|-------|
-| ESPN Transactions | ✅ Works | Per-team via `/nfl/team/transactions/_/name/{abbr}/{slug}` |
-| ESPN NFL News | ✅ Works | National page at `espn.com/nfl/` |
-| NFL.com News Wire | ✅ Works | `nfl.com/news/` for official announcements |
-| NFL.com Roster Status | ✅ Works | UFA/RFA/ERFA flags at `/teams/{team-slug}/roster` |
-| Spotrac Free Agents | ✅ Works | Best FA tracker via `spotrac.com/nfl/free-agents` |
-| Spotrac Transactions | ✅ Works | `spotrac.com/nfl/transactions/` for daily updates |
-| OTC Salary Cap | ✅ Works | Contract details at `/salary-cap/{team-slug}` |
-| CBS Sports FA Tracker | ✅ Works | Live updates with grades |
-| FOX Sports Tracker | ✅ Works | Coaching + FA tracking |
-| Pro Football Rumors | ✅ Works | Trade tracking at `profootballrumors.com` |
-| Heavy | ✅ Works | FA tracker with deep contract details |
-| web_search | ✅ Works | Best for aggregated multi-source news sweeps |
-| The Athletic | ⚠️ Untested | Beat reporting; may require login |
-| Pro Football Reference | 🔴 Blocked | HTTP 403 — do NOT attempt |
-| OTC Free Agency | 🔴 JS-only | Use Spotrac instead |
-
-## Reporter Reliability Tiers
-
-| Tier | Reliability | Key Names |
-|------|-------------|-----------|
-| **Tier 1** | Near-certain | Adam Schefter (ESPN), Ian Rapoport (NFL Network), Tom Pelissero (NFL Network), Jay Glazer (FOX) |
-| **Tier 2** | Strong | Jeremy Fowler (ESPN), Dianna Russini (The Athletic), team beat reporters |
-| **Tier 3** | Mixed | National columnists, radio hosts, NFL Spin Zone, Sportsnaut |
-| **Tier 4** | Speculative | Fan accounts, mock draft creators, opinion pieces |
-
----
-
-## Implementation: Media Sweep JSON Generator
-
-**Implemented:** 2026-03-14  
-**Decision:** Lead approved Option B — JSON export for M1 Backend integration  
-**Output:** `.squad/agents/media/media-sweep.json` (daily export)  
-**Script:** `.squad/agents/media/generate-sweep.js` (Node.js generator)
-
-### Algorithm Overview
-
-The daily media sweep generator converts NFL transaction data from `history.md` into structured JSON for automated consumption by the Backend M1 queue system.
-
-**Collection Strategy:**
-1. **Source:** Parse `history.md` breaking news sections (headline moves, confirmed signings, confirmed trades)
-2. **Frequency:** Daily at 6 AM ET (11:00 UTC, aligned with M1 cron trigger)
-3. **Period:** 24-hour lookback window (previous day to current day)
-4. **Validation:** JSON schema validation before writing to disk
-
-**Transaction Structuring:**
-- Each transaction gets unique ID (`tx-001`, `tx-002`, etc.)
-- Type classification: `signing`, `trade`, `release`, `draft`, `injury`
-- Position extraction from context (EDGE, QB, WR, RB, etc.)
-- Deal parsing: years, total value, guaranteed money, AAV
-- Source attribution with tier-based confidence scoring
-- Narrative context in `notes` field
-
-**Confidence Level Assignment (Source-Based):**
-- 🟢 **Confirmed:** 2+ Tier 1 sources OR 1 Tier 1 + 1 Tier 2
-- 🟡 **Likely:** Single Tier 1 source OR 2+ Tier 2 sources
-- 🔴 **Rumor:** Single Tier 2/3 source OR speculative reporting
-
-**Source Tier Mapping:**
-- **Tier 1:** ESPN, NFL.com (reliability score 1)
-- **Tier 2:** Yahoo, SI, CBS, USA Today, Spotrac (reliability score 2)
-- **Tier 3:** Heavy, FOX Sports, Pro Football Rumors (reliability score 3)
+## Recent Sessions
 
 ### Article Trigger Detection
 
