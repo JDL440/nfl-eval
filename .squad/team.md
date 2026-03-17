@@ -117,5 +117,5 @@
 - **Data Sources:** overthecap.com, spotrac.com, ESPN/NFL.com, Pro Football Reference, PFF, The Athletic, mock draft sites
 - **Rumor Mode:** Dual-track - RUMOR flags inline + separate rumor evaluation track
 - **Data Approach:** Automated web fetch from public sources
-- **Agent Model:** claude-opus-4.6 (all agents, per user directive)
+- **Agent Model:** claude-opus-4.6 (all agents, per user directive; exception: Scribe uses gpt-5.1-codex-mini per 2026-03-17 trial)
 - **Naming:** Specialists use role-based names; team agents named by NFL abbreviation

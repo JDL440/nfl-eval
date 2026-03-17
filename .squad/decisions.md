@@ -8,6 +8,192 @@
 **By:** Lead; approved by Joe Robinson
 **Status:** ✅ APPROVED + IMPLEMENTED — Forward-looking rollout
 **Affects:** `.squad/skills/substack-article/SKILL.md`, `.squad/agents/writer/charter.md`, `.squad/skills/substack-publishing/SKILL.md`, `.squad/skills/publisher/SKILL.md`, `extension.mjs`, `batch-publish-prod.mjs`
+### 2026-07-25: Production-Default Publishing (Prod-First Workflow)
+**Date:** 2026-07-25
+**Decided by:** Lead, at Joe Robinson's direction
+**Status:** ACCEPTED
+**Affects:** `extension.mjs`, `batch-publish-prod.mjs`, all future article publishes
+
+**Context:** The original stage-first workflow was a safety measure during early pipeline validation. Now that the publisher extension is stable and validated across 20+ articles, sending articles directly to production by default reduces friction without sacrificing safety.
+
+**Decision:** Normal article drafts go **directly to prod by default**. Stage is preserved as an explicit opt-in for testing new functionality.
+
+**What changed:**
+1. Extension default: `args.target || "prod"` (was `"stage"`)
+2. Extension tool description updated
+3. Publisher skill documentation updated (Stage-First → Prod-First Workflow)
+4. Substack-publishing skill documentation updated
+
+**How to request stage/testing:** Pass `target: "stage"` explicitly to `publish_to_substack()`, or run `node batch-publish-prod.mjs stage <slug>`.
+
+**Safety preserved:**
+- Published-article guard still blocks Stage 8/published articles
+- ProseMirror validation gate still fires before draft creation
+- Hero-safe image check still runs
+- Dense table blocker still fires
+- DB writeback required after every publish
+
+---
+
+### 2026-07-26: Mass Document Update Feature — Batch Article Content Changes (Issue #76)
+**Date:** 2026-07-26
+**Author:** Lead
+**Status:** Proposed (unassigned)
+**Affects:** Backlog for future implementation
+
+**Context:** The footer rollout (War Room copy) highlighted a gap — we have no tooling to apply a single content change across all articles. Footer updates touched 4 templates but left ~18 existing drafts untouched because there was no batch-update mechanism.
+
+**Decision:** Filed GitHub issue #76 with a 4-phase design:
+1. **Inventory** — full manifest of nfllab articles classified as published, draft, local-only, or Substack-only
+2. **Local-only updates** — apply changes to in-progress repo articles (stages 1–7) with no Substack API writes
+3. **Substack draft updates** — write to Substack drafts with mandatory dry-run gate
+4. **Published merge** — full read-merge-write cycle for live articles; Substack version wins on conflict
+
+**Safety rails:** dry-run mode, git snapshot before writes, per-article status log, rate limiting, idempotency.
+
+**Rationale:** Footer rollout is concrete precedent — this tooling would have saved manual work. Substack-first conflict resolution protects Joe's manual edits.
+
+**Impact:** No code changes yet — issue unassigned, awaiting prioritization. When implemented, will integrate with `pipeline_state.py`, `article_board.py`, and Substack publisher extension.
+
+---
+
+### 2026-07-25: Footer Boilerplate Rollout — War Room Brand
+**Date:** 2026-07-25
+**Author:** Lead
+**Status:** ✅ IMPLEMENTED
+**Affects:** All future articles on nfllab.substack.com
+
+**Decision:** Joe approved **Option A ("The War Room")** as the default article footer. This is a forward-looking rollout — new articles use the new footer; existing drafts and published articles are not batch-rewritten.
+
+**New Default Footer:**
+> *The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
+>
+> *Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
+
+**Files changed:**
+| File | What changed |
+|------|-------------|
+| `.squad/skills/substack-article/SKILL.md` | Structure template boilerplate + Style Guide reference updated |
+| `.squad/agents/writer/charter.md` | Boilerplate section updated to new copy |
+| `.squad/skills/substack-publishing/SKILL.md` | Article file conventions example updated |
+| `.squad/skills/publisher/SKILL.md` | Publisher checklist item updated |
+| `.github/extensions/substack-publisher/extension.mjs` | `FOOTER_PARAGRAPH_PATTERNS` — added 3 new regex patterns for War Room brand |
+| `batch-publish-prod.mjs` | `FOOTER_PARAGRAPH_PATTERNS` — same 3 new regex patterns added |
+
+**Backward compatibility:** Old footer patterns are preserved in detection regex arrays. Subscribe widget placement and footer detection work with both old and new footer copy.
+
+**Existing articles:** 18 existing articles still use the old footer. They do not need manual retrofit — already published articles can be edited in Substack editor if desired. Unpublished drafts will naturally pick up the new footer if Writer revises them through the pipeline.
+
+---
+
+### 2026-03-17: Re-gate Notes POST After Live 403
+**By:** Lead (GM Analyst)
+**Status:** ACTIVE — Implementation required
+**Affects:** `extension.mjs` (`createSubstackNote()`), `validate-notes-smoke.mjs`, Notes Phase 0 timeline
+
+**What:**
+The Notes API endpoint candidate (`POST https://substack.com/api/v1/comment/feed`) discovered from the `postcli/substack` open-source library was ungated in `createSubstackNote()` based on the belief that open-source discovery replaced manual DevTools capture. Live smoke test authenticated successfully as Joe Robinson but the POST returned **HTTP 403 with an HTML error page**. No Note was posted.
+
+**Decision:**
+1. **Re-gate `createSubstackNote()` in `extension.mjs`** — restore unconditional throw until browser capture provides the missing request context
+2. **Reinstate browser DevTools capture as the required Phase 0 unblock** — the open-source discovery narrows what to look for (most probable endpoint, payload shape, host) but does not replace the capture
+3. **Do not speculate about the 403 cause in code** — wait for browser capture to reveal the actual difference between what the browser sends and what Node `fetch()` sends (likely: CSRF token, Origin/Referer validation, cookie scope, or endpoint deprecation)
+
+**Why:**
+Leaving `createSubstackNote()` ungated means any agent or tool call silently fails with 403 — bad UX and misleading pipeline state. Reverting to the original capture plan is low-cost (Joe knows the DevTools checklist) and high-certainty.
+
+**Key Findings from 403:**
+- Auth cookies are valid for publication subdomain (profile lookup succeeded)
+- HTTP 403 from global `substack.com` endpoint suggests missing browser-level context
+- Most likely blockers: CSRF token, Origin validation, cookie domain scope, or endpoint change
+
+**Next Step:**
+Joe performs browser DevTools capture per `docs/notes-api-discovery.md`. Focus on: CSRF headers, exact cookie string to `substack.com`, any `X-Substack-*` headers, and the response status when posting from the browser.
+
+**Files changed:**
+- `.github/extensions/substack-publisher/extension.mjs` — `createSubstackNote()` re-gated
+- `validate-notes-smoke.mjs` — help text updated
+- `docs/notes-api-discovery.md` — "Live Test Results: HTTP 403" section added; capture required again
+
+---
+
+### 2026-03-17: Notes API Endpoint Discovery (Phase 0 Shortcut)
+**By:** Lead (GM Analyst)
+**Status:** ATTEMPTED — Live 403 requires browser capture (see decision above)
+**Affects:** `extension.mjs` (`createSubstackNote()`), `validate-notes-smoke.mjs`, Notes Phase 0 timeline
+
+**Discovery (2025-07-27):**
+The exact Notes API endpoint was found in the `postcli/substack` open-source library (`src/lib/substack.ts`, `publishNote()`):
+
+- **Endpoint:** `POST https://substack.com/api/v1/comment/feed`
+- **Host:** `substack.com` (global, not publication-specific)
+- **Payload:** `{ bodyJson: {ProseMirror doc}, tabId: "for-you", surface: "feed", replyMinimumRole: "everyone" }`
+- **Auth:** Same `substack.sid` / `connect.sid` cookies
+- **CSRF:** Claimed not required by open-source library (incorrect — see 403 re-gate decision)
+
+**Key Insight:**
+Notes are **global**, not publication-scoped. The POST goes to `substack.com`, not to `{subdomain}.substack.com`. This means there is no "stage publication" isolation for Notes (unlike article drafts) — the auth token determines which user the Note is from.
+
+**Rationale for Shortcut:**
+The manual DevTools capture flow (originally Phase 0) was blocking all Notes progress. The open-source shortcut aimed to ungate implementation immediately, with the assumption that the captured endpoint format would match browser behavior.
+
+**Status Update (after 403):**
+The shortcut **did not work**. See "Re-gate Notes POST After Live 403" decision above for resolution path.
+
+---
+
+### 2026-03-17: Substack Notes Feature — Architecture & Rollout (Phase 0)
+**By:** Lead (GM Analyst)
+**Status:** ACTIVE — Phase 0 blocked on browser capture; Phase 1 ungated once capture completes
+**Design doc:** `docs/substack-notes-feature-design.md`
+
+**What:**
+NFL Lab publishes long-form articles but has zero Substack Notes presence. Notes are Substack's microblogging / engagement layer — public, feed-visible, not emailed. They drive subscriber discovery between newsletter editions.
+
+**Decisions Made:**
+
+1. **Same extension, new tool (not a separate extension)**
+   - `publish_note_to_substack` lives in `.github/extensions/substack-publisher/extension.mjs` alongside `publish_to_substack`
+   - Rationale: shared auth, shared helpers, single maintenance surface
+
+2. **Post-publish action, not a new pipeline stage**
+   - Notes attach to Stage 8 as optional follow-up (8a: promotion, 8b: follow-up)
+   - Adding a Stage 9 would break the 8-stage model embedded in DB schema and tooling
+
+3. **`notes` table with optional FK to `articles`**
+   - Supports both article-linked Notes (promotion, follow-up) and standalone Notes (quick takes)
+   - FK nullable — standalone Notes have `article_id = NULL`
+
+4. **Joe approval required for prod Notes**
+   - Same editorial control model as articles
+   - Agents post freely to `nfllabstage` for testing; prod requires explicit approval
+
+5. **Rollout order: nfllabstage generic → nfllabstage structured → prod**
+   - Mirrors the proven staging-first pattern used for article publishing
+
+6. **API discovery as Phase 0 (hard gate)**
+   - The Notes API endpoint is unofficial and reverse-engineered
+   - Exact payload format MUST be validated by browser request capture before writing implementation code
+   - **Status Update (2025-07-27):** Live test returned 403; browser capture reinstate as mandatory
+
+**Files Affected (When Implemented):**
+- `extension.mjs` — new tool registration + `createSubstackNote()` function
+- `content/schema.sql` — new `notes` table
+- `content/pipeline_state.py` — `record_note()`, `get_notes_for_article()` methods
+- `content/article_board.py` — informational note count in board output
+- `.squad/skills/substack-publishing/SKILL.md` — Notes documentation
+- `.squad/skills/publisher/SKILL.md` — optional post-publish Note step
+- `.squad/skills/article-lifecycle/SKILL.md` — mention Notes as post-publish action
+
+**Current Status:**
+Phase 0 browser capture is **BLOCKED** awaiting Joe's DevTools capture. Once capture is complete and validated, Phase 1 implementation can proceed immediately (infrastructure decisions already made).
+
+---
+
+### 2026-03-17: Publish Article Drafts to Production by Default
+**By:** Joe Robinson (user directive via Copilot)
+**Status:** ACTIVE — Enforced in workflow
+**Affects:** All article publishing; batch-publish-prod.mjs, squad orchestration, Lead routing
 
 **What:**
 Replaced misaligned footer boilerplate ("powered by a 46-agent AI expert panel...consensus view") with brand-aligned copy from the welcome article. New default:
@@ -3654,3 +3840,22 @@ Generated 2 inline editorial images for kc-fields-trade-evaluation using Gemini 
 Images ready for Editor review. Article markdown not yet updated with image references.
 
 ---
+
+---
+
+### 2026-03-17: Scribe Model → gpt-5.1-codex-mini (permanent)
+**By:** Lead (approved), Scribe (proposed & tested)
+**Status:** APPROVED — permanent
+**Affects:** Scribe agent only
+
+**What:**
+Switched Scribe's default model from claude-haiku-4.5 to gpt-5.1-codex-mini. Joe Robinson requested a one-hour trial with double-write verification. Both artifacts (real log + fake verification file) were written and read back successfully. Trial passed; change made permanent.
+
+**Why:**
+- Double-write trial confirmed gpt-5.1-codex-mini handles Scribe's logging/decision workflow without issue
+- Joe explicitly requested permanent switch after successful trial
+- Scoped to Scribe only — all other agents remain on claude-opus-4.6
+
+**Files updated:**
+- `.squad/agents/scribe/charter.md` (Model line)
+- `.squad/team.md` (Agent Model note with Scribe exception)

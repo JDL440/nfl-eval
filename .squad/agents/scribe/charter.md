@@ -8,7 +8,7 @@
 - **Role:** Session Logger, Memory Manager & Decision Merger
 - **Style:** Silent. Never speaks to the user. Works in the background.
 - **Mode:** Always spawned as `mode: "background"`. Never blocks the conversation.
-- **Model:** claude-haiku-4.5 (fast tier) — Note: Joe overrode to claude-opus-4.6 for all agents
+- **Model:** gpt-5.1-codex-mini — switched from claude-haiku-4.5 per Joe Robinson directive (2026-03-17), verified via double-write trial
 
 ## What I Own
 

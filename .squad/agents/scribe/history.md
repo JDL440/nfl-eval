@@ -8,6 +8,31 @@
 
 ## Recent Sessions
 
+### Model Trial: gpt-5.1-codex-mini Double Write (2026-03-17T105753Z)
+**Status:** ✅ LOGGED — Verified the codex 5.1 mini logging path
+- Created `.squad/log/20260317T105753Z-scribe-model-trial-codex-mini.md` with a `model-trial/verification` marker.
+- Created `.squad/log/_model-trial/20260317T105753Z-scribe-model-trial-verification.md` as the fake verification artifact.
+- Read both artifacts back and confirmed the recorded content matches the trial intent.
+- Dropped decision inbox file `.squad/decisions/inbox/20260317T105823Z-scribe-model-trial.md` recommending `gpt-5.1-codex-mini` as Scribe's default.
+- No product code affected; codex 5.1 mini is ready for Scribe's logging duties.
+
+### Notes Phase 0 Follow-up: Dry-run Success, Live 403, Docs Rollback (2026-03-17T05:35:20Z)
+**Status:** ✅ LOGGED — Session documentation complete
+- Dry-run of `validate-notes-smoke.mjs` succeeded; auth validated as Joe Robinson
+- Live POST to `https://substack.com/api/v1/comment/feed` returned HTTP 403 (HTML error page, not JSON)
+- No Note was posted to nfllabstage.substack.com
+- Decision: Re-gate `createSubstackNote()` in extension.mjs until browser capture provides missing context
+- Docs and plan corrected back to "browser-capture-required" state
+- Open-source shortcut (postcli/substack discovery) narrowed search but did NOT replace manual DevTools capture as hoped
+- Created orchestration log: `.squad/orchestration-log/2026-03-17T053520Z-scribe-notes-phase0.md`
+- Created session log: `.squad/log/2026-03-17T053520Z-notes-phase0-follow-up.md`
+- **Merged 3 decision inbox files:**
+  - `lead-notes-plan.md` — Phase 0 architecture decisions
+  - `lead-notes-api-discovery.md` — endpoint discovery shortcut decision
+  - `lead-notes-403-regate.md` — re-gating decision after 403 failure
+- Cross-agent updates appended (if applicable)
+- **Product code impact:** NONE — only docs/logs/decisions modified
+
 ### Mobile Chart/Table Rendering Investigation Kickoff (2026-03-18)
 **Status:** 🚀 LAUNCHED — Lead agent investigating
 - Joe Robinson initiated deep-dive on mobile chart/table rendering on Substack
@@ -81,3 +106,11 @@ Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 - Cross-agent update appended to KC history.md
 - decisions.md: 189KB — all entries within 5 days, no 30-day archival candidates
 - ⚠️ NOTE: 30+ agent histories exceed 12KB threshold; needs batch summarization in future session
+
+### Smoke-Note Cleanup & Plan Continuation Prep (2026-03-18)
+**Status:** 📋 LOGGING PREPARED
+- Scribe summoned by Joe Robinson to prepare logging context for smoke-note cleanup session.
+- Context review completed: charter protocol verified, session history indexed, decisions.md state checked (no inbox merges needed), session plan reviewed.
+- Plan backdrop: Article state architecture refactor (8-phase) completed; `pipeline.db` baseline established. Current focus: smoke-note cleanup and backlog reconciliation validation.
+- No decisions pending merge — shared decisions remain current.
+- Lightweight session/orchestration note created for coordination.
