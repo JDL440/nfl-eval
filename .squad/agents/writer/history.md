@@ -129,3 +129,14 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 📌 Team update (2026-03-17T121944Z): Phase 0 Notes now rely on Playwright POST and we're moving into Phase 1 with stage-safe, question-first Notes that limit images to one editorial asset and run daily for validation — decided by Lead
 📌 Team update (2026-03-17T121944Z): Adopt the War Room footer copy (Option A default, Option E quick-hit variant) with the "Drop it in the comments" CTA on upcoming articles — decided by Lead
 
+📌 **Phase 2 Promotion Note Package — JSN Extension (2026-03-18)** — Drafted candidate structured article promotion Note for jsn-extension-preview on nfllabstage. Key learnings:
+    - **Article-linked Notes are traffic drivers.** The JSN Note structure (contract gap + panelist disagreement + urgency frame) mirrors the article's central tension. Notes aren't just teasers — they're micro-essays that create their own narrative arc before linking to the full piece.
+    - **Image reuse from article is safe.** The jsn-extension-preview-inline-1.png (four-paths chart) is already editorial-approved for the article. Reusing it in the Note (same 1:1 square aspect ratio) drives visual consistency and avoids image generation overhead.
+    - **Panelist voice in Notes works at sentence scale.** Rather than quote-heavy promotion, the Note threads each expert's position into a single narrative: Cap says "trap," PlayerRep says "guaranteed cash," Offense says "system-amplified." The disagreement is the hook.
+    - **Dollar amounts are Note magnets.** The $3.4M → $34M → $17M → $33M progression in the Note headline + body creates visual scanning points. Readers latch onto specific numbers before abstract arguments.
+    - **"One clock ticking" is the implicit urgency.** Rather than "read our latest," the Note ends with the decision frame that drives traffic: JSN's agent has new leverage; the path matters; the timing matters.
+    - **Decision:** Extension negotiation Note (contract/salary decisions) template is reusable: absurd gap → unexpected variable → expert positions → implicit call-to-action. Recorded for future use.
+    - **Artifact location:** `content/notes-phase2-candidate-jsn.md` — full structured package ready for dry-run validation and manual post to nfllabstage.
+
+
+

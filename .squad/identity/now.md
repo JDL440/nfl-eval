@@ -1,17 +1,20 @@
 ---
-updated_at: 2025-07-27
-focus_area: Substack Notes — Phase 0 blocked by 403, browser capture required
+updated_at: 2026-03-17T13:24Z
+focus_area: Substack Notes — Phase 2 (jsn-extension-preview on nfflabstage)
 ---
 
 # What We're Focused On
 
-**Mode:** Substack Notes Phase 0 — browser DevTools capture required (live POST returned 403).
+**Mode:** Substack Notes Phase 2 execution.
 
-- Notes API endpoint candidate: `POST https://substack.com/api/v1/comment/feed` (from postcli/substack open-source)
-- `createSubstackNote()` was ungated for live test — authenticated as Joe Robinson, but POST returned **HTTP 403**
-- **No Note was posted.** The 403 means server-side replay is missing something the browser provides.
-- **Blocker:** Joe needs to do a browser DevTools capture — manually post a Note on nfllabstage, intercept the request, and record the full headers/cookies/payload
-- Key values to capture: CSRF tokens, `X-Substack-*` headers, exact cookie string sent to `substack.com`, response status
-- Capture checklist: `docs/notes-api-discovery.md`
-- After capture: update `.env`, re-run `node validate-notes-smoke.mjs`, then Phase 1 is unblocked
-- Ralph pipeline + article production continues in parallel as normal
+- Phase 0 ✅ — API discovery complete via browser DevTools. Cloudflare Bot Management requires Playwright `page.evaluate(fetch)` from browser context.
+- Phase 1 ✅ — All three smoke test cases passed (plain text, linked draft, inline image). Notes use payload-level `attachments` for images. All smoke Notes cleaned up.
+- **Phase 2 READY** — Target: `jsn-extension-preview` (Jaxon Smith-Njigba Extension)
+  - **Why:** Highest production value (9 images, 4-path expert panel), structured narrative ideal for promotion teaser
+  - **Stage:** 7 (Publisher Pass complete)
+  - **Stage Draft URL:** https://nfllabstage.substack.com/publish/post/191168255
+  - **Execution:** Post teaser Note + inline image to nfflabstage, validate, delete before Phase 3
+  - **Caveat:** Stage draft URL will be overwritten when article goes to prod; need separate DB column
+
+- **Phase 3:** Production rollout (after jsn publishes to nfllab)
+- Ralph pipeline continues in parallel as normal
