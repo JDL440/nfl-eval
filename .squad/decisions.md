@@ -4,6 +4,29 @@
 
 ---
 
+### 2026-03-17: Witherspoon + JSN Publisher Pass and Prod Push
+**By:** Lead (Team Lead Specialist)
+**Status:** EXECUTED
+**Affects:** witherspoon-extension-v2, jsn-extension-preview articles; article_board.py module; pipeline.db; nfllab.substack.com production
+
+**What:**
+After the overbroad Stage 7 prod push was rolled back (only DEN and MIA confirmed safe), reconciliation identified `witherspoon-extension-v2` and `jsn-extension-preview` as the next safe targets. Fixed three critical bugs in `article_board.py` and promoted both articles to production Substack:
+
+1. **`article_board.py` sort bug** — `_parse_editor_verdict` sorted editor-review files by ASCII, causing `editor-review.md` (original REVISE) to sort above `editor-review-3.md` (latest APPROVED) for JSN. Fixed by sorting on extracted numeric suffix.
+2. **`article_board.py` image-path bug** — `_count_images` only checked article directory, not `content/images/{slug}/` where generated images live. Fixed to check both locations.
+3. **Missing `_expected_status_for_stage` helper** — Called in `reconcile()` repair mode but never defined. Added the function.
+4. **Witherspoon inline image alt text** — Contained "Placeholder for generated art:" production notes. Cleaned to descriptive captions.
+
+**Prod Draft URLs:**
+- witherspoon-extension-v2: https://nfllab.substack.com/publish/post/191200944
+- jsn-extension-preview: https://nfllab.substack.com/publish/post/191200952
+
+**Why:** Both articles blocked on article_board.py repair-mode bugs and needed prod draft promotion to move to Stage 8 (Joe's final review). The fixes are foundational for all future article_board.py operations and needed shipping before any further pipeline work.
+
+**Known cleanup:** ~39 orphan drafts from earlier overbroad push remain on nfllab.substack.com (non-destructive; bulk-delete from Substack dashboard when convenient).
+
+---
+
 ### 2026-03-12: User directive — Model override
 **By:** Joe Robinson (via Copilot)
 **What:** All agents should use claude-opus-4.6 model. No exceptions.
