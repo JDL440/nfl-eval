@@ -4,34 +4,53 @@
 
 ---
 
-### 2026-03-17: Publish Article Drafts to Production by Default
-**By:** Joe Robinson (user directive via Copilot)
-**Status:** ACTIVE — Enforced in workflow
-**Affects:** All article publishing; batch-publish-prod.mjs, squad orchestration, Lead routing
+### 2026-07-25: Article Footer Boilerplate — "War Room" Brand (Option A)
+**By:** Lead; approved by Joe Robinson
+**Status:** ✅ APPROVED + IMPLEMENTED — Forward-looking rollout
+**Affects:** `.squad/skills/substack-article/SKILL.md`, `.squad/agents/writer/charter.md`, `.squad/skills/substack-publishing/SKILL.md`, `.squad/skills/publisher/SKILL.md`, `extension.mjs`, `batch-publish-prod.mjs`
 
 **What:**
-Publish article drafts directly to the **production** Substack (nfllab.substack.com) by default. Use stage (nfllabstage.substack.com) **only** when explicitly testing new publishing functionality (e.g., table rendering changes, schema experiments).
+Replaced misaligned footer boilerplate ("powered by a 46-agent AI expert panel...consensus view") with brand-aligned copy from the welcome article. New default:
 
-**Why:**
-User preference — articles are ready for prod review without an intermediate stage step. Reduces manual re-push friction. Stage remains available for engineering validation of publisher changes.
+> *The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
+>
+> *Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
+
+**Rollout:** Forward-looking only. 18 existing articles retain old footer (not batch-rewritten). Old footer regex patterns preserved in `FOOTER_PARAGRAPH_PATTERNS` for backward compatibility. 4 skill/charter templates + 2 publisher scripts updated.
+
+---
+
+### 2026-07-25: Prod-Default Publishing
+**By:** Joe Robinson (directive), Lead (implementation)
+**Status:** ✅ ACCEPTED — Enforced in workflow
+**Affects:** All article publishing; extension.mjs, batch-publish-prod.mjs, squad orchestration, Lead routing
+
+**What:**
+Normal article drafts go directly to prod (`nfllab.substack.com`) by default. Extension default changed from `"stage"` to `"prod"` (`args.target || "prod"`). Stage is preserved as explicit opt-in via `target: "stage"` or `node batch-publish-prod.mjs stage <slug>` — use when testing new publisher/rendering functionality.
+
+**Safety preserved:** Published-article guard, ProseMirror validation, hero-safe image check, dense table blocker, DB writeback requirement all still active.
 
 **Related todo:** prod-default-publishing
 
 ---
 
-### 2026-03-17: Dense Table Images Illegible on Mobile — Investigation Open
+### 2026-03-17: Dense Table Images Illegible on Mobile — Dual-Render Implemented
 **By:** Lead (Team Lead Specialist)
-**Status:** OPEN — Tracking in GitHub issue #75
-**Affects:** `.github/extensions/table-image-renderer/renderer-core.mjs`, `fix-dense-tables.mjs`, `audit-tables.mjs`
+**Status:** ✅ IMPLEMENTED — Awaiting human review (issue #75)
+**Affects:** `.github/extensions/table-image-renderer/renderer-core.mjs`, `fix-dense-tables.mjs`, `audit-tables.mjs`, `validate-mobile-tables.mjs`
 
 **What:**
-Table/chart images rendered at 960–1160px width are shrunk to ~375px on mobile, making text ~36% of intended size. Seven alternatives evaluated; dual-render (desktop + mobile variants) recommended as best effort-to-impact approach.
+Table/chart images rendered at 960–1160px width were shrunk to ~375px on mobile, making text ~36% of intended size. Alternative A (dual-render) implemented: every dense/borderline table now produces two PNGs — desktop at 960–1160px and mobile at 500–660px with 20px body / 16px header fonts. Mobile variant embedded by default.
 
-**Next Steps:**
-1. Test font-size bump (17px→20px) as quick baseline improvement
-2. Implement mobile viewport option in renderer-core.mjs
-3. Update fix-dense-tables.mjs to emit mobile variants
-4. Validate on real mobile devices via Substack stage
+**Validation:**
+- Mobile PNGs at 375px viewport: 10.4–12.3px effective font ✅
+- Desktop PNGs at 375px viewport: 5.0–5.6px effective font ❌
+- Playwright validation passed; nfllabstage draft: https://nfllabstage.substack.com/publish/post/191225023
+
+**Open Items for Human Review:**
+1. 6–7 column mobile renders hit 10.4px effective font — borderline on low-DPR Android devices
+2. Email rendering untested — mobile PNGs should scale better but needs real email validation
+3. Future: Alternative E (text summaries) for low-complexity tables could complement this
 
 ---
 
