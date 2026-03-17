@@ -116,3 +116,16 @@ Both had the right tone (Ringer meets OverTheCap) but needed Editor corrections.
 
 📌 Session (2026-03-16T20:44Z): Generated 2 inline images for kc-fields-trade-evaluation via gemini-2.5-flash-image. inline-1 hero-safe atmospheric, inline-2 analytical dual-QB. MD5s unique. Extension tool unavailable — used direct Gemini API.
 
+📌 **Phase 1 Test Case 3 Image Dependency (2026-03-17)** — Prepared for inline-image Note test. Key findings:
+   - **Existing 1:1 square images located:** Two images (1024×1024) from kc-fields-trade-evaluation article are reusable editorial images:
+     - `kc-fields-trade-evaluation-inline-1.png` — stadium atmospheric (red/gold sunset), generic sports imagery, high engagement potential
+     - `kc-fields-trade-evaluation-inline-2.png` — dual silhouette comparison, useful for debate/analysis Notes
+   - **Decision:** Use inline-1 (stadium) for Phase 1 TC-3 — safe, atmospheric, generalizable across topics
+   - **Rationale:** Square format + publication-approved quality + already CDN-ready (no creation needed) = minimal risk for smoke test
+   - **Reusable pattern:** Article inline images (1024×1024) are pre-approved and transfer cleanly to Substack Notes social feed; verify no context-specific narrative before reuse
+   - **Safety:** Image remains in article folder; upload places CDN copy only; article pipeline unaffected by Note lifecycle
+   - **Decision artifact:** `.squad/decisions/inbox/writer-notes-image-prep.md` captures finding for future image prep decisions
+
+📌 Team update (2026-03-17T121944Z): Phase 0 Notes now rely on Playwright POST and we're moving into Phase 1 with stage-safe, question-first Notes that limit images to one editorial asset and run daily for validation — decided by Lead
+📌 Team update (2026-03-17T121944Z): Adopt the War Room footer copy (Option A default, Option E quick-hit variant) with the "Drop it in the comments" CTA on upcoming articles — decided by Lead
+

@@ -57,6 +57,31 @@
 
 ---
 
+### 2026-07-25: Article Footer Boilerplate Copy
+**Date:** 2026-07-25
+**By:** Lead
+**Status:** ✅ APPROVED — Joe picked Option A on 2026-07-25
+**Affects:** `.squad/skills/substack-article/SKILL.md`, existing article `draft.md` files, `.squad/skills/substack-publishing/SKILL.md`
+
+**Problem:**
+The current footer reads like a spec sheet and misses the welcome article's virtual-front-office tone.
+
+**Decision:**
+- Default Option A ("The War Room"):
+  > *The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
+  >
+  > *Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
+- Breaking-news variant Option E (short form):
+  > *NFL Lab — AI-powered analysis, human-edited. Multiple experts. Real disagreements.*
+- CTA line stays "Drop it in the comments."
+
+**Impact:**
+- New articles adopt Option A via `.squad/skills/substack-article/SKILL.md`.
+- Existing published drafts remain untouched unless manually updated.
+- Quick-hit posts keep Option E when the full footer is too heavy.
+
+---
+
 ### 2026-07-25: Footer Boilerplate Rollout — War Room Brand
 **Date:** 2026-07-25
 **Author:** Lead
@@ -187,6 +212,117 @@ NFL Lab publishes long-form articles but has zero Substack Notes presence. Notes
 
 **Current Status:**
 Phase 0 browser capture is **BLOCKED** awaiting Joe's DevTools capture. Once capture is complete and validated, Phase 1 implementation can proceed immediately (infrastructure decisions already made).
+
+---
+
+### 2026-03-17: Writer — Substack Notes Phase 1 Voice & Content Decisions
+**Date:** 2026-03-17
+**Status:** Proposal stage (awaiting Joe Robinson approval)
+**Owner:** Writer
+**Requested by:** Joe Robinson
+**Related:** `docs/substack-notes-feature-design.md`, `pipeline.db`
+
+**Decisions:**
+1. Notes are independent editorial voices rather than mere article abstracts; post a roughly 50/50 mix of article-linked teasers and standalone observations.
+2. Every Note ends with an open question CTA so readers are invited to reply instead of being pointed to “read more.”
+3. Images are optional but limited to one editorial/atmospheric photo; charts, headshots, memes, and low-resolution assets are prohibited.
+4. Phase 1 Notes stay generic and stage-safe—no unpublished panels or proprietary analysis.
+5. Notes use pure NFL Lab (Writer) voice; Phase 1 is not the place for expert quotes.
+6. Phase 1 runs daily for validation; Phase 2 ties Notes to article publications (1 teaser per article + 1–2 standalone Notes per week).
+
+**Implementation:**
+- Record each Note in `pipeline.db` with a `note_type` flag (`teaser` vs `standalone`) so analytics track the mix.
+- `publish_note_to_substack()` accepts an optional `image_path` and uploads the asset via `uploadImageToSubstack()`; Writer/Lead vet images for editorial tone.
+- Editor or Lead spot-checks CTAs to ensure they are genuine questions.
+- Writer flags any Note that risks spoiling unpublished material so the Lead can redirect the plan.
+
+---
+
+### 2026-03-17: Notes Phase 0 Complete — Playwright Required for POST
+**Date:** 2026-03-17
+**By:** Lead
+**Status:** Applied
+**Affects:** `.github/extensions/substack-publisher/extension.mjs` (`createSubstackNote()`), `validate-notes-smoke.mjs`, `.env`
+
+**What:**
+Joe's DevTools capture of `nfllab.substack.com/api/v1/comment/feed` succeeded with HTTP 200, proving the POST must originate from the publication host inside a real browser context.
+
+**Key Findings:**
+1. The POST targets the publication subdomain, not `substack.com`.
+2. Cloudflare enforces same-origin headers, so server-side `fetch()` is blocked.
+3. A Playwright page context (with `--headless=new`, `--disable-blink-features=AutomationControlled`, a real Chrome user-agent, navigation to `/publish/home`, and `fetch` with `credentials: "same-origin"`) is the reliable path.
+4. No CSRF token is required; the `substack.sid` cookie carries the auth.
+
+**Decision:**
+- `createSubstackNote()` and `validate-notes-smoke.mjs` now use Playwright with the above settings.
+- Remove `NOTES_HOST` from `.env` (defaults to the publication subdomain).
+- No new dependency needed—the existing Playwright devDependency is reused.
+
+**Impact:**
+- Phase 0 is complete, unlocking Phase 1.
+- Playwright adds 5–10 seconds per POST; direct fetch remains blocked until Cloudflare changes its bot detection.
+
+**Files changed:**
+- `.github/extensions/substack-publisher/extension.mjs`
+- `validate-notes-smoke.mjs`
+- `.env`
+- `docs/notes-api-discovery.md`
+- `.squad/skills/substack-publishing/SKILL.md`
+- `.squad/agents/lead/history.md`
+
+---
+
+### 2026-03-17: Advance Notes Integration to Phase 1
+**Date:** 2026-03-17
+**Decided by:** Lead
+**Status:** Accepted
+**Affects:** Notes roadmap, `extension.mjs`, nfllabstage testing
+
+**Context:**
+Phase 0 (API discovery, Playwright POST, and test note cleanup) is complete. `delete-notes-api.mjs` now removes nfllabstage test Notes via Node `fetch()`.
+
+**Decision:**
+- Phase 1 (Structured Notes on nfllabstage) is now current.
+- Phase 1 goals:
+  1. Post a structured Note with an article link.
+  2. Post a Note that includes an inline image.
+  3. Validate ProseMirror rich text (bold, links, multiple paragraphs).
+  4. Keep testing limited to nfllabstage; no production writes.
+
+**Key Learnings:**
+- Notes POST requires Playwright; DELETE works via Node `fetch()`.
+- Always clean up test artifacts before advancing phases.
+
+---
+
+### 2026-03-17T05:35:20Z: Copilot Directive — Notes rollout staging order
+**By:** Joe Robinson (via Copilot)
+**What:** Roll out Substack Notes in stages: generic tests on nfllabstage, then structured NFL Lab-style Notes, and only after that make production updates.
+**Why:** Joe wants explicit staged validation with AI checks, human validation, and production gating before any prod rollout.
+
+---
+
+### 2026-03-17T05:23:28Z: Copilot Directive — Article footer
+**By:** Joe Robinson (via Copilot)
+**What:** Use the War Room footer copy and follow it with the CTA asking readers to drop trade, signing, or draft scenarios in the comments.
+**Why:** It aligns with the welcome article and the NFL Lab identity.
+
+---
+
+### 2026-03-17: Scribe Model Trial — gpt-5.1-codex-mini
+**Date:** 2026-03-17
+**By:** Scribe
+**Status:** Approved
+
+**Decision:** Default Scribe model switches to gpt-5.1-codex-mini after the verified double-write trial.
+**Why:**
+- Trial logs `.squad/log/20260317T105753Z-scribe-model-trial-codex-mini.md` and `.squad/log/_model-trial/20260317T105753Z-scribe-model-trial-verification.md` confirmed stability.
+- Double-write verification proves the logging workflow works with gpt-5.1-codex-mini.
+- gpt-5.1-codex-mini delivers the requested bandwidth for Scribe's logging and decision role.
+
+**Next Steps:**
+- Source gpt-5.1-codex-mini in future orchestration runs.
+- Monitor the model trial logs for regressions before making the change permanent.
 
 ---
 
