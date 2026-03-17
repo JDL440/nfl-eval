@@ -34,3 +34,7 @@
 - Increased `heightSafety` (72 → 150px) for generous overestimate; `trimBottomWhitespace` crops excess.
 
 **Key insight:** When rendering images at fixed viewport size with `overflow: hidden`, always overestimate canvas dimensions and rely on post-render cropping. Underestimation is irrecoverable (content is permanently clipped), but overestimation is cheap (whitespace is trivially trimmed).
+
+### Issue #75 Landed on Main (2026-03-17)
+
+PR #77 merged `feature/mobiletable` → `main` (merge commit 477d7b8). Issue #75 auto-closed. All dual-render mobile table work — including Analytics' revision fixes (commits c3a3243, 907bfa4) — is now in the production codepath.

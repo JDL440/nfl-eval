@@ -4,6 +4,24 @@
 
 ---
 
+### 2026-03-17: Land Issue #75 — Mobile Table Dual-Render Merged to Main
+**By:** Lead (merge executor)
+**Status:** ✅ EXECUTED — PR #77 merged, issue #75 auto-closed
+**Affects:** `renderer-core.mjs`, `fix-dense-tables.mjs`, `audit-tables.mjs`, `validate-mobile-tables.mjs`, `publish-stage-validation.mjs`
+
+**What:**
+Merged `feature/mobiletable` → `main` via PR #77 (merge commit 477d7b8). All dual-render mobile table work now in production codepath. Issue #75 auto-closed via `Closes #75` in PR body.
+
+**Rationale:**
+- All acceptance criteria from issue #75 met
+- Analytics revision fixed clipping/collision defects (commits c3a3243, 907bfa4)
+- Stage draft validated at nfllabstage before merge
+- User explicitly approved final renders
+
+**Artifacts landed:** `renderer-core.mjs` (mobile render mode), `fix-dense-tables.mjs` (dual-render pipeline), `audit-tables.mjs` (MOBILE_RISK flag), `validate-mobile-tables.mjs` (Playwright validation), `publish-stage-validation.mjs` (stage publisher), test article.
+
+---
+
 ### 2026-07-25: Article Footer Boilerplate — "War Room" Brand (Option A)
 **By:** Lead; approved by Joe Robinson
 **Status:** ✅ APPROVED + IMPLEMENTED — Forward-looking rollout
