@@ -168,6 +168,78 @@ _Last updated: 2026-03-12 via SumerSports, nfelo, ESPN QBR_
 | ✅ Jordan Love | GB | 0.24 | 86.5 | 3,381 | 23 | 6 | 72.7 |
 | ✅ Brock Purdy | SF | 0.23 | 52.8 | 2,549 | 21 | 7 | 72.8 |
 | ✅ Matthew Stafford | LAR | 0.17 | 99.8 | 4,707 | 46 | 8 | 71.2 |
+
+---
+
+## 4. Draft Pick Expected Value
+_Last updated: 2026-03-12 via PFF hit rate studies, statchasers.com — Archived from history.md 2026-03-17_
+
+### Historical "Hit Rate" by Round & Position
+📊 "Hit" = multi-year starter. Based on 2017–2025 averages.
+
+| Position | Round 1 | Round 2 | Rounds 3-4 | Day 3 |
+|----------|---------|---------|-----------|-------|
+| QB | 45-50% | 10-15% | <10% | <5% |
+| RB | 60% | 30% | 15% | <10% |
+| WR | 60% | 25% | 10-15% | <10% |
+| TE | 30-35% | 20% | 8% | <5% |
+| EDGE | 55% | 30% | 15% | <10% |
+| CB | 55% | 25% | 10% | <5% |
+| OT | 65% | 40% | 20% | <10% |
+| Interior OL | **75%** | **50%** | 25% | 10% |
+| Safety | 30% | 15% | 6% | <5% |
+
+Key: Interior OL safest R1 (75%), OT 2nd (65%), QB boom-or-bust (45-50%), TE/Safety traps (30-35%).
+
+### Draft Pick Trade Value Chart (Jimmy Johnson / Modern)
+
+| Pick # | Classic Value |
+|--------|-------------|
+| 1 | 3,000 |
+| 3 | 2,200 (ARI's 2026 pick) |
+| 10 | 1,300 |
+| 32 | 590 (SEA's 2026 pick) |
+| 64 | 270 |
+| 96 | 116 |
+
+---
+
+## 5. Contract Value Models
+_Last updated: 2026-03-12 — Archived from history.md 2026-03-17_
+
+Key principles: Rookie QB window is king. Don't pay RBs (worst ROI). OL undervalued (+0.575 correlation). EDGE worth premium. WR value rising. 2026 cap: $301.2M.
+
+Market benchmarks: Elite QB $50-55M+, EDGE $40M+, WR $30-35M, OT $25-28M, CB $22-25M, RB $12-16M (poor ROI).
+
+---
+
+## 6. Key Analytical Frameworks
+_Last updated: 2026-03-12 — Archived from history.md 2026-03-17_
+
+Evaluation stack: EPA/play (efficiency) → Success Rate (consistency) → CPOE (accuracy isolation) → PFF grade (film context) → DVOA (opponent adjustment) → Volume check (flag <100 plays).
+
+Tiers: PFF 90+=Elite, 80-89=High, 70-79=Above Avg. QBR 75+=Elite, 50=Avg. DVOA negative=better for defense.
+
+---
+
+## 7. 2025 Season Statistical Leaders
+_Last updated: 2026-03-12 — Archived from history.md 2026-03-17_
+
+**Passing:** Stafford 4,707/46/8 MVP, Maye 4,394/31/8 best QBR (77.1) & EPA (0.26), Williams 3,942/27/7 sophomore leap.
+**Rushing:** Cook 1,621, Henry 1,595/16TD, Taylor 1,585/18TD, Achane 5.7 YPC.
+**Receiving:** JSN 1,793/10TD, Nacua 129rec/1,715, McBride 126rec/1,239/11TD (elite TE).
+**Sacks:** Garrett 23.0 (record), Burns 16.5, Hunter 15.0.
+**Takeaways:** SEA defensive template (-24.5% DVOA). Maye = franchise QB on rookie deal. Garrett proves EDGE value.
+
+---
+
+## Learnings & Analytical Insights (archived from history.md 2026-03-17)
+
+### Source Reliability
+ESPN ✅, FTN DVOA ✅, SumerSports ✅, PFF ⚠️ paywalled, PFR 🔴 blocked (403), TeamRankings ❓ lags.
+
+### Key 2025 Takeaways
+SEA template (elite D + good-enough O), Maye is the truth, Stafford aging (succession needed), DET paradox (3rd DVOA but 9-8), Garrett record proves EDGE, NFC West 3×12+ wins, rookie CB Johnson validates R1 CB picks.
 | ✅ Josh Allen | BUF | 0.17 | 83.2 | 3,668 | 25 | 10 | 65.4 |
 | ✅ Daniel Jones | IND | 0.17 | 57.6 | 3,101 | 19 | 8 | 63.0 |
 

@@ -336,7 +336,8 @@ async function fixArticle(slug, draftPath, dryRun) {
         }
 
         try {
-            const result = await renderTableImage({
+            // Desktop render (kept for desktop/email quality)
+            const desktopResult = await renderTableImage({
                 article_file_path: relative(ROOT, draftPath).replace(/\\/g, "/"),
                 article_slug: slug,
                 table_markdown: tableMarkdown,
@@ -344,15 +345,28 @@ async function fixArticle(slug, draftPath, dryRun) {
                 template,
                 output_name: outputName,
             });
+            console.log(`     ✅ Desktop → ${desktopResult.relativeImagePath}`);
 
-            // Queue replacement: replace the markdown table lines with the image markdown
+            // Mobile render (narrower canvas, larger fonts for 375px viewport)
+            const mobileResult = await renderTableImage({
+                article_file_path: relative(ROOT, draftPath).replace(/\\/g, "/"),
+                article_slug: slug,
+                table_markdown: tableMarkdown,
+                title,
+                template,
+                output_name: outputName,
+                mobile: true,
+            });
+            console.log(`     📱 Mobile  → ${mobileResult.relativeImagePath}`);
+
+            // Embed the mobile variant in the article — it's more universally
+            // readable since it starts from a smaller base with larger fonts.
             replacements.push({
                 startIdx: tableInfo.lineIndices[0],
                 endIdx: tableInfo.lineIndices[tableInfo.lineIndices.length - 1],
-                newContent: result.markdown,
+                newContent: mobileResult.markdown,
             });
 
-            console.log(`     ✅ Rendered → ${result.relativeImagePath}`);
             fixedCount++;
         } catch (err) {
             console.log(`     ❌ Failed: ${err.message}`);

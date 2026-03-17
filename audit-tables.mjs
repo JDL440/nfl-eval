@@ -295,6 +295,9 @@ function auditFile(filePath, slug) {
         } else if (classification.densityScore >= 5.5) {
             status = "BORDERLINE";
             icon = "⚠️";
+        } else if (classification.columnCount >= 5 || (classification.columnCount >= 4 && classification.numericComparisonColumns >= 2)) {
+            status = "MOBILE_RISK";
+            icon = "📱";
         } else {
             status = "OK";
             icon = "✅";
@@ -318,10 +321,11 @@ function auditFile(filePath, slug) {
 function printAudit(audit) {
     const blocked = audit.tables.filter((t) => t.status === "BLOCKED");
     const borderline = audit.tables.filter((t) => t.status === "BORDERLINE");
+    const mobileRisk = audit.tables.filter((t) => t.status === "MOBILE_RISK");
     const ok = audit.tables.filter((t) => t.status === "OK");
 
     const slugLabel = audit.slug.padEnd(42);
-    const summary = `${audit.tables.length} tables  (${ok.length} ✅  ${borderline.length} ⚠️   ${blocked.length} 🚫)  ${audit.imageCount} table images`;
+    const summary = `${audit.tables.length} tables  (${ok.length} ✅  ${mobileRisk.length} 📱  ${borderline.length} ⚠️   ${blocked.length} 🚫)  ${audit.imageCount} table images`;
     console.log(`\n━━━ ${slugLabel} ${summary}`);
 
     if (audit.tables.length === 0) {
@@ -347,24 +351,30 @@ function printSummary(audits) {
     let totalTables = 0;
     let totalBlocked = 0;
     let totalBorderline = 0;
+    let totalMobileRisk = 0;
     let totalOk = 0;
     let totalImages = 0;
     const blockedArticles = [];
+    const mobileRiskArticles = [];
 
     for (const a of audits) {
         totalTables += a.tables.length;
         const blocked = a.tables.filter((t) => t.status === "BLOCKED").length;
         const borderline = a.tables.filter((t) => t.status === "BORDERLINE").length;
+        const mobileRisk = a.tables.filter((t) => t.status === "MOBILE_RISK").length;
         totalBlocked += blocked;
         totalBorderline += borderline;
+        totalMobileRisk += mobileRisk;
         totalOk += a.tables.filter((t) => t.status === "OK").length;
         totalImages += a.imageCount;
         if (blocked > 0) blockedArticles.push({ slug: a.slug, count: blocked });
+        if (mobileRisk > 0) mobileRiskArticles.push({ slug: a.slug, count: mobileRisk });
     }
 
     console.log("\n" + "═".repeat(80));
     console.log(`SUMMARY: ${audits.length} articles, ${totalTables} tables`);
     console.log(`  ✅ ${totalOk} will inline as lists (OK)`);
+    console.log(`  📱 ${totalMobileRisk} mobile-risk (OK inline but may be hard to read on phones)`);
     console.log(`  ⚠️  ${totalBorderline} borderline (will inline but may look rough)`);
     console.log(`  🚫 ${totalBlocked} BLOCKED (must render to PNG before publish)`);
     console.log(`  🖼️  ${totalImages} table images already rendered`);
@@ -373,6 +383,12 @@ function printSummary(audits) {
         console.log(`\nBLOCKED ARTICLES (${blockedArticles.length}):`);
         for (const ba of blockedArticles) {
             console.log(`  • ${ba.slug} — ${ba.count} dense table(s) need render_table_image`);
+        }
+    }
+    if (mobileRiskArticles.length > 0) {
+        console.log(`\nMOBILE-RISK ARTICLES (${mobileRiskArticles.length}):`);
+        for (const mr of mobileRiskArticles) {
+            console.log(`  • ${mr.slug} — ${mr.count} table(s) may be illegible on mobile`);
         }
     }
     console.log("═".repeat(80));

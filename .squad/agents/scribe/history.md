@@ -62,6 +62,15 @@ Logged session for imageCaption investigation across parser and stage7 publishin
 - Propagated cross-agent updates to Lead and Editor histories
 - decisions.md: 166 blocks, 184KB (all within 30-day window)
 
+### Issue #75 Mobile Dual-Render Session (2026-03-17T07:33Z)
+Logged Lead agent's dual-render implementation for mobile table legibility (GitHub issue #75).
+- Created orchestration log: `20260317-073304-lead.md`
+- Created session log: `20260317-073304-issue-75-mobile-tables.md`
+- Merged 4 decision inbox files: `lead-issue-75.md` (updated existing entry), `lead-footer-copy.md`, `lead-footer-rollout.md`, `lead-prod-default-publish.md` (enhanced existing entry)
+- Updated issue #75 decision status: OPEN → ✅ IMPLEMENTED
+- decisions.md: ~193KB — all entries within 2-day window, no 30-day archival candidates
+- 40+ agent histories exceed 12KB threshold; batch summarization deferred (not related to this session's scope)
+
 ### KC Fields Stage Publish Session (2026-03-16T20:51Z)
 Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 - Created orchestration log: `20260316-205127-lead.md`
