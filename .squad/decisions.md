@@ -295,6 +295,45 @@ Phase 0 (API discovery, Playwright POST, and test note cleanup) is complete. `de
 
 ---
 
+### 2026-03-17: Notes Sweep Report Implementation
+**By:** Lead
+**Status:** ✅ SHIPPED
+**Affects:** `content/article_board.py`, `docs/substack-notes-feature-design.md`
+
+**Context:**
+The Notes cadence (Phase 5 of the Notes feature design) specifies a daily sweep that detects articles missing expected Notes. Step 2 called for "Add sweep eligibility report to `article_board.py` (report only)."
+
+**Decision:**
+Implemented `notes-sweep` as a report-only CLI command under `content/article_board.py`. The command emits gap counts on the console and via `--json`, wiring its output back into the existing reconciliation surface so `reconcile` references note-gap counts without posting anything to Substack. The detection rules flag Stage 7+ and Stage 8 articles that lack teasers or promotions, and urgent stale promotions that have gone 48+ hours without a prod Note.
+
+**Detection rules:**
+
+| Gap Type | Trigger | Severity |
+|----------|---------|----------|
+| `MISSING_TEASER` | Stage 7+ article with no teaser or promotion Note | info |
+| `MISSING_PROMOTION` | Stage 8 published article with no prod promotion Note | warning |
+| `STALE_PROMOTION` | Published >48h with no prod promotion Note | urgent |
+
+**Why `article_board.py` (not a new file):**
+- `article_board.py` is the existing operator reconciliation surface — all pipeline health checks already live there.
+- It already has note-count awareness and `PipelineState` integration, so the new command can reuse those helpers.
+- Operators already run `reconcile` and `board`; adding `notes-sweep` to the same CLI is zero onboarding cost.
+- The `reconcile` output now cross-references the note-gap counts automatically.
+
+**Why report-only:**
+- Production Note posting still requires Joe’s approval; auto-posting would bypass that editorial gate.
+- Report-only lets the instrumentation run safely while surfacing the gaps for human review.
+- This phase is strictly observability; no automated writes are permitted until the follow-up slice.
+
+**Alternatives considered**
+1. **Standalone `notes-sweep.py`** — rejected; it would fragment the operator surface.
+2. **Inline in `reconcile` output** — rejected; note gaps are semantically different from DB drift and would clutter reconciliation.
+3. **Full auto-post with dry-run flag** — rejected; premature for this phase.
+
+**Follow-up**
+- Next slice (Step 3): semi-auto Stage 7 teaser workflow — auto-post teasers to nfllabstage while keeping prod writes report-only.
+
+
 # Editor Review: JSN Note Trim & Image-Led Rewrite
 
 **Date:** 2026-03-18  

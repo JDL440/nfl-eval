@@ -27,6 +27,13 @@
 - **Files affected:** `extension.mjs` (re-gated), `validate-notes-smoke.mjs` (help text), `docs/notes-api-discovery.md` (updated with HTTP 403 finding)
 - See decision files for full architecture and Phase 0 prerequisites: `.squad/decisions.md` (merged 2026-03-17)
 
+**Notes Sweep Report (2026-03-17):**
+- Added `notes-sweep` CLI under `content/article_board.py` to detect `MISSING_TEASER`, `MISSING_PROMOTION`, and `STALE_PROMOTION` gaps for Stage 7+ and Stage 8 articles.
+- `reconcile` now cross-references the same note-gap counts so the CLI output and reconciliation surface align.
+- Coordinator verification (`python content/article_board.py notes-sweep` + `--json`) reported 8 gaps across 7 articles and an urgent `STALE_PROMOTION` flag for Stage 8 promos older than 48 hours.
+- Next slice (Step 3) will semi-auto Stage 7 teasers to nfllabstage while keeping prod writes report-only.
+
+
 **Infrastructure & Pipeline (2026-03-12–16):**
 - Built `pipeline_state.py` (shared DB write gateway) and `article_board.py` (artifact-first reconciliation with `--repair` mode)
 - Retargeted Ralph loop from .NET demo to NFL article pipeline driver; later upgraded to max-parallel-throughput mode
