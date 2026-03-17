@@ -109,6 +109,26 @@ CREATE TABLE IF NOT EXISTS publisher_pass (
 );
 
 -- ─────────────────────────────────────────────
+-- NOTES
+-- Substack Notes linked to articles (post-publish)
+-- or standalone. Does not affect the 8-stage model.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id      TEXT REFERENCES articles(id),   -- NULL for standalone Notes
+    note_type       TEXT NOT NULL DEFAULT 'promotion',
+                    -- 'promotion'  = teaser for a published article
+                    -- 'follow_up'  = post-publish engagement
+                    -- 'standalone' = not tied to any article
+    content         TEXT NOT NULL,                   -- Note body text
+    image_path      TEXT,                            -- local path if image was attached
+    substack_note_url TEXT,                          -- URL of the published Note
+    target          TEXT NOT NULL DEFAULT 'prod',    -- 'prod' or 'stage'
+    created_by      TEXT,                            -- agent name or 'Joe'
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ─────────────────────────────────────────────
 -- CONVENIENCE VIEW: Pipeline Board
 -- One row per article, all key status fields.
 -- ─────────────────────────────────────────────

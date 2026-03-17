@@ -14,6 +14,7 @@ Usage from repo root:
 import json
 import os
 import re
+import sqlite3
 import sys
 from datetime import datetime, timezone
 
@@ -612,11 +613,26 @@ def _safe_print(text):
 
 def _cli_board():
     board = scan_articles()
-    _safe_print(f"{'SLUG':<45} {'STAGE':>5}  {'NAME':<20} {'NEXT ACTION'}")
-    _safe_print("-" * 110)
+
+    # Load note counts per article (informational only)
+    note_counts = {}
+    try:
+        ps = PipelineState()
+        for row in ps._conn.execute(
+            "SELECT article_id, COUNT(*) AS cnt FROM notes WHERE article_id IS NOT NULL GROUP BY article_id"
+        ).fetchall():
+            note_counts[row["article_id"]] = row["cnt"]
+        ps.close()
+    except (sqlite3.OperationalError, FileNotFoundError):
+        pass  # notes table may not exist yet; degrade gracefully
+
+    _safe_print(f"{'SLUG':<45} {'STAGE':>5}  {'NAME':<20} {'NOTES':>5}  {'NEXT ACTION'}")
+    _safe_print("-" * 120)
     for item in sorted(board, key=lambda x: (-x["stage"], x["slug"])):
         na = (item.get("next_action", "-") or "-").replace("\u2192", "->")
-        _safe_print(f"{item['slug']:<45} {item['stage']:>5}  {item['stage_name']:<20} {na}")
+        nc = note_counts.get(item["slug"], 0)
+        nc_str = str(nc) if nc else "-"
+        _safe_print(f"{item['slug']:<45} {item['stage']:>5}  {item['stage_name']:<20} {nc_str:>5}  {na}")
 
 
 def _cli_reconcile(repair=False):
@@ -625,11 +641,26 @@ def _cli_reconcile(repair=False):
     discreps = reconcile(dry_run=not repair)
     if not discreps:
         _safe_print("OK No discrepancies found -- DB matches artifacts.")
-        return
-    for d in discreps:
-        flag = "[FIX]" if repair else "[WARN]"
-        _safe_print(f"  {flag} {d['slug']}: [{d['action']}] {d['detail']}")
-    _safe_print(f"\nTotal: {len(discreps)} discrepancies {'repaired' if repair else 'found'}")
+    else:
+        for d in discreps:
+            flag = "[FIX]" if repair else "[WARN]"
+            _safe_print(f"  {flag} {d['slug']}: [{d['action']}] {d['detail']}")
+        _safe_print(f"\nTotal: {len(discreps)} discrepancies {'repaired' if repair else 'found'}")
+
+    # Notes summary (informational, never affects reconciliation logic)
+    try:
+        ps = PipelineState()
+        all_notes = ps.get_all_notes()
+        ps.close()
+        _safe_print("")  # blank line before notes summary
+        if all_notes:
+            linked = sum(1 for n in all_notes if n.get("article_id"))
+            standalone = len(all_notes) - linked
+            _safe_print(f"Notes: {len(all_notes)} total ({linked} article-linked, {standalone} standalone)")
+        else:
+            _safe_print("Notes: 0")
+    except (sqlite3.OperationalError, FileNotFoundError):
+        pass  # notes table may not exist yet; degrade gracefully
 
 
 def _cli_actions():

@@ -23,6 +23,8 @@ That question only got sharper after Year 1. Jacksonville won 13 games. Hunter f
 
 Our panel sees the same paradox from three directions. JAX says Hunter must be managed like a scarce resource. Offense says Jacksonville is wasting WR1 talent in a WR2 job. Cap says the trade only works if Hunter becomes good enough at both jobs to justify everything it cost.
 
+![Jacksonville Jaguars Travis Hunter deployment — inline image 1|Jacksonville Jaguars offseason analysis](../../images/jax-2026-offseason/jax-2026-offseason-inline-1.jpg)
+
 ---
 
 ## The Paradox, in One Table
@@ -44,9 +46,6 @@ Cap's framing is the hardest to ignore because it strips away the novelty. If th
 ## Jacksonville's Internal Case: Scale Him Back Before He Breaks Again
 
 The Jaguars' team-side position is the least sexy and maybe the most adult one in the room: last season already showed them the upper bound.
-
-![Jacksonville Jaguars Travis Hunter deployment — inline image 1|Jacksonville Jaguars offseason analysis](../../images/jax-2026-offseason/jax-2026-offseason-inline-1.jpg)
-
 
 In seven games, Hunter put up 28 catches for 298 yards and a touchdown while also logging 15 tackles and three pass breakups. The number that matters most isn't any single stat line. It's the 103% total snap rate — a number that reads like a typo and, in hindsight, like a warning label.
 

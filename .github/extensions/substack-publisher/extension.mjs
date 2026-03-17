@@ -343,6 +343,93 @@ async function lookupArticleStateFromDb(articleSlug, cwd) {
     }
 }
 
+// ─── Substack Notes API ──────────────────────────────────────────────────────
+
+/**
+ * Look up an article's published URL (and draft URL) from pipeline.db.
+ * Returns { substackUrl, substackDraftUrl, currentStage, status } or null.
+ */
+async function lookupArticleUrlFromDb(articleSlug, cwd) {
+    const dbPath = resolve(cwd, "content", "pipeline.db");
+    if (!existsSync(dbPath)) return null;
+
+    try {
+        const { DatabaseSync } = await import("node:sqlite");
+        const db = new DatabaseSync(dbPath, { readOnly: true });
+        const stmt = db.prepare(
+            "SELECT substack_url, substack_draft_url, current_stage, status FROM articles WHERE id = ?"
+        );
+        const row = stmt.get(articleSlug);
+        db.close();
+        if (!row) return null;
+        return {
+            substackUrl: row.substack_url || null,
+            substackDraftUrl: row.substack_draft_url || null,
+            currentStage: row.current_stage,
+            status: row.status,
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Convert plain text to ProseMirror JSON suitable for a Substack Note.
+ * Notes are plain text — no markdown formatting (bold/italic/headings).
+ * URLs in the text will be auto-linked by Substack's frontend.
+ */
+function noteTextToProseMirror(text) {
+    const paragraphs = text.split(/\n{2,}/);
+    const content = [];
+    for (const para of paragraphs) {
+        const trimmed = para.trim();
+        if (trimmed === "") {
+            content.push({ type: "paragraph" });
+        } else {
+            // Preserve single line breaks within a paragraph block
+            const lines = trimmed.split("\n");
+            const inlineContent = [];
+            for (let i = 0; i < lines.length; i++) {
+                if (i > 0) inlineContent.push({ type: "hard_break" });
+                inlineContent.push({ type: "text", text: lines[i] });
+            }
+            content.push({ type: "paragraph", content: inlineContent });
+        }
+    }
+    if (content.length === 0) {
+        content.push({ type: "paragraph", content: [{ type: "text", text: text }] });
+    }
+    return { type: "doc", attrs: { schemaVersion: "v1" }, content };
+}
+
+/**
+ * Create a Note on Substack.
+ *
+ * ⛔ GATED — The Notes endpoint and payload format are UNVERIFIED.
+ *
+ * Leading candidates from reverse-engineering sources:
+ *   - POST https://substack.com/api/v1/comment/feed  (browser intercept, 2023)
+ *   - POST https://{subdomain}.substack.com/api/v1/note  (community library)
+ *   - POST https://{subdomain}.substack.com/api/v1/notes  (design doc draft)
+ *
+ * Payload likely uses ProseMirror bodyJson (same schema as article drafts),
+ * but the exact fields (bodyJson vs body, tabId, replyMinimumRole, etc.) are
+ * unconfirmed. Phase 0 browser interception on nfllabstage is required before
+ * this function can make live requests.
+ *
+ * Until verified, this function throws unconditionally. Replace the throw
+ * with the real fetch() call once Phase 0 captures the exact request shape.
+ */
+async function createSubstackNote({ headers, bodyJson }) {
+    // eslint-disable-next-line no-unused-vars
+    void headers; void bodyJson;
+    throw new Error(
+        "Notes API endpoint is UNVERIFIED. " +
+        "Phase 0 browser interception on nfllabstage must be completed before live posting. " +
+        "See docs/substack-notes-feature-design.md §8 Phase 1 for the validation protocol."
+    );
+}
+
 // ─── Markdown → ProseMirror ──────────────────────────────────────────────────
 
 /**
@@ -1606,6 +1693,244 @@ const session = await joinSession({
                 } catch (err) {
                     return {
                         textResultForLlm: `Error publishing to Substack: ${err.message}`,
+                        resultType: "failure",
+                    };
+                }
+            },
+        },
+        {
+            name: "publish_note_to_substack",
+            description:
+                "Creates a Note (short-form post) on the target Substack publication. " +
+                "Notes appear in the Substack Notes feed and subscriber home feeds. " +
+                "Use for article teasers, quick takes, or engagement content. " +
+                "Same auth as publish_to_substack (SUBSTACK_TOKEN in .env). " +
+                "If article_slug is provided, auto-links to the published article URL. " +
+                "Defaults to PROD target; use target='stage' for testing. " +
+                "⛔ GATED: the Notes API endpoint is unverified — this tool will prepare " +
+                "the full payload and validate inputs, but the final POST is blocked until " +
+                "Phase 0 browser interception confirms the endpoint. Call it to dry-run " +
+                "and validate your Note content/parameters.",
+            parameters: {
+                type: "object",
+                properties: {
+                    content: {
+                        type: "string",
+                        description:
+                            "Note body text. Plain text — URLs will auto-link. No markdown formatting " +
+                            "(Notes don't support bold/italic). Keep concise for engagement.",
+                    },
+                    image_path: {
+                        type: "string",
+                        description:
+                            "Optional path to a local image file to attach to the Note. " +
+                            "Uploaded to Substack CDN via the existing image upload endpoint.",
+                    },
+                    article_slug: {
+                        type: "string",
+                        description:
+                            "Optional article slug (pipeline.db id) to link this Note to. " +
+                            "If provided, the published article URL is looked up from pipeline.db " +
+                            "and appended to the Note body (unless already present in content).",
+                    },
+                    target: {
+                        type: "string",
+                        description:
+                            '"prod" (default) or "stage". Same semantics as publish_to_substack.',
+                        enum: ["stage", "prod"],
+                    },
+                },
+                required: ["content"],
+            },
+            handler: async (args) => {
+                try {
+                    // ── Auth & target resolution ─────────────────────
+                    const env = loadEnv();
+                    const token = process.env.SUBSTACK_TOKEN || env.SUBSTACK_TOKEN;
+                    const target = args.target || "prod";
+
+                    let pubUrl;
+                    if (target === "stage") {
+                        pubUrl = process.env.SUBSTACK_STAGE_URL || env.SUBSTACK_STAGE_URL;
+                        if (!pubUrl) {
+                            pubUrl = process.env.SUBSTACK_PUBLICATION_URL || env.SUBSTACK_PUBLICATION_URL;
+                            if (pubUrl) {
+                                await session.log("⚠️  SUBSTACK_STAGE_URL not set — falling back to production URL", { ephemeral: true });
+                            }
+                        }
+                    } else {
+                        pubUrl = process.env.SUBSTACK_PUBLICATION_URL || env.SUBSTACK_PUBLICATION_URL;
+                    }
+
+                    if (!token) {
+                        return {
+                            textResultForLlm:
+                                "Error: SUBSTACK_TOKEN not found in .env.\n\n" +
+                                "Setup: copy the value of your substack.sid cookie from Chrome DevTools → Application → Cookies → substack.com, then set SUBSTACK_TOKEN=<that value> in .env.",
+                            resultType: "failure",
+                        };
+                    }
+                    if (!pubUrl) {
+                        return {
+                            textResultForLlm:
+                                `Error: No publication URL found for target="${target}".\n\n` +
+                                "Add to .env:\n" +
+                                "  SUBSTACK_PUBLICATION_URL=https://yourpub.substack.com    (production)\n" +
+                                "  SUBSTACK_STAGE_URL=https://yourpubstage.substack.com     (staging)",
+                            resultType: "failure",
+                        };
+                    }
+
+                    const headers = makeHeaders(token);
+                    const subdomain = extractSubdomain(pubUrl);
+                    await session.log(`Targeting ${subdomain}.substack.com (${target}) for Note…`, { ephemeral: true });
+
+                    // ── Article URL resolution ───────────────────────
+                    let linkedArticleUrl = null;
+                    if (args.article_slug) {
+                        const articleInfo = await lookupArticleUrlFromDb(args.article_slug, process.cwd());
+                        if (!articleInfo) {
+                            return {
+                                textResultForLlm:
+                                    `Error: Article '${args.article_slug}' not found in pipeline.db. ` +
+                                    "Verify the slug is correct, or omit article_slug for a standalone Note.",
+                                resultType: "failure",
+                            };
+                        }
+
+                        if (articleInfo.substackUrl) {
+                            // Published article — use the canonical public URL
+                            linkedArticleUrl = articleInfo.substackUrl;
+                        } else if (target === "stage" && articleInfo.substackDraftUrl) {
+                            // Stage/testing only: fall back to draft URL so testers can verify linking.
+                            // Draft URLs are NOT suitable for production Notes (they require auth).
+                            linkedArticleUrl = articleInfo.substackDraftUrl;
+                            await session.log(
+                                `⚠️  No published URL for '${args.article_slug}' — using draft URL for stage testing.`,
+                                { ephemeral: true }
+                            );
+                        } else {
+                            return {
+                                textResultForLlm:
+                                    `Error: Article '${args.article_slug}' has no published URL (substack_url is empty, ` +
+                                    `current_stage=${articleInfo.currentStage}, status=${articleInfo.status}). ` +
+                                    `Notes should link to published articles. ` +
+                                    (target === "prod"
+                                        ? "Publish the article first, or omit article_slug for a standalone Note."
+                                        : "For stage testing, ensure a draft URL exists in pipeline.db."),
+                                resultType: "failure",
+                            };
+                        }
+                        await session.log(`Linked article URL: ${linkedArticleUrl}`, { ephemeral: true });
+                    }
+
+                    // ── Build Note body ──────────────────────────────
+                    if (!args.content || !args.content.trim()) {
+                        return {
+                            textResultForLlm:
+                                "Error: Note content cannot be empty or whitespace-only.",
+                            resultType: "failure",
+                        };
+                    }
+
+                    const noteType = args.article_slug ? "promotion" : "standalone";
+                    let noteBody = args.content;
+
+                    // Auto-append article URL if provided and not already in the content
+                    if (linkedArticleUrl && !noteBody.includes(linkedArticleUrl)) {
+                        noteBody = noteBody.trimEnd() + "\n\n" + linkedArticleUrl;
+                    }
+
+                    // ── Image path validation (upload deferred) ─────
+                    // While createSubstackNote() is gated, skip the actual CDN
+                    // upload to avoid orphaned uploads and external side effects.
+                    // Only validate that the local file exists.
+                    let imageUrl = null;
+                    let imagePath = null;
+                    if (args.image_path) {
+                        imagePath = /^([A-Za-z]:[\\/]|\/)/.test(args.image_path)
+                            ? args.image_path
+                            : resolve(process.cwd(), args.image_path);
+                        if (!existsSync(imagePath)) {
+                            return {
+                                textResultForLlm:
+                                    `Error: Image file not found: ${imagePath}`,
+                                resultType: "failure",
+                            };
+                        }
+                        await session.log(
+                            `Image validated (upload deferred until Notes API is verified): ${imagePath}`,
+                            { ephemeral: true }
+                        );
+                    }
+
+                    // ── Assemble ProseMirror body ────────────────────
+                    const bodyJson = noteTextToProseMirror(noteBody);
+
+                    // ── Post the Note (GATED) ────────────────────
+                    // createSubstackNote() throws unconditionally until the Notes
+                    // endpoint is verified via Phase 0 browser interception.
+                    // Everything above this point (auth, URL lookup, content
+                    // assembly, ProseMirror conversion) is validated. Image upload
+                    // is deferred — no external side effects while gated.
+                    try {
+                        await session.log("Attempting to post Note…", { ephemeral: true });
+                        const noteResult = await createSubstackNote({ headers, bodyJson });
+
+                        // ── Success response (reached only after gate is lifted) ──
+                        // NOTE: when ungating, re-add image upload + captionedImage
+                        // node assembly before the createSubstackNote() call above.
+                        const noteId = noteResult?.id || noteResult?.comment?.id || null;
+                        const noteUrl = noteResult?.url || noteResult?.canonical_url || null;
+                        const targetLabel = target === "prod" ? "🔴 PRODUCTION" : "🟡 STAGE";
+                        const writebackBlock =
+                            `\n**⚡ DB Writeback required (record Note):**\n` +
+                            `\`\`\`python\n` +
+                            `from content.pipeline_state import PipelineState\n` +
+                            `with PipelineState() as ps:\n` +
+                            `    ps.record_note(` +
+                            `${args.article_slug ? `'${args.article_slug}'` : "None"}, ` +
+                            `'${noteType}', ` +
+                            `${JSON.stringify(noteBody)}, ` +
+                            `${noteUrl ? JSON.stringify(noteUrl) : "None"}, ` +
+                            `target='${target}', agent='Publisher', ` +
+                            `${imagePath ? `image_path=${JSON.stringify(imagePath)}` : "image_path=None"})\n` +
+                            `\`\`\`\n`;
+                        return (
+                            `✅ Substack Note posted!\n\n` +
+                            `**Target:** ${targetLabel} (${subdomain}.substack.com)\n` +
+                            (noteId ? `**Note ID:** ${noteId}\n` : "") +
+                            (noteUrl ? `**Note URL:** ${noteUrl}\n` : "") +
+                            `**Note type:** ${noteType}\n` +
+                            (linkedArticleUrl ? `**Linked article:** ${linkedArticleUrl}\n` : "") +
+                            (imageUrl ? `**Attached image:** ${imageUrl}\n` : "") +
+                            `**Content preview:** ${args.content.slice(0, 150)}${args.content.length > 150 ? "…" : ""}\n` +
+                            (args.article_slug ? `**Article slug:** ${args.article_slug}\n` : "") +
+                            writebackBlock +
+                            `\nThe Note should now be visible in the Substack Notes feed for ${subdomain}.`
+                        );
+                    } catch (gateErr) {
+                        // Surface the gate error alongside the validated dry-run payload
+                        const targetLabel = target === "prod" ? "🔴 PRODUCTION" : "🟡 STAGE";
+                        return {
+                            textResultForLlm:
+                                `⛔ Notes API GATED — ${gateErr.message}\n\n` +
+                                `All inputs validated successfully (no external calls made). Dry-run summary:\n\n` +
+                                `**Target:** ${targetLabel} (${subdomain}.substack.com)\n` +
+                                `**Note type:** ${noteType}\n` +
+                                (linkedArticleUrl ? `**Linked article:** ${linkedArticleUrl}\n` : "") +
+                                (imagePath ? `**Image (local, upload deferred):** ${imagePath}\n` : "") +
+                                `**Content preview:** ${args.content.slice(0, 200)}${args.content.length > 200 ? "…" : ""}\n` +
+                                `**ProseMirror paragraphs:** ${bodyJson.content.length}\n` +
+                                (args.article_slug ? `**Article slug:** ${args.article_slug}\n` : "") +
+                                `\nTo ungate: complete Phase 0 browser interception on nfllabstage, then ` +
+                                `update createSubstackNote() in extension.mjs with the verified endpoint and payload.`,
+                            resultType: "failure",
+                        };
+                    }
+                } catch (err) {
+                    return {
+                        textResultForLlm: `Error in publish_note_to_substack: ${err.message}`,
                         resultType: "failure",
                     };
                 }

@@ -15,6 +15,10 @@ The Seattle Seahawks have a decision to make, and the clock is ticking louder th
 
 Here's what four domain experts — a salary cap analyst, a player advocate, the Seahawks team analyst, and an offensive scheme specialist — told us about what JSN should cost, what Seattle can afford, and which path keeps the championship window open.
 
+::subscribe
+
+![JSN — Four Paths to an Extension](../../images/jsn-extension-preview/jsn-extension-preview-inline-1.png)
+
 ---
 
 ## The Four Paths
@@ -24,8 +28,6 @@ Here's what four domain experts — a salary cap analyst, a player advocate, the
 The panel's positions:
 
 ![Panelist vs Recommended Path vs AAV Target. 4 rows and 5 columns. Columns include Panelist, Recommended Path, AAV Target, and more. First row: Cap.](../../images/jsn-extension-preview/jsn-extension-preview-panelist-vs-recommended-path-vs-aav-target.png)
-
-![JSN — Four Paths to an Extension](../../images/jsn-extension-preview/jsn-extension-preview-inline-1.png)
 
 *The four contract paths and their projected cap implications through 2030.*
 
@@ -178,6 +180,8 @@ The market says $34M. The tape says $28–32M. The smart number is in between �
 The fifth-year option is a trap dressed as prudence. It saves $12–14M over two years but costs $30–40M over the life of the deal. The franchise tag is financial malpractice. Letting him walk to free agency is organizational malpractice. The only real debate is the AAV — and even there, the range is narrow. Pay JSN what he's worth within the system he's in. Lock him up. Fix the defense. Defend the title.
 
 The injury clock doesn't care about cap projections. It's already running.
+
+::subscribe
 
 ---
 

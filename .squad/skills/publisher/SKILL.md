@@ -201,6 +201,16 @@ Post the following to the article thread:
 - Images: {N} (cover: {N}, inline: {N})
 ```
 
+### Step 6b — Post-Publish Promotion Note (⛔ Gated)
+
+After Joe publishes the article live (Stage 8), Lead or Publisher should prompt for a promotion Note. **However, `publish_note_to_substack` is currently gated — the final POST is disabled** pending Phase 0 browser interception of the real Notes API endpoint on `nfllabstage`.
+
+**Current dry-run workflow:**
+- Calling `publish_note_to_substack` will validate auth, look up the article URL, assemble ProseMirror, and return a dry-run summary — but will **not** actually post.
+- Once Phase 0 capture is complete and the tool is ungated, this step becomes: present a teaser Note to Joe → approve → post to prod.
+
+See `docs/substack-notes-feature-design.md` §11 for the full rollout plan and `docs/notes-api-discovery.md` for the Phase 0 capture checklist.
+
 ---
 
 ## Common Issues and Fixes
@@ -240,3 +250,4 @@ Once Joe publishes the article live, Lead (or the publishing owner) should creat
 - **Image source:** [`image-generation`](../image-generation/SKILL.md) — images should already exist from Stage 5
 - **Publishing mechanics:** [`substack-publishing`](../substack-publishing/SKILL.md) — full syntax reference
 - **After Publisher:** Joe runs Stage 8 (Approval / Publish)
+- **Post-publish Notes:** [`substack-publishing`](../substack-publishing/SKILL.md) → `publish_note_to_substack` (⛔ currently gated — dry-run only until Phase 0 browser interception)

@@ -258,6 +258,64 @@ class PipelineState:
         )
         self._conn.commit()
 
+    # ── Notes ────────────────────────────────────────────────────────────────
+
+    VALID_NOTE_TYPES = ("promotion", "follow_up", "standalone")
+    VALID_NOTE_TARGETS = ("prod", "stage")
+
+    def record_note(self, article_id, note_type, content, note_url=None,
+                    target="prod", agent=None, image_path=None):
+        """
+        Insert a notes row for a published Substack Note.
+
+        Parameters
+        ----------
+        article_id : str or None
+            Linked article slug, or None for standalone Notes.
+        note_type : str
+            One of 'promotion', 'follow_up', 'standalone'.
+        content : str
+            Note body text.
+        note_url : str or None
+            URL of the published Note on Substack.
+        target : str
+            'prod' or 'stage'.
+        agent : str or None
+            Agent name or 'Joe'.
+        image_path : str or None
+            Local path if an image was attached.
+        """
+        if note_type not in self.VALID_NOTE_TYPES:
+            raise ValueError(f"Invalid note_type '{note_type}', expected one of {self.VALID_NOTE_TYPES}")
+        if target not in self.VALID_NOTE_TARGETS:
+            raise ValueError(f"Invalid target '{target}', expected one of {self.VALID_NOTE_TARGETS}")
+        if article_id is not None:
+            article = self.get_article(article_id)
+            if article is None:
+                raise ValueError(f"Article '{article_id}' not found in pipeline.db")
+        self._conn.execute(
+            """INSERT INTO notes
+               (article_id, note_type, content, substack_note_url, target, created_by, image_path)
+               VALUES (?,?,?,?,?,?,?)""",
+            (article_id, note_type, content, note_url, target, agent, image_path),
+        )
+        self._conn.commit()
+
+    def get_notes_for_article(self, article_id):
+        """Return all Notes linked to an article, newest first."""
+        rows = self._conn.execute(
+            "SELECT * FROM notes WHERE article_id = ? ORDER BY created_at DESC",
+            (article_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_all_notes(self):
+        """Return all Notes, newest first."""
+        rows = self._conn.execute(
+            "SELECT * FROM notes ORDER BY created_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     # ── Publish confirmation ─────────────────────────────────────────────────
 
     def record_publish(self, article_id, substack_url, agent="Joe"):

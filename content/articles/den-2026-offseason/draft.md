@@ -17,6 +17,10 @@ The Denver Broncos won 14 games, reached the AFC Championship Game, and still en
 
 That would already be a problem. The part that makes it urgent is the calendar. **Bo Nix** is still on his rookie deal through 2027. **Davis Webb** is taking over playcalling for the first time. **Alex Singleton** is 32. **Mike McGlinchey** is looming as a 2027 cap decision. In other words: Denver does not have the luxury of pretending this is just a depth-chart tweak. This is an identity test. If Payton still needs the Joker, then the Broncos need to buy one immediately.
 
+::subscribe
+
+![The Broncos' Missing Joker: Why Denver's Super Bowl Push May Come Down to One Tight End Bet — inline image 1|Denver's offensive potential in the red zone](../../images/den-2026-offseason/den-2026-offseason-inline-1.png)
+
 ---
 
 ## The Engram Decision Is Really a Franchise Decision
@@ -34,8 +38,6 @@ Denver's first call isn't the draft card. It's what to do with Engram's contract
 ![2025 Snapshot vs Number vs Why It Matters. 4 rows and 3 columns. Columns include 2025 Snapshot, Number, Why It Matters. First row: Engram production.](../../images/den-2026-offseason/den-2026-offseason-2025-snapshot-vs-number-vs-why-it-matters.png)
 
 Denver's offense wasn't broken everywhere. It was broken in the exact place Payton usually uses a tight end to solve problems: the middle of the field, especially near the goal line. That's why this conversation keeps coming back to the same uncomfortable conclusion. The Broncos don't just need *a* tight end. They need **the** type of tight end their coach has historically used as the cheat code.
-
-![The Broncos' Missing Joker: Why Denver's Super Bowl Push May Come Down to One Tight End Bet — inline image 1|Denver's offensive potential in the red zone](../../images/den-2026-offseason/den-2026-offseason-inline-1.png)
 
 ---
 
@@ -130,6 +132,8 @@ Denver should designate **Evan Engram** as a post-June 1 cut, take **Kenyon Sadi
 The Broncos don't need to rebuild their identity. They need to stop renting it. Payton's offense is still built around the possibility that a tight end can force impossible answers from a defense. If Denver believes that, it has to draft like it believes it. If it doesn't, then it should admit the entire premise has changed and stop chasing the ghost of Jimmy Graham in smaller, cheaper installments.
 
 The panel's read is that the premise hasn't changed. The window is just getting louder.
+
+::subscribe
 
 ---
 

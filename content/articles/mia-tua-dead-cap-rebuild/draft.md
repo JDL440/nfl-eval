@@ -18,6 +18,8 @@ But here's what the headlines miss: dead cap math doesn't work the way casual fa
 
 We convened three experts to evaluate whether Miami can execute a competitive rebuild under unprecedented dead money, or whether this albatross condemns them to a talent drought no amount of drafting can overcome. What we found: unanimous agreement on the path forward, sharp disagreement on how fast it actually works, and a non-obvious market strategy that turns Miami's biggest constraint into a draft-pick harvesting tool.
 
+![$99 Million Ghost: How Miami Rebuilds With the Largest Dead Cap Hit in NFL History — inline image 1|Miami's front-office rebuild under financial constraint](../../images/mia-tua-dead-cap-rebuild/mia-tua-dead-cap-rebuild-inline-1.png)
+
 ---
 
 ## The $99.2M That Isn't What It Seems
@@ -54,8 +56,6 @@ The cap rises to ~$317M. The second Tua tranche ($43.8M) still hits, but expensi
 
 > *"This is a two-year tax, not a five-year sentence. At 18.4% and 13.8% of cap, both years are lighter proportional hits than what LA and Denver survived. Miami's math supports competitiveness by 2027. The constraint isn't dollars — it's quarterback."*
 > — Cap, Salary Cap Expert
-
-![$99 Million Ghost: How Miami Rebuilds With the Largest Dead Cap Hit in NFL History — inline image 1|Miami's front-office rebuild under financial constraint](../../images/mia-tua-dead-cap-rebuild/mia-tua-dead-cap-rebuild-inline-1.png)
 
 ---
 

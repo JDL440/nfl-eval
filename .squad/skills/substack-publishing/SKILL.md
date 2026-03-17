@@ -354,3 +354,37 @@ Attempts made (2026-03-15):
 - ✅ Local image auto-upload: `./test-local.jpg` → `substack-post-media.s3.amazonaws.com` S3 URL (2026-03-15)
 - ✅ Auth: cookie-based via `SUBSTACK_TOKEN` (base64 encoded `substack_sid` only — `connect_sid` not needed)
 - ✅ Author ID resolution: `GET /api/v1/user/profile/self` on publication subdomain
+
+---
+
+## Substack Notes (⛔ Gated — Dry-Run Only)
+
+A second tool — `publish_note_to_substack` — is registered in the same extension for short-form Notes. **It is currently gated at the final POST** because the real Notes API endpoint and payload shape are unverified.
+
+### What is shipped and working
+
+| Component | Status |
+|-----------|--------|
+| `publish_note_to_substack` tool registration | ✅ Registered in `extension.mjs` |
+| Auth, article URL lookup, image upload | ✅ Reuses existing article-publishing infra |
+| `noteTextToProseMirror()` — text → ProseMirror assembly | ✅ Implemented |
+| `createSubstackNote()` — final POST | ⛔ **Gated** — intentionally throws; no-op until Phase 0 |
+| `notes` table in `schema.sql` / `pipeline.db` | ✅ Shipped |
+| `PipelineState.record_note()` / `.get_notes_for_article()` / `.get_all_notes()` | ✅ Shipped |
+| `article_board.py` note-count awareness | ✅ Shipped |
+| `validate-notes-smoke.mjs` — stage-only smoke harness | ✅ Shipped |
+| `docs/notes-api-discovery.md` — Phase 0 capture checklist | ✅ Shipped |
+
+### What is still required before live posting
+
+1. **Phase 0 browser interception** on `nfllabstage` — Joe or Lead manually creates a Note while capturing the network request in DevTools. See `docs/notes-api-discovery.md`.
+2. Record the captured endpoint path and any extra fields in `.env` (`NOTES_ENDPOINT_PATH`, `NOTES_PAYLOAD_SHAPE`).
+3. Ungate `createSubstackNote()` and run `validate-notes-smoke.mjs` against stage.
+
+### Key design note
+
+Notes use **ProseMirror `bodyJson`**, not a plain-text `content` string. The tool accepts plain text as input and assembles the ProseMirror document internally.
+
+### Full design doc
+
+See `docs/substack-notes-feature-design.md` for parameters, rollout plan, data model, and decision log.

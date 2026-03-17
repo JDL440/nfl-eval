@@ -23,6 +23,8 @@ The prayer is over. The Cardinals are 3-14, carrying a $47.5M dead-cap crater fr
 
 We put the rebuild blueprint to four experts — a team analyst, a draft specialist, a cap expert, and a scheme analyst. They agreed on more than we expected: the Murray era had to end, 2026 is a transition year, and nobody should take a QB at #3 in this class. Where they fractured is the question that will define this franchise for the next five years: *When does the next quarterback arrive?*
 
+![Arizona Cardinals post-Murray rebuild — inline image 1|Arizona Cardinals offseason analysis](../../images/ari-2026-offseason/ari-2026-offseason-inline-1.jpg)
+
 ---
 
 ## The Dead Cap Crater — And Why It's Actually the Best Asset in Football
@@ -55,9 +57,6 @@ Cap modeled four paths through 2028 and landed firmly on patience: accept the de
 ## The #3 Pick Menu: Take the Pass Rusher, Then Go Get Your Quarterback
 
 Our draft expert was blunt: **there is no quarterback worth the #3 overall pick in the 2026 draft.** Mendoza goes #1 to Las Vegas. After that, the QB landscape drops off a cliff. Ty Simpson (Alabama, ~15 college starts) is a legitimate late-first talent. Taking him at #3 would be a 20+ pick reach — the kind of move that gets GMs fired.
-
-![Arizona Cardinals post-Murray rebuild — inline image 1|Arizona Cardinals offseason analysis](../../images/ari-2026-offseason/ari-2026-offseason-inline-1.jpg)
-
 
 So what IS at #3? An elite pass rusher staring Arizona in the face.
 

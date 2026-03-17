@@ -20,6 +20,8 @@ That creates the kind of disagreement front offices actually care about. Cap loo
 
 The interesting part is that both sides are making rational arguments from the same evidence. Seattle is not debating whether Witherspoon is elite. Seattle is debating whether elite should be priced as a market reset or as a championship fit. That's a much narrower fight — and much more solvable — than the headline suggests.
 
+::subscribe
+
 ---
 
 ## The Setup
@@ -219,6 +221,8 @@ And that window is very real. Arizona is retooling. San Francisco looks older, p
 Witherspoon is one of the rare players whose value extends beyond his stat line because he changes how every snap around him can be called. That is worth elite money. Just not performative money.
 
 Call it $31.5 million. Call it $66 million fully guaranteed. Call it the cost of keeping the disguise machine alive. Whatever label Seattle uses, the assignment is obvious now: stop debating fake endpoints and sign the deal sitting in the overlap.
+
+::subscribe
 
 ---
 

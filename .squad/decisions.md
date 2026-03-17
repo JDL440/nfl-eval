@@ -4,6 +4,37 @@
 
 ---
 
+### 2026-03-17: Publish Article Drafts to Production by Default
+**By:** Joe Robinson (user directive via Copilot)
+**Status:** ACTIVE — Enforced in workflow
+**Affects:** All article publishing; batch-publish-prod.mjs, squad orchestration, Lead routing
+
+**What:**
+Publish article drafts directly to the **production** Substack (nfllab.substack.com) by default. Use stage (nfllabstage.substack.com) **only** when explicitly testing new publishing functionality (e.g., table rendering changes, schema experiments).
+
+**Why:**
+User preference — articles are ready for prod review without an intermediate stage step. Reduces manual re-push friction. Stage remains available for engineering validation of publisher changes.
+
+**Related todo:** prod-default-publishing
+
+---
+
+### 2026-03-17: Dense Table Images Illegible on Mobile — Investigation Open
+**By:** Lead (Team Lead Specialist)
+**Status:** OPEN — Tracking in GitHub issue #75
+**Affects:** `.github/extensions/table-image-renderer/renderer-core.mjs`, `fix-dense-tables.mjs`, `audit-tables.mjs`
+
+**What:**
+Table/chart images rendered at 960–1160px width are shrunk to ~375px on mobile, making text ~36% of intended size. Seven alternatives evaluated; dual-render (desktop + mobile variants) recommended as best effort-to-impact approach.
+
+**Next Steps:**
+1. Test font-size bump (17px→20px) as quick baseline improvement
+2. Implement mobile viewport option in renderer-core.mjs
+3. Update fix-dense-tables.mjs to emit mobile variants
+4. Validate on real mobile devices via Substack stage
+
+---
+
 ### 2026-03-17: Produce Justin Fields Trade Evaluation as Breaking News
 **By:** Lead (Team Lead Specialist)
 **Status:** EXECUTED
