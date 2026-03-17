@@ -42,13 +42,23 @@ API read-back only confirms that the JSON was stored. It does NOT validate that 
 API read-back is NOT sufficient to predict editor compatibility. The strongest safe substitute now in place is:
 - Pre-publish validation that checks all node types against known Substack schema
 - Structural validation that verifies `captionedImage` children are exactly `[image2, caption]`
-- Full browser-based validation would require Puppeteer/Playwright with authenticated cookies, which is not currently feasible without persisting secrets
+- **Browser-level validation** via `validate-substack-editor.mjs` — launches headless Chrome with in-memory cookies, opens each draft URL, and checks console for `RangeError` / schema errors. No secrets persisted.
+
+**Browser Validation Results (post-fix):**
+All 4 drafts opened cleanly in headless Chrome — zero console errors, zero page errors, zero dialogs, editor contenteditable element loaded successfully.
+
+| Article | Draft ID | Browser Validation |
+|---------|----------|--------------------|
+| witherspoon-extension-v2 | 191200944 | ✅ PASS — zero errors |
+| jsn-extension-preview | 191200952 | ✅ PASS — zero errors |
+| den-2026-offseason | 191154355 | ✅ PASS — zero errors |
+| mia-tua-dead-cap-rebuild | 191150015 | ✅ PASS — zero errors |
 
 **Manual Follow-Up:**
-Joe should open each of the 4 draft URLs in the Substack editor to confirm they load cleanly:
+None required for the fix itself — browser validation confirmed all 4 drafts load cleanly. Joe can verify manually if desired:
 - https://nfllab.substack.com/publish/post/191200944
 - https://nfllab.substack.com/publish/post/191200952
 - https://nfllab.substack.com/publish/post/191154355
 - https://nfllab.substack.com/publish/post/191150015
 
-**Key Learning:** API acceptance ≠ editor compatibility. Node type names must match Substack's exact schema — `"caption"` not `"imageCaption"`. Always cross-reference against documented Substack format (`can3p/substack-api-notes`) when generating ProseMirror JSON.
+**Key Learning:** API acceptance ≠ editor compatibility. Node type names must match Substack's exact schema — `"caption"` not `"imageCaption"`. Always cross-reference against documented Substack format (`can3p/substack-api-notes`) when generating ProseMirror JSON. Use `validate-substack-editor.mjs` for browser-level confirmation after any future schema changes.
