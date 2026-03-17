@@ -84,6 +84,24 @@ const RENDER_LAYOUT = Object.freeze({
     heightSafety: 72,
 });
 
+// Mobile-optimized layout: larger fonts and tighter padding for 375px viewport readability.
+// At ~58% scaling (600px canvas → 343px content area), 20px body → ~11.7px effective,
+// which is legible on retina screens (23.4 physical pixels).
+const MOBILE_RENDER_LAYOUT = Object.freeze({
+    canvasPadding: 6,
+    tableRadius: 10,
+    tableHeaderHeight: 50,
+    tableHeadFontSize: 16,
+    tableHeadLineHeight: 1.18,
+    tableCellFontSize: 20,
+    tableCellLineHeight: 1.36,
+    tableCellPaddingX: 10,
+    tableCellPaddingY: 10,
+    tableFirstRowMinHeight: 52,
+    tableRowMinHeight: 48,
+    heightSafety: 72,
+});
+
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
@@ -437,6 +455,13 @@ function chooseCanvasWidth(columnCount, templateName) {
     return 1020;
 }
 
+function chooseMobileCanvasWidth(columnCount) {
+    if (columnCount <= 3) return 500;
+    if (columnCount <= 4) return 560;
+    if (columnCount <= 5) return 620;
+    return 660;
+}
+
 function inferColumnRoles(table, templateName) {
     return table.headers.map((header, index) => {
         const normalized = normalizeHeader(header);
@@ -598,8 +623,8 @@ function buildAutoTitle(table, templateName) {
     return leadHeaders.length > 0 ? `${leadHeaders.join(" vs. ")}` : "Comparison table";
 }
 
-function estimateRowHeight(row, columns, canvasWidth, rowIndex) {
-    const usableWidth = canvasWidth - (RENDER_LAYOUT.canvasPadding * 2);
+function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_LAYOUT) {
+    const usableWidth = canvasWidth - (layout.canvasPadding * 2);
     let maxLines = 1;
 
     row.forEach((cell, index) => {
@@ -609,7 +634,7 @@ function estimateRowHeight(row, columns, canvasWidth, rowIndex) {
         const charsPerLine = Math.max(
             7,
             Math.floor(
-                (widthPx - (RENDER_LAYOUT.tableCellPaddingX * 2) - 10) /
+                (widthPx - (layout.tableCellPaddingX * 2) - 10) /
                 (
                     column.role === "number"
                         ? 9.2
@@ -627,41 +652,45 @@ function estimateRowHeight(row, columns, canvasWidth, rowIndex) {
         maxLines = Math.max(maxLines, lines);
     });
 
-    const minHeight = rowIndex === 0 ? RENDER_LAYOUT.tableFirstRowMinHeight : RENDER_LAYOUT.tableRowMinHeight;
-    const lineHeightPx = RENDER_LAYOUT.tableCellFontSize * RENDER_LAYOUT.tableCellLineHeight;
+    const minHeight = rowIndex === 0 ? layout.tableFirstRowMinHeight : layout.tableRowMinHeight;
+    const lineHeightPx = layout.tableCellFontSize * layout.tableCellLineHeight;
     return Math.max(
         minHeight,
-        Math.round((RENDER_LAYOUT.tableCellPaddingY * 2) + (maxLines * lineHeightPx))
+        Math.round((layout.tableCellPaddingY * 2) + (maxLines * lineHeightPx))
     );
 }
 
 function createRenderModel(table, options = {}) {
+    const layout = options.mobile ? MOBILE_RENDER_LAYOUT : RENDER_LAYOUT;
     const templateName = selectTemplate(table, options.template);
     const preset = TEMPLATE_PRESETS[templateName];
     const columns = resolveColumnMetadata(table, templateName);
-    const canvasWidth = chooseCanvasWidth(table.columnCount, templateName);
+    const canvasWidth = options.mobile
+        ? chooseMobileCanvasWidth(table.columnCount)
+        : chooseCanvasWidth(table.columnCount, templateName);
     const rowHeaderColumnIndex = templateName === "priority-list" && table.columnCount > 1 ? 1 : 0;
     const title = String(options.title || "").trim() || buildAutoTitle(table, templateName);
     const caption = String(options.caption || "").trim();
     const rows = table.rows.map((cells, index) => ({
         cells,
-        estimatedHeight: estimateRowHeight(cells, columns, canvasWidth, index),
+        estimatedHeight: estimateRowHeight(cells, columns, canvasWidth, index, layout),
         isSummary: isSummaryRow(cells),
     }));
-    const tableHeaderHeight = RENDER_LAYOUT.tableHeaderHeight;
+    const tableHeaderHeight = layout.tableHeaderHeight;
     const tableBodyHeight = rows.reduce((sum, row) => sum + row.estimatedHeight, 0);
     const canvasHeight = Math.max(
         220,
-        (RENDER_LAYOUT.canvasPadding * 2) +
+        (layout.canvasPadding * 2) +
         tableHeaderHeight +
         tableBodyHeight +
-        RENDER_LAYOUT.heightSafety
+        layout.heightSafety
     );
 
     return {
         templateName,
         templateLabel: preset.label,
         preset,
+        layout,
         title,
         caption,
         canvasWidth,
@@ -719,7 +748,7 @@ function buildTableBodyHtml(model) {
 
 function buildHtml(table, options = {}) {
     const model = createRenderModel(table, options);
-    const { preset } = model;
+    const { preset, layout } = model;
 
     const columnGroup = model.columns
         .map((column) => `<col style="width:${column.widthPercentage}%">`)
@@ -758,13 +787,13 @@ function buildHtml(table, options = {}) {
     }
     body {
       box-sizing: border-box;
-      padding: ${RENDER_LAYOUT.canvasPadding}px;
+      padding: ${layout.canvasPadding}px;
     }
     .table-frame {
       box-sizing: border-box;
       width: 100%;
       border: 1px solid var(--line-strong);
-      border-radius: ${RENDER_LAYOUT.tableRadius}px;
+      border-radius: ${layout.tableRadius}px;
       overflow: hidden;
       background: #ffffff;
     }
@@ -774,12 +803,12 @@ function buildHtml(table, options = {}) {
       table-layout: fixed;
     }
     thead th {
-      padding: 12px ${RENDER_LAYOUT.tableCellPaddingX}px;
+      padding: 12px ${layout.tableCellPaddingX}px;
       background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
       border-bottom: 1px solid var(--line-strong);
       color: #334155;
-      font-size: ${RENDER_LAYOUT.tableHeadFontSize}px;
-      line-height: ${RENDER_LAYOUT.tableHeadLineHeight};
+      font-size: ${layout.tableHeadFontSize}px;
+      line-height: ${layout.tableHeadLineHeight};
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -792,11 +821,11 @@ function buildHtml(table, options = {}) {
     tbody th,
     tbody td {
       box-sizing: border-box;
-      padding: ${RENDER_LAYOUT.tableCellPaddingY}px ${RENDER_LAYOUT.tableCellPaddingX}px;
+      padding: ${layout.tableCellPaddingY}px ${layout.tableCellPaddingX}px;
       border-bottom: 1px solid var(--line);
       color: var(--body);
-      font-size: ${RENDER_LAYOUT.tableCellFontSize}px;
-      line-height: ${RENDER_LAYOUT.tableCellLineHeight};
+      font-size: ${layout.tableCellFontSize}px;
+      line-height: ${layout.tableCellLineHeight};
       vertical-align: top;
       overflow-wrap: anywhere;
     }
@@ -1198,10 +1227,12 @@ export async function renderTableImage(args) {
         title: args.title,
         caption: args.caption,
         template: args.template,
+        mobile: args.mobile,
     });
 
+    const mobileSuffix = args.mobile ? "-mobile" : "";
     const outputStem = slugify(args.output_name || args.title || `table-${tableIndex}`);
-    const outputFilename = `${articleSlug}-${outputStem}.png`;
+    const outputFilename = `${articleSlug}-${outputStem}${mobileSuffix}.png`;
     const outputPath = join(outputDir, outputFilename);
     const image = renderTablePng({ html, width, height, outputPath });
 
@@ -1285,6 +1316,10 @@ async function startExtension() {
                         template: {
                             type: "string",
                             description: "Optional template override: auto, generic-comparison, cap-comparison, draft-board, or priority-list.",
+                        },
+                        mobile: {
+                            type: "boolean",
+                            description: "When true, renders a mobile-optimized variant (narrower canvas, larger fonts) instead of the desktop default.",
                         },
                     },
                     required: ["article_file_path"],
