@@ -571,3 +571,89 @@ A: We'll need to add a preflight GET to fetch the token. The capture
 checklist specifically calls out CSRF headers. If found, note the header
 name, value, and where the browser sourced it (usually a `<meta>` tag
 or a prior API response).
+
+---
+
+## CRITICAL CORRECTION — Phase 3 Investigation (2026-03-17T21:00Z)
+
+**Finding:** Article card rendering requires published article URL, not draft URL or image attachment.
+
+**Evidence from live Notes:**
+
+| Note | Pattern | Result |
+|------|---------|--------|
+| **c-228989056** (working) | Text + link to /p/justin-fields-... | ✅ Card renders (thumbnail + headline + pub) |
+| **c-229342260** (example) | Caption + image only | ❌ No card (image-only view) |
+| **229347247** (our Phase 3) | Caption + image (attachmentIds) | ❌ No card (image-only view) |
+
+**Root Cause Analysis:**
+
+The extension.mjs \parseInline()\ function (line 1050) supports markdown links:
+\\\javascript
+[link text](https://example.com)
+\\\
+
+This creates ProseMirror link marks with href attributes. When the href points to a published article URL (\/p/...\), Substack auto-fetches article metadata and renders a card preview.
+
+However:
+- Draft URLs (\/publish/post/...\) do NOT trigger card rendering
+- Image attachments alone (\ttachmentIds\ field) do not trigger cards
+- Card rendering requires an explicit link in the Note body pointing to a published article
+
+**Why Phase 3 Note (229347247) lacks a card:**
+
+The \uildNoteBody()\ function in replace-jsn-note.mjs created text-only paragraphs with no link marks:
+\\\
+Payload: { bodyJson: { type: "doc", content: [ { type: "paragraph", content: [{ type: "text", text: "JSN at..." }] } ] }, attachmentIds: [...] }
+\\\
+
+No link mark was included. The image attachment rendered but did not trigger card generation.
+
+**Corrective Action:**
+
+To achieve article card rendering on production:
+1. ✅ Publish JSN article to nfllab.substack.com → get published /p/ URL
+2. Create new Note with markdown link in the caption:
+   \\\
+   JSN at 90% below market. Our panel breaks the extension paths.
+   [Read the analysis →](https://nfllab.substack.com/p/jsn-extension-preview)
+   \\\
+3. This link becomes a ProseMirror mark
+4. Substack auto-renders the card with article metadata
+
+**Current Note Status:**
+- Note ID: 229347247
+- Image: ✅ Visible (jsn-extension-preview-inline-1.png via attachmentIds)
+- Caption: ✅ Visible ("JSN at 90% below market...")
+- Card: ❌ Missing (would require published /p/ link)
+- Action: Do NOT delete; use as learning artifact. Repost after JSN publishes.
+
+**Key Learning:**
+Images are supplementary visual content. Article cards are triggered exclusively by links to published articles. The card is the primary discovery mechanism; image + text are the engagement hooks.
+
+---
+
+## Phase 4 Correction — Card Rendering Fix (2026-03-18T02:30Z)
+
+**Problem:** Phase 4 stage review Notes (5 total) rendered as plain links instead of article cards despite linking to published production `/p/` URLs.
+
+**Root Cause:** `noteTextToProseMirror()` in `extension.mjs` created plain text paragraphs. URLs embedded in the text were not wrapped in ProseMirror `link` marks. Substack requires explicit `marks: [{ type: "link", attrs: { href } }]` on URL text nodes to trigger card rendering. Plain text URLs get auto-linked by Substack's renderer but do NOT generate the rich article card preview.
+
+**Fix applied:**
+1. Added `parseNoteInline()` helper to `extension.mjs` — auto-detects `https://` URLs in note text and wraps them in ProseMirror link marks
+2. Deleted 5 broken Notes (229372212, 229372239, 229372275, 229372305, 229372344)
+3. Reposted with corrected ProseMirror containing explicit link marks
+
+**New Note IDs (stage review, corrected):**
+
+| Article | Old Note ID | New Note ID | Permalink |
+|---------|-------------|-------------|-----------|
+| JSN Extension | 229372212 | 229378039 | https://substack.com/@joerobinson495999/note/c-229378039 |
+| KC Fields Trade | 229372239 | 229378074 | https://substack.com/@joerobinson495999/note/c-229378074 |
+| Denver Offseason | 229372275 | 229378102 | https://substack.com/@joerobinson495999/note/c-229378102 |
+| Miami Dead Cap | 229372305 | 229378151 | https://substack.com/@joerobinson495999/note/c-229378151 |
+| Witherspoon Extension | 229372344 | 229378200 | https://substack.com/@joerobinson495999/note/c-229378200 |
+
+**Also backfilled:** `substack_url` in pipeline.db for both Stage 8 published articles:
+- `seahawks-rb1a-target-board` → `https://nfllab.substack.com/p/the-6-million-backfield-how-seattle`
+- `witherspoon-extension-cap-vs-agent` → `https://nfllab.substack.com/p/cap-says-27m-the-agent-demands-33m-d00`

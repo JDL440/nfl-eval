@@ -378,6 +378,10 @@ async function lookupArticleUrlFromDb(articleSlug, cwd) {
  * Notes are plain text — no markdown formatting (bold/italic/headings).
  * Each non-empty line becomes its own paragraph. This is more reliable for
  * Notes than emitting `hard_break` nodes inside a single paragraph.
+ *
+ * URLs are auto-detected and wrapped in ProseMirror link marks so that
+ * Substack can resolve article cards when the URL points to a published
+ * /p/ article.
  */
 function noteTextToProseMirror(text) {
     const content = [];
@@ -385,12 +389,38 @@ function noteTextToProseMirror(text) {
     for (const rawLine of lines) {
         const trimmed = rawLine.trim();
         if (trimmed === "") continue;
-        content.push({ type: "paragraph", content: [{ type: "text", text: trimmed }] });
+        content.push({ type: "paragraph", content: parseNoteInline(trimmed) });
     }
     if (content.length === 0) {
         content.push({ type: "paragraph", content: [{ type: "text", text: String(text || "") }] });
     }
     return { type: "doc", attrs: { schemaVersion: "v1" }, content };
+}
+
+/**
+ * Parse a plain-text line into ProseMirror text nodes, auto-linking URLs.
+ * Bare URLs (https://...) get a link mark so Substack renders article cards.
+ */
+function parseNoteInline(line) {
+    const urlRe = /(https?:\/\/[^\s<>)"]+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = urlRe.exec(line)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push({ type: "text", text: line.slice(lastIndex, match.index) });
+        }
+        parts.push({
+            type: "text",
+            text: match[1],
+            marks: [{ type: "link", attrs: { href: match[1], target: "_blank" } }],
+        });
+        lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < line.length) {
+        parts.push({ type: "text", text: line.slice(lastIndex) });
+    }
+    return parts.length > 0 ? parts : [{ type: "text", text: line }];
 }
 
 /**
