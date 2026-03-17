@@ -20,6 +20,8 @@ On the first Tuesday of free agency week, George Paton found one in Miami's fire
 
 ::subscribe
 
+![Denver Paid a Late First for the Receiver Who Changes Their Coverage Math — inline image 1|Denver Broncos trade atmosphere — editorial image](../../images/den-mia-waddle-trade/den-mia-waddle-trade-inline-1.jpg)
+
 ---
 
 ## The Deal
@@ -119,6 +121,8 @@ The Dolphins cycled through three different signal-callers in 2025 with no estab
 Denver is betting that situation — not talent — was the problem. The panel agrees unanimously.
 
 ---
+
+![Denver Paid a Late First for the Receiver Who Changes Their Coverage Math — inline image 2|Waddle trade analysis — editorial image](../../images/den-mia-waddle-trade/den-mia-waddle-trade-inline-2.jpg)
 
 ## The $5 Million Mirage: Cap's Warning
 
