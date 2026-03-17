@@ -99,6 +99,8 @@ Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 {Opening hook — 2-3 paragraphs setting up the problem/question. Make it visceral.
 Use the team's current situation to create urgency.}
 
+::subscribe
+
 ---
 
 ## {Section 1: The Situation / The Problem}
@@ -129,6 +131,8 @@ Use the team's current situation to create urgency.}
 ---
 
 {Closing paragraph — tie it back to the big picture}
+
+::subscribe
 
 ---
 
@@ -177,6 +181,8 @@ The tool saves images to `content/images/{slug}/` and returns markdown reference
 **Image policy (current):**
 - **NO cover image** in article markdown — cover is set manually in Substack editor by Joe at Stage 8
 - **Exactly 2 inline images** — placed at natural section breaks to keep mobile readers scrolling
+- **inline-1 MUST be a hero/atmospheric image** (not a chart/table) — it drives the social share thumbnail
+- **inline-2** can be analytical or data-adjacent
 - Inline images use 1:1 aspect ratio, rendered at `imageSize: "normal"` (text column width)
 
 **Full guidance:** See [`image-generation` SKILL.md](../image-generation/SKILL.md) for prompting strategy, custom prompts, and Editor review format.

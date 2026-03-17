@@ -407,6 +407,14 @@ async function markdownToProseMirror(markdown, uploadImage) {
             continue;
         }
 
+        // Subscribe widget: ::subscribe or ::subscribe Custom caption text
+        const subLine = trimmed.match(/^::subscribe(?:\s+(.+))?$/i);
+        if (subLine) {
+            content.push(buildSubscribeWidget(subLine[1] || DEFAULT_SUBSCRIBE_CAPTION));
+            i++;
+            continue;
+        }
+
         // Standalone image line: ![alt](url) or ![alt|caption](url) or ![alt](url "caption")
         const imgLine = trimmed.match(/^!\[([^\]]*)\]\(([^)"]+?)(?:\s+"([^"]*)")?\)$/);
         if (imgLine) {
@@ -561,6 +569,7 @@ const KNOWN_SUBSTACK_NODE_TYPES = new Set([
     "captionedImage", "image2", "caption",
     "youtube2", "table", "table_row", "table_cell", "table_header",
     "hard_break", "code_block",
+    "subscribeWidget", "ctaCaption",
 ]);
 
 /**
@@ -609,6 +618,12 @@ function validateProseMirrorBody(body) {
                 issues.push(`captionedImage at ${path} has ${childTypes.length} children (expected 2: image2 + caption)`);
             }
         }
+        if (node.type === "subscribeWidget") {
+            const childTypes = (node.content || []).map(c => c.type);
+            if (childTypes.length !== 1 || childTypes[0] !== "ctaCaption") {
+                issues.push(`subscribeWidget at ${path} must contain exactly one ctaCaption child (got: ${childTypes.join(", ") || "nothing"})`);
+            }
+        }
         if (Array.isArray(node.content)) {
             node.content.forEach((child, i) => walkStructure(child, `${path}.content[${i}]`));
         }
@@ -617,6 +632,207 @@ function validateProseMirrorBody(body) {
 
     if (issues.length === 0) return { valid: true, issues: [] };
     return { valid: false, issues };
+}
+
+// ─── Subscribe widget ────────────────────────────────────────────────────────
+
+const DEFAULT_SUBSCRIBE_CAPTION =
+    "Thanks for reading NFL Lab! Subscribe for free to receive new posts and support our work.";
+
+const FOOTER_PARAGRAPH_PATTERNS = [
+    /\bThe NFL Lab\b/i,
+    /\bAbout the NFL Lab Expert Panel\b/i,
+    /\bWant us to evaluate\b/i,
+    /\bDrop (?:it|your take) in the comments\b/i,
+    /^\s*Next from the panel:/i,
+];
+
+const PANEL_ROLLCALL_RE = /^(?:[A-Z][A-Za-z]+|[A-Z]{2,})(?:\s*[·•]\s*(?:[A-Z][A-Za-z]+|[A-Z]{2,}))+$/;
+
+function buildSubscribeWidget(captionText) {
+    return {
+        type: "subscribeWidget",
+        attrs: { url: "%%checkout_url%%", text: "Subscribe", language: "en" },
+        content: [{
+            type: "ctaCaption",
+            content: [{ type: "text", text: captionText || DEFAULT_SUBSCRIBE_CAPTION }],
+        }],
+    };
+}
+
+function getNodeText(node) {
+    if (!node) return "";
+    if (node.type === "text") return node.text || "";
+    if (!Array.isArray(node.content)) return "";
+    return node.content.map(getNodeText).join("");
+}
+
+function isBylineParagraph(node) {
+    if (node?.type !== "paragraph") return false;
+    return /\bBy:\s*The NFL Lab Expert Panel\b/i.test(getNodeText(node).trim());
+}
+
+function isPanelRollCallParagraph(node) {
+    if (node?.type !== "paragraph") return false;
+    const text = getNodeText(node).trim();
+    return text.length <= 80 && PANEL_ROLLCALL_RE.test(text);
+}
+
+function isTldrParagraph(node) {
+    if (node?.type !== "paragraph") return false;
+    return /\bTL;?DR\b/i.test(getNodeText(node).trim());
+}
+
+function isFooterParagraph(node) {
+    if (node?.type !== "paragraph") return false;
+    const text = getNodeText(node).trim();
+    return FOOTER_PARAGRAPH_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function findOpeningParagraphIndex(content) {
+    for (let i = 0; i < content.length; i++) {
+        const node = content[i];
+        if (node?.type !== "paragraph") continue;
+        const text = getNodeText(node).trim();
+        if (!text) continue;
+        if (isBylineParagraph(node) || isPanelRollCallParagraph(node) || isTldrParagraph(node) || isFooterParagraph(node)) {
+            continue;
+        }
+        return i;
+    }
+    return -1;
+}
+
+function findClosingNotesInsertIndex(content) {
+    for (let i = 0; i < content.length; i++) {
+        if (!isFooterParagraph(content[i])) continue;
+        return i > 0 && content[i - 1].type === "horizontal_rule" ? i - 1 : i;
+    }
+
+    for (let i = content.length - 1; i >= 0; i--) {
+        if (content[i].type === "horizontal_rule") return i;
+    }
+
+    return content.length;
+}
+
+/**
+ * Ensure exactly 2 subscribe-with-caption widgets exist in the ProseMirror doc.
+ *
+ * Placement rules:
+ *   1) After the first substantive opening paragraph (skip bylines / TLDR).
+ *   2) Near the end — before the closing notes / footer block.
+ *
+ * If the markdown already contains explicit ::subscribe markers (converted to
+ * subscribeWidget nodes), those are preserved and only missing early/late
+ * placements are injected.
+ */
+function ensureSubscribeButtons(doc) {
+    const content = doc.content;
+    if (!Array.isArray(content) || content.length === 0) return doc;
+
+    const subscribeIndices = [];
+    for (let i = 0; i < content.length; i++) {
+        if (content[i].type === "subscribeWidget") subscribeIndices.push(i);
+    }
+    if (subscribeIndices.length >= 2) return doc;
+
+    const openingParaIdx = findOpeningParagraphIndex(content);
+    const closingNotesIdx = findClosingNotesInsertIndex(content);
+    const midpoint = Math.floor(content.length / 2);
+
+    const hasEarlyWidget = openingParaIdx >= 0
+        ? subscribeIndices.some((idx) => idx >= openingParaIdx && idx <= openingParaIdx + 2)
+        : subscribeIndices.some((idx) => idx <= midpoint);
+    const hasLateWidget = closingNotesIdx >= 0
+        ? subscribeIndices.some((idx) => idx >= Math.max(0, closingNotesIdx - 2))
+        : subscribeIndices.some((idx) => idx >= midpoint);
+
+    const insertions = [];
+    if (!hasLateWidget && closingNotesIdx >= 0) {
+        insertions.push(closingNotesIdx);
+    }
+    if (!hasEarlyWidget && openingParaIdx >= 0) {
+        insertions.push(openingParaIdx + 1);
+    }
+
+    insertions
+        .sort((a, b) => b - a)
+        .forEach((index) => content.splice(Math.min(index, content.length), 0, buildSubscribeWidget()));
+
+    return doc;
+}
+
+// ─── First-image hero safety ─────────────────────────────────────────────────
+
+// Path/text patterns that indicate a chart/table/data image (not hero-safe).
+const CHART_TABLE_IMAGE_PATH_RE =
+    /(?:^|[-_/])(table|chart|data|decision|priority|comparison|breakdown|salary|contract|depth-chart|matrix|targets|snapshot|blueprint|paths|question-vs|panelist-vs|year-vs|expert-vs|prospect-vs|path-vs|model-vs|move-vs|deployment-model|dead-cap-comparison|engram-decision|pick-30-options)(?:[-_.\\/]|$)/i;
+const CHART_TABLE_IMAGE_TEXT_RE =
+    /\b(rows?|columns?|table|comparison|decision matrix|blueprint|depth chart|cap hit|dead cap|projected cap|draft targets|question vs|panelist vs|path vs|year vs|expert vs)\b/i;
+
+function getImageDescriptor(node) {
+    const img = (node.content || []).find((child) => child.type === "image2");
+    const caption = (node.content || []).find((child) => child.type === "caption");
+    return {
+        src: img?.attrs?.src || "",
+        alt: img?.attrs?.alt || "",
+        caption: getNodeText(caption).trim(),
+    };
+}
+
+/**
+ * Validate that the first captionedImage in the doc is hero-safe (not a
+ * chart/table/data image). If the first image looks like a chart and a later
+ * image does not, swap them so the social share / email thumbnail is
+ * visually appealing.
+ *
+ * Returns { safe: boolean, warning?: string }.
+ */
+function ensureHeroFirstImage(doc) {
+    const content = doc.content;
+    if (!content) return { safe: true };
+
+    const imageIndices = [];
+    for (let i = 0; i < content.length; i++) {
+        if (content[i].type === "captionedImage") imageIndices.push(i);
+    }
+    if (imageIndices.length === 0) return { safe: true };
+
+    function looksLikeChart(node) {
+        const { src, alt, caption } = getImageDescriptor(node);
+        const text = `${alt} ${caption}`.trim();
+        return CHART_TABLE_IMAGE_PATH_RE.test(src) || CHART_TABLE_IMAGE_TEXT_RE.test(text);
+    }
+
+    const firstIdx = imageIndices[0];
+    if (!looksLikeChart(content[firstIdx])) return { safe: true };
+
+    const safeCandidates = imageIndices
+        .slice(1)
+        .filter((idx) => !looksLikeChart(content[idx]))
+        .sort((a, b) => {
+            const aSrc = getImageDescriptor(content[a]).src;
+            const bSrc = getImageDescriptor(content[b]).src;
+            const aInline = /inline-\d+/i.test(aSrc) ? 0 : 1;
+            const bInline = /inline-\d+/i.test(bSrc) ? 0 : 1;
+            return aInline - bInline || a - b;
+        });
+
+    if (safeCandidates.length > 0) {
+        const swapIdx = safeCandidates[0];
+        [content[firstIdx], content[swapIdx]] = [content[swapIdx], content[firstIdx]];
+        return {
+            safe: true,
+            warning: `⚠️ First image was a chart/table — swapped with image at position ${swapIdx} for hero safety.`,
+        };
+    }
+
+    return {
+        safe: false,
+        warning: "⚠️ First image appears to be a chart/table but no hero-safe image was found to swap. " +
+            "The social share thumbnail may not be visually appealing. Regenerate inline-1 as a true hero image before publishing.",
+    };
 }
 
 function buildCaptionedImage(src, alt, caption) {
@@ -1276,6 +1492,17 @@ const session = await joinSession({
                         uploadImageToSubstack(subdomain, headers, localPath, articleDir);
                     const body = await markdownToProseMirror(bodyMarkdown, uploadImage);
 
+                    // ── Post-conversion enrichment ───────────────────────
+                    // 1. Subscribe-with-caption: ensure exactly 2 widgets
+                    ensureSubscribeButtons(body);
+                    await session.log("✅ Subscribe buttons enforced (2x subscribe-with-caption)", { ephemeral: true });
+
+                    // 2. Hero-safe first image: swap chart/table images away from first position
+                    const heroCheck = ensureHeroFirstImage(body);
+                    if (heroCheck.warning) {
+                        await session.log(heroCheck.warning, { ephemeral: true });
+                    }
+
                     // Pre-publish validation: catch unknown node types before sending to Substack
                     const validation = validateProseMirrorBody(body);
                     if (!validation.valid) {
@@ -1352,6 +1579,9 @@ const session = await joinSession({
 
                     const actionWord = isUpdate ? "updated" : "created";
                     const targetLabel = target === "prod" ? "🔴 PRODUCTION" : "🟡 STAGE";
+                    const heroWarningBlock = heroCheck.warning
+                        ? `\n${heroCheck.warning}\n`
+                        : "";
                     return (
                         `✅ Substack draft ${actionWord}!\n\n` +
                         `**Target:** ${targetLabel} (${subdomain}.substack.com)\n` +
@@ -1362,6 +1592,8 @@ const session = await joinSession({
                         `**Tags:** ${tags.length > 0 ? tags.join(", ") : "(none)"}\n` +
                         `**Draft ID:** ${isUpdate ? existingDraftId : draft.id}\n` +
                         (articleSlug ? `**Article slug:** ${articleSlug}\n` : "") +
+                        `**Subscribe buttons:** 2x subscribe-with-caption injected\n` +
+                        heroWarningBlock +
                         `\n**Review & publish:** ${draftUrl}\n` +
                         writebackBlock +
                         `\nOpen the URL above to review formatting, add a cover image, and publish.`

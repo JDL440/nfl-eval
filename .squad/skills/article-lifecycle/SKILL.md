@@ -389,6 +389,10 @@ Every article must pass three accuracy checks before moving to Stage 7 (Publishe
 
 This stage is **automated** via the `publish_to_substack` Copilot extension. Lead (or any agent) calls the tool; the extension converts the article to Substack's format and creates a draft. Joe receives the editor URL, checks a short final checklist, then publishes.
 
+**Automated enforcement at publish time (durable — applied by the extension, not by agents):**
+- **Subscribe buttons (2x):** The extension ensures exactly 2 subscribe-with-caption widgets. If the markdown contains `::subscribe` markers, those are converted. If fewer than 2 exist, the extension auto-injects them (after opening hook + near end).
+- **Hero-safe first image:** The extension validates that the first image is not a chart/table/data visualization. If it is, it swaps with a later hero-safe image when possible, or warns.
+
 ### How to Run Stage 7
 
 Lead calls the tool directly:

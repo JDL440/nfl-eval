@@ -49,12 +49,15 @@ Open `content/articles/{slug}.md` and verify:
 **Image policy (current):**
 - **Exactly 2 inline images** in article markdown body
 - **NO cover image** in article markdown — Substack post cover is set manually in the Substack editor by Joe at Stage 8
+- **inline-1 MUST be a hero/atmospheric image** — it drives the social share thumbnail. NOT a chart, table, or dense data image.
+- **inline-2** can be analytical or data-adjacent
 - Images rendered at `imageSize: "normal"` (text column width), NOT full-bleed
 
 **Checklist:**
 
 - [ ] **No cover image** in the article markdown body — cover is NOT rendered inline; it's set in Substack editor
 - [ ] **Exactly 2 inline images** present in the article body
+- [ ] **First image (inline-1) is hero-safe** — not a chart, table, or data visualization (the publisher extension will warn/swap if not, but it's better to get this right)
 - [ ] Both inline images use correct syntax: `![alt text](../../images/{slug}/filename.png)`
 - [ ] Both inline images are named `{slug}-inline-1.png` and `{slug}-inline-2.png`
 - [ ] Both inline images have descriptive alt text (no empty `![]()`)
@@ -65,6 +68,33 @@ Open `content/articles/{slug}.md` and verify:
 - Place first inline image after the first major data table or argument (~line 35–40)
 - Place second inline image at a natural tension point in the middle section (~line 85–95)
 - Do NOT place images in the closing section or after the verdict
+
+### Step 2b — Subscribe Button Verification
+
+**Subscribe button policy:** Every published article includes **2 subscribe-with-caption widgets** — one after the opening hook and one near the closing.
+
+**The publisher extension auto-injects these at publish time**, so manual placement is optional. However, for precise control, add `::subscribe` markers in the article markdown where you want the buttons:
+
+```markdown
+{Opening paragraphs}
+
+::subscribe
+
+---
+
+## Section 1
+...
+
+{Closing paragraph}
+
+::subscribe
+
+---
+```
+
+- [ ] **Two `::subscribe` markers** in the article body (optional — auto-injected if missing)
+- [ ] First `::subscribe` is after the opening hook, before the first section heading
+- [ ] Second `::subscribe` is near the end, before boilerplate / "Next from the panel"
 
 ### Step 3 — Final Content Read-Through
 

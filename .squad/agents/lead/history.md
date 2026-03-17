@@ -1,5 +1,24 @@
 # Lead — Lead / GM Analyst History
 
+## Durable Article Rules: Subscribe Buttons & Hero-Safe First Image (2025-07-27)
+
+**Outcome:** Implemented two durable enforcement rules in the publisher extension — subscribe buttons and hero-safe first image — per Joe Robinson's directive.
+
+**Changes:**
+1. **Subscribe-with-caption (2x per article):** `extension.mjs` now auto-injects Substack `subscribeWidget` + `ctaCaption` nodes at publish time. Position 1: after first paragraph. Position 2: before last HR. Writers can also use `::subscribe` in markdown for explicit placement. Both `subscribeWidget` and `ctaCaption` added to `KNOWN_SUBSTACK_NODE_TYPES`. Structural validation added.
+2. **Hero-safe first image:** `extension.mjs` validates the first `captionedImage` against a chart/table filename regex. If the first image is a chart, it swaps with the next non-chart image. If no swap candidate, it warns but doesn't block. Image-generation SKILL.md updated: `inline-1` = hero/atmospheric, `inline-2` = analytical.
+3. **SKILL updates:** Updated `image-generation`, `substack-article`, `publisher`, `substack-publishing`, and `article-lifecycle` SKILL files with the new rules.
+
+**Key learnings:**
+1. Substack's `subscribeWidget` ProseMirror node: `{ type: "subscribeWidget", attrs: { url: "%%checkout_url%%", text: "Subscribe", language: "en" }, content: [{ type: "ctaCaption", content: [{ type: "text", text: "..." }] }] }` — discovered by querying existing prod drafts via API.
+2. The `ctaCaption` node is a child of `subscribeWidget`, not a sibling. This is the "subscribe-with-caption" pattern.
+3. Durable enforcement > doc-only rules. The extension guarantees compliance even if Writer/Editor forget.
+4. Chart/table filename patterns for hero-safety: `[-_](table|chart|data|decision|priority|comparison|breakdown|salary|contract|depth-chart|cap-|roster-|engram|cap\b)`.
+
+**Files changed:** `extension.mjs`, 5 SKILL.md files, `decisions/inbox/lead-article-rules.md`.
+
+---
+
 ## Core Context
 - **Project:** NFL Roster Evaluation — 2026 Offseason
 - **User:** Joe Robinson
@@ -483,6 +502,24 @@ Our articles are cap-and-contract strong but analytically thin. Panel agents can
 **Proposed first step:** Phase 1A proof-of-concept — install `nfl_data_py`, pull one season, build a minimal data helper, test against one article topic.
 
 **Agents most affected:** Analytics (primary), CollegeScout (combine/draft data), Offense/Defense (scheme efficiency data).
+
+## Production Substack Section Cleanup — Complete (2026-03-17)
+
+**Outcome:** All 32 unused NFL team sections successfully deleted from `nfllab.substack.com`.
+
+**What was done:**
+- Identified token format mismatch in `.env`: URL-encoded instead of base64-encoded JSON
+- Decoded URL-encoded token and re-encoded as base64 per spec in `.squad/skills/substack-publishing/SKILL.md`
+- Executed: `node create-nfl-sections.mjs --delete`
+- Result: 32 sections deleted (all HTTP 200 responses)
+- Verified: Subsequent dry-run shows 0 sections on nfllab.substack.com
+
+**Sections deleted:**
+All 32 NFL team sections (ARI → WAS), each with custom team colors (primary pop / accent).
+
+**Context:** Sections were created early but publishing now uses tags instead. No longer in use. Cleanup removes orphaned infrastructure.
+
+---
 
 ## Learnings — Ralph Batch Publish Run (2026-03-16)
 

@@ -33,6 +33,19 @@ Generate **exactly 2 inline images** per article:
 - **No cover/banner image in markdown** — the Substack post cover is set manually in the Substack editor by Joe at Stage 8. Do not generate or embed a cover in the article body.
 - **2 inline images** (1:1 aspect ratio, rendered at `imageSize: "normal"`) — placed at the two best text breaks to keep mobile readers scrolling.
 
+### ⚠️ First Image Must Be Hero-Safe (Social Share Rule)
+
+**The first image in the article drives the Substack social share thumbnail and email preview.** It must NOT be a chart, table, data visualization, or dense analytical image.
+
+- **`inline-1`** = **Hero/atmospheric image** — dramatic stadium scene, abstract team-color art, player silhouette, moody editorial imagery. This is the image readers see first in email/feed.
+- **`inline-2`** = Can be analytical, chart-adjacent, or more specific to the article's data angle.
+
+The publisher extension (`publish_to_substack`) enforces this at publish time: if the first image filename contains chart/table/data keywords, it will attempt to swap it with a later non-chart image. But generating the right image up front avoids the swap and produces a better result.
+
+**Safe inline-1 prompt patterns:** stadium atmosphere, team color palettes, abstract competition imagery, player silhouettes, dramatic lighting. See "Prompt Strategy" section below.
+
+**Unsafe for inline-1:** anything with `-table`, `-chart`, `-data`, `-decision`, `-comparison`, `-breakdown`, `-salary`, `-contract` in the filename or prompt.
+
 ---
 
 ## How to Call the Tool
@@ -188,7 +201,7 @@ After generating multiple images for the same article:
 | **Article body cover** | NOT USED — policy removed | N/A | N/A |
 | **Substack post cover** | The thumbnail shown in email/feed | Set in Substack editor, not in markdown | Joe at Stage 8 |
 
-If you need a hero image for an article, generate it as `inline-1` and place it early in the body. Joe can reuse that image as the Substack post cover if appropriate.
+**Inline-1 IS the de facto hero image.** Generate it as a dramatic, atmospheric, hero-style image and place it early in the body (after the opening hook). Joe can reuse that image as the Substack post cover if appropriate. The publisher extension will warn/swap if inline-1 looks like a chart or table.
 
 ---
 

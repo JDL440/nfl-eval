@@ -156,6 +156,24 @@ Use the `::youtube` custom syntax (not standard markdown — Substack has a nati
 
 All three formats resolve to the same embed. The video appears as a native player in Substack, not a link.
 
+### Subscribe Buttons
+
+Use the `::subscribe` custom syntax to place a subscribe-with-caption widget:
+
+```markdown
+::subscribe
+
+::subscribe Custom caption text here
+```
+
+If no caption is provided, the default is used: "Thanks for reading NFL Lab! Subscribe for free to receive new posts and support our work."
+
+**Auto-injection:** The publisher extension automatically ensures every article has exactly 2 subscribe-with-caption widgets. If fewer than 2 `::subscribe` markers are present in the markdown, the missing widgets are injected:
+1. After the first paragraph (the opening hook)
+2. Near the end of the article (before the final horizontal rule)
+
+This is a durable enforcement — even if the Writer or Editor forgets, the publisher will add them at publish time.
+
 ---
 
 ## What Gets Handled Manually (in Substack Editor)
