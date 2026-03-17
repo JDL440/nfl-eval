@@ -129,3 +129,9 @@ Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 - Merged pending inbox decisions into `.squad/decisions.md` and cleared `.squad/decisions/inbox/`.
 - Logged orchestration/session artifacts for the Lead + Scribe work around Note card rendering and URL backfill.
 - Ran oversized-history maintenance and archived stale decision blocks older than the 30-day window where applicable.
+### Squad Memory Maintenance (2026-03-17T16:25:48Z)
+**Status:** ✅ COMPLETED — memory refresh actions recorded
+- Architecture decision reinforcement: Always snapshot the current `.squad/log`, `.squad/orchestration-log`, `.squad/decisions.md`, and agent history state before making new updates so downstream agents have accurate context.
+- Pattern noted: Decision and knowledge inboxes deal only with non-code entries; if both directories hold nothing but `.gitkeep`, no merges or routing are required.
+- User preference recorded: Backend (Squad Agent) expects new orchestration logs, session logs, and history appends before any `.squad` commit.
+- Key files for this flow: `.squad/log/*scribe-memory-maintenance*.md`, `.squad/orchestration-log/*-scribe.md`, `.squad/decisions.md`, and `.squad/agents/scribe/history.md`.
