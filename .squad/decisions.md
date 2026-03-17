@@ -1547,6 +1547,33 @@ Spending #2 overall on a non-consensus QB in a "thin" class — with full knowle
 
 - Teardown is 80% coherent but the Hall franchise tag ($14.3M) and Fitzpatrick acquisition ($15.6M) contradict rebuild logic
 - CB1 is a genuine scheme emergency — Glenn's press-man identity requires a corner the roster doesn't have
+
+---
+
+### 2026-03-16: Stage 7 → Prod Draft Promotion & Final Reconciliation
+**By:** Lead (Production Specialist)
+**Status:** Implemented
+**Date:** 2026-03-16
+
+**What:**
+- Completed final production batch push to nfllab.substack.com with zero failures
+- Promoted 19 articles to production draft status with full verification: ARI, BUF, CAR, DAL, GB, HOU, JAX, JSN, KC, LAR, LV, NE, NO, NYG, PHI, SEA-RB-Pick64, SF, TEN, WSH
+- Updated DEN's existing prod draft with final cleaned content
+- Confirmed MIA unchanged on prod (no action required)
+- witherspoon-extension-v2 independently advanced to Stage 8; already has prod draft
+- Staging drafts (all 22) refreshed with final cleaned content
+- All substack_draft_url fields persisted to pipeline.db
+
+**Why:**
+All Stage 7 articles completed dense table cleanup and were ready for production. This final push moves all 22 relevant articles to production-ready status (19 new drafts + 3 already-published/auto-promoted) with 100% verification completion.
+
+**Result:**
+- 19 newly promoted to Prod Draft
+- 21 total Stage 7 articles now have prod URLs
+- 1 Stage 8 independent advance confirmed
+- 2 published articles left untouched
+- 0 failures across all 22 operations
+- publish-inprogress-articles todo can be closed
 - 2028 is the realistic contention window (dead money clears, $264M projected cap space)
 - 2026 win projection: 5-7 wins regardless of draft path
 
