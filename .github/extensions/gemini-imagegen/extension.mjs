@@ -21,6 +21,7 @@ import {
 } from "node:fs";
 import { resolve, join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { hashTelemetryText, recordPipelineUsageEvent } from "../pipeline-telemetry.mjs";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -225,6 +226,7 @@ async function generateArticleImages(params) {
 
     const results = [];
     const errors = [];
+    const telemetryWarnings = [];
 
     // Pre-count total images per type so filenames are always unique when a type appears multiple times
     const typeTotal = {};
@@ -268,10 +270,33 @@ async function generateArticleImages(params) {
             }
         } catch (err) {
             errors.push(`${imageType}: ${err.message}`);
+            try {
+                recordPipelineUsageEvent({
+                    articleId: article_slug,
+                    stage: 5,
+                    surface: "generate_article_images",
+                    provider: "google",
+                    actor: "generate_article_images",
+                    eventType: "failed",
+                    modelOrTool: use_model === "imagen-4" ? IMAGEN_MODEL : use_model,
+                    quantity: count_per_type,
+                    unit: "image",
+                    metadata: {
+                        article_title,
+                        error: err.message,
+                        image_type: imageType,
+                        prompt_hash: hashTelemetryText(prompt),
+                        requested_model_mode: use_model,
+                    },
+                });
+            } catch (telemetryErr) {
+                telemetryWarnings.push(`Failed to record image telemetry for ${imageType}: ${telemetryErr.message}`);
+            }
             continue;
         }
 
         typeIndex[imageType] = typeIndex[imageType] || 0;
+        const batchRelativePaths = [];
 
         for (let i = 0; i < images.length; i++) {
             typeIndex[imageType]++;
@@ -300,10 +325,37 @@ async function generateArticleImages(params) {
                 prompt,
                 model: modelUsed,
             });
+            batchRelativePaths.push(relativePath);
+        }
+
+        try {
+            recordPipelineUsageEvent({
+                articleId: article_slug,
+                stage: 5,
+                surface: "generate_article_images",
+                provider: modelUsed === IMAGEN_MODEL ? "google_imagen" : "google_gemini",
+                actor: "generate_article_images",
+                eventType: "completed",
+                modelOrTool: modelUsed,
+                requestCount: modelUsed === IMAGEN_MODEL ? 1 : count_per_type,
+                quantity: batchRelativePaths.length,
+                unit: "image",
+                imageCount: batchRelativePaths.length,
+                costUsdEstimate: modelUsed === IMAGEN_MODEL ? 0.04 * batchRelativePaths.length : 0.04 * batchRelativePaths.length,
+                metadata: {
+                    article_title,
+                    image_type: imageType,
+                    output_paths: batchRelativePaths,
+                    prompt_hash: hashTelemetryText(prompt),
+                    requested_model_mode: use_model,
+                },
+            });
+        } catch (telemetryErr) {
+            telemetryWarnings.push(`Failed to record image telemetry for ${imageType}: ${telemetryErr.message}`);
         }
     }
 
-    return { results, errors, outputDir };
+    return { results, errors, outputDir, telemetryWarnings };
 }
 
 // ─── Extension Entrypoint ────────────────────────────────────────────────────
@@ -374,7 +426,7 @@ await joinSession({
                 },
             },
             handler: async (params) => {
-                const { results, errors, outputDir } = await generateArticleImages(params);
+                const { results, errors, outputDir, telemetryWarnings } = await generateArticleImages(params);
 
                 const lines = [];
 
@@ -411,12 +463,22 @@ await joinSession({
                         lines.push("## ⚠️ Errors");
                         for (const e of errors) lines.push(`- ${e}`);
                     }
+                    if (telemetryWarnings.length > 0) {
+                        lines.push("");
+                        lines.push("## ⚠️ Telemetry");
+                        for (const warning of telemetryWarnings) lines.push(`- ${warning}`);
+                    }
                 } else {
                     lines.push("❌ No images were generated.");
                     lines.push("");
                     if (errors.length > 0) {
                         lines.push("**Errors:**");
                         for (const e of errors) lines.push(`- ${e}`);
+                    }
+                    if (telemetryWarnings.length > 0) {
+                        lines.push("");
+                        lines.push("**Telemetry warnings:**");
+                        for (const warning of telemetryWarnings) lines.push(`- ${warning}`);
                     }
                 }
 

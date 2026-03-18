@@ -14,6 +14,7 @@ import { joinSession } from "@github/copilot-sdk/extension";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve, dirname, extname } from "node:path";
 import { homedir } from "node:os";
+import { recordPipelineUsageEvent } from "../pipeline-telemetry.mjs";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -1810,6 +1811,37 @@ const session = await joinSession({
                               `\`\`\`\n`
                         : "";
 
+                    let telemetryWarningBlock = "";
+                    if (articleSlug) {
+                        try {
+                            recordPipelineUsageEvent({
+                                articleId: articleSlug,
+                                stage: 7,
+                                surface: "publish_to_substack",
+                                provider: "substack",
+                                actor: "publish_to_substack",
+                                eventType: isUpdate ? "updated" : "completed",
+                                modelOrTool: "substack_publisher",
+                                requestCount: 1,
+                                quantity: 1,
+                                unit: "draft",
+                                metadata: {
+                                    audience: args.audience || "everyone",
+                                    draft_id: isUpdate ? existingDraftId : draft.id,
+                                    draft_url: draftUrl,
+                                    file_path: args.file_path,
+                                    is_update: isUpdate,
+                                    tag_count: tags.length,
+                                    target,
+                                    target_subdomain: subdomain,
+                                },
+                            });
+                        } catch (telemetryErr) {
+                            telemetryWarningBlock =
+                                `\n⚠️ Telemetry warning: ${telemetryErr.message}\n`;
+                        }
+                    }
+
                     const actionWord = isUpdate ? "updated" : "created";
                     const targetLabel = target === "prod" ? "🔴 PRODUCTION" : "🟡 STAGE";
                     const heroWarningBlock = heroCheck.warning
@@ -1827,6 +1859,7 @@ const session = await joinSession({
                         (articleSlug ? `**Article slug:** ${articleSlug}\n` : "") +
                         `**Subscribe buttons:** 2x subscribe-with-caption injected\n` +
                         heroWarningBlock +
+                        telemetryWarningBlock +
                         `\n**Review & publish:** ${draftUrl}\n` +
                         writebackBlock +
                         `\nOpen the URL above to review formatting, add a cover image, and publish.`

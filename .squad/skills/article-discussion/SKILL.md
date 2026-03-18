@@ -18,6 +18,8 @@ Codifies the three-phase discussion workflow (Stages 2–4 of the Article Lifecy
 
 This skill is the "inner loop" of article production. The [article-lifecycle skill](../article-lifecycle/SKILL.md) orchestrates the full 8-stage pipeline; this skill provides the detailed playbook for Stages 2–4 specifically.
 
+> **Runtime model policy:** resolve panel, Writer, and Editor models from `.squad/config/models.json` via `python content/model_policy.py select ...`; do not rely on hard-coded model names in prompts.
+
 ---
 
 ## When to Use
@@ -163,18 +165,20 @@ Omit data anchor tables entirely. Level 1 articles are narrative-first; agents s
 
 ### Execution Protocol
 
-> **Model config source of truth:** `.squad/config/models.json` → `models` and `max_output_tokens`
+> **Model config source of truth:** `.squad/config/models.json` plus `content/model_policy.py`
 
 1. **Spawn all panelists simultaneously** — use `task` tool in parallel, all as `background` agents
 2. **Model selection is depth-level-driven:**
 
    | Depth Level | Panel Agent Model | Source |
    |-------------|-------------------|--------|
-   | 1 — Casual Fan | `claude-sonnet-4.5` | `models.panel_casual` |
-   | 2 — The Beat | `claude-opus-4.6` | `models.panel_beat` |
-   | 3 — Deep Dive | `claude-opus-4.6` | `models.panel_deep_dive` |
+   | 1 — Casual Fan | resolve `stage_key=panel --depth-level 1` | `models.panel_casual` + task-family precedence |
+   | 2 — The Beat | resolve `stage_key=panel --depth-level 2` | `models.panel_beat` + task-family precedence |
+   | 3 — Deep Dive | resolve `stage_key=panel --depth-level 3` | `models.panel_deep_dive` + task-family precedence |
 
-   Writer and Editor always use `claude-opus-4.6` (`models.writer`, `models.editor`) regardless of depth level.
+   Writer and Editor should likewise resolve through `python content/model_policy.py select --stage-key writer` and `--stage-key editor`, even when the current defaults remain `claude-opus-4.6`.
+
+   When you are opening a tracked panel/Writer/Editor run, prefer `python content/model_policy.py start-stage-run ...` so the selected model, tier, precedence rank, and output budget are captured in `stage_runs` at spawn time.
 
 3. **Each panelist prompt must include:**
    - Their identity and role (brief)

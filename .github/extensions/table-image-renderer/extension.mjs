@@ -6,6 +6,18 @@
  */
 
 import { renderTableImage, formatRenderSuccess } from "./renderer-core.mjs";
+import { recordPipelineUsageEvent } from "../pipeline-telemetry.mjs";
+
+function deriveArticleSlug(articleFilePath) {
+    const normalized = articleFilePath.replace(/\\/g, "/");
+    const match = normalized.match(/content\/articles\/([^/]+)/);
+    if (match) {
+        return match[1];
+    }
+
+    const filename = normalized.split("/").pop() || "";
+    return filename.endsWith(".md") ? filename.slice(0, -3) : null;
+}
 
 const [{ approveAll }, { joinSession }] = await Promise.all([
     import("@github/copilot-sdk"),
@@ -69,7 +81,35 @@ const session = await joinSession({
             async call(args) {
                 try {
                     const result = await renderTableImage(args);
-                    return formatRenderSuccess(result);
+                    const articleSlug = args.article_slug || deriveArticleSlug(args.article_file_path);
+                    let telemetryWarning = "";
+                    if (articleSlug) {
+                        try {
+                            recordPipelineUsageEvent({
+                                articleId: articleSlug,
+                                surface: "render_table_image",
+                                provider: "local",
+                                actor: "render_table_image",
+                                eventType: "completed",
+                                modelOrTool: "table_image_renderer",
+                                quantity: 1,
+                                unit: "image",
+                                imageCount: 1,
+                                metadata: {
+                                    article_file_path: args.article_file_path,
+                                    mobile: !!args.mobile,
+                                    output_path: result.outputPath,
+                                    source_path: args.source_path || null,
+                                    table_index: args.table_index || 1,
+                                    template: result.template,
+                                },
+                            });
+                        } catch (telemetryErr) {
+                            telemetryWarning = `\n\n⚠️ Telemetry warning: ${telemetryErr.message}`;
+                        }
+                    }
+
+                    return `${formatRenderSuccess(result)}${telemetryWarning}`;
                 } catch (err) {
                     return {
                         textResultForLlm: `Error rendering table image: ${err.message}`,

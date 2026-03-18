@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS articles (
     current_stage   INTEGER NOT NULL DEFAULT 1,
     discussion_path TEXT,                       -- relative path to discussion summary, e.g. content/articles/{slug}/discussion-summary.md
     article_path    TEXT,                       -- relative path to final draft, e.g. content/articles/{slug}/draft.md
+    substack_draft_url TEXT,                    -- draft editor URL used during stages 7-8
     substack_url    TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
@@ -41,6 +42,88 @@ CREATE TABLE IF NOT EXISTS stage_transitions (
     notes           TEXT,
     transitioned_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ─────────────────────────────────────────────
+-- ARTICLE RUNS
+-- End-to-end execution records for article pipelines.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS article_runs (
+    id              TEXT PRIMARY KEY,           -- UUID / run id
+    article_id      TEXT NOT NULL REFERENCES articles(id),
+    trigger         TEXT,                       -- e.g. manual, issue, batch, retry
+    initiated_by    TEXT,                       -- agent or human
+    status          TEXT NOT NULL DEFAULT 'started',
+    notes           TEXT,
+    started_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_runs_article_id
+    ON article_runs(article_id, started_at DESC);
+
+-- ─────────────────────────────────────────────
+-- STAGE RUNS
+-- One execution record per article stage / surface.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS stage_runs (
+    id                  TEXT PRIMARY KEY,       -- UUID / stage run id
+    run_id              TEXT REFERENCES article_runs(id),
+    article_id          TEXT NOT NULL REFERENCES articles(id),
+    stage               INTEGER NOT NULL,
+    surface             TEXT NOT NULL,          -- e.g. lead, panel, writer, editor, substack, imagegen
+    actor               TEXT,                   -- agent, extension, or human
+    requested_model     TEXT,
+    requested_model_tier TEXT,
+    precedence_rank     INTEGER,
+    output_budget_tokens INTEGER,
+    status              TEXT NOT NULL DEFAULT 'started',
+    notes               TEXT,
+    artifact_path       TEXT,
+    started_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at        TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_stage_runs_article_stage
+    ON stage_runs(article_id, stage, started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_stage_runs_run_id
+    ON stage_runs(run_id, started_at DESC);
+
+-- ─────────────────────────────────────────────
+-- USAGE EVENTS
+-- Fine-grained provider / tool / model attribution.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS usage_events (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id              TEXT REFERENCES article_runs(id),
+    stage_run_id        TEXT REFERENCES stage_runs(id),
+    article_id          TEXT NOT NULL REFERENCES articles(id),
+    stage               INTEGER,
+    surface             TEXT NOT NULL,          -- e.g. writer, editor, image_generation
+    provider            TEXT,                   -- e.g. github_copilot, google, substack, local
+    actor               TEXT,                   -- agent, extension, or human
+    event_type          TEXT NOT NULL DEFAULT 'completed',
+    model_or_tool       TEXT,
+    model_tier          TEXT,
+    precedence_rank     INTEGER,
+    request_count       INTEGER,
+    quantity            INTEGER,
+    unit                TEXT,
+    prompt_tokens       INTEGER,
+    output_tokens       INTEGER,
+    cached_tokens       INTEGER,
+    premium_requests    REAL,
+    image_count         INTEGER,
+    cost_usd_estimate   REAL,
+    metadata_json       TEXT,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_usage_events_article_stage
+    ON usage_events(article_id, stage, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_usage_events_stage_run
+    ON usage_events(stage_run_id, created_at DESC);
 
 -- ─────────────────────────────────────────────
 -- ARTICLE PANELS

@@ -18,6 +18,8 @@ The canonical process reference for how every article gets made — from first s
 
 This is **coordinator-level guidance**. It tells Lead how to orchestrate the full lifecycle. For drafting/editorial detail, agents should read the [`substack-article` skill](../substack-article/SKILL.md), which remains the authoritative reference for Phases 5–6.
 
+> **Runtime model policy:** `.squad/config/models.json` is the source of truth, and `python content/model_policy.py select ...` is the executable selector for stage/task-family model resolution.
+
 ## When to Use
 
 - Any time an article enters production (from idea approval through publish)
@@ -145,6 +147,8 @@ conn.execute("INSERT INTO stage_transitions (article_id, from_stage, to_stage, a
              (article_id, current_stage, current_stage, agent_name, f"Depth level adjusted to {new_level}"))
 conn.commit()
 ```
+
+Before spawning panelists, Writer, or Editor after a depth change, re-resolve the model through `content/model_policy.py` so the requested model, tier, and precedence stay aligned with the current policy.
 
 ---
 
