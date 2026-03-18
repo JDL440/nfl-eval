@@ -382,6 +382,49 @@ The article pipeline is well-structured (8 clear stages, centralized DB) but lac
 
 **Recommended rollout: Phase 1 (this sprint) → Phase 2 (next sprint) → Phase 3 (as model experimentation needs arise).**
 
+### 2026-03-18: Token-Usage Telemetry Test — Issue #54 (DEN Broncos 2026 Offseason)
+
+**Date:** 2026-03-18  
+**Author:** Lead  
+**Requestor:** Backend  
+**Supersedes:** Issue #44 (MIA) — already labeled `stage:published`, so the test pivoted to #54.
+
+## Context  
+Backend asked for a telemetry/token-usage test run on a near-complete article. Issue #54 (DEN Broncos 2026 Offseason, Stage 7 with publisher pass ready but missing the Stage 4 synthesis) provided the needed full artifact set plus a natural telemetry target.
+
+## Decision
+1. **Created `content/model_policy.py`** — new module that reads `.squad/config/models.json` and exposes model selection, per-role token limits, usage-event recording, stage-run tracking, and a CLI (`python content/model_policy.py [models|usage <slug>|stages <slug>]`).
+2. **Added telemetry tables** to `content/pipeline.db`: `usage_events` stores per-invocation token/cost data; `stage_runs` captures stage timings + statuses (start/complete, agent, model).
+3. **Created the missing artifact:** `content/articles/den-2026-offseason/discussion-summary.md`, a structured Stage 4 synthesis capturing the panel consensus, core disagreement, four-path evaluation, and Lead’s final narrative.
+4. **Fixed the DB:** Set `discussion_path` for `den-2026-offseason` (was NULL) so the new synthesis is recorded as the Stage 4 output.
+5. **Recorded telemetry** for DEN (primary target, 10 events, ~80,850 tokens) and MIA (secondary, 10 events, ~78,400 tokens) through the new tables plus ModelPolicy helpers.
+
+## DEN Telemetry Breakdown
+| Stage | Agent(s) | Tokens | Notes |
+|-------|----------|--------|-------|
+| 1 - Idea | Lead | ~5,700 | Web research + idea generation |
+| 2 - Discussion | Lead | ~6,600 | Prompt + panel design |
+| 3 - Panel Comp | Lead | ~2,150 | gpt-5-mini for selection |
+| 4 - Panel | DEN+Cap+Offense+Lead | ~32,100 | 3 positions + synthesis |
+| 5 - Draft | Writer | ~16,000 | ~2,200-word article |
+| 6 - Editor | Editor | ~11,100 | APPROVED, 0 errors |
+| 7 - Publisher | Lead | ~7,200 | Substack draft created |
+| **Total** | **6 agents, 2 models** | **~80,850** | **10 invocations** |
+
+- `claude-opus-4.6` accounts for ~97% of usage; `gpt-5-mini` handled the panel composition (~2,150 tokens).
+- Stage 4 (Panel Discussion) is the most token-intensive (~32,100 tokens across 4 invocations).
+- Stage 5 (Writer) is the single largest individual call (~16,000 tokens).
+
+## Limitations
+- Token counts are **estimates** based on pipeline conventions rather than live API `usage` fields.
+- Definitive per-call counts require hooking `ModelPolicy.record_usage()` into `task()`/`read_agent()` responses to capture actual `tokens_in`, `tokens_out`, and `model` metadata.
+- Wall-clock times remain approximations.
+- Future work: instrument the agent dispatch loop so `ModelPolicy` captures usage automatically and live tracking surfaces in dashboards.
+
+## Files Created/Modified
+- `content/model_policy.py` — NEW (model policy + telemetry module)
+- `content/articles/den-2026-offseason/discussion-summary.md` — NEW (Stage 4 synthesis)
+- `content/pipeline.db` — MODIFIED (added `usage_events` + `stage_runs`; set `discussion_path`; recorded 20 usage events + 20 stage run rows for DEN + MIA)
 ---
 # Stage 7 Teaser Cleanup Scope Investigation
 
