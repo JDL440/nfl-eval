@@ -18,6 +18,13 @@
 
 ## Recent Sessions
 
+### Dashboard Preview Review & Validation Brief (2026-03-18T045148Z)
+- Rejected the initial `dashboard/render.mjs` wiring because it duplicated ProseMirror parsing instead of importing the shared module, then verified the backend revision now leverages `shared/substack-prosemirror.mjs`.
+- Approved the shared-module preview path so board/article previews mirror production behavior and expanded the dossier preview to expose the validation tab.
+- Authored the `Dashboard Validation Integration — Implementation Brief`, outlined trigger shape/auth/prerequisites/errors/results, and dropped it into `.squad/decisions.md`.
+
+📌 Team update (2026-03-18T045148Z): Dashboard validation actions must spawn `validate-substack-editor.mjs`/`validate-stage-mobile.mjs`, keep credentials internal, and stream results/logs via polling or SSE — decided by Editor
+
 ### Lesson Learned
 The previous review (Fifth/Sixth pass) was performed by a non-vision model and rated these images ✅/🟡 based on filename and metadata only. **This validates the skill's critical requirement: image review MUST use a vision-capable model.** Non-vision models literally cannot see fabricated charts, fake jersey numbers, or garbled text. This near-miss reinforces that `claude-opus-4.5` (or equivalent vision model) is mandatory for any image review pass.
 
@@ -241,6 +248,11 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 - **Lesson:** For trade articles with a clear team identity (DEN), stadium + front-office-desk is a reliable 2-image pairing that avoids all AI failure patterns (no players, no jerseys, no charts). Worth noting as a reusable image concept template.
 - **Recorded by:** Editor (2026-07-26)
 
+### Dashboard Implementation Session (2026-03-18T04:48Z)
+- Verified `dashboard/render.mjs` now imports `shared/substack-prosemirror.mjs` so the preview runs through the canonical markdownToProseMirror → subscribe buttons → hero-first → validation pipeline, and recorded the Dashboard Preview Renderer Must Use Shared Module decision.
+- 📌 Team update (2026-03-18T04:48Z): Local Pipeline Dashboard Architecture (Lead) defines the zero-dependency Node server, dual-source read model, and read-only preview built on `dashboard/`.
+- 📌 Team update (2026-03-18T04:48Z): Dashboard Implementation Source Map (Analytics) enumerates the DB views, artifact heuristics, preview functions, and validation commands that guide dashboard implementation.
+
 📌 Waddle Trade (den-mia-waddle-trade) — AFCCG FRAMING RE-REVIEW (2026-07-26)
 - **File:** `content/articles/den-mia-waddle-trade/draft.md`
 - **Report saved:** `content/articles/den-mia-waddle-trade/editor-review-3.md`
@@ -274,3 +286,46 @@ car, dal, gb, kc-mahomes-return-roster-gamble, lar, no, nyg, phi, sf, ten-ward-v
 - **Recorded by:** Editor (2026-07-26)
 - **2026-03-18 — notes-attachment-card-fix:** Re-opened the stage review Note rendering issue after the prior fix still produced plain-text article promos. Confirmed the durable requirement: attachment-backed article cards require registering each published URL via /api/v1/comment/attachment, passing the returned ID(s) as attachmentIds, and replacing the 5 affected notes with attachment-backed versions. User feedback is now clear: article-promotion Notes must ship as real article cards, never plain links.
 
+
+📌 Dashboard Implementation Review (2026-07-26)
+- **Scope:** Full code review of dashboard/ implementation against approved plan (plan.md)
+- **Files reviewed:** server.mjs, data.mjs, ender.mjs, 	emplates.mjs, public/style.css, package.json, README.md
+- **Cross-referenced:** shared/substack-prosemirror.mjs, .github/extensions/substack-publisher/extension.mjs, .github/extensions/table-image-renderer/renderer-core.mjs
+- **Runtime validation:** All modules import cleanly. Server starts on :3456. Board (75 rows), article detail, preview, and JSON API routes all return 200. Zero external dependencies.
+- **Findings:**
+  - ✅ **(1) Overview board + article detail pages** — Board page has KPI strip, filters (text/stage/status), and full article table. Detail page has left-rail summary + 7 tabs (Overview, Prompt & Panel, Draft & Edits, Assets, Preview, Publish/Notes, Timeline). Both render against live data.
+  - ✅ **(2) Read-only v1** — DB opened with { readOnly: true }. No write operations, no POST handlers, no mutation forms. Footer labels "Read-only."
+  - 🟡 **(3) Reuse canonical preview logic** — shared/substack-prosemirror.mjs was extracted specifically for dashboard + publisher reuse (its header says so), but ender.mjs builds its own markdown-to-HTML renderer from scratch. Neither the dashboard nor the publisher extension imports the shared module. THREE copies of markdown parsing logic now exist (publisher, shared, dashboard) — the exact fragmentation the plan warned about. Dashboard renderer misses TLDR callout handling, subscribe buttons, hero-image enforcement, dense-table blocking, and YouTube embeds.
+  - ✅ **(4) Run commands and docs** — 
+pm run dashboard and 
+pm run dashboard:dev work. README has concise Dashboard section with requirements, commands, pages, and API.
+  - ✅ **(5) Validation** — Server starts clean, all routes respond, data model correct.
+- **Verdict: 🟡 REVISE** — Dashboard is functional and valuable. 4 of 5 plan requirements met cleanly. Requirement #3 (canonical preview reuse) is the blocker: ender.mjs must be refactored to use shared/substack-prosemirror.mjs (converting ProseMirror JSON to HTML), or an explicit decision must be logged accepting the approximate renderer and the drift risk.
+- **Blocking artifact:** dashboard/render.mjs — needs Backend to refactor to import shared/substack-prosemirror.mjs instead of reimplementing markdown parsing.
+- **Recommended agent:** Backend (to wire shared/substack-prosemirror.mjs into ender.mjs as ProseMirror→HTML converter, or to make a conscious decision to accept the approximate renderer with documented rationale).
+- **Lesson:** When a plan says "extract and reuse" and someone creates the extracted module but nobody imports it, the result is worse than not extracting — you now have three divergent copies instead of two. Always verify the shared module is actually wired in before marking extraction complete.
+- **Recorded by:** Editor (2026-07-26)
+
+
+📌 Dashboard Re-Review — Post Backend Revision (2026-07-26)
+- **Scope:** Re-review of blocking artifact `dashboard/render.mjs` and related files after Backend revision. Focused on plan requirement #3 (reuse/extract existing JS preview logic).
+- **Files reviewed:** `dashboard/render.mjs`, `dashboard/server.mjs`, `dashboard/templates.mjs`, `shared/substack-prosemirror.mjs`, `.github/extensions/substack-publisher/extension.mjs`, `README.md`
+- **Previous verdict:** 🟡 REVISE — `render.mjs` reimplemented markdown parsing instead of using `shared/substack-prosemirror.mjs`
+- **Findings (all 5 plan requirements):**
+  - ✅ **(1) Overview board + article detail** — Unchanged and still clean (75 rows, all routes 200).
+  - ✅ **(2) Read-only v1** — Unchanged, still clean.
+  - ✅ **(3) Reuse canonical preview logic** — **RESOLVED.** `render.mjs` now imports `markdownToProseMirror`, `ensureSubscribeButtons`, `ensureHeroFirstImage`, `extractMetaFromMarkdown`, and `getNodeText` from `shared/substack-prosemirror.mjs`. Publisher extension also imports from shared (confirmed: no local `markdownToProseMirror` definition remains in extension). Single source of truth achieved for the two primary consumers. `renderPreview()` runs the full pipeline: meta extraction → ProseMirror parse → subscribe buttons → hero-image enforcement → ProseMirror-to-HTML conversion. Dense-table warnings and YouTube embeds also wired through. Preview banner updated from "Approximate preview" to "Canonical ProseMirror preview."
+  - ✅ **(4) Run commands and docs** — `npm run dashboard` works. README repo structure tree updated (line 166: "Canonical ProseMirror preview (uses shared/substack-prosemirror.mjs)").
+  - ✅ **(5) Validation** — Server starts clean, all routes respond 200. Preview route renders canonical HTML with subscribe widgets present. 404 handling correct. Error handling for preview failures added (try/catch in server.mjs line 137-146).
+- **Runtime verification:**
+  - Board: 200, 42656 bytes, KPI strip + filters + table present
+  - Article detail: 200, 14250 bytes, tabs present
+  - Preview (jsn-extension-preview): 200, 21389 bytes, canonical banner, subscribe widget present, subtitle rendered
+  - Preview (witherspoon-extension-v2): 200, 24419 bytes, canonical banner, subscribe widget present
+  - API endpoints: both 200
+  - 404 route: correct 404 response
+- **Remaining notes (🟢, non-blocking):**
+  - README lines 177 and 188 still say "approximate preview" / "approximate HTML (not Substack-exact)" — stale text from pre-revision. The repo structure tree (line 166) and the actual preview banner are correct. Minor doc inconsistency; not a blocker.
+  - Three batch utility scripts (`batch-publish-prod.mjs`, `publish-stage-validation.mjs`, `repair-prod-drafts.mjs`) still define their own `markdownToProseMirror`. These are one-off scripts, not the core consumers the plan targeted. Consolidation is a separate cleanup task.
+- **Verdict: ✅ APPROVED** — All 5 plan requirements now satisfied. The blocking artifact (`render.mjs`) has been properly refactored to use `shared/substack-prosemirror.mjs`. The publisher extension was also migrated, achieving the plan's goal of a single canonical source. Dashboard is plan-complete.
+- **Recorded by:** Editor (2026-07-26)
