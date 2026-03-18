@@ -46,3 +46,15 @@
 ### Notes Card Render Fix + URL Backfill Logged (2026-03-17)
 - Scribe merged the Lead decision for published-URL backfill + Note card-render fix into `decisions.md`, cleared the decision inbox, and recorded the session artifacts under `.squad/log/` and `.squad/orchestration-log/`.
 - Shared memory now reflects the durable rule: Note URLs need ProseMirror link marks for article-card rendering, and missing `substack_url` values can be backfilled from the production archive API.
+
+## Learnings
+
+### Stage Note Retry — Idempotent Cleanup (2026-03-18)
+- Previous note batch (229384944–229385077) returned HTTP 404 on delete — they were already cleaned up in an earlier session. DELETE on non-existent notes is harmless (not 500-class).
+- Fresh 5-note batch posted with `registerPostAttachment()` + `attachmentIds` on nfllabstage. All 5 rendered article cards (hero image + NFL Lab logo + title). Verified via web fetch on c-229399257.
+- The `retry-stage-notes.mjs` script is a parameterized fork of `replace-stage-notes-v2.mjs` — change the `PREVIOUS_NOTES` array to target any batch. Two-phase (delete-all-first, then post-all) avoids interleaving failures.
+- Pipeline.db `notes` table updated with new URLs in-place (same row IDs 6–10, new `substack_note_url` values).
+
+### Stage-review note retry logged (2026-03-17T17:07Z)
+- Reran the nfllabstage stage-review Notes through the attachment-backed article-card flow and confirmed the five replacements render as cards.
+- Durable architecture recorded in .squad/decisions.md under 2026-03-18: Stage-Review Note Retry — Two-Phase Delete-then-Post; orchestration trace saved at .squad/orchestration-log/20260317T170758Z-lead.md.

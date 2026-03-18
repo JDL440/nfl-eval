@@ -1,1 +1,3 @@
 - **2026-03-18 — notes-attachment-card-fix verification:** Performed an independent verification pass on the attachment-card fix. Reviewed the extension for `registerPostAttachment()` and `attachmentIds`, fetched a fresh Note permalink to confirm the rendered behavior, and recorded the tidemark so this fix has a clean validation trail for future reference.
+
+- **2026-03-17T17:07Z — stage-review retry verification:** Fetched the fresh JSN Note permalink from the rerun batch for a direct spot-check, confirmed the attachment-backed Note rendered as a card, and tied the verification trail to .squad/orchestration-log/20260317T170758Z-coordinator.md and the new stage-note retry decision in .squad/decisions.md.

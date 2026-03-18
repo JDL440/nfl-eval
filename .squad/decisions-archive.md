@@ -1729,6 +1729,7 @@ Removed all 32 unused NFL team sections from nfllab.substack.com. Sections were 
 - Ran: `node create-nfl-sections.mjs --delete`
 - Result: All 32 sections deleted successfully (HTTP 200 on each)
 - Verified: Subsequent dry-run shows 0 sections on nfllab.substack.com
+- Status update (2026-03-18): `nfllabstage` has now been cleaned up too; both publications use tag-based organization with no team sections.
 
 **Sections removed:** Arizona Cardinals through Washington Commanders (all 32 NFL teams with custom team colors).
 
@@ -2586,6 +2587,8 @@ New language (L139–L141):
 - [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing with tag-based routing
 - [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
 \\\
+
+**Historical note (2026-03-18):** The `32-team sections` line above is preserved as a record of the README state at that time. It is now obsolete: both `nfllab` and `nfllabstage` have no team sections, and tags are the active publishing taxonomy.
 
 **Rationale:**
 1. **Section routing removed:** The publisher extension no longer assigns drafts to per-team sections. Tags are the organizing mechanism.
