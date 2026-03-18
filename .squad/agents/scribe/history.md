@@ -8,6 +8,13 @@
 
 ## Recent Sessions
 
+### Token-Usage Telemetry Test Logging (2026-03-18T22:30Z)
+**Status:** ✅ LOGGED — Documented the Denver telemetry run, merged the decision, and recorded the new orchestration + session artifacts.
+
+- Recorded the new `2026-03-18: Token-Usage Telemetry Test — Issue #54 (DEN Broncos Offseason)` entry in `decisions.md` and deleted the inbox drop.
+- Created `.squad/log/2026-03-18T223000Z-den-telemetry-test.md` and `.squad/orchestration-log/2026-03-18T223000Z-lead.md` so the telemetry test is traceable.
+- Added this record to Lead history so the instrumentation totals remain visible to readers.
+
 ### Notes Card Render Fix & URL Backfill Logging (2026-03-17T16:28Z)
 **Status:** ✅ LOGGED — Memory refreshed for the card-first directive
 - Recorded Joe’s directive about article cards and kept the active decision `2026-03-18: Backfill Published URLs + Fix Note Card Rendering` in place.

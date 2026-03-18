@@ -27,6 +27,13 @@
 
 ## Recent Sessions
 
+### Token-Usage Telemetry Test — Issue #54 (2026-03-18T22:30Z)
+**Status:** ✅ LOGGED — Telemetry instrumentation verified, the missing Stage 4 synthesis created, and Backend received the summary totals.
+
+- Added `content/model_policy.py`, `usage_events`, and `stage_runs`, then recorded 10 usage events apiece for DEN (~80,850 tokens) and MIA (~78,400 tokens).
+- Created `content/articles/den-2026-offseason/discussion-summary.md` and updated `pipeline.db` so `discussion_path` points to the new artifact.
+- Logged the decision entry (`2026-03-18: Token-Usage Telemetry Test — Issue #54`) plus the session log (`.squad/log/2026-03-18T223000Z-den-telemetry-test.md`) and orchestration trace (`.squad/orchestration-log/2026-03-18T223000Z-lead.md`).
+
 ### Notes Card Render Fix & URL Backfill Verification (2026-03-17T16:28Z)
 **Status:** ✅ LOGGED — Session artifacts captured by Scribe
 - Backfilled `substack_url` for `seahawks-rb1a-target-board` and `witherspoon-extension-cap-vs-agent`, then replaced the five broken stage-review Notes so they include the new link-marked bodies.
