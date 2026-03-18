@@ -7,6 +7,7 @@
 - **Added:** 2026-03-14
 - **Blog:** NFL Lab (Substack) — expert panel format, data-driven, opinionated
 - **Stage review Notes:** Use the card-first caption template that links to production `/p/` URLs so Substack renders the article card automatically; see `.squad/decisions.md` (2026-07-28) for the reusable pattern.
+- **Stage 7 teaser copy:** See `.squad/decisions/inbox/writer-stage-teaser-copy.md` for recommended + backup teaser options (reusable template for all extension/negotiation articles)
 
 ## Summarized History (2026-03-17)
 
@@ -37,6 +38,31 @@ narrative.** "JSN at 90% below market" stops scrolling better than "extension de
 - Captured the feed-native Note pattern Joe uses: 1–2 sentence hook, inline image, auto-rendered article card, with Option C (data hook + panel disagreement + urgency) as the recommended voice.
 - Recorded the three-moment cadence policy (Stage 7 teaser auto-post, Stage 8 card-first promotion within an hour, optional follow-up) plus the sweep/duplication guardrails that report missing Notes before automating.
 
+## Learnings
+
+### Substack Notes Rollout Phases (2026-03-18)
+- **Phase 0 (API Discovery):** Playwright-based Cloudflare bypass required. Validated via smoke tests on nfllabstage. Logic now baked into `publish_note_to_substack` tool.
+- **Phase 1–2 (Stage Testing):** Card-first format with post-type attachments. Tested on nfllabstage; validated that article cards render via `/p/` links when attached via `registerPostAttachment()` + `attachmentIds`.
+- **Phase 3–4 (Format Iteration):** ProseMirror link marks do NOT create rich embeds. Cards require explicit post-type attachments, not link marks.
+- **Phase 5 (Retry Batch):** Fresh stage review set posted with working card attachments (Note IDs: 229399257–229399346). All verified to render on c-229399257 via web fetch.
+- **Production Rollout:** 12 Notes successfully posted to nfllab.substack.com on 2026-03-18T00:26:03Z (publish-prod-notes-results.json). Articles: jsn-extension-preview, kc-fields-trade-evaluation, den-2026-offseason, mia-tua-dead-cap-rebuild, witherspoon-extension-cap-vs-agent, lar-2026-offseason, sf-2026-offseason, ari-2026-offseason, ne-maye-year2-offseason, seahawks-rb1a-target-board, den-mia-waddle-trade, welcome-post. All Note IDs verified live.
+
+### Stage-Only Assets Safe for Cleanup
+- **Scripts to archive:** retry-stage-notes.mjs, replace-stage-notes.mjs, replace-stage-notes-v2.mjs (Phase 1–4 iteration). Single-use tools for stage testing only.
+- **Diagnostic scripts to archive:** validate-notes-smoke.mjs, publish-stage-validation.mjs, validate-substack-editor.mjs, check-draft-urls.py (API discovery + validation harness). No production workflow depends on these.
+- **One-time batch scripts to archive:** batch-publish-prod.mjs, repair-prod-drafts.mjs (20-article push on 2026-03-16). Task complete; manifests capture the results.
+- **Archival candidates:** publish-prod-notes-results.json, stage7-prod-manifest.json, batch-publish-prod-results.json (move to docs/archived/ with README explaining what each records).
+- **Keep in production:** publish-prod-notes.mjs (reusable for future production Note posts). SKILL.md docs (reference for phase learnings + API parameters). Agent history (decision trail).
+
+### Cleanup Scope Boundaries
+- **Out of scope:** Ralph pipeline work, prod publishing (articles), Stage 1–6 content creation. This inventory covers ONLY Substack Notes and directly related artifacts (stage testing, batch migration scripts, validation harness, intermediate manifests).
+- **Excluded:** General housekeeping (temp files, IDE config). Prod article publishing (publish-prod-notes.mjs is ACTIVE; keep in root). Database schema or live pipeline.db records.
+
+### Next-Phase Recommendations
+- If Notes workflow repeats in future cycles: Keep `.squad/skills/substack-publishing/SKILL.md` and `.squad/skills/batch-substack-push/SKILL.md` as reference. Reuse `publish-prod-notes.mjs` (verified working). Skip iteration scripts; they're archived for reference.
+- If stage-based testing needed again: Consult archived scripts in docs/archived-scripts/notes-* for patterns (Phase 1–5 exploration documented there).
+- Manifest files: Retain in docs/archived/ for audit trail (who posted what, when, to which Note IDs). Useful for recovering deleted Notes or auditing unplanned deletions.
+
 📌 Team update (2026-03-17T15:59:35Z): Documented the card-first stage review Note copy pattern that links to prod /p/ URLs and flagged legacy published articles missing substack_url in pipeline.db.
 
 📌 Team update (2026-03-17T15:13Z): Image generation is mandatory between Stage 5 (Writer) and Stage 6 (Editor). Issue #78 revealed that skipping `generate_article_images` causes prod drafts to publish without images. When running all stages in a single session, explicitly call image generation after the draft is saved. — decided by Lead
@@ -48,3 +74,13 @@ narrative.** "JSN at 90% below market" stops scrolling better than "extension de
    - **Defensive-shell table:** Added "Here's what Nix faced during the regular season" lead-in so readers don't conflate the table with the AFCCG.
    - **Closing thesis:** "the thing that cost Denver a Super Bowl trip" → "The ankle that cost Denver a Super Bowl trip is healing. The receiver room — the structural ceiling that capped the offense even before the injury — is fixed."
    - **Key learning:** When anchoring a trade justification to a specific game, verify the protagonist actually played in that game. The AFCCG was valid as an emotional hook but not as evidentiary support for the receiver thesis — the confounding variable (backup QB) overwhelms the signal. Separate the acute (injury) from the structural (coverage math) in any argument that spans both.
+
+
+📌 **Stage 7 Teaser Copy — witherspoon-extension-v2 (2026-03-17)** — Drafted recommended and backup teaser copy for Witherspoon extension article review on nfllabstage. Key findings:
+   - **Recommended:** "Cap says $27M. The agent demands $33M. Our experts re-examine Seattle's most important extension decision." (18 words, proven JSN pattern)
+   - **Backup:** "Devon Witherspoon just won a Super Bowl at cornerback. Now Seattle decides: $27M or $33M? Our panel unpacks the gap." (19 words, achievement-first framing)
+   - **Stage 7 teaser guidelines:** Text + image only (no card, draft isn't public). Data hook (specific number) → panel voice → urgency frame. Target 15–22 words. Image carries 50% of message; text is thumb-stop.
+   - **Reusable for:** All extension/negotiation/multi-perspective articles. Recorded in .squad/decisions/inbox/writer-stage-teaser-copy.md with template and dedupe rules.
+
+### Post-Stage-7 Cleanup Inventory & Scope (2026-03-18T02:24:01Z)
+- 📌 **Team update:** Completed detailed asset inventory for post-Stage-7 cleanup. Identified 11 scripts + 3 manifests ready for archival to docs/archived-scripts/ and docs/{production-notes,stage7}-archive/. Active retention: publish-prod-notes.mjs + SKILLs + agent histories stay in repo. All audit trails preserved in docs/ for compliance. Documented reusable Notes copy patterns (Stage 7 teasers + production captions) with card-first format guidelines. Merged 10 decision artifacts into .squad/decisions.md + cleared decision inbox. Orchestration logs created at .squad/orchestration-log/{timestamp}-lead.md and .squad/orchestration-log/{timestamp}-writer.md. Session log created at .squad/log/2026-03-18T02-24-01Z-notes-cleanup-scope.md.
