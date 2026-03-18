@@ -33,6 +33,18 @@
 - Added `content/model_policy.py`, `usage_events`, and `stage_runs`, then recorded 10 usage events apiece for DEN (~80,850 tokens) and MIA (~78,400 tokens).
 - Created `content/articles/den-2026-offseason/discussion-summary.md` and updated `pipeline.db` so `discussion_path` points to the new artifact.
 - Logged the decision entry (`2026-03-18: Token-Usage Telemetry Test — Issue #54`) plus the session log (`.squad/log/2026-03-18T223000Z-den-telemetry-test.md`) and orchestration trace (`.squad/orchestration-log/2026-03-18T223000Z-lead.md`).
+### Dashboard Implementation Session (2026-03-18T04:48Z)
+- Merged the Local Pipeline Dashboard Architecture, Dashboard Implementation Source Map, and Dashboard Preview Renderer decisions into `.squad/decisions.md`, capturing the zero-dependency Node server architecture, dual-source read model, and canonical preview requirements.
+- Created orchestration logs for Lead, Analytics, Editor, and Backend, then updated this session's log after archiving older decision blocks to keep the ledger lean.
+- 📌 Team update (2026-03-18T04:48Z): Dashboard Implementation Source Map (Analytics) now governs the DB views, artifact heuristics, and validation commands feeding the board/detail surfaces.
+- 📌 Team update (2026-03-18T04:48Z): Dashboard Preview Renderer Must Use Shared Module (Editor) mandates shared/substack-prosemirror.mjs across `dashboard/render.mjs` and the publisher extension so local previews mirror production behavior.
+
+### Dashboard Implementation Sprint (2026-03-18T045148Z)
+- Completed the local dashboard foundation: board/detail APIs, shared preview wiring, package scripts, documentation, and an initial validation check run.
+- Routed preview rendering through `shared/substack-prosemirror.mjs` so the detail preview matches the canonical article rendering, and surfaced the dossier tab content.
+- Captured Editor's validation integration requirements (child-process execution, auth isolation, result contract) while auditing the latest dashboard flows.
+
+📌 Team update (2026-03-18T045148Z): Dashboard validation actions must spawn `validate-substack-editor.mjs` and `validate-stage-mobile.mjs` as child processes, keep credentials internal, and report results/logs via polling or SSE — decided by Editor
 
 ### Notes Card Render Fix & URL Backfill Verification (2026-03-17T16:28Z)
 **Status:** ✅ LOGGED — Session artifacts captured by Scribe
@@ -104,3 +116,16 @@
 - **Post-disable workflow:** After publishing an article, agents should surface that a promotion Note *can* be posted (optional). The sweep still catches `MISSING_PROMOTION` and `STALE_PROMOTION` for published articles. No teaser enforcement at Stage 7.
 - **Teaser deletion completed:** c-229449096 deleted via `DELETE /api/v1/comment/{id}` on nfllabstage (plain fetch, HTTP 200). Key finding: the delete endpoint for Notes is `/api/v1/comment/{id}`, NOT `/api/v1/notes/{id}` (which returns 404). The existing `cleanup-stage-notes.mjs` and `retry-stage-notes.mjs` use the wrong endpoint (`/api/v1/notes/`). CDN caching can delay deletion visibility by several minutes.
 - **Decision:** `.squad/decisions/inbox/lead-disable-teaser-flow.md`
+
+## Learnings
+
+### Local Pipeline Dashboard (2026-03-17T21:23Z)
+- **Architecture:** Zero-dependency Node server (`node:http` + `node:sqlite`). No Express, no React, no build step.
+- **Key decision:** Reimplement `article_board.py` stage-inference in JavaScript (`dashboard/data.mjs`) rather than shelling out to Python. This keeps the dashboard pure-Node and avoids cross-runtime coordination.
+- **Key decision:** Approximate markdown preview (`dashboard/render.mjs`) rather than full ProseMirror round-trip for v1. The preview banner warns about Substack fidelity gap. Canonical preview via publisher validation is the upgrade path.
+- **File structure:** `dashboard/server.mjs` (HTTP + routing), `data.mjs` (read model), `render.mjs` (md→HTML), `templates.mjs` (server-rendered HTML), `public/style.css`.
+- **Data model:** Unified board payload merges DB rows (`pipeline.db`) with filesystem artifact scanning. Drift (DB vs artifact stage mismatch) is surfaced as a first-class column.
+- **Routes:** `/` (board), `/article/:slug` (detail with 7 tabs), `/preview/:slug` (draft.md rendered), `/api/board` and `/api/article/:slug` (JSON).
+- **Token telemetry:** Placeholder section ("not yet instrumented") on overview tab per plan. Schema-ready slot exists.
+- **Baseline:** `npm test` exits 1 — intentionally left unchanged (no test specified).
+- **Node requirement:** 22+ (`node:sqlite` is experimental). The `ExperimentalWarning` is expected.

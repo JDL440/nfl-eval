@@ -155,3 +155,8 @@ Logged KC Fields Trade Evaluation stage publish to nfllabstage.substack.com.
 otes-attachment-card-fix session log summarizing context, actions, and key learnings for the multi-agent story.
 - Merged .squad/decisions/inbox/editor-note-card-audit.md into .squad/decisions.md, deleting the inbox file after the attachment-based diagnosis was preserved.
 - Appended cross-agent history updates for Editor and Scribe, and prepared a new Coordinator history snippet so the verification work is durably recorded.
+
+### Dashboard Implementation Memory (2026-03-18T04:48Z)
+- Local Pipeline Dashboard Architecture (Lead) is archived in `.squad/decisions.md` as the canonical zero-dependency Node server reading `pipeline_board` + artifact scans, surfacing drift, notes, and preview telemetry while enforcing read-only semantics.
+- Dashboard Implementation Source Map (Analytics) now documents every DB field, artifact heuristic, preview helper, and validation command (`python content/article_board.py`, `python content/article_board.py reconcile`, `python content/article_board.py notes-sweep`, `node validate-substack-editor.mjs`, `node validate-stage-mobile.mjs`) that implementers must follow.
+- Dashboard Preview Renderer Must Use Shared Module (Editor) ensures `dashboard/render.mjs` and `.github/extensions/substack-publisher/extension.mjs` share `shared/substack-prosemirror.mjs` (markdownToProseMirror, ensureSubscribeButtons, ensureHeroFirstImage, validateProseMirrorBody, dense-table guards, YouTube handling) so the local preview mirrors production with canonical dense-table warnings.
