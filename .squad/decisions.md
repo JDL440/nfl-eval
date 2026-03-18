@@ -1268,6 +1268,91 @@ docs/
 
 ---
 
+---
+date: 2026-03-18
+author: Lead
+source: Notes cleanup scoping after prod promotion rollout
+status: READY FOR APPROVAL
+---
+
+# Stage Notes Cleanup Scope
+
+## Context
+
+Production promotion Notes are now live on `nfllab.substack.com` for 12 articles (`publish-prod-notes-results.json`, Note IDs `229406564`–`229406730`). The `notes` table in `content/pipeline.db` now holds paired stage rows (`id` 6–17, `target='stage'`) and prod rows (`id` 18–29, `target='prod'`) for those same articles.
+
+At the same time, `python content\article_board.py notes-sweep --json` still reports one open Stage 7 Notes gap:
+
+- `witherspoon-extension-v2` — `current_stage=7`, `status='in_production'`, `gap_type='MISSING_TEASER'`
+
+Joe asked for cleanup scope **after posting the Stage 7 teaser to nfllabstage**. That means this is a scoping/ordering decision only until the missing teaser is actually posted.
+
+## Decision
+
+Use a strict cleanup gate:
+
+1. **Do not delete stage Notes yet** while the current Stage 7 teaser gap remains open.
+2. Once the `witherspoon-extension-v2` teaser is posted to `nfllabstage`, clean up the **external stage Notes only** for articles that already have matching live prod promotion Notes.
+3. Preserve the audit trail:
+   - keep both stage and prod `pipeline.db` rows
+   - keep `publish-prod-notes-results.json`
+   - keep reusable posting scripts
+
+## Cleanup Targets
+
+### Tier 1 — delete from nfllabstage after the teaser posts
+
+These 12 stage Notes are now superseded by live prod promotion Notes for the same `article_id`:
+
+| Article | Stage note | DB row | Matching prod note |
+|---|---:|---:|---:|
+| `jsn-extension-preview` | `c-229399257` | 6 | `c-229406564` |
+| `kc-fields-trade-evaluation` | `c-229399279` | 7 | `c-229406577` |
+| `den-2026-offseason` | `c-229399303` | 8 | `c-229406592` |
+| `mia-tua-dead-cap-rebuild` | `c-229399326` | 9 | `c-229406608` |
+| `witherspoon-extension-cap-vs-agent` | `c-229399346` | 10 | `c-229406616` |
+| `lar-2026-offseason` | `c-229402275` | 11 | `c-229406626` |
+| `sf-2026-offseason` | `c-229402289` | 12 | `c-229406637` |
+| `ari-2026-offseason` | `c-229402302` | 13 | `c-229406652` |
+| `ne-maye-year2-offseason` | `c-229402322` | 14 | `c-229406667` |
+| `seahawks-rb1a-target-board` | `c-229402343` | 15 | `c-229406685` |
+| `den-mia-waddle-trade` | `c-229402254` | 16 | `c-229406712` |
+| `welcome-post` | `c-229402366` | 17 | `c-229406730` |
+
+### Tier 2 — safe to archive later, not urgent for the first cleanup pass
+
+These Notes-specific artifacts are superseded, but they are repo artifacts rather than live stage Notes:
+
+- `replace-stage-notes.mjs` — older link-mark replacement path
+- `replace-stage-notes-v2.mjs` — older attachment repost path superseded by `retry-stage-notes.mjs`
+- `content/notes-phase2-candidate-jsn.md` — obsolete Phase 2 candidate package
+
+## Recommended Order
+
+1. **Post the missing Stage 7 teaser** for `witherspoon-extension-v2` on `nfllabstage`.
+2. **Delete the 12 superseded stage Notes** listed above from `nfllabstage`.
+3. **Verify no prod Note was touched** by checking the paired prod Note IDs still match `publish-prod-notes-results.json`.
+4. **Leave `pipeline.db` rows 6–29 in place** as the Notes audit trail.
+5. **Optionally archive** the superseded repo artifacts in Tier 2 after the live stage cleanup is complete.
+
+## Keep / Do Not Clean Up
+
+- `publish-prod-notes.mjs` — active reusable prod poster
+- `retry-stage-notes.mjs` — current reusable stage repost script
+- `publish-prod-notes-results.json` — prod audit record
+- `content/pipeline.db` Notes rows — retain for audit/history
+- all prod Notes `c-229406564`–`c-229406730`
+
+## Operational Note
+
+History and prior decisions refer to `delete-notes-api.mjs` as the canonical cleanup tool, but that file is not present in the current working tree. Before executing the live cleanup, restore that script or recreate the same delete-only behavior from the existing stage-note helpers.
+
+## Reusable Principle
+
+When a production promotion Note exists for an article, the matching stage Note becomes disposable **review residue**. Delete the live stage Note from `nfllabstage`, but keep the database rows and results artifacts as the permanent audit trail.
+
+---
+
 ### 2026-03-18: Stage-Review Note Retry — Two-Phase Delete-then-Post
 
 **Date:** 2026-03-18
@@ -3945,6 +4030,7 @@ Switched Scribe's default model from claude-haiku-4.5 to gpt-5.1-codex-mini. Joe
 
 ### Path to ✅ APPROVED:
 Fix the 3 🔴 items → address top 🟡 suggestions → resubmit for final sign-off.
+
 
 
 
