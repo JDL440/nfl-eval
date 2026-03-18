@@ -157,8 +157,44 @@ nfl-eval/
 │   └── team.md          # Full agent roster and project context
 ├── content/
 │   ├── articles/        # Published and in-progress articles
+│   ├── pipeline.db      # SQLite pipeline state (source of truth for stages)
 │   ├── article-ideas.md # Editorial calendar and idea pipeline
 │   └── proposals/       # Article proposals awaiting approval
+├── dashboard/           # Local pipeline dashboard (read-only)
+│   ├── server.mjs       # HTTP server — `npm run dashboard` to start
+│   ├── data.mjs         # Read model (pipeline.db + article artifact scanning)
+│   ├── render.mjs       # Canonical ProseMirror preview (uses shared/substack-prosemirror.mjs)
+│   ├── templates.mjs    # Server-rendered HTML pages
+│   └── public/          # Static assets (CSS)
 ├── VISION.md            # Internal strategy doc (not for public sharing)
 └── README.md            # You are here
 ```
+
+---
+
+## Dashboard
+
+A local read-only dashboard for the article pipeline. Shows every article's stage, artifacts, drift status, editor verdicts, and a canonical publisher-aligned preview.
+
+```bash
+npm run dashboard          # start at http://localhost:3456
+npm run dashboard:dev      # start with --watch (auto-reload on file changes)
+DASHBOARD_PORT=8080 npm run dashboard  # custom port
+```
+
+**Pages:**
+- **Board** (`/`) — All articles with stage, status, drift, and next-action columns. Filter by text, stage, or status.
+- **Article detail** (`/article/:slug`) — Left-rail summary + tabs: Overview, Prompt & Panel, Draft & Edits, Assets, Preview, Publish/Notes, Timeline.
+- **Preview** (`/preview/:slug`) — Renders `draft.md` through the canonical ProseMirror pipeline (subscribe buttons, hero-image safety, dense-table warnings).
+- **API** (`/api/board`, `/api/article/:slug`) — JSON endpoints for tooling.
+
+**Requirements:** Node 22+ (uses `node:sqlite`). Zero external dependencies.
+
+**Validation notes:** The dashboard includes optional browser/mobile validation hooks. Important details:
+
+- Validation requires `SUBSTACK_TOKEN` in `.env` (see 'Publishing Setup' above) to authenticate Playwright sessions.
+- Dashboard-triggered validation is stage-only: it will refuse to run against production draft URLs. Use the Stage publication URLs (`*.nfllabstage.substack.com`).
+- Validation runs in a background child process and calls the existing Playwright CLI scripts; original validation scripts are not modified.
+- Validation artifacts (screenshots) are stored under `content/images/stage-validation-screenshots/{slug}/` and results are persisted to `dashboard/validation-results.json`.
+- Trigger validation manually from the article page Validation tab or via POST `/api/validate/editor/{slug}` and `/api/validate/mobile/{slug}`; poll `/api/validation/{slug}` for status updates.
+
