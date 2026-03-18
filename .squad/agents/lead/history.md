@@ -80,5 +80,20 @@
 - Current first-pass cleanup list is the 12 live nfllabstage Note IDs `229399257, 229399279, 229399303, 229399326, 229399346, 229402275, 229402289, 229402302, 229402322, 229402343, 229402254, 229402366`; each already has a paired prod Note row (`18`–`29`).
 - `delete-notes-api.mjs` is still the referenced cleanup mechanism in decisions/history, but it is absent from the current working tree. Restore or recreate that delete-only helper before executing stage-note cleanup.
 
+### Stage Teaser Posted + Stage Cleanup Executed (2026-03-18T02:30Z)
+- **Teaser posted:** `witherspoon-extension-v2` Stage 7 teaser live on nfllabstage at `c-229449096`. Used recommended Writer copy: "Cap says $27M. The agent demands $33M. Our experts re-examine Seattle's most important extension decision." Text-only (no article card — v2 not yet published). `notes-sweep` now returns `[]` — zero gaps.
+- **Cleanup executed:** All 12 superseded stage-review Notes (IDs 229399257–229402366) confirmed already deleted externally (all returned 404). Marked pipeline.db rows 6–17 as `[DELETED]` for audit trail. 12 prod notes (IDs 18–29) untouched. New teaser (ID 30) protected.
+- **`delete-notes-api.mjs` absent:** Confirmed the file doesn't exist in the working tree. Used the DELETE endpoint from `retry-stage-notes.mjs` pattern instead — same validated path. Created `cleanup-stage-notes.mjs` (reusable) and `post-stage-teaser.mjs` (single-article) as purpose-built scripts.
+- **Key learning:** For articles not yet published (Stage 7, no `substack_url`), post text-only teasers — card attachment requires a live `/p/` URL. Add the card retroactively when the article reaches Stage 8.
+- **Decision:** `.squad/decisions/inbox/lead-stage-teaser-clean.md`
+
 ### Post-Stage-7 Cleanup Scope Verification (2026-03-18T02:24:01Z)
 - 📌 **Team update:** Verified stage teaser status and documented reusable Notes lifecycle pattern. Stage review batch (5 articles, IDs 229399257/279/303/326/346) is **PENDING Joe's review** on nfllabstage. Production promotion batch (12 articles, IDs 229406564–229406730) is **already live** on nfllab.substack.com. Cleanup is safe after Joe approves. Merged 10 decision artifacts into `.squad/decisions.md` covering: Stage vs. Production Notes lifecycle, Production rollout execution, Full backlog coverage, Cleanup scope + archival recommendations, Telemetry infrastructure design, and Production conventions. Orchest ration logs created at `.squad/orchestration-log/{timestamp}-lead.md` and `.squad/orchestration-log/{timestamp}-writer.md`. Session log created at `.squad/log/2026-03-18T02-24-01Z-notes-cleanup-scope.md`.
+
+### Stage 7 Teaser Flow Disabled (2026-03-18)
+- **Directive:** Joe deprioritized teasers — "they need more work." Promotion-note flow for published articles remains active.
+- **Changes:** Removed `MISSING_TEASER` from `notes-sweep`, deprecated `post-stage-teaser.mjs`, updated feature design doc Phase 5 cadence, unprotected the live stage teaser c-229449096 for cleanup.
+- **Key pattern:** When disabling a feature, deprecate the script (early exit + message) rather than deleting it — preserves reference code and makes the deprecation visible to anyone who runs it.
+- **Post-disable workflow:** After publishing an article, agents should surface that a promotion Note *can* be posted (optional). The sweep still catches `MISSING_PROMOTION` and `STALE_PROMOTION` for published articles. No teaser enforcement at Stage 7.
+- **Teaser deletion completed:** c-229449096 deleted via `DELETE /api/v1/comment/{id}` on nfllabstage (plain fetch, HTTP 200). Key finding: the delete endpoint for Notes is `/api/v1/comment/{id}`, NOT `/api/v1/notes/{id}` (which returns 404). The existing `cleanup-stage-notes.mjs` and `retry-stage-notes.mjs` use the wrong endpoint (`/api/v1/notes/`). CDN caching can delay deletion visibility by several minutes.
+- **Decision:** `.squad/decisions/inbox/lead-disable-teaser-flow.md`

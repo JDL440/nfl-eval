@@ -1,11 +1,11 @@
 ---
-updated_at: 2026-03-18T07:15Z
-focus_area: Substack Notes — Phase 5 retry complete. Fresh 5-note stage review set posted with article cards.
+updated_at: 2026-03-18T00:00Z
+focus_area: Stage 7 teasers disabled. Promotion Notes for published articles remain active. Sweep tracks MISSING_PROMOTION and STALE_PROMOTION only.
 ---
 
 # What We're Focused On
 
-**Mode:** Phase 5 retry — Fresh stage review Notes posted with post-type attachments for article card rendering.
+**Mode:** Notes cadence — teasers disabled, promotion-note flow active.
 
 - Phase 0 ✅ — API discovery complete via browser DevTools. Cloudflare Bot Management requires Playwright page.evaluate(fetch) from browser context.
 - Phase 1 ✅ — All three smoke test cases passed (plain text, linked draft, inline image). Notes images use attachmentIds after /api/v1/comment/attachment. All smoke Notes cleaned up.
@@ -20,6 +20,6 @@ focus_area: Substack Notes — Phase 5 retry complete. Fresh 5-note stage review
   - Verified: article cards render (hero image + NFL Lab logo + article title) on c-229399257 via web fetch.
   - `pipeline.db` notes table updated with new URLs.
 
-- **Phase 6 NEXT:** Based on Joe's review — if approved → ready for production Notes workflow
-- Also backfilled: `substack_url` for both Stage 8 published articles (seahawks-rb1a-target-board, witherspoon-extension-cap-vs-agent)
+- **Stage 7 teasers DISABLED (2026-03-18):** Per Joe's directive, teaser Notes are deprioritized. `MISSING_TEASER` removed from `notes-sweep`. `post-stage-teaser.mjs` deprecated. Live stage teaser c-229449096 confirmed deleted (GET → 404). Promotion Notes for published articles remain fully active.
+- **Phase 6 NEXT:** Post-publish promotion Notes — after an article is published, surface that a Note can be posted (optional, not enforced)
 - Ralph pipeline continues in parallel as normal

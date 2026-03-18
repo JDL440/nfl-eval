@@ -695,17 +695,19 @@ def notes_sweep():
     Detect articles that are missing expected Substack Notes.
 
     Rules:
-      - Stage 7+ articles should have at least one teaser Note.
       - Stage 8 (published) articles should have a promotion Note.
       - Published articles older than 48 hours without a promotion Note are stale.
+
+    Note: Stage 7 teaser detection (MISSING_TEASER) was disabled per Joe's
+    directive (2026-03-18). Teasers are deprioritized; the sweep now only
+    tracks promotion Notes for published articles.
 
     Returns a list of gap dicts:
         slug, stage, status, gap_type, severity, detail
     where gap_type is one of:
-        MISSING_TEASER    — stage 7+ with no teaser/promotion Note
         MISSING_PROMOTION — stage 8 published with no promotion Note
         STALE_PROMOTION   — published >48h with no promotion Note
-    and severity is one of: info, warning, urgent
+    and severity is one of: warning, urgent
     """
     try:
         ps = PipelineState()
@@ -740,24 +742,10 @@ def notes_sweep():
             continue  # skip corrupt rows
 
         article_notes = note_types_by_article.get(slug, [])
-        has_teaser = any(
-            n["note_type"] in ("promotion", "follow_up") for n in article_notes
-        )
         has_prod_promotion = any(
             n["note_type"] == "promotion" and n["target"] == "prod"
             for n in article_notes
         )
-
-        # Stage 7+ without any teaser/promotion Note
-        if stage >= 7 and not has_teaser:
-            gaps.append({
-                "slug": slug,
-                "stage": stage,
-                "status": status,
-                "gap_type": "MISSING_TEASER",
-                "severity": "info",
-                "detail": f"Stage {stage} — no teaser or promotion Note exists",
-            })
 
         # Stage 8 (published) without a prod promotion Note
         if stage == 8 and status == "published" and not has_prod_promotion:
@@ -854,7 +842,7 @@ def _cli_notes_sweep(as_json=False):
     if counts["warning"]:
         _safe_print("  - MISSING_PROMOTION: Create and post promotion Notes (requires Joe approval).")
     if counts["info"]:
-        _safe_print("  - MISSING_TEASER: Consider drafting teaser Notes for upcoming articles.")
+        _safe_print("  - INFO: Review info-level gaps above.")
 
 
 if __name__ == "__main__":

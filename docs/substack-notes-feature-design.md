@@ -581,16 +581,18 @@ Before signing off on the Notes feature for production:
 
 ### Phase 5: Ongoing Operation — Notes Cadence
 
-Once rolled out, Notes follow a **three-moment cadence** tied to the article lifecycle:
+Once rolled out, Notes follow a **two-moment cadence** tied to the article lifecycle:
 
 | Moment | Trigger | Target | Format | Note Type |
 |--------|---------|--------|--------|-----------|
-| **Draft teaser** | Draft pushed to Substack (Stage 7) | `stage` | Text + image (no card) | `teaser` |
+| ~~**Draft teaser**~~ | ~~Draft pushed to Substack (Stage 7)~~ | — | — | ~~`teaser`~~ |
 | **Publish-day promotion** | Article published by Joe (Stage 8) | `prod` | Card-first: 1-2 sentence hook + image + article card | `promotion` |
 | **Follow-up** | 2-3 days post-publish or engagement spike | `prod` | Text or image + card | `follow_up` |
 
+> **⚠️ Teaser Notes disabled (2026-03-18):** Stage 7 teaser Notes are deprioritized per Joe's directive. The `MISSING_TEASER` gap type has been removed from `notes-sweep`. The `post-stage-teaser.mjs` script is deprecated. Promotion Notes for published articles remain fully active.
+
 **Automated sweep (daily, part of Ralph cycle):**
-- Checks for Stage 7+ articles missing teaser Notes → auto-posts to nfllabstage (safe).
+- ~~Checks for Stage 7+ articles missing teaser Notes → auto-posts to nfllabstage (safe).~~ *Disabled.*
 - Checks for Stage 8 published articles missing promotion Notes → proposes to Joe (no auto-post to prod in v1).
 - Staleness warning: flags articles at Stage 8 for >48 hours without a promotion Note.
 
@@ -603,13 +605,14 @@ Once rolled out, Notes follow a **three-moment cadence** tied to the article lif
 2. ✅ Add sweep eligibility report to `article_board.py` (report only) — **SHIPPED**
    - `python content/article_board.py notes-sweep` — CLI report
    - `python content/article_board.py notes-sweep --json` — machine-readable
-   - Detects: MISSING_TEASER (stage 7+), MISSING_PROMOTION (stage 8), STALE_PROMOTION (>48h)
-   - Severity: urgent / warning / info — sorted for operator triage
-3. Semi-auto stage teasers (auto-post to stage on Stage 7)
+   - Detects: MISSING_PROMOTION (stage 8), STALE_PROMOTION (>48h)
+   - Severity: urgent / warning — sorted for operator triage
+   - ~~MISSING_TEASER~~ removed (2026-03-18)
+3. ~~Semi-auto stage teasers (auto-post to stage on Stage 7)~~ *Disabled.*
 4. Semi-auto prod promotions (sweep proposes, Joe approves)
 5. Full auto (v2, gated on ≥10 successful manual cycles)
 
-**Copy standard:** Card-first format per Joe's approved model. Text is ≤20 words (promotion) or ≤30 words (teaser). Data hook from subtitle or panel disagreement stat. Image is article inline-1 (hero).
+**Copy standard:** Card-first format per Joe's approved model. Text is ≤20 words (promotion). Data hook from subtitle or panel disagreement stat. Image is article inline-1 (hero).
 
 See `.squad/decisions/inbox/writer-notes-cadence.md` for the full decision record.
 
@@ -714,3 +717,4 @@ The exact top-level field name (`bodyJson` vs `body` vs something else) and any 
 | 2025-07-27 | Final POST gated until Phase 0 browser interception | Avoids shipping a tool that calls an unverified endpoint; all scaffolding except the POST is validated |
 | 2025-07-27 | Shipped dry-run tool + smoke harness + DB support ahead of Phase 0 | De-risks Phase 1 — once the endpoint is captured, only the gate needs to be lifted |
 | 2025-07-28 | Notes sweep report shipped in `article_board.py notes-sweep` | Report-only detection of missing teaser/promotion Notes; no auto-posting. Reuses existing board CLI surface. Rollout step 2 of Phase 5 cadence. |
+| 2026-03-18 | Stage 7 teaser Notes disabled | Teasers deprioritized per Joe's directive. `MISSING_TEASER` removed from sweep. `post-stage-teaser.mjs` deprecated. Promotion Notes for published articles remain active. |
