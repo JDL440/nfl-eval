@@ -27,6 +27,27 @@
 
 ## Recent Sessions
 
+### nflverse Platform-Fit Review (2026-03-19T02:20:14Z)
+**Status:** ✅ LOGGED — Lead assessed nflverse/nflreadpy integration report against platform state; recommended Tier 0–1 (data cache script + 3 query scripts), deferred Tiers 2–5 (DataScience agent, extension, gameday pipeline).
+
+- Reviewed 5-tier proposal: determined Analytics gap is data access (PFR blocked), not scope.
+- Recommended immediate: `pip install nflreadpy` + cache script + 3 query scripts (EPA, efficiency, positional comparison).
+- Deferred DataScience agent (premature; no evidence Analytics will bottleneck; Phase 2+ investment).
+- Flagged two-runtime overhead (Python + Node) — mitigate via `.squad/skills/nflverse-data/SKILL.md` + isolated `content/data/`.
+- Identified Stage 2 integration point: data anchors for discussion prompts (automated aggregation replaces hand-assembly).
+- Captured risk: offseason data is static; real value is historical comparisons for current articles (Witherspoon, JSN, draft).
+- 📌 Team update (2026-03-19T02:20:14Z): nflverse Tier 0–1 integration strategy — do now + defer 2–5 until Phase 1 goals proven, decided by Lead.
+
+### Teaser Flow Disablement & Notes Cleanup (2026-03-18T03:18:41Z – 2026-03-18)
+**Status:** ✅ LOGGED — Disabled Stage 7 teaser Notes flow per Joe directive; fixed API endpoint in cleanup scripts; verified teaser deletion and audit trail closure.
+
+- Merged directive (teaser disablement, notes flow active) + two follow-up decisions (endpoint fix + cleanup verification).
+- Confirmed teaser note c-229449096 deleted (GET returns 404); updated `now.md` status.
+- Fixed wrong DELETE endpoint in `cleanup-stage-notes.mjs` and `retry-stage-notes.mjs`: `/api/v1/notes/{id}` → `/api/v1/comment/{id}`.
+- Updated feature design doc (Phase 5 cadence); disabled `post-stage-teaser.mjs`.
+- Verified `notes-sweep` clean — zero gaps remaining; promotion Notes still active.
+- Session log: `.squad/log/2026-03-18T02-24-01Z-lead.md`
+
 ### Token-Usage Telemetry Test — Issue #54 (2026-03-18T22:30Z)
 **Status:** ✅ LOGGED — Telemetry instrumentation verified, the missing Stage 4 synthesis created, and Backend received the summary totals.
 
@@ -118,6 +139,15 @@
 - **Decision:** `.squad/decisions/inbox/lead-disable-teaser-flow.md`
 
 ## Learnings
+
+### nflverse Platform-Fit Review (2026-03-19)
+- **Research report reviewed:** Backend's 5-tier nflverse integration proposal (Tiers 0–5: Foundation → Gameday Review). Report at `session-state/.../research/i-want-to-add-another-expert-for-more-advanced-dat.md`.
+- **Key decision:** Approve Tiers 0 + selective Tier 1 now. Defer Tiers 2–5 until Phase 1 publishing goals are met. Decision filed at `.squad/decisions/inbox/lead-nflverse-platform-fit.md`.
+- **Analytics vs. DataScience:** Extend Analytics (add data access) — do NOT create DataScience agent yet. Analytics' charter already owns the analytical domain; it lacks access, not scope. Split only when code-writing demands exceed what pre-built query scripts can serve.
+- **Pipeline integration point:** Stage 2 discussion prompt Data Anchors. Query scripts replace hand-assembled web-scraped tables. No schema changes, no new pipeline stages needed.
+- **Risks flagged:** Python+Node dual-runtime management, offseason data is static (limits near-term uplift), token cost of large data tables in 1,500-token panel budget, ~300MB parquet cache needs `.gitignore`.
+- **Quick wins:** `requirements.txt`, `content/data/fetch_nflverse.py`, `.squad/skills/nflverse-data/SKILL.md`, Analytics charter PFR→nflverse update, 2–3 query scripts (`query_player_epa.py`, `query_team_efficiency.py`, `query_positional_comparison.py`).
+- **Platform bottleneck today:** Publishing and audience validation, not data sophistication. Content quality upgrades matter but shouldn't distract from getting articles live.
 
 ### Local Pipeline Dashboard (2026-03-17T21:23Z)
 - **Architecture:** Zero-dependency Node server (`node:http` + `node:sqlite`). No Express, no React, no build step.

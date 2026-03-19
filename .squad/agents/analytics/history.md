@@ -16,6 +16,12 @@
 
 ## Learnings
 
+### nflverse Data Integration Roadmap (2026-03-19T02:20:14Z)
+
+**Cross-agent update (from Lead):** nflverse/nflreadpy integration approved for Tier 0–1 phased rollout. Lead assessment determined Analytics' data access gap (PFR blocked 403, ESPN requires scraping) can be filled via `nflreadpy` without a new DataScience agent. Tier 0 immediate actions: `pip install` + cache script + `.squad/skills/nflverse-data/SKILL.md`. Tier 1 next session: 3 query scripts (`query_player_epa.py`, `query_team_efficiency.py`, `query_positional_comparison.py`). **Why Tier 1 only:** Integration point is Stage 2 (discussion prompt data anchors); Analytics' parsing/interpretation layer is sufficient; API + execution risk is low; token budget constraint requires pre-aggregated tables (10–20 rows max). Deferred Tiers 2–5 (Copilot Extension, DataScience agent, gameday pipeline) to Phase 2+ — no evidence Analytics will become a bottleneck before Phase 1 publishing goals proven. **Risk flagged:** Offseason data is static (real value in historical comps for current articles, not live updates); token budget implications for large datasets.
+
+📌 Team update (2026-03-19T02:20:14Z): nflverse Tier 0–1 integration strategy — Analytics extends with PFR → nflverse data bridge, defer full automation ladder until Phase 1 published, decided by Lead.
+
 ### Dashboard Data & Validation Audit (2026-03-18T045148Z)
 - Cataloged the board/detail payload sources (`article_board`, `pipeline_state`, `stage_transitions`, publisher metadata) to confirm the dashboard pulls from the same canonical fields as the pipeline.
 - Documented the overlapping reuse points across the board, detail, and dossier views, noting which fields remain stable and which are derived or stage-dependent.
