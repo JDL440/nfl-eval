@@ -182,8 +182,10 @@
 ### Dashboard Fact-Check UI Plumbing
 - **`panel-factcheck.md` classified as `"verify"` group** in `dashboard/data.mjs` — sort key 85 (between editor-image-review at 80 and publisher-pass at 90). This places it in the pipeline timeline after editor review but before publisher pass.
 - **Not stage-defining:** `inferStage()` is completely untouched. `panel-factcheck.md` does NOT gate or change stage inference.
-- **Rendering:** Dashboard `draftTab` renders a "Fact-Check Verification" section; overview tab shows a green "✓ Fact-Checked" badge on the stage-inference line when the artifact exists.
+- **Rendering:** Dashboard `draftTab` renders a "Fact-Check Verification" section (between Draft and Editor Reviews); overview tab shows a green "✓ Fact-Checked" badge on the stage-inference line when the artifact exists.
 - **Key files:** `dashboard/data.mjs` (`classifyDocumentGroup`, `documentSortKey`), `dashboard/templates.mjs` (`overviewTab`, `draftTab`).
+- **Wiring pattern:** New document group requires 4 touch points: (1) `classifyDocumentGroup` group name, (2) `documentSortKey` stable key, (3) filter in `articlePage`, (4) pass-through to tab renderer. Missing any one silently drops the artifact into "other."
+- **Phase 2 complete.** Decision: `.squad/decisions/inbox/lead-dashboard-factcheck-ui.md`
 
 ### Fact-Checking Phase 1 Rollout (2026-03-15)
 - **Skill created:** `.squad/skills/fact-checking/SKILL.md` — lightweight preflight verification gate between Stage 4 (Panel) and Stage 5 (Writer).
@@ -208,3 +210,24 @@
 - Orchestration log: `.squad/orchestration-log/2026-03-19T05-10-46Z-lead.md`
 - Session log: `.squad/log/2026-03-19T05-10-46Z-factcheck-rollout.md`
 - Decision merged to `.squad/decisions.md`
+
+### Dashboard Fact-Check UI Phase 2 (2026-03-19T05:19:32Z)
+**Status:** ✅ COMPLETED — Dashboard Phase 2 implementation and approval received.
+
+- Updated `dashboard/data.mjs`: `panel-factcheck.md` classified into new `"verify"` document group (sort key 85, between editor-image-review and publisher-pass)
+- Updated `dashboard/templates.mjs`: Renders Fact-Check Verification section in Draft & Edits tab; green "✓ Fact-Checked" badge on overview tab
+- `inferStage()` unchanged — artifact-first pipeline fully preserved
+- 📌 Team update (2026-03-19T05:19:32Z): Dashboard fact-check UI complete, decided by Lead
+- 📌 Team approval (2026-03-19T05:19:32Z): Editor approved Phase 2 implementation — constraints respected, no regressions, decided by Editor
+- Orchestration logs: `.squad/orchestration-log/2026-03-19T05-19-32Z-lead.md`, `.squad/orchestration-log/2026-03-19T05-19-32Z-editor.md`
+- Session log: `.squad/log/2026-03-19T05-19-32Z-dashboard-factcheck-ui.md`
+- Decisions merged to `.squad/decisions.md`: lead-dashboard-factcheck-ui.md (implementation), editor-dashboard-factcheck-review.md (approval)
+
+### Fact-Check Rollout Surgical Cleanup (2026-03-19T05:19:32Z)
+**Status:** ✅ COMPLETED — Verified Phase 1 rollout is surgical, feature-essential changes only.
+
+- Validated README.md, fact-checking/SKILL.md, and supporting documentation
+- Reverted non-feature session logging from editor/history.md
+- Confirmed all remaining changes are feature-essential: writer/charter.md guardrails, article-lifecycle/SKILL.md gate, substack-article/SKILL.md production integration, decisions.md log
+- Zero non-feature changes; all changes committed or staged
+- Decision merged to `.squad/decisions.md`: lead-factcheck-cleanup.md

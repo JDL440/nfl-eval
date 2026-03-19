@@ -2252,3 +2252,73 @@ Decision: **Dashboard reference will use `panel-factcheck.md` artifact name**, b
 - **Writer/Editor roles clarified:** ✅
 - **Dashboard deferred to Phase 2:** ✅
 
+---
+
+### Dashboard Phase 2 (panel-factcheck.md) — Approved
+
+# Decision: Dashboard Phase 2 Approval — Editor Review
+
+**Date:** 2026-03-19
+**Decided by:** Editor
+
+Editor reviewed the workspace diff for `dashboard/data.mjs` and `dashboard/templates.mjs`.
+
+## Findings
+
+1. **Classification:** `panel-factcheck.md` is classified into group `"verify"` (not `"other"`). ✅
+2. **Sort key:** Assigned 85 — stable, deterministic, correctly ordered after editor review artifacts (70–80) and before publisher-pass (90). ✅
+3. **Template surfacing:** Two UI touch-points added:
+   - Overview tab: green `✓ Fact-Checked` badge next to stage inference line when artifact exists.
+   - Draft & Edits tab: dedicated "Fact-Check Verification" section with `✓ Verification Complete` badge, document group, and a dim placeholder when absent.
+4. **Stage inference unchanged:** `inferStage()` has zero modified lines in the diff. Numeric stage semantics are fully preserved. ✅
+5. **No regressions:** Changes are additive. No existing function signatures broken (draftTab gains an optional param with null-safe guard).
+
+## Verdict
+
+**✅ APPROVED** — Phase 2 is implemented correctly and ready to ship.
+
+---
+
+### Fact-Check Rollout Surgical Cleanup
+
+# Decision: Fact-Check Rollout Surgical Cleanup
+
+**Date:** 2026-03-19
+**Decided by:** Lead
+
+Cleanup pass for fact-check Phase 1 rollout: verified feature-essential changes are minimal and properly scoped.
+
+## Cleanup Validated
+
+### 1. README.md ✅
+- **Status:** No changes needed
+- **Verified:** Pipeline section (lines 92-118) correctly documents preflight verification between Expert Analysis and Writer stages, with clear boundary: Editor remains final fact-check gate.
+
+### 2. .squad/skills/fact-checking/SKILL.md ✅
+- **Status:** Verified clean
+- **Finding:** No mention of non-existent API calls (`ps.record_factcheck_preflight()`) or raw SQL. Line 188 explicitly states: "Phase 1 does NOT add new DB tables or schema changes." Artifact is standalone markdown file, no DB required.
+
+### 3. .squad/agents/editor/history.md ✅
+- **Status:** Reverted
+- **Finding:** Added entry "Writer charter guardrails update" was session logging, not feature-essential. Reverted to baseline.
+
+### 4. .squad/agents/writer/charter.md ✅ (Kept)
+- **Status:** Feature-essential changes retained
+- **Content:** Writer inputs now include `panel-factcheck.md` preflight; new "Lightweight Prose-Safety Preflight" section added. Boundary preserved: Writer does NOT fact-check; Editor is mandatory final gate.
+
+### 5. .squad/skills/article-lifecycle/SKILL.md ✅ (Kept)
+- **Status:** Feature-essential changes retained
+- **Content:** Stage 4 → Stage 5 Gate section documents the preflight as non-numeric gate (preserves 8-stage model). Writer receives preflight summary before drafting.
+
+### 6. .squad/skills/substack-article/SKILL.md ✅ (Kept)
+- **Status:** Feature-essential changes retained
+- **Content:** Preflight verification referenced in production pipeline (step 3); Writer spawn instructions include preflight guidance.
+
+### 7. .squad/decisions.md ✅ (Kept)
+- **Status:** Feature-essential decision log retained
+- **Content:** Two decisions logged: "Writer Guardrails for Draft Fidelity" (2026-03-19) and "Fact-Checking Phase 1 Rollout" (2026-03-15).
+
+## Final Outcome
+
+Cleanup pass complete. The fact-check Phase 1 rollout is surgical and minimal: 6 skill/documentation changes + 1 new skill directory. No session logs, no non-feature changes, no API references. Ready for merge.
+
