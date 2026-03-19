@@ -78,6 +78,7 @@ server.registerTool(renderTableImageTool.name, {
         alt_text: z.string().optional().describe(renderTableImageTool.parameters.properties.alt_text.description),
         output_name: z.string().optional().describe(renderTableImageTool.parameters.properties.output_name.description),
         template: z.string().optional().describe(renderTableImageTool.parameters.properties.template.description),
+        mobile: z.boolean().optional().describe(renderTableImageTool.parameters.properties.mobile.description),
     },
 }, async (args) => runWithNormalization(handleRenderTableImage, args));
 

@@ -318,7 +318,7 @@ async function handleRequest(req, res) {
     // API: article detail as JSON
     if (path.startsWith("/api/article/")) {
         const slug = path.slice("/api/article/".length);
-        const detail = getArticleDetail(slug);
+        const detail = await getArticleDetail(slug);
         if (!detail.article && detail.artifacts.length === 0) {
             sendJson(res, { error: "Article not found" }, 404);
         } else {
@@ -397,7 +397,7 @@ async function handleRequest(req, res) {
     // Article detail page
     if (path.startsWith("/article/")) {
         const slug = path.slice("/article/".length);
-        const detail = getArticleDetail(slug);
+        const detail = await getArticleDetail(slug);
         if (!detail.article && detail.artifacts.length === 0) {
             sendHtml(res, notFoundPage(`Article "${slug}" not found in DB or on disk.`), 404);
         } else {
@@ -416,7 +416,7 @@ async function handleRequest(req, res) {
             sendHtml(res, notFoundPage(`No draft.md found for "${slug}".`), 404);
             return;
         }
-        const detail = getArticleDetail(slug);
+        const detail = await getArticleDetail(slug);
         const dbTitle = detail.article?.title || slug;
         try {
             const preview = await renderPreview(md, { slug });

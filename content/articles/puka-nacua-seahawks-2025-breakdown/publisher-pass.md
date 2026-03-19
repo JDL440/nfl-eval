@@ -20,18 +20,21 @@
 
 ## Image Verification
 
-- ✅ **No cover image in markdown** — cover handled in dashboard / Substack editor at Stage 8
+- ✅ **Hero cover image present at top of markdown body**:
+  1. `puka-nacua-seahawks-2025-breakdown-cover.jpg`
 - ✅ **Exactly 2 inline editorial images** present:
   1. `puka-nacua-seahawks-2025-breakdown-inline-1.jpg`
   2. `puka-nacua-seahawks-2025-breakdown-inline-2-replacement.jpg`
+- ✅ **Rendered table image present** for the dense week-by-week split:
+  1. `puka-nacua-seahawks-2025-breakdown-puka-vs-seahawks-game-split.png`
 - ✅ **All image files exist** in `content/images/puka-nacua-seahawks-2025-breakdown/`
 - ✅ **Alt text is descriptive** and does not overclaim venue, player identity, or game state
-- ✅ **Image review cleared** in `editor-review.md`
+- ✅ **First image is hero-safe** for dashboard preview / Substack social share handling
 
 ## Table Treatment
 
-- ✅ **All 7 tables remain inline markdown**
-- ✅ Tables are light enough for direct article reading; no rendered table-image fallback required for this draft
+- ✅ **The dense game-by-game split table is rendered as an image**
+- ✅ Remaining tables stay inline markdown and preview cleanly in the canonical pipeline
 
 ## Metadata for Dashboard / Substack
 
@@ -50,8 +53,8 @@
 - **Word count:** ~2,680 words
 - **Sections:** 6 major sections
 - **Expert quotes:** 4 blockquote attributions
-- **Tables:** 7 inline markdown tables
-- **Images:** 2 inline editorial images
+- **Tables:** 6 inline markdown tables + 1 rendered table image
+- **Images:** 1 cover image + 2 inline editorial images + 1 table image
 - **TLDR:** 4-bullet summary
 - **Subscribe markers:** 2
 
@@ -64,7 +67,7 @@
 ### For Joe — Stage 8 Checklist
 
 - [ ] Review the dashboard preview and validation output
-- [ ] Select cover image in the dashboard / Substack editor
+- [ ] Confirm the generated hero image remains the first image in the article body
 - [ ] Confirm tags and final slug
 - [ ] Confirm paywall setting (currently intended as free / everyone)
 - [ ] Publish live from the dashboard article page

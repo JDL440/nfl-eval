@@ -287,7 +287,7 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
     const article = getArticle(slug);
     const publisherPass = getPublisherPass(slug);
     const notes = getNotes(slug);
-    const publishState = buildPublishState(article, publisherPass, notes, slug);
+    const publishState = await buildPublishState(article, publisherPass, notes, slug);
     const articleFile = resolveArticleMarkdownPath(slug, article);
     const channels = normalizeRequestedChannels(requestedChannels);
 

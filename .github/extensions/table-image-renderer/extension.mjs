@@ -68,6 +68,10 @@ export const renderTableImageTool = {
                 type: "string",
                 description: "Optional template override: auto, generic-comparison, cap-comparison, draft-board, or priority-list.",
             },
+            mobile: {
+                type: "boolean",
+                description: "When true, renders a mobile-optimized variant with a narrower canvas and larger text.",
+            },
         },
         required: ["article_file_path"],
     },

@@ -2,6 +2,8 @@
 
 *The Seahawks spent the 2025 regular season looking like one of football's best defenses. The Rams still turned **Puka Nacua** into the entire passing game against them. The fight is over whether that was a warning siren, a schematic tax, or one giant divisional outlier.*
 
+![Cover image: Puka Nacua Put 300 Yards on Seattle in 2025. Our Panel Still Can't Agree on What It Means.](../../images/puka-nacua-seahawks-2025-breakdown/puka-nacua-seahawks-2025-breakdown-cover.jpg)
+
 > **📋 TLDR**
 > - **Puka Nacua** put up 24 targets, 19 catches, 300 yards, 2 TD, and 17.457 receiving EPA against the Seahawks in the 2025 regular season.
 > - The caution flag matters: Week 16 accounted for 75.0% of the yards and 99.2% of the EPA in that two-game split.
@@ -68,10 +70,7 @@ Analytics is the wet blanket here, which is exactly why you want analytics in th
 
 That is not an opinion. That is arithmetic.
 
-| Week | Result | Targets | Rec | Yards | TD | EPA | YAC |
-| --: | :-- | --: | --: | --: | --: | --: | --: |
-| 11 | Rams 21, Seahawks 19 | 8 | 7 | 75 | 0 | 0.147 | 24 |
-| 16 | Seahawks 38, Rams 37 | 16 | 12 | 225 | 2 | 17.310 | 124 |
+![Game-by-game table showing Puka Nacua production against Seattle in Weeks 11 and 16 of the 2025 regular season.|Week 16 drove most of the volume and nearly all of the EPA in the season split.](../../images/puka-nacua-seahawks-2025-breakdown/puka-nacua-seahawks-2025-breakdown-puka-vs-seahawks-game-split.png)
 
 Week 11 was annoying if you were Seattle. Week 16 was the kind of game that makes fans spend the next three days opening coverage threads and immediately regretting it. Nacua accounted for **66.7% of the targets**, **63.2% of the catches**, **75.0% of the yards**, **100% of the touchdowns**, and **99.2% of the EPA** in the full Seattle split during that second game. So yes, the "Seattle had a season-long Puka problem" case depends heavily on one track meet.
 

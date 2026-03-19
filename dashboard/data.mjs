@@ -9,6 +9,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve, join, relative } from "node:path";
+import { buildCanonicalPreview } from "../shared/substack-preview.mjs";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ export function resolveArticleMarkdownPath(slug, article = null) {
     };
 }
 
-export function buildPublishState(article, publisherPass, notes, slug) {
+export async function buildPublishState(article, publisherPass, notes, slug) {
     const articleFile = resolveArticleMarkdownPath(slug, article);
     const missingPublisherChecks = publisherPass
         ? PUBLISHER_PASS_FIELDS
@@ -165,12 +166,25 @@ export function buildPublishState(article, publisherPass, notes, slug) {
         : null;
 
     const blockedReasons = [];
+    const previewWarnings = [];
     if (!article) blockedReasons.push("Article not found in pipeline.db.");
     if (!articleFile.exists) blockedReasons.push("No canonical article markdown file found for live publish.");
     if (!publisherPass) {
         blockedReasons.push("No publisher pass recorded.");
     } else if (missingPublisherChecks.length > 0) {
         blockedReasons.push(`Publisher pass incomplete: ${missingPublisherChecks.join(", ")}`);
+    }
+    if (articleFile.exists && articleFile.absolutePath) {
+        try {
+            const markdown = readFileSync(articleFile.absolutePath, "utf-8");
+            const preview = await buildCanonicalPreview(markdown);
+            previewWarnings.push(...preview.warnings);
+            for (const warning of preview.warnings) {
+                blockedReasons.push(`Canonical preview blocker: ${warning.message}`);
+            }
+        } catch (error) {
+            blockedReasons.push(`Canonical preview check failed: ${error.message}`);
+        }
     }
     if (isPublished) blockedReasons.push("Article is already live on Substack.");
 
@@ -184,6 +198,7 @@ export function buildPublishState(article, publisherPass, notes, slug) {
         hasPromotionNote,
         publisherPassComplete: Boolean(publisherPass) && missingPublisherChecks.length === 0,
         missingPublisherChecks,
+        previewWarnings,
         promotionChannels: {
             substack_note: {
                 id: "substack_note",
@@ -498,7 +513,7 @@ export function getBoardData() {
 
 // ── Article detail aggregate ─────────────────────────────────────────────────
 
-export function getArticleDetail(slug) {
+export async function getArticleDetail(slug) {
     const article = getArticle(slug);
     const inferredBase = inferStage(slug);
     const inferred = article && (article.substack_url || article.status === "published" || article.current_stage === 8)
@@ -513,7 +528,7 @@ export function getArticleDetail(slug) {
     const panels = getArticlePanels(slug);
     const notes = getNotes(slug);
     const prompt = getDiscussionPrompt(slug);
-    const publishState = buildPublishState(article, publisherPass, notes, slug);
+    const publishState = await buildPublishState(article, publisherPass, notes, slug);
 
     return {
         slug,
