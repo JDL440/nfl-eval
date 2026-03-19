@@ -13,28 +13,14 @@ import { approveAll } from "@github/copilot-sdk";
 import { joinSession } from "@github/copilot-sdk/extension";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve, dirname, extname } from "node:path";
-import { homedir } from "node:os";
+import { pathToFileURL } from "node:url";
 import { recordPipelineUsageEvent } from "../pipeline-telemetry.mjs";
+import { loadExtensionEnv, createNoopLogger } from "../shared-env.mjs";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
 function loadEnv() {
-    const candidates = [
-        resolve(process.cwd(), ".env"),
-        resolve(homedir(), ".config", "postcli", ".env"),
-    ];
-    const env = {};
-    for (const p of candidates) {
-        if (!existsSync(p)) continue;
-        const text = readFileSync(p, "utf-8");
-        for (const line of text.split("\n")) {
-            const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.+?)\s*$/);
-            if (!m || line.trimStart().startsWith("#")) continue;
-            env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-        }
-        break;
-    }
-    return env;
+    return loadExtensionEnv();
 }
 
 // ─── Pipeline DB lookup ──────────────────────────────────────────────────────

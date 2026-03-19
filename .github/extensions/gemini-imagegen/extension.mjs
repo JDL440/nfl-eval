@@ -11,8 +11,6 @@
  * Set GEMINI_API_KEY in .env (see .env.example for instructions).
  */
 
-import { approveAll } from "@github/copilot-sdk";
-import { joinSession } from "@github/copilot-sdk/extension";
 import {
     readFileSync,
     writeFileSync,
@@ -20,28 +18,14 @@ import {
     mkdirSync,
 } from "node:fs";
 import { resolve, join, dirname } from "node:path";
-import { homedir } from "node:os";
+import { pathToFileURL } from "node:url";
 import { hashTelemetryText, recordPipelineUsageEvent } from "../pipeline-telemetry.mjs";
+import { loadExtensionEnv } from "../shared-env.mjs";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
 function loadEnv() {
-    const candidates = [
-        resolve(process.cwd(), ".env"),
-        resolve(homedir(), ".config", "postcli", ".env"),
-    ];
-    const env = {};
-    for (const p of candidates) {
-        if (!existsSync(p)) continue;
-        const text = readFileSync(p, "utf-8");
-        for (const line of text.split("\n")) {
-            const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.+?)\s*$/);
-            if (!m || line.trimStart().startsWith("#")) continue;
-            env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-        }
-        break;
-    }
-    return env;
+    return loadExtensionEnv();
 }
 
 // ─── Gemini API ──────────────────────────────────────────────────────────────
@@ -194,7 +178,7 @@ function saveImage(base64, mimeType, outputDir, filename) {
 
 // ─── Main Tool ───────────────────────────────────────────────────────────────
 
-async function generateArticleImages(params) {
+export async function generateArticleImages(params) {
     const env = loadEnv();
     const apiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -360,130 +344,150 @@ async function generateArticleImages(params) {
 
 // ─── Extension Entrypoint ────────────────────────────────────────────────────
 
-await joinSession({
-    onPermissionRequest: approveAll,
-    tools: [
-        {
-            name: "generate_article_images",
-            description: [
+export const generateArticleImagesTool = {
+    name: "generate_article_images",
+    description: [
                 "Generate editorial images for an NFL Lab article using Google Imagen 4.",
                 "Saves images to content/images/{slug}/ and returns markdown references",
                 "ready to insert into the article. Call this after the Writer produces",
                 "a draft and before the Editor pass so Editor can review both text and images.",
-            ].join(" "),
-            parameters: {
-                type: "object",
-                required: ["article_slug", "article_title"],
-                properties: {
-                    article_slug: {
-                        type: "string",
-                        description: "Article slug matching the filename in content/articles/ (e.g. 'witherspoon-extension-analysis')",
-                    },
-                    article_title: {
-                        type: "string",
-                        description: "Full article headline — used to craft image generation prompts",
-                    },
-                    article_summary: {
-                        type: "string",
-                        description: "1-3 sentence summary of the article's core argument — improves image prompt quality",
-                    },
-                    team: {
-                        type: "string",
-                        description: "Primary NFL team name (e.g. 'Seattle Seahawks') — informs visual style",
-                    },
-                    players: {
-                        type: "array",
-                        items: { type: "string" },
-                        description: "Player names to reference in image prompts. Both Imagen 4 and Gemini Flash can generate athlete likenesses in editorial sports contexts.",
-                    },
-                    image_types: {
-                        type: "array",
-                        items: {
-                            type: "string",
-                            enum: ["cover", "inline"],
-                        },
-                        description: "Types of images to generate. 'cover' = 16:9 hero image (set manually in Substack editor). 'inline' = 16:9 wide banner image embedded in the article body. Default: ['inline']. For 2 inline images use ['inline', 'inline'] — they will be named -inline-1.png and -inline-2.png.",
-                        default: ["inline"],
-                    },
-                    count_per_type: {
-                        type: "integer",
-                        minimum: 1,
-                        maximum: 4,
-                        description: "Number of images to generate per type. Default: 1",
-                        default: 1,
-                    },
-                    custom_prompts: {
-                        type: "object",
-                        description: "Override the auto-generated prompt for a specific image type. Keys: 'cover' or 'inline'. Values: full prompt string.",
-                        additionalProperties: { type: "string" },
-                    },
-                    use_model: {
-                        type: "string",
-                        enum: ["gemini", "auto", "imagen-4"],
-                        description: "Image model to use. 'gemini' (default) uses Gemini 3 Pro Image. 'auto' tries Gemini first, falls back to Imagen 4. 'imagen-4' uses Imagen 4 Ultra directly.",
-                        default: "gemini",
-                    },
-                },
+    ].join(" "),
+    parameters: {
+        type: "object",
+        required: ["article_slug", "article_title"],
+        properties: {
+            article_slug: {
+                type: "string",
+                description: "Article slug matching the filename in content/articles/ (e.g. 'witherspoon-extension-analysis')",
             },
-            handler: async (params) => {
-                const { results, errors, outputDir, telemetryWarnings } = await generateArticleImages(params);
-
-                const lines = [];
-
-                if (results.length > 0) {
-                    lines.push(`✅ Generated ${results.length} image(s) → ${outputDir}`);
-                    lines.push("");
-                    lines.push("## Generated Images");
-                    lines.push("");
-
-                    for (const r of results) {
-                        lines.push(`### ${r.type.charAt(0).toUpperCase() + r.type.slice(1)} Image`);
-                        lines.push(`- **File:** \`${r.filename}\``);
-                        lines.push(`- **Model:** \`${r.model}\``);
-                        lines.push(`- **Prompt used:** ${r.prompt}`);
-                        lines.push("");
-                        lines.push("**Markdown reference to paste into article:**");
-                        lines.push("```markdown");
-                        lines.push(r.markdownRef);
-                        lines.push("```");
-                        lines.push("");
-                    }
-
-                    lines.push("## Next Steps");
-                    lines.push("");
-                    lines.push("1. Review the saved images in `" + outputDir + "`");
-                    lines.push("2. Paste the markdown references above into the article at the right positions:");
-                    lines.push("   - Cover image: directly after the subtitle line (`*subtitle*`)");
-                    lines.push("   - Inline images: at natural section breaks or to illustrate specific points");
-                    lines.push("3. The cover image will also be set in the Substack editor (Stage 8)");
-                    lines.push("4. Proceed to the Editor pass — Editor can review images alongside the text");
-
-                    if (errors.length > 0) {
-                        lines.push("");
-                        lines.push("## ⚠️ Errors");
-                        for (const e of errors) lines.push(`- ${e}`);
-                    }
-                    if (telemetryWarnings.length > 0) {
-                        lines.push("");
-                        lines.push("## ⚠️ Telemetry");
-                        for (const warning of telemetryWarnings) lines.push(`- ${warning}`);
-                    }
-                } else {
-                    lines.push("❌ No images were generated.");
-                    lines.push("");
-                    if (errors.length > 0) {
-                        lines.push("**Errors:**");
-                        for (const e of errors) lines.push(`- ${e}`);
-                    }
-                    if (telemetryWarnings.length > 0) {
-                        lines.push("");
-                        lines.push("**Telemetry warnings:**");
-                        for (const warning of telemetryWarnings) lines.push(`- ${warning}`);
-                    }
-                }
-
-                return lines.join("\n");
+            article_title: {
+                type: "string",
+                description: "Full article headline — used to craft image generation prompts",
+            },
+            article_summary: {
+                type: "string",
+                description: "1-3 sentence summary of the article's core argument — improves image prompt quality",
+            },
+            team: {
+                type: "string",
+                description: "Primary NFL team name (e.g. 'Seattle Seahawks') — informs visual style",
+            },
+            players: {
+                type: "array",
+                items: { type: "string" },
+                description: "Player names to reference in image prompts. Both Imagen 4 and Gemini Flash can generate athlete likenesses in editorial sports contexts.",
+            },
+            image_types: {
+                type: "array",
+                items: {
+                    type: "string",
+                    enum: ["cover", "inline"],
+                },
+                description: "Types of images to generate. 'cover' = 16:9 hero image (set manually in Substack editor). 'inline' = 16:9 wide banner image embedded in the article body. Default: ['inline']. For 2 inline images use ['inline', 'inline'] — they will be named -inline-1.png and -inline-2.png.",
+                default: ["inline"],
+            },
+            count_per_type: {
+                type: "integer",
+                minimum: 1,
+                maximum: 4,
+                description: "Number of images to generate per type. Default: 1",
+                default: 1,
+            },
+            custom_prompts: {
+                type: "object",
+                description: "Override the auto-generated prompt for a specific image type. Keys: 'cover' or 'inline'. Values: full prompt string.",
+                additionalProperties: { type: "string" },
+            },
+            use_model: {
+                type: "string",
+                enum: ["gemini", "auto", "imagen-4"],
+                description: "Image model to use. 'gemini' (default) uses Gemini 3 Pro Image. 'auto' tries Gemini first, falls back to Imagen 4. 'imagen-4' uses Imagen 4 Ultra directly.",
+                default: "gemini",
             },
         },
-    ],
-});
+    },
+};
+
+export function formatGenerateArticleImagesResult({ results, errors, outputDir, telemetryWarnings }) {
+    const lines = [];
+
+    if (results.length > 0) {
+        lines.push(`✅ Generated ${results.length} image(s) → ${outputDir}`);
+        lines.push("");
+        lines.push("## Generated Images");
+        lines.push("");
+
+        for (const r of results) {
+            lines.push(`### ${r.type.charAt(0).toUpperCase() + r.type.slice(1)} Image`);
+            lines.push(`- **File:** \`${r.filename}\``);
+            lines.push(`- **Model:** \`${r.model}\``);
+            lines.push(`- **Prompt used:** ${r.prompt}`);
+            lines.push("");
+            lines.push("**Markdown reference to paste into article:**");
+            lines.push("```markdown");
+            lines.push(r.markdownRef);
+            lines.push("```");
+            lines.push("");
+        }
+
+        lines.push("## Next Steps");
+        lines.push("");
+        lines.push("1. Review the saved images in `" + outputDir + "`");
+        lines.push("2. Paste the markdown references above into the article at the right positions:");
+        lines.push("   - Cover image: directly after the subtitle line (`*subtitle*`)");
+        lines.push("   - Inline images: at natural section breaks or to illustrate specific points");
+        lines.push("3. The cover image will also be set in the Substack editor (Stage 8)");
+        lines.push("4. Proceed to the Editor pass — Editor can review images alongside the text");
+
+        if (errors.length > 0) {
+            lines.push("");
+            lines.push("## ⚠️ Errors");
+            for (const e of errors) lines.push(`- ${e}`);
+        }
+        if (telemetryWarnings.length > 0) {
+            lines.push("");
+            lines.push("## ⚠️ Telemetry");
+            for (const warning of telemetryWarnings) lines.push(`- ${warning}`);
+        }
+    } else {
+        lines.push("❌ No images were generated.");
+        lines.push("");
+        if (errors.length > 0) {
+            lines.push("**Errors:**");
+            for (const e of errors) lines.push(`- ${e}`);
+        }
+        if (telemetryWarnings.length > 0) {
+            lines.push("");
+            lines.push("**Telemetry warnings:**");
+            for (const warning of telemetryWarnings) lines.push(`- ${warning}`);
+        }
+    }
+
+    return lines.join("\n");
+}
+
+export async function handleGenerateArticleImages(params) {
+    const result = await generateArticleImages(params);
+    return formatGenerateArticleImagesResult(result);
+}
+
+async function main() {
+    const [{ approveAll }, { joinSession }] = await Promise.all([
+        import("@github/copilot-sdk"),
+        import("@github/copilot-sdk/extension"),
+    ]);
+
+    await joinSession({
+        onPermissionRequest: approveAll,
+        tools: [
+            {
+                ...generateArticleImagesTool,
+                handler: handleGenerateArticleImages,
+            },
+        ],
+    });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    await main();
+}

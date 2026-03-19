@@ -48,6 +48,16 @@ This is an interactive system. You talk to the agents through GitHub Copilot CLI
 2. Make sure **GitHub Copilot CLI** is installed with the `squad` agent extension
 3. Open the Copilot chat panel
 
+### Local MCP Server
+
+This repo also ships a local MCP server for non-Copilot clients.
+
+```bash
+npm run mcp:server
+```
+
+Client-specific config details for Codex, Codex Desktop, Claude Code, OpenCode, and GitHub Copilot live in [`docs/mcp-server.md`](./docs/mcp-server.md).
+
 ### Publishing Setup (one-time)
 
 To enable automated Substack publishing:

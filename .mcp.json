@@ -5,7 +5,7 @@
       "args": [
         "mcp/server.mjs"
       ],
-      "cwd": "${workspaceFolder}"
+      "env": {}
     }
   }
 }

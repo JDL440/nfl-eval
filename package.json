@@ -9,7 +9,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dashboard": "node dashboard/server.mjs",
-    "dashboard:dev": "node --watch dashboard/server.mjs"
+    "dashboard:dev": "node --watch dashboard/server.mjs",
+    "mcp:server": "node mcp/server.mjs",
+    "mcp:smoke": "node mcp/smoke-test.mjs"
   },
   "repository": {
     "type": "git",
@@ -25,5 +27,9 @@
   "homepage": "https://github.com/JDL440/nfl-eval#readme",
   "devDependencies": {
     "playwright": "^1.58.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
   }
 }
