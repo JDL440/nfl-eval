@@ -12,7 +12,7 @@ tools:
 
 ## Context
 
-Beyond salary cap data (OTC/Spotrac), agents need roster composition, depth charts, transaction history, and game results. ESPN and NFL.com are the primary fetchable sources. Pro Football Reference (PFR) blocks web_fetch with 403 errors — do NOT attempt it.
+Beyond salary cap data (OTC/Spotrac), agents need roster composition, depth charts, transaction history, and game results. ESPN and NFL.com are the primary fetchable sources. Pro Football Reference (PFR) blocks web_fetch with 403 errors — do NOT attempt it. For transaction news and trade/contract context, see the `pro-football-rumors` skill (ProFootballRumors.com).
 
 ## Patterns
 

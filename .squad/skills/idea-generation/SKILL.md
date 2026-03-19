@@ -50,6 +50,7 @@ Before proposing any angle, Lead MUST fetch current data for the team:
 **Where to fetch from:**
 - **Over the Cap**: `https://overthecap.com/team/{team-slug}` (cap data, free agents, contract details)
 - **ESPN Roster**: `https://www.espn.com/nfl/team/roster/_/name/{abbr}` (current roster)
+- **Pro Football Rumors**: `https://www.profootballrumors.com/?s={team name}` (transaction news, trade rumors, contract negotiations, coaching changes)
 - **News search**: Use web_search for "{team name} 2026 offseason" on ESPN/NFL.com/The Athletic
 
 **Example research queries:**
@@ -57,6 +58,7 @@ Before proposing any angle, Lead MUST fetch current data for the team:
 web_search: "Buffalo Bills 2026 offseason priorities cap space"
 web_fetch: https://overthecap.com/team/buffalo-bills
 web_fetch: https://www.espn.com/nfl/team/roster/_/name/buf
+web_fetch: https://www.profootballrumors.com/?s=Buffalo Bills
 ```
 
 ### 3. Idea Format
