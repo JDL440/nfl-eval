@@ -71,6 +71,7 @@ const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0
 
 const RENDER_LAYOUT = Object.freeze({
     canvasPadding: 6,
+    tableFramePaddingX: 0,
     tableRadius: 10,
     tableHeaderHeight: 54,
     tableHeadFontSize: 14,
@@ -87,8 +88,11 @@ const RENDER_LAYOUT = Object.freeze({
 // Mobile-optimized layout: larger fonts and tighter padding for 375px viewport readability.
 // At ~58% scaling (600px canvas → 343px content area), 20px body → ~11.7px effective,
 // which is legible on retina screens (23.4 physical pixels).
+// tableFramePaddingX adds a safety buffer inside the table frame so that subpixel
+// column-width rounding in Chrome never clips the rightmost column's text.
 const MOBILE_RENDER_LAYOUT = Object.freeze({
     canvasPadding: 6,
+    tableFramePaddingX: 4,
     tableRadius: 10,
     tableHeaderHeight: 50,
     tableHeadFontSize: 17,
@@ -456,11 +460,14 @@ function chooseCanvasWidth(columnCount, templateName) {
 }
 
 function chooseMobileCanvasWidth(columnCount) {
-    if (columnCount <= 3) return 500;
-    if (columnCount <= 4) return 560;
-    if (columnCount <= 5) return 660;
-    if (columnCount <= 6) return 720;
-    return 740;
+    // Extra width compensates for tableFramePaddingX (4px each side = 8px)
+    // so the effective table content area stays the same.
+    const framePad = MOBILE_RENDER_LAYOUT.tableFramePaddingX * 2;
+    if (columnCount <= 3) return 500 + framePad;
+    if (columnCount <= 4) return 560 + framePad;
+    if (columnCount <= 5) return 660 + framePad;
+    if (columnCount <= 6) return 720 + framePad;
+    return 740 + framePad;
 }
 
 function inferColumnRoles(table, templateName) {
@@ -625,7 +632,10 @@ function buildAutoTitle(table, templateName) {
 }
 
 function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_LAYOUT) {
-    const usableWidth = canvasWidth - (layout.canvasPadding * 2);
+    // Usable width = canvas minus body padding, frame border (1px each side),
+    // and frame padding (tableFramePaddingX each side).
+    const framePaddingX = layout.tableFramePaddingX || 0;
+    const usableWidth = canvasWidth - (layout.canvasPadding * 2) - 2 - (framePaddingX * 2);
     const fontScale = layout.tableCellFontSize / 17;
     let maxLines = 1;
 
@@ -664,7 +674,8 @@ function estimateRowHeight(row, columns, canvasWidth, rowIndex, layout = RENDER_
 }
 
 function estimateHeaderRowHeight(headers, columns, canvasWidth, layout) {
-    const usableWidth = canvasWidth - (layout.canvasPadding * 2);
+    const framePaddingX = layout.tableFramePaddingX || 0;
+    const usableWidth = canvasWidth - (layout.canvasPadding * 2) - 2 - (framePaddingX * 2);
     const charWidth = layout.tableHeadFontSize * 0.62;
     let maxLines = 1;
 
@@ -819,10 +830,12 @@ function buildHtml(table, options = {}) {
       border-radius: ${layout.tableRadius}px;
       overflow: hidden;
       background: #ffffff;
+      padding: 0 ${layout.tableFramePaddingX || 0}px;
     }
     table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       table-layout: fixed;
     }
     thead th {

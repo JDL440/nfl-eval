@@ -167,3 +167,21 @@
 - **Offensive-only nflverse queries don't work for defensive players.** `query_player_epa.py` and positional comparison scripts are WR/QB/RB-oriented. For safety/DB evaluations, use `snap_counts` + `pfr_defense` datasets directly, plus `query_snap_usage.py --position-group defense` and `query_draft_value.py --position S`.
 - **Command stubs > fabricated stats.** When data queries haven't been run yet, write the commands as placeholders in the discussion prompt and mark them as required anchors. Never invent numbers to fill anchor tables. This preserves reviewer-gate integrity.
 - **Lane boundaries in panel-composition.md prevent duplicate work.** Explicitly stating what each agent owns and what they should NOT do (e.g., "Analytics: don't interpret scheme fit — that's Defense's lane") produces better panel output than vague instructions.
+
+### Emmanwori Discussion Synthesis (2026-03-19)
+- **Scheme-expert reframes are the article's highest-value material.** Defense's reinterpretation of the 5.6 aDOT (short = harder assignment in Macdonald's system, not sheltered) was the single most counter-intuitive insight in the panel. In future panels with a scheme specialist, explicitly prompt for "reframe one metric the other panelists will misread." This produces the non-obvious insights that differentiate the article.
+- **"Conditionally earned" framing resolves tension better than averaging.** When one panelist says Path 1 and another says Path 2, don't split the difference — name the precise condition that separates them. Defense's two-tier/three-tier framework (big-nickel proven, full chess piece projected) gave the synthesis its structure. This is reusable for any "label vs. evidence" evaluation.
+- **Analytics YAC rate finding (66.2%) was the best specific-metric contribution.** It kept the synthesis honest by providing a concrete weakness even within a positive overall picture. Future panels should ask Analytics to identify one metric that challenges the prevailing narrative, not just confirm it.
+- **Witherspoon ecosystem dependency was under-engaged by the panel.** SEA raised it; Analytics and Defense didn't pick it up. In future panels where one agent identifies a cross-domain risk (roster dependency affecting scheme evaluation), Lead should flag it in the synthesis as an open question rather than letting it get lost.
+- **Three-agent panels at Level 2 produce good tension with lower cost.** The SEA/Analytics/Defense trio covered roster, numbers, and scheme with no overlap and genuine disagreement. This is the template for future defensive-player evaluations.
+
+### Emmanwori Editor-Revision Pass (2026-07-26)
+- **Lead owns post-Editor surgical revisions.** When Editor flags factual errors and low-risk cleanups, Lead applies them directly — no round-trip to Writer. This keeps the pipeline moving and avoids re-entering the draft loop.
+- **Seahawks first-name cross-contamination is a recurring pattern.** Devon Woolen (should be Tariq), Uchenna Mafe (should be Boye) — both borrowed first names from teammates (Witherspoon, Nwosu). Future SEA articles should include a name-verification checklist in the Writer prompt.
+- **One-year contracts should never use "AAV" formatting.** AAV implies multi-year; use "1yr / $XM" for consistency with how multi-year deals are formatted in tables.
+
+### Mobile Table Image Right-Edge Clipping Fix (2026-07-26)
+- **Root cause:** `border-collapse: collapse` + `table-layout: fixed` in Chrome causes subpixel column-width rounding that can overflow the `.table-frame` by 1-4px. With `overflow: hidden` and zero frame padding, the rightmost column's text gets clipped.
+- **Fix:** Added `tableFramePaddingX` (4px mobile, 0 desktop) to layout constants, switched to `border-collapse: separate; border-spacing: 0`, increased mobile canvas width by `2 × framePadding` to compensate. Updated height estimation functions to account for frame border + padding.
+- **Reusable:** Fix applies to all future mobile table renders automatically — not article-specific.
+- **Re-rendered:** Emmanwori "Tier" and "Position Need" mobile PNGs regenerated and verified.
