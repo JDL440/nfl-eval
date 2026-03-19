@@ -15,11 +15,74 @@ import { boardPage, articlePage, previewPage, notFoundPage } from "./templates.m
 import { renderPreview } from "./render.mjs";
 import { getValidationResults } from "./validation.mjs";
 
-const PORT = parseInt(process.env.DASHBOARD_PORT || "3456", 10);
+const DEFAULT_PORT = 3456;
 const PUBLIC_DIR = resolve(import.meta.dirname, "public");
 const REPO_ROOT = resolve(import.meta.dirname, "..");
 const VALIDATION_WORKER = join(import.meta.dirname, "validation-worker.mjs");
 const validationJobs = new Map();
+
+function parsePortValue(rawValue, sourceLabel) {
+    const port = Number.parseInt(rawValue, 10);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new Error(`Invalid ${sourceLabel} port "${rawValue}". Expected an integer between 1 and 65535.`);
+    }
+    return port;
+}
+
+function resolvePort(argv, env) {
+    let cliPort = null;
+    for (let index = 0; index < argv.length; index += 1) {
+        const arg = argv[index];
+        if (arg === "--port" || arg === "-p") {
+            const nextValue = argv[index + 1];
+            if (!nextValue) {
+                throw new Error(`Missing value for ${arg}. Usage: npm run dashboard -- --port 8080`);
+            }
+            cliPort = nextValue;
+            index += 1;
+            continue;
+        }
+        if (arg.startsWith("--port=")) {
+            cliPort = arg.slice("--port=".length);
+        }
+    }
+
+    if (cliPort !== null) {
+        return parsePortValue(cliPort, "CLI");
+    }
+
+    if (env.DASHBOARD_PORT) {
+        return parsePortValue(env.DASHBOARD_PORT, "DASHBOARD_PORT");
+    }
+
+    return DEFAULT_PORT;
+}
+
+function printStartupBanner(port) {
+    console.log(`\n  🏈 NFL Lab Pipeline Dashboard`);
+    console.log(`  ────────────────────────────`);
+    console.log(`  Local:  http://localhost:${port}/`);
+    console.log(`  Board:  http://localhost:${port}/`);
+    console.log(`  API:    http://localhost:${port}/api/board\n`);
+}
+
+function printPortConflict(port) {
+    console.error(`\n  Dashboard could not start.`);
+    console.error(`  Port ${port} is already in use.`);
+    console.error(`  If the dashboard is already running, open: http://localhost:${port}/`);
+    console.error(`  To use a different port, run one of these:`);
+    console.error(`    npm run dashboard -- --port 8080`);
+    console.error(`    $env:DASHBOARD_PORT=8080; npm run dashboard\n`);
+}
+
+let PORT;
+try {
+    PORT = resolvePort(process.argv.slice(2), process.env);
+} catch (err) {
+    console.error(`\n  Dashboard could not start.`);
+    console.error(`  ${err.message}\n`);
+    process.exit(1);
+}
 
 // ── MIME types ───────────────────────────────────────────────────────────────
 
@@ -268,10 +331,16 @@ const server = createServer(async (req, res) => {
     }
 });
 
+server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+        printPortConflict(PORT);
+        process.exit(1);
+    }
+    console.error(`\n  Dashboard could not start.`);
+    console.error(`  ${err.name}: ${err.message}\n`);
+    process.exit(1);
+});
+
 server.listen(PORT, () => {
-    console.log(`\n  🏈 NFL Lab Pipeline Dashboard`);
-    console.log(`  ────────────────────────────`);
-    console.log(`  Local:  http://localhost:${PORT}/`);
-    console.log(`  Board:  http://localhost:${PORT}/`);
-    console.log(`  API:    http://localhost:${PORT}/api/board\n`);
+    printStartupBanner(PORT);
 });

@@ -84,6 +84,19 @@ Wrote Cap position for 	en-ward-vs-saleh-draft-identity article. Core tension: E
 - The trade cost (four picks including 2026 1st-rounder #19) created roster holes at RB/CB2/WILL LB that would have been filled with ~$3.5M rookie contracts
 - Net cap inefficiency: paying $7.8M for part-time usage at two positions vs. $3.5M for full-time starter at one position
 - Required restructures (Kirk $12M, Robinson $8M, Oluokun $6M) mortgage 2027 cap by $14M to solve 2026 crunch
+
+### 2026-03-19: BUF Cap Position Refresh — Phase B Validation
+
+**Article:** buf-2026-offseason
+**Task:** Rewrote cap-position.md from scratch to replace stale "$11M over / cut Knox" framing with current mid-March 2026 cap reality.
+
+## Learnings
+
+- **Cap positions go stale within days during FA week** — the original position was built on pre-restructure projections that became invalid once Beane moved. Cap artifacts for offseason articles should always include an "as of" dateline and be flagged for refresh if >48hrs old during peak FA.
+- **Void-year restructures compound faster than simple base-to-bonus conversions** — Oliver's deal added 2 void years (2029–2030) to prorate $12.8M, but the resulting 2027 cap hit ($28.4M for an interior DT) creates a forced decision point. When modeling restructures, always project the first year where the inflated hit becomes untenable, not just the savings year.
+- **nflverse draft_value data directly supports cap analysis** — the DE/CB hit-rate-by-round table quantifies the opportunity cost of trading draft picks. This should become standard in any cap position where a team traded draft capital (R2 DE starter+ rate of 13.3% vs R3 at 14.3% shows the R2→R3 drop isn't as steep as R1→R2, but CB drops sharply: 20% → 7.9%).
+- **Defensive EPA/play allowed is a leading indicator for cap spend pressure** — BUF's +0.024 in 2025 (below average) predicted the aggressive defensive spend (Chubb $43.5M, Gardner-Johnson $6M). Teams with below-average defense AND a top-10 QB almost always spend aggressively on defense in FA rather than build through the draft.
+- **Turnover differential regression is a cap-relevant signal** — BUF went from +24 (2024) to +2 (2025). Turnovers are volatile; a team that rode +24 turnovers to a 12-5 record faces regression risk that makes standing pat feel riskier than spending. Cap analysis should flag turnover-dependent win totals as context for "why did the GM spend?"
 - Trevor Lawrence's contract structure ($24M → $35M → $47M from 2026-2028) creates closing championship window that Hunter experiment must hit immediately
 
 **Panel insight that made it into the position:**
@@ -100,6 +113,8 @@ The "missing 1st-round pick scenario analysis" — mapping pick #19 to specific 
 3. Divide cap hit by actual snap % at each position to get "effective position cost"
 4. Compare effective cost to market rates for full-time starters at those positions
 5. If effective cost > market rate at both positions, the allocation is inefficient
+
+- **When a cap wording fix lands, mirror it in the Lead validation record too.** Allen cap-hit language is part of the analytical frame, so Buffalo repair work is incomplete until the discussion prompt and canonical Phase B path describe that wording the same way.
 
 
 ### 2026-03-16: BAL Panel Position — Crosby Trade Cap Math and Two-Year Consequences

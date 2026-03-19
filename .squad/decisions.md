@@ -194,11 +194,172 @@ Include the actual numbers from the output in your analysis. The player's positi
 This decision was implemented by Analytics on 2026-03-19 with Lead's prior approval (Tier 0–1 roadmap approved 2026-03-19T02:20:14Z). **Revised same session** to address auto-fetch, pbp integration, position rank, and documentation accuracy per user feedback.
 
 **Coordinator follow-up fixes:**
-1. Fixed ambiguous partial-name player matching so multi-player matches error instead of aggregating multiple players.
+1. Fixed ambiguous partial-name player matching so multi-player matches error instead of aggregating multiple players.  
 2. Fixed red-zone drive grouping to use per-game drive identity instead of season-wide drive numbers.
 3. Synced skill/decision/history text to the verified 2024 SEA output after the red-zone fix.
 
-**No objections raised.** Phase A is production-ready and validated.
+---
+title: "nflverse Phase B Complete — Four Additional Query Scripts"
+status: "implemented"
+date: "2026-03-19"
+decider: "Analytics"
+context: "Phase B extends the nflverse query library with four article-ready analytics scripts and the documentation that tells agents how to run them."
+---
+
+# nflverse Phase B Complete — Four Additional Query Scripts
+
+## Context
+
+Phase A delivered auto-fetch, cache management, and three core query scripts (player EPA, team efficiency, positional comparison) plus the SKILL and charter updates. Phase B now finishes the analytics stack with four additional scripts so article discussion prompts can embed nflverse data anchors without manual preparation.
+
+## Implementation Summary
+
+### Four new query scripts
+
+| Script | Purpose | Key features |
+|--------|---------|--------------|
+| `query_snap_usage.py` | Workload and usage analysis | Teams or players: snap totals by unit, position-group filtering, offense/defense/special percentages |
+| `query_draft_value.py` | Draft capital value & hit rates | Pick-range AV averages, positional hit-rate tables by round, player draft profiles |
+| `query_ngs_passing.py` | Next Gen Stats passing metrics | NGS time-to-throw, air yards, aggressiveness, completion probability, 2016+ data, 100-attempt qualification |
+| `query_combine_comps.py` | Combine measurables & comps | Player combine profiles, position leaderboards, height/metrics sourcing, builds comps with direct strings |
+
+### Documentation updates
+
+1. `.squad/skills/nflverse-data/SKILL.md` now catalogs all four Phase B scripts with run commands, output samples, use cases, and licensing notes for nflverse/FTN data.
+2. `.squad/skills/article-discussion/SKILL.md` now explicitly lists the seven query scripts in the Data Anchors section, describing which tension each command supports and reminding agents to keep combined tables under the 400-token budget.
+
+## Technical Decisions
+
+1. **Draft AV metric choice:** Use `w_av` (weighted Approximate Value) because the `car_av` column in nflverse `draft_picks` is stored as a boolean; `w_av` contains usable numeric career value.
+2. **Snap counts aggregation:** Aggregate game-level snap_counts by player to create season totals; convert decimals (0.22) to human-readable percentages (22.0%) so markdown tables are readable.
+3. **Combine height format:** Use the dataset strings (e.g., "6-1") directly to avoid parsing issues and to match common NFL height notation.
+4. **NGS qualification threshold:** Require 100+ attempts for top-N rankings to avoid small-sample noise; matches common stat thresholds.
+
+## Validation Results
+
+| Script | Test case | Result |
+|--------|-----------|--------|
+| `query_snap_usage.py` | 2024 JSN snap counts | 948 offense snaps (86.4%), 0 defense, 0 ST — ✅ |
+| `query_draft_value.py` | Round 1 WR hit rate (since 2015) | 49 picks, 24.0 avg AV, 36.7% starter rate — ✅ |
+| `query_ngs_passing.py` | Drake Maye 2024 NGS metrics | 2.74s TTT, 7.4 avg intended air yards, 14.8% aggressiveness — ✅ |
+| `query_combine_comps.py` | JSN 2023 combine | 6-1, 196 lbs, 35.0" vertical, 6.57s 3-cone — ✅ |
+
+All scripts output markdown tables, support `--format json`, follow the Phase A `_shared.load_cached_or_fetch()` + auto-fetch pattern, and handle ambiguous player names gracefully.
+
+## Article Integration
+
+- Discussion prompt blocks now instruct agents to run specific query commands so data anchors are produced from nflverse tables instead of hand-typed numbers.
+- Token budget target remains <400 tokens for combined data anchors; the new scripts reduce manual editing while ensuring consistent formatting.
+
+## Next Steps
+
+1. Article-level validation gate: publish an article (Stage 6+) that cites the new Phase B tables, proving the queries work in real discussion prompts, panels, and drafts.
+2. Monitor usage of each script and adjust the `article-discussion` SKILL guidance if new datasets or metrics are requested.
+
+---
+title: "Phase B Validation Path — Buffalo Validation Completed"
+status: "implemented"
+date: "2026-03-19"
+decider: "Lead"
+context: "Phase A already shipped. Phase B implementation was completed and verified through the Buffalo validation artifacts in `content/articles/buf-2026-offseason/` while `draft.md` remained deferred under reviewer lockout."
+---
+
+# Phase B Validation Path — Buffalo Validation Completed
+
+## Context
+
+Phase A implemented the nflverse foundation and already shipped. Phase B added the remaining four query scripts plus prompt/skill guidance; the open question was whether those tools worked inside a real article path without reopening shipped work or inventing a test-only flow.
+
+The Buffalo offseason package under `content/articles/buf-2026-offseason/` became the live validation target because it already had an in-flight discussion prompt, panel positions, draft, and editor review history. That made it possible to prove the data-anchor workflow in production artifacts while keeping draft-governance constraints explicit.
+
+## Decision
+
+Mark **Phase B implementation complete and verified**.
+
+**Validation artifacts used:**
+- `content/articles/buf-2026-offseason/discussion-prompt.md`
+- `content/articles/buf-2026-offseason/cap-position.md`
+- `content/articles/buf-2026-offseason/buf-position.md`
+
+**Validation result:**
+1. The Buffalo discussion prompt was refreshed to current mid-March 2026 reality and now carries the Phase B nflverse query instructions.
+2. Cap and BUF position files were refreshed against that path, using Buffalo-specific validation artifacts rather than a synthetic test article.
+3. Allen's updated cap-hit wording was corrected across the Buffalo discussion prompt and this Lead validation path so the financial framing stays internally consistent.
+4. This closes the Phase B validation need. Phase A was already shipped before this repair.
+
+## Remaining Work (Deferred, not blocking Phase B)
+
+- `content/articles/buf-2026-offseason/draft.md` was **not** refreshed during this cycle.
+- `idea` / `panel-composition` follow-on stale-article planning remains intentionally deferred.
+- Any future article refresh should treat Buffalo's discussion prompt + panel positions as the completed validation bundle, not as a signal that the draft is current.
+
+## Governance Note
+
+The Editor previously rejected `draft.md`, so **Writer is locked out of the next draft revision for this artifact**. The next refresh must be handled by a different reviser or in a future revision cycle; Writer cannot author the immediate follow-up draft pass. This lockout applies only to `draft.md`, not to the completed discussion or panel validation artifacts.
+
+## Summary for Joe
+
+1. Buffalo was the validation path, and that validation is complete.
+2. The completed proof lives in `discussion-prompt.md`, `cap-position.md`, and `buf-position.md` under `content/articles/buf-2026-offseason/`.
+3. Remaining work is explicitly deferred to a future draft refresh and stale-article planning cycle, with Writer locked out of the next `draft.md` revision.
+
+---
+title: "Cap Position Refresh — buf-2026-offseason (Phase B)"
+status: "implemented"
+date: "2026-03-19"
+decider: "Cap"
+context: "The Cap agent rewrote `cap-position.md` to match Buffalo's mid-March 2026 reality (Allen restructure, Knox pay cut, Moore trade, Chubb signing, scheme reset, the 2027 invoice) and to ground the position in nflverse data."
+---
+
+# Cap Position Refresh — buf-2026-offseason (Phase B)
+
+## Decision
+
+Rebuilt the cap position so the article reflects the fact that Beane already went all-in: Buffalo is ~\$12.5M under the cap after the March wave of restructures, not \$11M over. The focus now is the 2027 invoice (Allen/Oliver/void years) and the lost draft capital, not deciding whether to restructure or how to cut Knox.
+
+## Key Changes
+
+1. **Core premise flipped:** The old opening assumed Buffalo was still \$11M over the cap and needed to choose between partial restructures or aggressive spending. Reality: Allen, Brown, Oliver all restructured; Knox gets a pay cut; Moore arrives via trade; Chubb, McGovern, Gardner-Johnson are signed — the team is now ~\$12.5M under.
+2. **2027 invoice is the new frame:** Oliver's restructure balloons his 2027 hit to ~$28.4M, Allen carries ~$173M dead money, and DJ Moore's 2027 base returns (~$24.5M). This is the structural risk the article now highlights.
+3. **Draft capital loss quantified:** Trading the 2026 second-round pick to Chicago costs a 13.3% starter+/DE replacement vs. the 20.0% starter+/CB value Curtis had; the 65-pick gap between #26 and #91 is now a real cap constraint.
+4. **Defensive efficiency anchors the spend:** BUF's +0.024 EPA/play allowed (from nflverse) and a turnover differential plunge from +24 to +2 explain why the defense had to be retooled through expensive FA, not conservatively rebuilt.
+
+## Rationale
+
+The Editor's 🔴 rejection listed three fatal flaws: a stale cap premise, bogus restructure candidates, and the omission of the big March moves. This refresh fixes all three while staying squarely in the Cap lane: showcase the restructure paradox, project the 2027 invoice, and prove the moves bought time (or mortgaged the future) with real numbers.
+
+## Impact on Other Agents
+
+- **Writer:** Rewrite the draft when the lockout lifts; the headline & TLDR must now read "Beane already went all-in—did those moves preserve Allen's window?" not "Can we still choose?".  
+- **BUF agent:** Evaluate whether the roster changes actually maintain championship-level talent, using the +0.024 EPA baseline and recruiting the scheme reset narrative.  
+- **Defense agent:** Show whether Chubb + the draft picks can turn +0.024 EPA/play into a competent 3-4 front, while acknowledging Milano and a press-heavy secondary remain the single-points-of-failure.
+
+---
+title: "BUF Position Phase B Refresh"
+status: "implemented"
+date: "2026-03-19"
+decider: "BUF"
+context: "BUF rewrote its position statement with the real March 2026 roster context (Beane's executed moves, snap data, efficiency baseline, structural risks) rather than the stale pre-move framing."
+---
+
+# BUF Position Phase B Refresh
+
+## Decision
+
+The BUF position now leads with what Beane actually did—restructures, trades, and scheme change—then evaluates whether that choice preserves Allen's championship window while addressing the key vulnerabilities (secondary readiness, Milano's departure, cap consequences).
+
+## Key Calls
+
+1. **Actual moves, not hypotheticals:** Frame the narrative around the "fifth path" that already happened—surgical retool + Leonhard's scheme reset—rather than debating plans that are no longer on the table.
+2. **Snap data refutes the lost-starters myth:** nflverse snap counts show Milano was the only irreplaceable defender; Bosa (+64% snaps), White (post-ACL), and Epenesa (47%) were replaceable, while the new scheme reframes their roles.
+3. **Defensive EPA anchors the urgency:** BUF allowed +0.024 EPA/play in 2025 (below average), so spending on Chubb + a new secondary is a reaction to real regression, not a panic buy.
+4. **CB at #26 remains non-negotiable:** Draft value data (39.4% starter+ rate for R1 CBs since 2015) justifies using the valuable pick there; Moore still ranks #66 among WRs in 2025, making the trade a buy-low gambit instead of a panic move.
+
+## Implications for the Panel
+
+- **Cap agent:** Build tables from the ~$5.17M Top-51 cap base (post-restructures) and focus on the restructure paradox + 2027 invoice—not just creating room.
+- **Defense agent:** Analyze whether the 3-4 scheme, the new edge pieces, and a young secondary can hold up; Milano's absence rewrites the coverage/communication story.
+- **Draft conversation:** Shift from "who should we trade for next" to "how do we make CB at #26 and future OT picks deliver value after the expensive Moore trade".
 
 ---
 

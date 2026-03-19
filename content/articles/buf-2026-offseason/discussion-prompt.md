@@ -1,97 +1,139 @@
-# Discussion Prompt: Buffalo's Last Best Window — Can the Bills Retool a Championship Roster at $11M Over the Cap?
+# Discussion Prompt: Buffalo's Last Best Window — Did Beane's March Moves Preserve or Distort Allen's Window?
 
 **Depth Level:** 2 — The Beat
+**As of:** Mid-March 2026
 
 ## The Core Question
 
-Can Brandon Beane thread the needle — clearing $11M in cap overages, replacing four defensive starters, and patching an offensive line — without wasting the final prime years of a quarterback who just posted 25 passing TDs and 14 rushing TDs but still hasn't reached a Super Bowl?
+Buffalo's offseason narrative shifted in March: the cap crisis (was $11M over) is solved through restructures and pay-cuts. Dawson Knox stayed (reduced deal, not cut). Allen was restructured and now carries roughly a ~$44.2M 2026 cap hit. McGovern was re-signed. DJ Moore and Bradley Chubb were acquired. The question is no longer *how can Beane clear the overage?* It's *did Beane's aggressive moves actually preserve Allen's window, or did the 2027-28 cap consequences already close it?*
 
 ## Key Tensions
 
-- **Window urgency vs. sustainable building:** Allen is entering his age-30 season with an 8-7 career playoff record and zero Super Bowl appearances. Seven straight playoff berths prove the floor is high, but the ceiling has been a divisional-round exit three years running. Do the Bills go all-in for 2026 (restructure everything, trade picks for talent), or build a roster that can contend for three more years even if it means a step back now?
+- **The restructure paradox:** Beane solved the 2026 cap crisis (~$11M over → ~$12.5M under) by converting base salaries to signing bonuses. Josh Allen's 2026 cap hit now sits around ~$44.2M, but dead money ballooned to ~$173M and restructure proration pushes ~$3M/yr into 2027–30. Ed Oliver's 2027 cap hit projects to ~$28.4M (for an interior DT). Did Beane actually buy Allen a true window, or just move the invoice to 2027-28 where it becomes catastrophic?
 
-- **Defensive rebuild cost vs. Allen's prime:** Bosa, Milano, Epenesa, and White represent the spine of Buffalo's defense — premier edge rush, the defensive signal-caller, rotational depth, and CB2 coverage. Replacing all four at market rates would cost $43–52M AAV. Letting them all walk means fielding a defense built on Day 2 picks and bargain-bin free agents. Can Allen's offense outscore a gutted defense in January, or is this the year the formula breaks?
+- **The defensive exodus was philosophical, not forced:** Buffalo let Bosa, White, Epenesa, Milano, and Taron Johnson walk/get traded. But nflverse snap data shows only Milano was genuinely irreplaceable (signal-caller, 73% of snaps). Bosa played 64%, White 75% but post-ACL, Epenesa only 47% (rotational). Jim Leonhard's 3-4 scheme reset changed what Buffalo actually *needed* — and the front office accepted the exodus as cover for the transition. Does a new scheme + internal development (Deone Walker 22 yo, 464 snaps) + Chubb acquisition actually fill the void, or did Buffalo hollow out the defense on the assumption Leonhard's scheme is good enough?
 
-- **OL stability as the hidden crisis:** McGovern (C) and Edwards (G) are both UFAs, and neither has gotten much attention relative to the defensive exodus. But Allen's rushing production (579 yards, 14 TDs) depends on a clean pocket and designed runs. Lose two interior linemen and the run game collapses — which collapses the play-action deep ball that made Buffalo's offense elite. Is protecting Allen actually the higher-priority spend?
+- **The trade: cap aggression vs. draft capital:** Beane traded for DJ Moore (2026 R2 to Chicago, +R5 back) and signed Chubb to a 3-year deal at significant guarantee (~$29M GTD). Those moves aggressively addressed the WR1 + EDGE voids. But Moore's contract has ~$24.5M base returning in 2027, and Chubb's deal extends the expensive years. Is this "pay now while you have the window" wisdom, or "mortgage the future even harder than Allen's deal already did"?
 
-- **WR1 vacuum vs. Allen-proof offense:** Buffalo hasn't had a true alpha receiver since the Diggs trade. Allen posted 3,668 yards and 25 TDs anyway — but the receiving corps was exposed in the playoff loss to Denver (no one could separate on third-and-long in OT). Does Beane need to invest a first-round pick or trade for a WR1, or has Allen proven he can spread the ball and doesn't need one?
+- **The secondary is unproven in the new scheme:** Leonhard's 3-4 base needs corners who can press and diagnose from depth. Buffalo has one proven outside corner (Benford, 796 snaps). The LCB spot is Dorian Strong (22 yo, 5 career starts). That's why CB at pick #26 is non-negotiable. But if Strong isn't ready, or if the scheme asks more than young corners can deliver, Buffalo's defense collapses in January despite the cap moves.
 
 ## Data Anchors
 
-### Buffalo's 2026 Cap Situation
+### Buffalo's 2026 Cap Situation (Current, Mid-March 2026)
 
-| Category | Amount | Notes |
-|----------|--------|-------|
-| 2026 league-wide salary cap | ~$301M | Per NFLPA projections |
-| Bills current commitments | ~$312M | ~$11M over pre-restructures (Spotrac) |
-| Josh Allen 2026 cap hit | ~$43.6M | Year 2 of 6-yr/$258M extension |
-| Dawson Knox cut savings | ~$9.7M | TE — most likely cap casualty |
-| Post-Knox projected deficit | ~$1.3M over | Still need restructures to sign draft class |
-| Allen restructure ceiling | ~$15–20M | Convert base salary to signing bonus (pushes to 2027–28) |
-| Realistic available space (post-restructures) | ~$15–25M | Depends on how many deals are reworked |
+| Category | Current Amount | Change from Pre-March |
+|----------|-----------|-----------|
+| 2026 league-wide salary cap | ~$301M | — |
+| Bills cap position (post-restructures) | ~**+$12.5M under** | From ~$11M over (pre-moves) |
+| Josh Allen 2026 cap hit | ~$44.2M | Restructured with ~$15.2M base converted to bonus |
+| Josh Allen dead money (2026) | ~$173M | Climbs due to extended proration window |
+| Dawson Knox 2026 cap hit | ~$8.55M | **Not cut** — reworked 3-yr deal (was projected ~$9.7M cut) |
+| Realistic 2026 cap flexibility (post-draft class + reserves) | ~$3M | Tight, but functional |
 
-### Key UFA Market Projections
+### March 2026 Roster Moves (Beane's Executed Path)
 
-| Player | Pos | Age | 2025 Stats / Role | Est. Market AAV | Retention Cost to BUF |
-|--------|-----|-----|-------------------|----------------|----------------------|
-| Joey Bosa | EDGE | 28 | 14 starts, 8.5 sacks | $17–20M | Premium — likely 3-yr/$54M+ range |
-| Matt Milano | LB | 30 | 12 starts, defensive signal-caller | $10–12M | Discount possible (age/injury) |
-| A.J. Epenesa | EDGE | 27 | Rotational, 6 sacks | $8–10M | Mid-tier — could re-sign cheaply |
-| Tre'Davious White | CB | 31 | 15 starts at CB2 | $8–10M | Post-prime — market may be soft |
-| Connor McGovern | C | 28 | 17 starts, OL anchor | $10–12M | Starting center market is thin |
-| David Edwards | G | 28 | 17 starts at LG | $8–10M | Solid starter — will have suitors |
-| Damar Hamlin | S | 27 | 13 starts | $5–7M | Young safety — market rising |
+| Move | Player/Asset | 2026 Cap Impact | Strategic Purpose |
+|------|-------------|------|---|
+| **Restructure** | Josh Allen | ~$12.0M relief | Create 2026 space; proration pushes cost to 2027+ |
+| **Restructure** | Spencer Brown (OT) | ~$10.4M relief | Additional OL cap relief |
+| **Restructure** | Ed Oliver (DT) | ~$10.2M relief + void years | Void years defer consequence to 2029–30, but 2027 balloons to ~$28.4M |
+| **Pay-cut deal** | Dawson Knox (TE) | ~$8.5M net savings | Retained on 3-yr deal, reduced 2026 hit |
+| **Veteran releases** | Johnson, Samuel, Rapp, Jackson | ~$12.1M savings | Clean out aging defenders; accept ~$14.2M dead money |
+| **Trade** | DJ Moore (WR) + CB | Acquired with 2026 R2 to CHI + R5 return | Fill WR1 void; high 2026 cap (~$6.75M), but ~$24.5M base in 2027 |
+| **Free agent** | Bradley Chubb (EDGE) | ~$6.5M 2026 | 3yr/$43.5M ($29M GTD) — fills EDGE void; extends expense into 2027-28 |
+| **Free agent** | C.J. Gardner-Johnson (S) | ~$6.0M | 1-yr/$6M — secondary depth, short-term commitment |
+| **Re-signed** | Connor McGovern (C) | ~$5.25M | Locked down center; was UFA risk; 4yr/$52M ($32M GTD) |
 
-### Allen's Contract Trajectory
+### Defensive Departure Analysis (Who Actually Left vs. Replacement)
 
-| Year | Age | Base Salary | Cap Hit | Dead Money if Cut |
-|------|-----|-------------|---------|-------------------|
-| 2026 | 30 | ~$35M | ~$43.6M | ~$118M |
-| 2027 | 31 | ~$40M | ~$48.2M | ~$80M |
-| 2028 | 32 | ~$43M | ~$52.4M | ~$43M |
+| Departed | 2025 Snap % | Snaps | Replacement | 2026 Strategy |
+|----------|-----|------|---------|---|
+| **Matt Milano (LB)** | 73.1% | 492 | Dorian Williams (internal) | Only truly irreplaceable loss; signal-caller role |
+| **Tre'Davious White (CB)** | 75.6% | 701 | Dorian Strong (22 yo, 5 starts) + draft CB (#26) | Post-ACL fade; younger replacement acceptable |
+| **Joey Bosa (DE)** | 64.0% | 562 | Bradley Chubb (FA, 3-yr/$43.5M) | One-year rental never fit cap; Chubb is long-term fit |
+| **Taron Johnson (CB)** | 73.3% | 570 | Dee Alford (FA) + Hairston | Beane extracted pick from LV rather than lose for nothing |
+| **A.J. Epenesa (DE)** | 47.4% | 438 | Rousseau expands to SLB + developmental EDGE | Rotational piece, not starter; scheme shift accommodates loss |
+| **Jordan Poyer (S)** | 73.2% | 428 | C.J. Gardner-Johnson (FA, 1yr/$6M) | Safety upgrade via FA rather than retention |
 
-### Buffalo's 2026 Draft Capital
+### Allen's Efficiency Baseline (2025 Context for 2026 Window)
 
-| Round | Pick | Notes |
-|-------|------|-------|
-| 1st | ~25–26 (own) | Playoff exit = late first |
-| 2nd | Own | |
-| 3rd | Own | |
-| 4th | Own | |
-| 5th | Own | |
-| 6th | Own | |
-| 7th | Own | |
+| Metric | Value | Context |
+|--------|-------|---------|
+| **QB EPA Rank** | #7 among QBs | 71.3 passing EPA (elite efficiency) |
+| **Offense EPA/Play** | +0.133 | Elite (+51.8% red zone TD rate) |
+| **Defense EPA/Play Allowed** | +0.024 (middling) | League-average defense; doesn't need repair, needs reset |
+| **Turnover Differential** | +2 | Slight advantage; balanced team |
+| **Playoff Record** | 8-7 career | Three straight divisional exits despite elite offense |
 
-**7 total picks — no extra selections.** Contrast with Miami's 8 picks (including 3 thirds) — Buffalo has fewer darts to throw.
+### 2027 Cap Consequence (The Invoice)
 
-### Allen's 2025 Season vs. Career Context
+| Player | 2026 Cap Hit | 2027 Projection | Risk |
+|--------|----------:|---------------:|------|
+| **Josh Allen** | ~$44.2M | ~$51–53M | Escalating; proration extends to 2030 |
+| **Ed Oliver** | ~$13.7M | ~$28.4M | Void-year trick balloons DT cost; cut decision likely by spring 2027 |
+| **Spencer Brown** | Restructured | +$2.6M/yr burden | Proration effect |
+| **DJ Moore** | ~$6.75M | ~$24.5M | Base salary returns in 2027; back-loaded expense |
+| **Bradley Chubb** | ~$6.5M | Years 2-3 of deal activate | Full contract in force; multi-year commitment |
 
-| Stat | 2025 | Career Avg | Note |
-|------|------|------------|------|
-| Pass Yards | 3,668 | 4,048 | Slightly down — more balanced offense |
-| Pass TD | 25 | 29 | Efficient, not volume |
-| INT | 10 | 12 | Improved decision-making |
-| Rush Yards | 579 | 583 | Consistent dual-threat |
-| Rush TD | 14 | 8 | Career high — heavy goal-line role |
-| Playoff Record | 8-7 career | — | No conference championship since 2020 |
+**The structural reality:** Every 2026 relief (restructure, pay-cut, release) has a 2027+ invoice. The Bills may face another restructure wave or difficult roster decisions (Oliver cut?) by spring 2027. The window isn't closed, but it's narrow and brittle.
+
+---
+
+## Data Query Instructions
+
+Before writing your position, run these nflverse query scripts to populate real statistical tables. These replace hand-assembled web-scrape comps with actual league data.
+
+### For All Panelists (Required):
+
+```bash
+# Buffalo's actual defensive efficiency vs. rest of league
+python content/data/query_team_efficiency.py --team BUF --season 2025
+```
+
+This command returns: Buffalo's off/def EPA per play, success rate, turnover margin, red zone %, 3rd down %. Use this to ground the "can Buffalo's defense survive losing four starters" debate in actual 2025 EPA data, not assumptions.
+
+### For Cap & Defense (Highly Recommended):
+
+```bash
+# Snap count usage by position — shows which defenders played significant snaps
+python content/data/query_snap_usage.py --team BUF --season 2025 --position-group defense --top 10
+
+# Historical draft hit rates for CB rebuilding
+python content/data/query_draft_value.py --position CB --round 1 --since 2015
+
+# Historical draft hit rates for DE/edge-type rebuilding
+python content/data/query_draft_value.py --position DE --round 2 --since 2015
+```
+
+- `query_snap_usage`: Use to show which defenders (Bosa, Epenesa, Milano, White) actually carried the load in snaps. Supports Cap's "rebuild cost" argument and Defense's "replacement archetype" logic.
+- `query_draft_value`: Use to show historical success rates for CB/EDGE picks in rounds 1–3. Supports both "can Day 2 picks replace these starters" and "is the youth movement realistic" tensions.
+
+### Optional (If Relevant to Your Lane):
+
+```bash
+# Value of Buffalo's late-first / Day-2 draft capital (Cap/BUF if modeling replacement realism)
+python content/data/query_draft_value.py --pick-range 25-60 --since 2015
+```
+
+---
 
 ## The Paths
 
-**Path 1 — Aggressive Retool (Win-Now):** Cut Knox ($9.7M), restructure Allen and 2-3 other contracts to create ~$25M in space. Re-sign Milano (defensive QB, accept the age discount) and one of Bosa/Epenesa. Fill remaining holes with Day 2 picks and veteran-minimum signings. Use Pick 25-26 on a WR1 or CB. The bet: Allen at 30 with a patched roster can still win in January. Risk: cap pushed to 2027-28 creates a cliff.
+**Path 1 — Beane Already Chose This One (Aggressive Retool Executed):** Restructure Allen + secondary figures, trade for DJ Moore, sign Chubb + Gardner-Johnson, lock down McGovern, release aging defenders. The bet: a new scheme (Leonhard 3-4) + fresh offensive skill + retained elite QB can outscore a rebuilt defense. The risk: proration debt to 2027-28 is real, and if the secondary (Strong, young corners) isn't ready, or if Leonhard's scheme doesn't work, this moves were expensive insurance for a false sense of security.
 
-**Path 2 — Measured Retreat (Controlled Reset):** Let all premium UFAs walk. Cut Knox. Restructure minimally — keep future cap flexibility. Accept a defensive downgrade and a probable 9-8 or 10-7 season. Use all 7 draft picks on defense and OL. Build toward a more complete 2027 roster when Allen's cap hit jumps but the supporting cast is younger and cheaper. Risk: Allen is 31 by the time the roster is ready again.
+**Path 2 — The 2027 Consequence:** Do the restructures and acquisitions actually hold? Or does 2027 force another wave of cuts/restructures that guts the 2027 roster just as it was supposed to peak with the newly acquired pieces? The question is whether Beane's gamble preserves Allen's window or just moves the pain forward.
 
-**Path 3 — Go-for-Broke Trade Package:** Cut Knox, restructure aggressively, and trade draft capital (2026 first + 2027 picks) for a proven WR1 or elite EDGE rusher. Pair Allen with a true alpha weapon and bet on offense carrying a thin defense. The ultimate "the window is NOW" play. Risk: if it fails, Buffalo has no picks and a bloated cap for 2027.
+**Path 3 — The Secondary Bet:** The defense's viability lives or dies with Dorian Strong's development at LCB. If Strong doesn't progress, or if Leonhard's scheme asks too much of young corners, Buffalo's defense bottlenecks in January despite every other move being right. This is the single-point-of-failure risk.
 
-**Path 4 — Youth Movement Defense:** Let Bosa, White, and Epenesa walk. Re-sign only Milano (cheaply) as the defensive anchor. Invest all cap savings and draft picks into young, scheme-versatile defenders — a Day 2 EDGE, a CB in the first, a safety in the third. Accept a 2026 defense that's bottom-half but trending up. Spend remaining cap on OL (re-sign McGovern) and one mid-tier WR. Risk: the young defense isn't ready fast enough and Allen's window closes during the development years.
+**Path 4 — Scheme Validation:** Does Jim Leonhard's 3-4 base actually work with this personnel? Deone Walker (22, 464 snaps in 2025), Chubb (new, 3-yr deal), and Rousseau (repositioned) need to cohere. If the scheme is prescriptive and these players don't fit, the design-change cover story falls apart.
 
 ## Panel Instructions
 
 ### Cap — Salary Cap Expert
-**Focus:** The financial engineering of a $11M-over roster. Model out exactly how much real cap space Beane can create: Knox cut ($9.7M), Allen restructure (how many void years? what's the dead-money tail?), and any other restructure candidates. What's the maximum number of UFAs Buffalo can retain under each scenario? Compare Buffalo's cap flexibility to other "over-the-cap contenders" — how have teams like the Saints, Rams, and Chiefs managed similar overages in the past? Build a cap waterfall: start at -$11M, show each move and its savings, arrive at realistic available dollars. **Do not** evaluate player talent, defensive scheme fit, or draft prospects — stay in the financial mechanics lane.
+**Focus:** The restructure paradox. Beane already moved; Buffalo went from ~$11M over to ~$12.5M under the cap. But every restructure (Allen, Oliver, Brown) created downstream liabilities. Model exactly how much of the 2026 created space is real (not borrowed from 2027+). Explain the void-year mechanics and why Ed Oliver's 2027 projection (~$28.4M for a DT) creates a structural crunch. Compare this restructure wave to historical precedent (Saints 2021-23, Rams 2022-23): did it actually extend the window, or just move the pain forward? What's Buffalo's most likely 2027 scenario: another restructure wave, a difficult cut (Oliver?), or accepting a step-back year? **Do not** evaluate whether the personnel moves (Moore, Chubb, McGovern re-sign) were right — just answer whether the cap engineering bought time or mortgaged the future further.
 
 ### BUF — Buffalo Bills Expert
-**Focus:** The roster audit and organizational evaluation. Of the seven UFAs, who is genuinely irreplaceable vs. who is a scheme product Buffalo can replace internally? Grade the Bills' 2024-25 drafts for developmental depth — are there Day 3 picks ready to step into starting roles? Evaluate Sean McDermott's track record of retooling on the fly: seven straight playoff appearances suggests elite coaching, but three straight divisional exits suggests a ceiling. Is this an Allen-masks-everything roster, or does Buffalo actually have a sustainable infrastructure? What's the realistic win range for 2026 if they lose 4+ starters? **Do not** do cap math — Cap handles that. Focus on football: player evaluation, coaching capability, and competitive trajectory.
+**Focus:** The philosophical case for Beane's chosen path. Beane executed "aggressive retool with scheme change as cover" — not one of the hypothetical four paths. Defend or critique that choice. Was letting the entire 2025 defensive core walk actually strategic (only Milano irreplaceable), or was it forced by cap constraints that Beane had no choice but to disguise as a scheme transition? Evaluate Leonhard's 3-4 base: does this scheme actually fit the personnel (Deone Walker, Chubb, Rousseau, young corners)? Grade the new acquisitions (Moore, Chubb, Gardner-Johnson, McGovern re-sign): do they actually address the 2026 roster weaknesses, or are they stop-gaps? What's your realistic win range for 2026 with this roster? And most critically: if 2027 forces another wave of cuts (Oliver?), does the 2026 window actually matter, or is Beane just extending Allen's decline rather than extending his prime? **Do not** do cap math — Cap handles the restructure mechanics. Focus on football: personnel, coaching, competitive sustainability.
 
 ### Defense — Defensive Scheme Expert
-**Focus:** The scheme implications of losing the defensive core in one offseason. Buffalo's defense under McDermott has been built on versatile front-seven pressure (Bosa + Epenesa + Von Miller's ghost) and Milano quarterbacking the second level. If all four leave, what does the defense even look like? Can McDermott run his 4-3 hybrid without a premium EDGE, or does the scheme need to change? Identify the replacement archetypes: what profile of Day 2 EDGE can replicate Epenesa's production? Can a rookie CB1 survive in the AFC East against Miami's speed and NYJ's contested-catch offense? Give specific player-type comps (not names from this draft — archetypes and measurables). **Do not** evaluate cap mechanics or offensive strategy — stay in the defensive scheme and personnel lane.
+**Focus:** Jim Leonhard's 3-4 base and the personnel fit. Leonhard is a first-time NFL DC installing a new system post-McDermott. The scheme shift is presented as cover for the exodus (McDermott's defense is gone, so losing McDermott's players is acceptable). But is that philosophically sound, or is it a rationalization? Evaluate: Does Ed Oliver (LDE) fit a 3-4 better than he fit McDermott's 4-3? Does Deone Walker (22, 464 snaps in 2025 at NT) project as a foundational piece, or is he a work-in-progress? Does Chubb's profile (premium EDGE) plug the Bosa/Epenesa void, or is he a different defensive concept? Most critically: the secondary is the choke point — one proven corner (Benford), one unproven young corner at LCB (Dorian Strong, 22, 5 starts). In Leonhard's 3-4, can the secondary operate at the required level with this youth/inexperience? Or is the entire scheme one missed development away from collapse? **Do not** evaluate cap mechanics or offensive strategy — stay in the scheme, personnel fit, and secondary readiness lane.

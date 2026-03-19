@@ -107,3 +107,39 @@ PR #77 merged `feature/mobiletable` → `main` (merge commit 477d7b8). Issue #75
 
 📌 Team update (2026-03-19): nflverse Phase A complete and revised — Analytics now has auto-fetch programmatic access to 372-col PBP data (with situational metrics), player/team stats, position rankings, and all PFR advanced stats (2018+). Charter updated. All Phase A success criteria met.
 
+### nflverse Phase B Implementation (2026-03-19)
+
+**Context:** Phase B extends the nflverse query library with four additional scripts for article development. Phase A provided the foundation (auto-fetch, cache, EPA/efficiency queries); Phase B adds workload, draft, advanced QB metrics, and prospect evaluation tools.
+
+**Deliverables completed:**
+1. ✅ `content/data/query_snap_usage.py` — Team/player snap counts by unit (offense/defense/ST) with position group filtering. Supports workload analysis and scheme reveal articles.
+2. ✅ `content/data/query_draft_value.py` — Draft pick value by range, positional hit rates by round, player draft profiles. Uses weighted AV (`w_av`) since `car_av` stored as bool in nflverse.
+3. ✅ `content/data/query_ngs_passing.py` — Next Gen Stats passing metrics (time to throw, air yards, aggressiveness, completion probability). Supports advanced QB evaluation (2016+ data).
+4. ✅ `content/data/query_combine_comps.py` — Combine measurables for players and position leaders by metric (40-yard, vertical, 3-cone, etc.). Uses `pos` field, height already formatted as "6-1".
+5. ✅ `.squad/skills/nflverse-data/SKILL.md` updated — Documented all Phase B scripts with usage examples, output samples, use cases, and available metrics.
+6. ✅ `.squad/skills/article-discussion/SKILL.md` updated — Added "run these commands for data" block in Data Anchors section with all 7 query scripts and article context guidance.
+
+**Implementation notes:**
+- **Snap counts:** Per-game data aggregated by player with REG season filter. Percentages converted from decimal (0.22 → 22.0%). Position groups: offense/defense/special.
+- **Draft value:** Used `w_av` (weighted AV) instead of `car_av` (stored as boolean in nflverse dataset). Hit rate thresholds: Starter+ (AV ≥ 30), Solid+ (AV ≥ 50), Elite (AV ≥ 80).
+- **NGS passing:** Aggregates weekly data by player. Aggressiveness = % of passes 20+ air yards. Qualified QBs require 100+ attempts. Available metrics include time to throw, air yards differential, max completed air distance.
+- **Combine:** Height stored as string "6-1", used directly. Position field is `pos` not `position`. Metrics include forty, vertical, bench, broad_jump, cone, shuttle.
+
+**Validation results:**
+- JSN snap counts 2024: 948 offense snaps (86.4%), 0 defense, 0 ST ✅
+- R1 WR draft hit rate (since 2015): 49 picks, 24.0 avg AV, 36.7% starter rate, 10.2% solid rate ✅
+- Drake Maye 2024 NGS: 2.74s time to throw, 7.4 avg intended air yards, 14.8% aggressiveness ✅
+- JSN combine 2023: 6-1, 196 lbs, 35.0" vertical, 6.57s 3-cone ✅
+- All scripts produce clean markdown tables, follow Phase A patterns, support `--format json` ✅
+
+**Article integration:**
+- Discussion prompt templates now include explicit command blocks for generating data anchors.
+- Seven query scripts cover player efficiency, team efficiency, positional comps, workload, draft value, advanced QB metrics, and prospect evaluation.
+- Token budget target: <400 tokens per article's combined data anchor tables (roughly half of 1,500-token panel budget).
+
+**Phase B gate:** Published article contains verifiable nflverse-sourced stats (pending — requires article selection and publication).
+
+📌 Team update (2026-03-19): nflverse Phase B complete — Analytics now has 7 production-ready query scripts covering EPA, efficiency, snaps, draft, NGS, and combine data. SKILL docs updated with usage examples and article-prompt integration guidance. All Phase B scripts validated.
+
+- **Buffalo closed the real-world validation loop without a draft rewrite.** `content/articles/buf-2026-offseason/discussion-prompt.md`, `cap-position.md`, and `buf-position.md` are enough to prove the data-anchor workflow when the open question is query execution, not final prose polish.
+

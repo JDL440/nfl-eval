@@ -1,0 +1,4 @@
+# Python dependencies for nfl-eval
+# Analytics data access layer
+nflreadpy>=0.1.5
+polars>=1.0

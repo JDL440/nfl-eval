@@ -10,6 +10,9 @@
 __pycache__/
 *.pyc
 
+# nflverse data cache (10-50 MB parquet files per dataset)
+content/data/cache/
+
 # Node.js / BullMQ
 node_modules/
 package-lock.json

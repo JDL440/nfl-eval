@@ -179,8 +179,12 @@ A local read-only dashboard for the article pipeline. Shows every article's stag
 ```bash
 npm run dashboard          # start at http://localhost:3456
 npm run dashboard:dev      # start with --watch (auto-reload on file changes)
-DASHBOARD_PORT=8080 npm run dashboard  # custom port
+npm run dashboard -- --port 8080       # custom port (cross-platform)
+$env:DASHBOARD_PORT=8080; npm run dashboard  # custom port from PowerShell
+DASHBOARD_PORT=8080 npm run dashboard        # custom port from bash/zsh
 ```
+
+If `3456` is already in use, the dashboard now prints the existing URL and alternate-port commands instead of crashing with a raw stack trace.
 
 **Pages:**
 - **Board** (`/`) — All articles with stage, status, drift, and next-action columns. Filter by text, stage, or status.

@@ -93,9 +93,9 @@ python content/data/fetch_nflverse.py --dataset combine
 
 ---
 
-## Query Scripts (Phase A)
+## Query Scripts (Phase A + Phase B)
 
-Three query scripts are production-ready. All output **pre-aggregated markdown tables** to control token cost when injected into agent prompts.
+Seven query scripts are production-ready. All output **pre-aggregated markdown tables** to control token cost when injected into agent prompts.
 
 ### 1. Player EPA & Efficiency — `query_player_epa.py`
 
@@ -210,6 +210,158 @@ python content/data/query_positional_comparison.py --position RB --metric rushin
 
 ---
 
+### 4. Snap Counts & Usage — `query_snap_usage.py`
+
+**Usage:**
+```bash
+python content/data/query_snap_usage.py --team SEA --season 2024 --position-group offense --top 10
+python content/data/query_snap_usage.py --player "Jaxon Smith-Njigba" --season 2024
+python content/data/query_snap_usage.py --team KC --season 2024 --format json
+```
+
+**Output (team mode):**
+```markdown
+### SEA Snap Counts — 2024 (offense group) (Top 10)
+
+| Player | Position | OFF Snaps | OFF % | DEF Snaps | DEF % | ST Snaps | ST % |
+|--------|----------|----------:|------:|----------:|------:|---------:|-----:|
+| Laken Tomlinson | G | 1,097 | 99.7 | 0 | 0.0 | 60 | 12.9 |
+| Charles Cross | T | 1,097 | 99.7 | 0 | 0.0 | 70 | 15.1 |
+| Geno Smith | QB | 1,075 | 97.5 | 0 | 0.0 | 0 | 0.0 |
+| Jaxon Smith-Njigba | WR | 948 | 86.4 | 0 | 0.0 | 0 | 0.0 |
+...
+```
+
+**Use cases:**
+- Workload analysis: who's playing vs. who's on the roster?
+- Scheme reveals: 3-WR vs. 11 personnel usage
+- Injury impact: snap-count drops after return from injury
+- Special teams contributors
+
+**Available position groups:** `offense`, `defense`, `special`
+
+---
+
+### 5. Draft Pick Value & Hit Rates — `query_draft_value.py`
+
+**Usage:**
+```bash
+python content/data/query_draft_value.py --pick-range 1-10 --since 2015
+python content/data/query_draft_value.py --position WR --round 1 --since 2010
+python content/data/query_draft_value.py --player "Jaxon Smith-Njigba" --format json
+```
+
+**Output (position hit rate mode):**
+```markdown
+### WR Draft Hit Rates Round 1 (Since 2015)
+
+| Round | Picks (n) | Avg AV | Median AV | Starter+ % | Solid+ % | Elite % |
+|------:|----------:|-------:|----------:|-----------:|---------:|--------:|
+| 1 | 49 | 24.0 | 18.0 | 36.7% | 10.2% | 0.0% |
+
+*Starter+ = AV >= 30, Solid+ = AV >= 50, Elite = AV >= 80*
+```
+
+**Use cases:**
+- Draft capital value modeling
+- Trade-up/trade-down analysis
+- Positional hit rates: which positions are safest?
+- Historical context for prospect evaluation
+
+**Note:** AV = Approximate Value (Pro Football Reference's weighted career value metric). Higher is better.
+
+---
+
+### 6. Next Gen Stats (Passing) — `query_ngs_passing.py`
+
+**Usage:**
+```bash
+python content/data/query_ngs_passing.py --player "Drake Maye" --season 2024
+python content/data/query_ngs_passing.py --top 10 --metric avg_time_to_throw --season 2024
+```
+
+**Output (player mode):**
+```markdown
+### Drake Maye — 2024 Next Gen Stats (Passing)
+
+**Team:** NE
+
+| Metric | Value |
+|--------|------:|
+| Attempts | 661 |
+| Pass Yards | 4,507 |
+| Pass TDs | 30 |
+| Interceptions | 20 |
+| Avg Time to Throw | 2.74s |
+| Avg Completed Air Yards | 4.9 |
+| Avg Intended Air Yards | 7.4 |
+| Air Yards Differential | -2.5 |
+| Aggressiveness % | 14.8% |
+| Max Completed Air Distance | 51.7 |
+| Avg Air Yards to Sticks | -1.4 |
+
+*Aggressiveness = % of passes 20+ air yards downfield*
+```
+
+**Use cases:**
+- QB evaluation beyond box score
+- Play-style profiling: quick-game vs. vertical
+- Pressure response: time to throw under duress
+- Tracking-based separation and completion probability
+
+**Available metrics for top-N queries:**
+- `avg_time_to_throw` — pocket patience
+- `avg_completed_air_yards` / `avg_intended_air_yards` — vertical aggression
+- `aggressiveness` — deep-ball rate
+- `max_completed_air_distance` — arm strength ceiling
+
+**Note:** NGS data available 2016–present only.
+
+---
+
+### 7. Combine Measurables & Comps — `query_combine_comps.py`
+
+**Usage:**
+```bash
+python content/data/query_combine_comps.py --player "Jaxon Smith-Njigba"
+python content/data/query_combine_comps.py --position WR --metric forty --top 20
+python content/data/query_combine_comps.py --player "Drake Maye" --format json
+```
+
+**Output (player mode):**
+```markdown
+### Jaxon Smith-Njigba — 2023 NFL Combine
+
+**Position:** WR
+
+| Metric | Value |
+|--------|------:|
+| Height | 6'1" |
+| Weight | 196 lbs |
+| 40-Yard Dash | N/A |
+| Vertical Jump | 35.0 in |
+| Bench Press | N/A |
+| Broad Jump | 125 in |
+| 3-Cone Drill | 6.57s |
+| 20-Yard Shuttle | 3.93s |
+```
+
+**Use cases:**
+- Prospect evaluation: baseline athleticism
+- Historical comps: find players with similar measurables
+- Draft analysis: positional norms and outliers
+- Injury risk modeling (future): size/speed profiles
+
+**Available metrics for top-N queries:**
+- `forty` — 40-yard dash (lower is better)
+- `vertical` / `broad_jump` — explosiveness
+- `bench` — upper-body strength (225 lbs reps)
+- `cone` / `shuttle` — agility and change-of-direction (lower is better)
+
+**Note:** Combine data available 2000–present. Not all players attend the combine; some work out at pro days (not captured).
+
+---
+
 ## Integration with Article Pipeline
 
 ### Data anchors for discussion prompts
@@ -283,7 +435,7 @@ Include the actual numbers from the output in your analysis.
 
 ## Future Phases (Deferred)
 
-- **Phase B (Tier 1 complete):** Add 4 more query scripts (snap usage, draft value, NGS passing, combine comps)
+- **Phase B complete ✅ (2026-03-19):** 4 additional query scripts added (snap usage, draft value, NGS passing, combine comps). Seven total scripts now production-ready.
 - **Tier 2:** Analytics charter upgrade — nflverse as primary data source, auto-generated data anchors
 - **Tier 3:** Copilot extension — native tool calling for any agent (no shell-out)
 - **Tier 4:** DataScience agent — writes Python for custom models (aging curves, statistical comps)

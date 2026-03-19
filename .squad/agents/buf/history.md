@@ -192,3 +192,10 @@ _Accumulated from research sessions_
 13. **Scheme change reframes the "lost 4 starters" narrative.** Leonhard's 3-4 means the replacements don't need to be the same player types. Oliver/Walker/Chubb/Rousseau fit the new front better than they fit McDermott's 4-3. This is the key analytical move for any BUF position piece.
 
 📌 Team update (2026-03-16T04:36:50Z): Issue #43 advanced to discussion prompt + panel composition. BUF + Cap + Draft panel ready for spawn.
+
+14. **nflverse snap data is the best tool for "who actually mattered" arguments.** Epenesa at 47.4% DEF snaps kills the "lost four starters" framing immediately. Always pull snap counts before evaluating departures — it separates starters from rotational pieces with one table.
+15. **Defensive EPA confirms the retool was necessary, not destructive.** BUF's 2025 defense at +0.024 EPA/play allowed was already middling — this isn't a team dismantling a top-5 unit. Frame accordingly.
+16. **Moore's 2025 nflverse line (#66 WR, 50 rec, 682 yds in CHI) is essential context for the buy-low trade argument.** Without it, the R2 trade cost looks steep. With it, Beane looks opportunistic.
+17. **Pick #26 AV data (median 16.0, avg 20.8) is lower-variance than the 24-25 range.** CB's 39.4% starter+ rate is the strongest position-specific argument for the pick. Always pair pick-range data with positional hit rates for draft arguments.
+18. **Phase B refresh pattern: lead with what happened, then evaluate whether it works.** The Editor rejected the original draft because it framed hypotheticals as open questions when Beane had already answered them. Future BUF positions should never present already-resolved decisions as live debates.
+19. **For Buffalo, the validation bundle is discussion + panel, not draft.** `discussion-prompt.md`, `cap-position.md`, and `buf-position.md` are the completed Phase B proof artifacts; `draft.md` remains a separate stale-article problem because Writer is locked out of the next revision.

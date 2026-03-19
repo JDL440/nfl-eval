@@ -8,7 +8,8 @@
     "panel_deep_dive": "claude-opus-4.6",
     "panel_beat": "claude-opus-4.6",
     "panel_casual": "claude-sonnet-4.5",
-    "lightweight": "gpt-5-mini"
+    "lightweight": "gpt-5-mini",
+    "scribe": "gpt-5.1-codex-mini"
   },
   "max_output_tokens": {
     "panel_agent": 1500,
@@ -16,7 +17,8 @@
     "editor": 2500,
     "lead_discussion_prompt": 2000,
     "lead_synthesis": 2500,
-    "lightweight": 800
+    "lightweight": 800,
+    "scribe": 1200
   },
   "panel_size_limits": {
     "casual_fan": { "min": 2, "max": 2 },
@@ -108,6 +110,7 @@
     "panel": "deep_reasoning",
     "writer": "deep_reasoning",
     "editor": "deep_reasoning",
+    "scribe": "agentic_code",
     "lightweight": "lightweight",
     "publisher_metadata": "lightweight"
   },

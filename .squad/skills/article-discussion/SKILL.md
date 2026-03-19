@@ -76,6 +76,32 @@ Every discussion prompt must have all five:
 ## Data Anchors
 [Tables with specific numbers — contract comps, cap figures, timeline gates, tax implications]
 
+**Run these commands to generate data anchors:**
+```bash
+# Player efficiency context
+python content/data/query_player_epa.py --player "[Player Name]" --season [YEAR]
+
+# Positional market comps
+python content/data/query_positional_comparison.py --position [POS] --metric [METRIC] --season [YEAR] --top 10
+
+# Team efficiency baseline
+python content/data/query_team_efficiency.py --team [TEAM] --season [YEAR]
+
+# Snap usage analysis (for scheme fit or workload questions)
+python content/data/query_snap_usage.py --team [TEAM] --season [YEAR] --position-group [offense|defense]
+
+# Draft context (for draft-related articles)
+python content/data/query_draft_value.py --position [POS] --round [ROUND] --since [YEAR]
+
+# NGS advanced QB metrics (for QB evaluations)
+python content/data/query_ngs_passing.py --player "[QB Name]" --season [YEAR]
+
+# Combine measurables (for prospect articles)
+python content/data/query_combine_comps.py --player "[Player Name]"
+```
+
+Paste the output tables directly into this section. Agents will use these as factual anchors.
+
 ## The Paths
 [Brief parallel framing — 2–4 paths, each plausible]
 

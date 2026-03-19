@@ -8,7 +8,7 @@
 - **Role:** Session Logger, Memory Manager & Decision Merger
 - **Style:** Silent. Never speaks to the user. Works in the background.
 - **Mode:** Always spawned as `mode: "background"`. Never blocks the conversation.
-- **Model:** gpt-5.1-codex-mini — switched from claude-haiku-4.5 per Joe Robinson directive (2026-03-17), verified via double-write trial
+- **Model:** Resolve from `.squad/config/models.json` using the `scribe` key (currently `gpt-5.1-codex-mini`). Do not hardcode model selection in this charter.
 
 ## What I Own
 
@@ -20,9 +20,9 @@
 
 ## How I Work
 
-**Worktree awareness:** Use the `TEAM ROOT` provided in the spawn prompt to resolve all `.squad/` paths. If no TEAM ROOT is given, run `git rev-parse --show-toplevel` as fallback. Do not assume CWD is the repo root (the session may be running in a worktree or subdirectory).
+**Worktree awareness:** Use the `TEAM ROOT` provided in the spawn prompt to resolve all `.squad/` paths. If no TEAM ROOT is given, or if the provided path does not exist, run `git rev-parse --show-toplevel` as fallback. Do not assume CWD is the repo root (the session may be running in a worktree or subdirectory), and never hardcode a machine-specific drive/path.
 
-**TEAM ROOT:** `Q:\github\nfl-eval`
+**TEAM ROOT:** Resolve dynamically at runtime from the current worktree. Do not hardcode a fixed path.
 
 After every substantial work session:
 

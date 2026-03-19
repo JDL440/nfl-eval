@@ -75,6 +75,50 @@
 - Created `content/articles/den-2026-offseason/discussion-summary.md` and updated `pipeline.db` so `discussion_path` points to the new artifact.
 - Logged the decision entry (`2026-03-18: Token-Usage Telemetry Test — Issue #54`) plus the session log (`.squad/log/2026-03-18T223000Z-den-telemetry-test.md`) and orchestration trace (`.squad/orchestration-log/2026-03-18T223000Z-lead.md`).
 
+### Phase B Step 1 Execution Complete — Discussion Prompt Updated (2026-03-19T04:00:00Z)
+**Status:** ✅ DONE — `buf-2026-offseason` discussion prompt now includes Phase B data query instructions.
+
+**Change summary:**
+- **File:** `content/articles/buf-2026-offseason/discussion-prompt.md`
+- **Section added:** "## Data Query Instructions" (new, 35 lines)
+- **Location:** After "Allen's 2025 Season vs. Career Context" table, before "The Paths" section
+- **Content:** Three-tier command block:
+  - **Required (all panelists):** `query_team_efficiency.py --team BUF --season 2025` — Buffalo's actual EPA/efficiency vs. league
+  - **Highly recommended (Cap/Defense):** `query_snap_usage.py --team BUF --season 2025` + `query_draft_value.py --position CB --position EDGE --since 2015` — supports rebuild cost + replacement archetype arguments
+  - **Optional (if relevant):** `query_positional_comparison.py --position C ...` — OL market context
+- **Guidance included:** Each command explains what it returns and which tension it supports (team efficiency, defensive exodus, OL questions)
+- **Scope:** No rewrites of core question, tensions, paths, or panel instructions. Pure instruction addition.
+- **Next step:** Rerun Cap + BUF agents with updated prompt (Step 2, ~10 min parallel)
+
+### Phase B Step 1 Revision Complete: Discussion Prompt Refreshed for Factual Consistency (2026-03-19T04:15:00Z)
+**Status:** ✅ DONE — Prompt now internally consistent with Cap + BUF positions + current March 2026 Buffalo reality.
+
+**Two-pass update completed:**
+1. **Phase B integration (prior turn):** Added "## Data Query Instructions" with 3 required + 1 optional Phase B commands
+2. **Factual consistency refresh (this turn):** Updated stale pre-March framing to align with executed moves
+
+**Targeted corrections made:**
+- **Title & core question:** "Can the Bills Retool at $11M Over?" → "Did Beane's March Moves Preserve or Distort Allen's Window?"
+- **All 4 key tensions rewritten:**
+  - Removed hypothetical options (pending decisions)
+  - Focused on executed moves: restructures (Allen, Brown, Oliver), pay-cut (Knox), trades (Moore), free agent signings (Chubb, Gardner-Johnson, McGovern re-sign)
+  - Shifted evaluation to consequences: 2027 cap invoice, secondary readiness as single-point-of-failure
+- **Data anchors completely refreshed:**
+  - Cap situation: ~$11M over → ~$12.5M under (post-restructures)
+  - Knox: cut for $9.7M → reworked deal, $8.55M
+  - Allen cap hit: $43.6M → $44.2M; dead money $173M
+  - Added 3 new tables: March 2026 moves (with 2026 + 2027 impact), defensive departure snap analysis, 2027 cap consequence invoice
+  - Removed stale UFA projections table, outdated Allen trajectory table
+- **The Paths:** Changed from 4 hypothetical options to 4 post-hoc evaluation frames (Beane's choice, 2027 consequence, secondary bet, scheme validation)
+- **All panel instructions refocused for post-March framing:**
+  - Cap: "evaluate restructure paradox + void-year mechanics + 2027 invoice"
+  - BUF: "defend/critique Beane's aggressive retool choice"
+  - Defense: "does Leonhard's 3-4 + young secondary work?"
+
+**Result:** Discussion prompt is now fully consistent with Cap + BUF positions and current Buffalo reality. Ready for Cap + BUF re-run with Phase B queries.
+
+### Phase B Validation Strategy
+
 ## Learnings
 
 ### nflverse Integration & Platform Prioritization
@@ -83,3 +127,5 @@
 - **Risks:** Python+Node dual-runtime, offseason data is static (limits near-term value), token budget implications for large datasets, ~300MB parquet cache.
 - **Why Tier 2–5 deferred:** No evidence Analytics will bottleneck before Phase 1 publishing goals are met. Deferred work has explicit entry triggers (frequency, cadence, regular season).
 - **DataScience agent decision:** Do NOT create. Extend Analytics instead — it owns the analytical domain; it lacks data access, not scope.
+- **Phase B validation strategy:** Use in-flight article work (Stage 6+) to prove nflverse integration, not new test articles. Grounds abstract capability in real publishing workflow. `buf-2026-offseason` is ideal: complex roster story, multiple data anchor types, benefits from snap counts + draft history + team efficiency queries.
+- **Silent-success merge repairs must normalize the canonical decision, not append another plan.** Once validation lands, update the Lead path to say Buffalo is complete, note the exact validation artifacts, and move draft refresh + stale-article planning into deferred work with the lockout stated explicitly.
