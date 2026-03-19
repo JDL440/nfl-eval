@@ -95,14 +95,14 @@ When Lead is assigned a GitHub issue with the `article` label (or any issue whos
    - **Synthesis:** Write discussion summary → `content/articles/{slug}/discussion-summary.md`
    - **Stage 5 (numeric: 5):** Spawn Writer → draft saved to `content/articles/{slug}/draft.md`, update DB `current_stage=5` + `article_path`
    - **Stage 6 (numeric: 6):** Spawn Editor (sync) → save review to `content/articles/{slug}/editor-review.md`, update DB `current_stage=6`
-   - **Stage 7 (numeric: 7):** Call `publish_to_substack` tool → get draft URL, update DB `current_stage=7`
-4. **Post completion comment** on the issue with the Substack draft URL:
+   - **Stage 7 (numeric: 7):** Record publisher pass and stop at dashboard review / live-publish handoff
+4. **Post completion comment** on the issue with the dashboard review URL:
    ```
-   ✅ Pipeline complete — Substack draft ready for review.
-   📝 Draft URL: {url}
+   ✅ Pipeline complete — dashboard review ready.
+   📝 Dashboard URL: http://localhost:3456/article/{slug}
    🔴 Editor flags: {count} (see content/articles/{slug}/editor-review.md)
    📊 DB: current_stage=7 (Publisher Pass complete)
-   Next: Joe reviews in Substack editor → publishes → updates DB to stage 8
+   Next: Review in dashboard → publish live → dashboard records stage 8 + Note
    ```
 5. **Update GitHub issue label** to reflect current stage (optional — labels are visibility mirrors, not source of truth for scheduling):
    - Add `stage:publisher-pass` or similar label if the label exists
@@ -125,13 +125,13 @@ Post a GitHub comment at EVERY meaningful step so the pipeline never feels like 
 | Stage 5 done | `✍️ Draft complete ({word_count} words). Spawning Editor...` |
 | Stage 6 done | `🔍 Editor review done. Verdict: {APPROVED/REVISE/REJECT}. {Count} flags.` |
 | Images generating | `🖼️ Generating 2 inline images...` |
-| Images done | `🖼️ Images complete. Publishing to Substack...` |
-| Pipeline complete | `✅ Done. Substack draft: {URL}` |
+| Images done | `🖼️ Images complete. Completing publisher pass — handing off to dashboard for review and publish...` |
+| Pipeline complete | `✅ Pipeline complete — dashboard review ready. http://localhost:3456/article/{slug}` |
 
 ### Error Handling
 
 - **Editor 🔴 REJECT:** Fix the specific issues (re-spawn relevant panel agents if factual gap) → re-run Writer → re-run Editor. Post comment: `🔄 Editor rejected draft — revising...`
-- **publish_to_substack fails:** Post the draft URL from file if tool fails; note manual publish needed.
+- **Dashboard publish fails:** Note the failure on the issue and inform Joe that manual publish from the dashboard may be needed; the article remains at Stage 7 for retry.
 - **Panel agent fails:** Re-spawn that single agent. Don't restart the whole panel.
 
 ## Boundaries

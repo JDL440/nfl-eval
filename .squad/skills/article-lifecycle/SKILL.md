@@ -1,6 +1,6 @@
 ---
 name: "article-lifecycle"
-description: "Canonical 8-stage process for producing articles from idea to Substack publish"
+description: "Canonical 8-stage process for producing articles from idea to dashboard review and live publish"
 domain: "content-production"
 confidence: "low"
 source: "manual — designed by Joe Robinson & Lead, not yet validated end-to-end"
@@ -41,9 +41,10 @@ This is **coordinator-level guidance**. It tells Lead how to orchestrate the ful
 │  4   │ Panel Discussion     │ Panel agents   │ Raw expert analysis     │
 │  5   │ Article Drafting     │ Writer         │ Draft in content/articles│
 │  6   │ Editor Pass          │ Editor         │ Verdict + corrections   │
-│  7   │ Publisher Pass       │ Joe (→ future  │ Formatted + metadata    │
-│      │                      │  Publisher)    │                         │
-│  8   │ Approval / Publish   │ Joe            │ Live on Substack        │
+│  7   │ Publisher Pass       │ Lead → Joe     │ Dashboard-ready publish │
+│      │                      │                │ package                 │
+│  8   │ Published            │ Joe via        │ Live on Substack        │
+│      │                      │ dashboard      │                         │
 └──────┴──────────────────────┴────────────────┴─────────────────────────┘
 ```
 
@@ -303,7 +304,7 @@ Each panelist produces a raw analysis document. Lead collects all outputs and pa
 
 **Owner:** Writer
 **Input:** Discussion Prompt + all raw panel outputs
-**Output:** Draft article saved to `content/articles/{slug}.md`
+**Output:** Draft article saved to `content/articles/{slug}/draft.md`
 
 Writer takes all panel outputs and assembles a polished article following the house style: **The Ringer meets OverTheCap** — informed but accessible, data-heavy but narrative-driven.
 
@@ -313,12 +314,12 @@ Writer takes all panel outputs and assembles a polished article following the ho
 
 - Writer does **not** fact-check — that's Editor's job in Stage 6
 - Disagreements between panelists are **content**, not problems to resolve
-- Draft goes to `content/articles/{slug}.md` — not directly to Substack
+- Draft goes to `content/articles/{slug}/draft.md` — not directly to Substack
 - Target length: 2,000–4,000 words (8–15 min read)
 
 ### Done when
 
-- [ ] Draft saved to `content/articles/{slug}.md`
+- [ ] Draft saved to `content/articles/{slug}/draft.md`
 - [ ] Article follows the structure template from substack-article skill
 - [ ] All panelists' analysis is represented (none dropped)
 - [ ] Headline follows the formula options in substack-article skill
@@ -329,7 +330,7 @@ Writer takes all panel outputs and assembles a polished article following the ho
 ## Stage 6 — Editor Pass
 
 **Owner:** Editor
-**Input:** Draft article from `content/articles/{slug}.md`
+**Input:** Draft article from `content/articles/{slug}/draft.md`
 **Output:** Editorial verdict + categorized corrections
 
 Editor reviews the draft for factual accuracy, structural issues, and style compliance. This is **mandatory** — no article skips the Editor pass.
@@ -358,7 +359,7 @@ Editor reviews the draft for factual accuracy, structural issues, and style comp
 - [ ] Editor has issued a verdict
 - [ ] All 🔴 errors are resolved
 - [ ] Final verdict is ✅ APPROVED
-- [ ] Approved draft is committed to `content/articles/{slug}.md`
+- [ ] Approved draft is committed to `content/articles/{slug}/draft.md`
 - [ ] Editor has verified the "Next from the panel" hook points to a real planned follow-on article and reads like a cliffhanger
 
 ---
@@ -386,107 +387,85 @@ Every article must pass three accuracy checks before moving to Stage 7 (Publishe
 
 ## Stage 7 — Publisher Pass
 
-**Owner:** Lead (calls `publish_to_substack` tool) → Joe reviews the draft URL
-**Input:** Editor-approved draft from `content/articles/{slug}.md`
-**Output:** Substack draft URL, ready for Joe to review and publish with one click
+**Owner:** Lead prepares the handoff; Joe reviews in the dashboard
+**Input:** Editor-approved draft from `content/articles/{slug}/draft.md`
+**Output:** Dashboard-ready article with a completed publisher checklist. No Substack publish happens yet.
 **DB update:** Advance to `current_stage=7`, record `publisher_pass` details
 
-This stage is **automated** via the `publish_to_substack` Copilot extension. Lead (or any agent) calls the tool; the extension converts the article to Substack's format and creates a draft. Joe receives the editor URL, checks a short final checklist, then publishes.
-
-**Automated enforcement at publish time (durable — applied by the extension, not by agents):**
-- **Subscribe buttons (2x):** The extension ensures exactly 2 subscribe-with-caption widgets. If the markdown contains `::subscribe` markers, those are converted. If fewer than 2 exist, the extension auto-injects them (after opening hook + near end).
-- **Hero-safe first image:** The extension validates that the first image is not a chart/table/data visualization. If it is, it swaps with a later hero-safe image when possible, or warns.
+Stage 7 is the **pause point before any Substack publish step**. The article stays local while Lead finishes the publisher pass, confirms the final checklist, and hands the article to Joe in the dashboard. The dashboard preview is the review surface immediately before live publish.
 
 ### How to Run Stage 7
 
-Lead calls the tool directly:
+Lead completes the handoff locally:
 
-```
-publish_to_substack(
-  file_path: "content/articles/{slug}.md",
-  title: "{Final headline}",
-  subtitle: "{1-line hook for Substack preview / email subject}",
-  audience: "everyone"
-)
-```
+1. Ensure the article markdown, inline images, and publisher-pass artifact are complete.
+2. Confirm every publisher-pass field is true in `content/pipeline.db`.
+3. Hand Joe the dashboard article page (`/article/{slug}`) for preview/validation review.
+4. Stop here. The main pipeline does **not** call `publish_to_substack` during Stage 7.
 
-**Team tagging is automatic.** The tool reads `primary_team` from `content/pipeline.db` via the article path and tags the draft with the team name. Specialist agents whose artifacts are in the article directory are also auto-tagged. You can override by passing `team: "{Team Name}"` explicitly, but this is rarely needed.
+Draft creation/update can still happen later, but it is part of the dashboard publish action rather than the Stage 7 handoff itself.
 
-The tool:
-1. Reads `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` from `.env`
-2. Looks up `primary_team` from `content/pipeline.db` (matched by `article_path`)
-3. Converts the markdown article to Substack's ProseMirror format
-4. Creates a draft on Substack, tagged with team + specialist agents
-5. Returns the draft editor URL
+### Dashboard Publish Checklist
 
-Title and subtitle are auto-extracted from the markdown if not provided (first `# Heading` and first `*italic*` line).
-
-### Pre-Publish Checklist (Joe does at Stage 8)
-
-Copy this to the article thread before calling the tool. Lead confirms content items; Joe confirms metadata/schedule.
+Copy this to the article thread before handoff. Lead confirms content items; Joe uses the dashboard page for final preview/validation review before publishing.
 
 ```markdown
 ## Publisher Pass — {Article Title}
 
-### Content (Lead confirms before calling tool)
-- [ ] Title: final headline (may differ from draft working title)
-- [ ] Subtitle: 1-line hook for Substack preview / email subject
-- [ ] Author line: "By: The NFL Lab Expert Panel" (or variant)
-- [ ] Opening preview text: first ~150 chars that show in email/social (compelling?)
-- [ ] Article body: final read-through — no orphaned placeholders, no TODO markers
-- [ ] All names spelled correctly (one last check)
-- [ ] All numbers current (cap figures, contract terms — things move fast)
-- [ ] No stale references to "upcoming" events that already happened
-- [ ] "Next from the panel" tease at end points to a real upcoming article and reads like a genuine cliffhanger
+### Publisher Pass Fields
+- [ ] Title final
+- [ ] Subtitle final
+- [ ] Body clean
+- [ ] Section assigned
+- [ ] Tags set
+- [ ] URL slug set
+- [ ] Cover image set
+- [ ] Paywall set
+- [ ] Names verified
+- [ ] Numbers current
+- [ ] No stale refs
 
-### Substack Metadata (Joe sets in editor after draft is created)
-- [ ] Tags: auto-applied by tool (team + specialist agents); add extra tags manually if desired
-- [ ] URL slug: clean, lowercase, hyphenated (e.g., `witherspoon-extension-analysis`)
-- [ ] Cover image: selected in Substack editor
-- [ ] Paywall setting: free / paid-only / preview
-
-### Scheduling & Distribution
-- [ ] Publish date/time: per editorial calendar (Tues 10 AM PT default)
-- [ ] Email send: yes/no (most articles = yes)
-- [ ] Social preview: headline + subtitle render well in card format?
+### Dashboard Review
+- [ ] Preview looks correct in the dashboard
+- [ ] Validation checks are green or understood
+- [ ] Publish promotion channels selected (Substack Note is the default)
 ```
 
 ### Done when
 
-- [ ] `publish_to_substack` called successfully — draft URL returned
 - [ ] DB updated: `current_stage=7`, `publisher_pass` row inserted, stage transition recorded
-- [ ] Lead posts the draft URL for Joe
-- [ ] Content checklist items confirmed
-- [ ] Joe has the URL and is ready to review/publish
+- [ ] Publisher-pass fields are complete
+- [ ] Joe has the dashboard article page and can review/publish from there
 - [ ] **GitHub issue label updated** (optional visibility mirror): `stage:publisher-pass` or similar label added if it exists. Labels reflect state for human visibility; DB `current_stage` is the authoritative scheduler source of truth.
 
 ---
 
-## Stage 8 — Approval / Publish
+## Stage 8 — Published
 
-**Owner:** Joe Robinson (human gate)
-**Input:** Draft URL from Stage 7 + completed Publisher Pass checklist
-**Output:** Live article on Substack
-**DB update:** Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`
+**Owner:** Joe Robinson via the dashboard publish action
+**Input:** Dashboard-reviewed Stage 7 article + selected promotion channels
+**Output:** Live article on Substack, plus any successful follow-on promotions
+**DB update:** Set `published_at`, `substack_url`, `status='published'`, `current_stage=8`; record promotion results such as Notes separately
 
 ### Process
 
-1. **Joe opens the draft URL** returned by `publish_to_substack`
-2. **Joe reviews** in the Substack editor: formatting, cover image, metadata (tags, slug), schedule
-3. **Joe approves** — or sends back to Stage 6 (editorial issues) or Stage 7 (re-run the tool)
-4. **Joe clicks Publish** (or schedules) in the Substack editor
+1. **Joe opens the dashboard article page** for the Stage 7 article.
+2. **Joe reviews** preview, validation output, and the completed publisher pass.
+3. **Joe clicks Publish** from the dashboard, leaving the default Substack Note enabled unless there is a reason to suppress it.
+4. **The dashboard publish flow** creates or updates the Substack draft behind the scenes, publishes it live, records the live URL, and then dispatches selected promotions.
+5. **If live publish fails before a public URL exists,** the article stays at Stage 7 for retry. If the article goes live but a promotion fails, the article remains Stage 8 and the failed promotion is retried separately.
 5. **Post-publish cleanup:**
 
 | Task | How |
 |------|-----|
 | Update `content/article-ideas.md` | Change status to ✅ Published, add publish date |
-| Update `content/pipeline.db` | Set `published_at`, `substack_url`, `status='published'`, `current_stage=8` (numeric); insert `stage_transitions` row |
+| Update `content/pipeline.db` | Handled by the dashboard publish flow via `content/pipeline_state.py` |
 | **GitHub issue label update** | Add `stage:published` label (optional visibility mirror). GitHub labels reflect pipeline state for human visibility; DB `current_stage` is the authoritative scheduler source of truth. |
 | Git commit | `git add . && git commit -m "Published: {article title}"` |
 | Content pipeline | Ensure "Next from the panel" tease at article end points to a real upcoming idea |
 | Follow-on issue | Create or confirm a GitHub idea issue for the teased next article, targeted for Thursday of the publication week (current default cadence) |
 | **History maintenance** | Run history summarization for all agents that participated (see [history-maintenance skill](../history-maintenance/SKILL.md)) |
-| Cross-post | Reddit threads, Twitter/X, other channels |
+| Promotions | Confirm the selected promotion channels succeeded; retry any failures separately |
 
 ### Done when
 
@@ -543,10 +522,10 @@ Lead reviews the recommendation and can override before spawning.
 | 2 → 3 | Discussion Prompt complete, tension identified | Lead |
 | 3 → 4 | Panel finalized (2–5 agents), each with specific question | Lead |
 | 4 → 5 | All panelists returned analysis, Lead reviewed for gaps | Lead |
-| 5 → 6 | Draft saved to `content/articles/{slug}.md` | Writer |
+| 5 → 6 | Draft saved to `content/articles/{slug}/draft.md` | Writer |
 | 6 → 7 | Editor verdict is ✅ APPROVED (all 🔴 resolved) | Editor |
-| 7 → 8 | `publish_to_substack` called, draft URL returned, content checklist confirmed | Lead |
-| 8 → Done | Article live on Substack, statuses updated, committed | Joe |
+| 7 → 8 | Joe approves the dashboard review and the live publish succeeds (`substack_url` recorded) | Joe |
+| 8 → Done | Article live on Substack, cleanup complete, promotions handled as needed | Joe |
 
 ## Recovery & Edge Cases
 
@@ -555,7 +534,8 @@ Lead reviews the recommendation and can override before spawning.
 | Editor rejects draft (🔴 REJECT) | Back to Stage 4 (re-gather analysis) or Stage 5 (rewrite) depending on issue |
 | Panelist misses their question | Lead re-prompts that specific agent (don't re-run entire panel) |
 | Breaking news makes article stale mid-production | Lead decides: update in place (if minor), restart from Stage 2 (if angle changed), or archive |
-| Joe rejects at Stage 8 | Back to Stage 6 or 7 depending on the issue type |
+| Joe rejects during dashboard review | Back to Stage 6 or remain at Stage 7 depending on the issue type |
+| Dashboard publish or promotion fails | If no live URL exists, remain at Stage 7 and retry publish. If the article is already live, remain at Stage 8 and retry only the failed promotion. |
 | Article idea becomes irrelevant | Mark 🗄️ Archived in `article-ideas.md` with reason |
 
 ## Anti-Patterns

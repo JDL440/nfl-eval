@@ -205,3 +205,8 @@ The trade works defensively IF: (1) Crosby and Madubuike stay healthy, (2) Minte
 5. **Target rate in coverage > interception count.** In zone-match systems, safeties close windows. A safety targeted 20 times in 400+ coverage snaps is elite even with 0 INTs.
 
 **Decision filed:** `defense-emmanwori-kickoff.md` in decisions/inbox — scheme evaluation framework for the panel.
+
+
+### Emmanwori Rookie Evaluation Framework (2026-03-19T05:08:13Z)
+**Status:** ✅ COMPLETED — Defense established scheme-fit lens for Nick Emmanwori (SEA hybrid defender) in Macdonald's disguise-heavy system. Framework repositioned Emmanwori for Stage 3 panel work.
+- Decision merged to \.squad/decisions.md

@@ -158,3 +158,20 @@
 - **Offensive-only nflverse queries don't work for defensive players.** `query_player_epa.py` and positional comparison scripts are WR/QB/RB-oriented. For safety/DB evaluations, use `snap_counts` + `pfr_defense` datasets directly, plus `query_snap_usage.py --position-group defense` and `query_draft_value.py --position S`.
 - **Command stubs > fabricated stats.** When data queries haven't been run yet, write the commands as placeholders in the discussion prompt and mark them as required anchors. Never invent numbers to fill anchor tables. This preserves reviewer-gate integrity.
 - **Lane boundaries in panel-composition.md prevent duplicate work.** Explicitly stating what each agent owns and what they should NOT do (e.g., "Analytics: don't interpret scheme fit — that's Defense's lane") produces better panel output than vague instructions.
+
+### Stage 7/8 Operator Guidance Cleanup (2026-03-19)
+- **Stage 7 is a dashboard-ready pause — no Substack publish happens in the autonomous pipeline.** The dashboard article page is the final review surface. The dashboard publish action performs live publish and can dispatch the Substack Note.
+- **Stage 8 means truly live published only** — reached only after the dashboard publish flow records a live `substack_url`. Lead should treat Stage 7 as the handoff boundary and Stage 8 as the proof-of-publication state.
+- **Key files audited and corrected:**
+  - `README.md` — Publishing setup, pipeline summary, and dashboard section now describe dashboard review as the default stop point before live publish.
+  - `ralph/prompt.md` — Ralph now aims for dashboard-ready Stage 7 or live-published Stage 8, and no longer instructs the main loop to call `publish_to_substack`.
+  - `.squad/skills/article-lifecycle/SKILL.md` — Stage 7/8 lifecycle guidance now defines a dashboard handoff instead of a direct draft-first Substack upload.
+  - `.squad/skills/publisher/SKILL.md` — Publisher output is the dashboard article URL plus handoff checklist, not a draft URL.
+  - `.squad/agents/lead/charter.md` — Pipeline comments and completion language now say "dashboard review ready" instead of implying a direct Substack push.
+  - `ralph/AGENTS.md` — Stage 8 owner/state is Joe via dashboard, clarifying that Stage 8 is the live-published state.
+- **`publish_to_substack` role:** Draft helper and manual fallback only. It is not the default Stage 7 step; the dashboard publish action is the live-publish entry point.
+
+
+### Stage 7/8 Operator Guidance Audit (2026-03-19T05:08:13Z)
+**Status:** ✅ COMPLETED — Scribe merged 3 inbox decisions. Lead completed surgical audit of operator-facing pipeline docs; corrected 4 files (charter, skills, AGENTS) to enforce dashboard-first Stage 7 architecture.
+- Decision merged to \.squad/decisions.md

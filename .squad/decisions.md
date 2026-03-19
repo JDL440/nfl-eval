@@ -1960,3 +1960,157 @@ When a production promotion Note exists for an article, the matching stage Note 
 
 ---
 
+
+
+---
+
+### 2026-03-19: Stage 7/8 operator guidance — enforced dashboard-first publish flow
+
+**By:** Backend / Coordinator (via task request)
+**What:** Audited and surgically corrected all operator-facing docs and prompts that still described the old draft-first Stage 7/8 flow. Three files had conflicting guidance; four files were already correct.
+
+---
+
+## Decision
+
+**Stage 7 is the dashboard-ready pre-publish pause.** No Substack publish happens before that pause. The dashboard article page is the final review surface. The dashboard publish action performs live publish and can dispatch the Substack Note in the same step. Stage 8 means truly live published only.
+
+This was already the intended architecture (documented correctly in `article-lifecycle/SKILL.md`, `publisher/SKILL.md` Step 5, `ralph/prompt.md`, and `README.md`), but three operator-facing files had leftover copy from the old flow where the autonomous pipeline called `publish_to_substack` directly during Stage 7.
+
+---
+
+## Files Changed
+
+| File | What was wrong | Fix |
+|------|----------------|-----|
+| `.squad/agents/lead/charter.md` | Pipeline Comments table said "Publishing to Substack…" and "✅ Done. Substack draft: {URL}" after images | Changed to "handing off to dashboard for review and publish…" and "✅ Pipeline complete — dashboard review ready. http://localhost:3456/article/{slug}" |
+| `.squad/agents/lead/charter.md` | Error Handling entry referenced `publish_to_substack fails` as if it's called in the main pipeline | Changed to `Dashboard publish fails` with Stage 7 retry guidance |
+| `.squad/skills/publisher/SKILL.md` | Role Distinction table listed Publisher output as "Draft URL + handoff checklist" — misleading since Stage 7 no longer creates a Substack draft URL | Changed to "Dashboard article URL + handoff checklist" |
+| `ralph/AGENTS.md` | Stage 8 owner column said "Dashboard / Human review" — makes Stage 8 sound like a review stage rather than the live-published state | Changed to "Joe via dashboard" |
+
+## Files Verified Clean (No Changes)
+
+- `README.md` — pipeline steps correctly describe dashboard review → live publish flow
+- `ralph/prompt.md` — Stage 6→7 and Stage 8 instructions already correct; explicit "do not call publish_to_substack in the main loop"
+- `.squad/skills/article-lifecycle/SKILL.md` — Stage 7 and Stage 8 sections already correct; Stage 7 is "pause point before any Substack publish step"
+- `.squad/skills/publisher/SKILL.md` Step 5 — already correctly documented as "Stop at dashboard review handoff"
+
+---
+
+## Why This Matters
+
+Operator-facing prompts (lead charter Pipeline Comments, ralph/AGENTS.md Stage table) are what agents read when deciding what to post as status updates and how to describe the pipeline state. If those say "Publishing to Substack…" and "Substack draft: {URL}" at pipeline complete, agents will post misleading status comments that imply the article was pushed to Substack directly — which is the old, incorrect flow.
+
+Keeping all operator-facing guidance consistent with the dashboard-first architecture ensures agents communicate the correct handoff boundary to Joe and don't imply a Substack push happened when it hasn't.
+
+
+---
+
+# Decision: Nick Emmanwori Rookie Eval — Article Kickoff
+
+**Date:** 2026-03-19
+**Author:** Lead
+**Type:** Article pipeline — kickoff (Stages 1–2)
+**GitHub Issue:** #80
+
+## Decision
+
+Kicked off the article creation flow for issue #80: "Nick Emmanwori's Rookie Season — What the Analytics Say About Seattle's Defensive Chess Piece."
+
+**Slug:** `sea-emmanwori-rookie-eval`
+**Path:** `content/articles/sea-emmanwori-rookie-eval/`
+**Current stage:** 2 (Discussion Prompt written)
+**Panel:** SEA + Analytics + Defense (3 agents, Level 2 minimum)
+
+## Key Corrections
+
+The original issue (#80) was created with Jacksonville context (see `lead-nick-emmanwori-article-issue.md`). The issue body has been corrected to Seattle. All kickoff artifacts use Seattle context exclusively. The prior inbox decision (`lead-nick-emmanwori-article-issue.md`) is now superseded by this document.
+
+## Artifacts Created
+
+| Artifact | Path | Purpose |
+|----------|------|---------|
+| `idea.md` | `content/articles/sea-emmanwori-rookie-eval/idea.md` | Captures the approved idea, angle, and data query list |
+| `panel-composition.md` | `content/articles/sea-emmanwori-rookie-eval/panel-composition.md` | Documents panel selection (SEA, Analytics, Defense) with rationale and lane boundaries |
+| `discussion-prompt.md` | `content/articles/sea-emmanwori-rookie-eval/discussion-prompt.md` | Full Stage 2 artifact — core question, tensions, data anchor commands, paths, panel instructions |
+| Pipeline DB record | `content/pipeline.db` | Article row (stage 2), stage transitions, panel composition, discussion prompt record |
+
+## What Remains Before Stage 3–4
+
+1. **Run the nflverse data queries** listed in the discussion prompt. The data anchors are currently command stubs, not populated tables. Analytics must execute the four primary queries and paste results into the prompt before panel agents are spawned.
+2. **Analytics may need to pull additional defensive data** from `snap_counts` and `pfr_defense` datasets for Emmanwori-specific stats not covered by the canned query scripts.
+3. Once data anchors are populated, Lead spawns the 3-agent panel (Stage 3→4).
+
+## Rationale
+
+- **Depth Level 2** is correct: single-player season evaluation, not a multi-layer roster construction piece. 3 agents, 2000–3500 words.
+- **3-agent panel (SEA, Analytics, Defense):** Each agent has a distinct lane — roster context, data/benchmarks, scheme interpretation. No overlap. Cap/Draft/PlayerRep excluded because this is a performance evaluation, not a contract or draft-capital article.
+- **Data-first approach:** The issue explicitly requires analytics-backed evaluation. Discussion prompt marks all stats as required anchors rather than fabricating numbers. This respects the reviewer-gate convention.
+- **Slug convention:** `sea-emmanwori-rookie-eval` follows the `{team}-{player}-{topic}` pattern used by `ind-sauce-gardner-gamble`, `kc-fields-trade-evaluation`, etc.
+
+
+---
+
+# Decision: Emmanwori Rookie Evaluation — Defensive Scheme Lens
+
+**Date:** 2026-03-19
+**Author:** Defense
+**Type:** Panel kickoff — scheme evaluation framework
+**Article:** Nick Emmanwori Rookie Season (Issue #80)
+
+## Decision
+
+Emmanwori's rookie season must be evaluated through Macdonald's disguise-heavy, rotation-dependent defensive system — not through traditional box-score safety metrics. The article's Defense lane should anchor on **deployment trust signals** (alignment diversity, post-snap rotation inclusion, red-zone/passing-down usage) rather than counting stats (tackles, INTs, PBUs).
+
+## Scheme Context
+
+Seattle runs a multi-front, pre-snap-disguise system under Macdonald/Durde. Core defensive identity:
+
+- **Two-high shells pre-snap → post-snap rotation** to Cover 1, 3, or 6
+- **Disciplined 4-man rush** with simulated pressures (show 5–6, send 4)
+- **Complex safety rotation** orchestrated by Julian Love (FS, signal-caller)
+- **Big-nickel personnel** as a primary sub-package, not a niche look
+
+Emmanwori's 6'2"+ frame slots into the **big-nickel hybrid role** — matching big slot WRs and TEs that traditional small slot corners can't handle. This is a schematically distinct role, not interchangeable with standard nickel CB or traditional SS.
+
+## Evaluation Framework for the Panel
+
+### What Counts as Real Evidence of Scheme Integration
+
+| Signal | Why It Matters | Data Source |
+|--------|---------------|-------------|
+| Pre-snap alignment diversity (box, slot, deep) | Shows coaching staff trusts him in multiple disguise looks | Snap alignment data (PFF/nflverse) |
+| Post-snap rotation reps | Rotation trust = full scheme integration, not just "stand here" | Film / alignment charting |
+| Passing-down snap share vs. early-down snap share | Big-nickel is a passing-down role; higher passing-down % is a positive signal | Snap counts by down/distance |
+| Target rate in coverage (targets per coverage snap) | Low target rate = erasing receivers, not "failing to create turnovers" | PFF coverage stats |
+| Red-zone deployment | Covering TEs in compressed space = high-value trust | Snap counts by field zone |
+| Blitz reps in simulated pressure packages | Included in calculated blitz design = full playbook integration | Pressure/blitz snap data |
+
+### False Signals the Article Must Avoid
+
+1. **"Only X tackles" = limited impact.** Safeties who tackle a lot are often cleaning up missed fits. Low tackle totals from a deep/hybrid safety can mean the defense in front of him functioned correctly.
+
+2. **"Only X interceptions" = not a playmaker.** In zone-match/disguise schemes, safeties close windows rather than bait throws. INT-dependent evaluation misses the scheme function entirely.
+
+3. **"Didn't start over Julian Love."** Love is the signal-caller who makes the rotation system work. A rookie not supplanting a veteran FS in a Super Bowl defense is expected. The question is what Emmanwori did when deployed, not whether he started.
+
+4. **Comparing to traditional strong safeties.** Emmanwori's value is chess-piece versatility (Hamilton, Derwin James, Budda Baker archetype), not box-safety run-stuffing (Kam Chancellor archetype). Wrong comp set = wrong evaluation.
+
+5. **Raw snap percentage as a referendum on readiness.** In a Super Bowl-winning defense with established starters, 35–45% snap share for a rookie hybrid is a feature (targeted deployment), not a bug (limited trust).
+
+### Key Scheme-Fit Questions for the Panel
+
+1. Was Emmanwori included in Macdonald's **post-snap rotation sets**, or was he deployed in static roles only? Rotation inclusion is the clearest trust signal.
+2. Was his big-nickel usage **personnel-driven** (triggered by 12-personnel, heavy sets) or **situation-driven** (passing downs, score differential)? Personnel-driven is narrower; situation-driven suggests broader scheme integration.
+3. How did **Seattle's defensive EPA shift** with Emmanwori on vs. off the field? (Flag small-sample caveats.)
+4. Did he execute **simulated pressure** assignments (fake blitz → drop into zone)? This is Macdonald's defensive signature.
+5. What was his **red-zone snap share** relative to his overall snap share? Higher red-zone deployment = high-value trust.
+
+## 2026 Projection Lens
+
+The question isn't "will Emmanwori start?" — it's **"can his role expand from targeted big-nickel deployment to being a core rotation piece in all three levels of the defense?"** Seattle lost Woolen and Coby Bryant, thinning the secondary. If Emmanwori demonstrated alignment versatility as a rookie, the 2026 projection is: his snap share grows not because the depth chart demands it, but because the coaching staff already tested those reps and trusts them.
+
+## Rationale
+
+Standard safety evaluation (tackles, INTs, FF) is nearly useless for evaluating a hybrid defender in a disguise-heavy scheme. The article-discussion skill requires each panelist to have a distinct lane. Defense's lane here is scheme-fit interpretation — translating raw snap/alignment data (from Analytics) into what it means about coaching trust and role trajectory. Without this framework, the article risks either underselling a meaningful rookie contribution or overselling counting stats that don't reflect scheme function.
+
