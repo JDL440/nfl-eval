@@ -96,3 +96,22 @@ narrative.** "JSN at 90% below market" stops scrolling better than "extension de
 
 ### Post-Stage-7 Cleanup Inventory & Scope (2026-03-18T02:24:01Z)
 - 📌 **Team update:** Completed detailed asset inventory for post-Stage-7 cleanup. Identified 11 scripts + 3 manifests ready for archival to docs/archived-scripts/ and docs/{production-notes,stage7}-archive/. Active retention: publish-prod-notes.mjs + SKILLs + agent histories stay in repo. All audit trails preserved in docs/ for compliance. Documented reusable Notes copy patterns (Stage 7 teasers + production captions) with card-first format guidelines. Merged 10 decision artifacts into .squad/decisions.md + cleared decision inbox. Orchestration logs created at .squad/orchestration-log/{timestamp}-lead.md and .squad/orchestration-log/{timestamp}-writer.md. Session log created at .squad/log/2026-03-18T02-24-01Z-notes-cleanup-scope.md.
+
+### Writer Prose-Safety Guardrails Implementation (2026-03-19T05:10:46Z)
+
+**Status:** 📌 TEAM UPDATE — New guardrails added to Writer charter by Editor
+
+Editor formalized upstream prose-safety checks to catch name/quote/table drift before Editor review. Your charter now includes five preflight requirements:
+
+1. Cross-check names in prose against supplied artifacts and in-article tables
+2. Never present paraphrases or stitched summaries as direct quotes  
+3. Avoid unsupported superlatives and absolutes
+4. Cross-check narrative claims against in-article tables before saving
+5. Keep ambiguous details generic instead of invented specifics
+
+**What this means for you:**
+- These are lightweight guardrails, not full fact-checking (Editor still does that)
+- They catch avoidable prose drift (specificity inflation, unsupported claims) before Editor sees the draft
+- Your role stays the same: draft compelling narrative from panel outputs
+- **Decision recorded in .squad/decisions.md**
+- Contact Editor if you have questions about guardrail application

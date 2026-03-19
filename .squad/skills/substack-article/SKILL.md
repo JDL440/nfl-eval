@@ -70,10 +70,13 @@ which may be one or more seasons stale.
 
 **Writer takes the raw expert output and crafts it into a polished Substack article.** Writer follows the house style guide in their charter and the structure template below. Writer does NOT fact-check — that's Editor's job.
 
+**Note on fact-checking preflight:** Before Writer begins, Lead runs a lightweight preflight verification (see [fact-checking SKILL.md](../fact-checking/SKILL.md)) on high-risk claims in the panel outputs, flagging contradictions, missing sources, and unsafe details. Writer receives the `panel-factcheck.md` artifact and uses it to understand which claims are verified, flagged, or problematic — but does not re-verify claims. Editor handles final fact-check at Stage 6.
+
 Spawn Writer with:
 - The topic brief
 - All raw expert analysis (pasted into the prompt)
 - The structure template below
+- **The `panel-factcheck.md` preflight** — include a summary so Writer knows which claims are verified, flagged, or problematic
 - **Model:** `claude-opus-4.6` (always — see `.squad/config/models.json` → `models.writer`)
 - **Output budget:** 5,000 tokens max. If content is dense, tighten narrative connective tissue first; never drop expert analysis. (See `.squad/config/models.json` → `max_output_tokens.writer`)
 
@@ -261,12 +264,13 @@ The tool auto-creates a Substack draft and returns an editor URL. Hand the URL t
 
 ```
 1. Topic selected from content/article-ideas.md
-2. Expert agents spawned in parallel (Phase 2)
-3. Writer assembles draft from expert output (Phase 3)
-4. Writer calls generate_article_images → images saved to content/images/{slug}/ (Phase 4b)
-5. Editor reviews draft + images — fact-check + style + structure + image review (Phase 5)
-6. Fixes applied if needed → re-review if 🔴 errors
-7. Saved to content/articles/ and committed, including images/ (Phase 6)
-8. Publisher pass → publish_to_substack called → draft URL returned to Joe (Phase 7)
-9. Joe reviews in Substack editor → clicks Publish
+2. Expert agents spawned in parallel
+3. Panel outputs collected; fact-check preflight run → panel-factcheck.md saved (gate between Stage 4 & 5)
+4. Writer assembles draft from expert output + preflight guidance
+5. Writer calls generate_article_images → images saved to content/images/{slug}/
+6. Editor reviews draft + images — fact-check + style + structure + image review
+7. Fixes applied if needed → re-review if errors
+8. Saved to content/articles/ and committed, including images/
+9. Publisher pass → publish_to_substack called → draft URL returned to Joe
+10. Joe reviews in Substack editor → clicks Publish
 ```

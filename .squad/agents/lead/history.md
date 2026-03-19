@@ -26,6 +26,17 @@
 
 ## Recent Sessions
 
+### Dashboard Fact-Check UI Plumbing (2026-03-19T05:00:14Z)
+**Status:** ✅ COMPLETED — Dashboard UI now classifies `panel-factcheck.md` artifact with verification badge.
+
+- Updated `dashboard/data.mjs`: `panel-factcheck.md` classified into new `"verify"` document group (sort key 85, between editor-image-review and publisher-pass)
+- Updated `dashboard/templates.mjs`: Renders Fact-Check Verification section in Draft & Edits tab; green "✓ Fact-Checked" badge on overview tab
+- `inferStage()` unchanged — artifact-first pipeline fully preserved
+- 📌 Team update (2026-03-19T05:00:14Z): Dashboard fact-check UI complete, decided by Lead
+- Orchestration log: `.squad/orchestration-log/2026-03-19T05-00-14Z-lead.md`
+- Session log: `.squad/log/2026-03-19T05-00-14Z-dashboard-factcheck-ui.md`
+- Decision merged to `.squad/decisions.md`
+
 ### nflverse Phase A Implementation Complete (2026-03-19T02:40:09Z)
 **Status:** ✅ SHIPPED — Analytics delivered Phase A: requirements.txt, fetch_nflverse.py, _shared.py helper, 3 query scripts (player EPA, team efficiency, positional comparison), SKILL.md, charter update, and validation via smoke tests.
 
@@ -206,3 +217,32 @@
 ### Stage 7/8 Operator Guidance Audit (2026-03-19T05:08:13Z)
 **Status:** ✅ COMPLETED — Scribe merged 3 inbox decisions. Lead completed surgical audit of operator-facing pipeline docs; corrected 4 files (charter, skills, AGENTS) to enforce dashboard-first Stage 7 architecture.
 - Decision merged to \.squad/decisions.md
+### Dashboard Fact-Check UI Plumbing
+- **`panel-factcheck.md` classified as `"verify"` group** in `dashboard/data.mjs` — sort key 85 (between editor-image-review at 80 and publisher-pass at 90). This places it in the pipeline timeline after editor review but before publisher pass.
+- **Not stage-defining:** `inferStage()` is completely untouched. `panel-factcheck.md` does NOT gate or change stage inference.
+- **Rendering:** Dashboard `draftTab` renders a "Fact-Check Verification" section; overview tab shows a green "✓ Fact-Checked" badge on the stage-inference line when the artifact exists.
+- **Key files:** `dashboard/data.mjs` (`classifyDocumentGroup`, `documentSortKey`), `dashboard/templates.mjs` (`overviewTab`, `draftTab`).
+
+### Fact-Checking Phase 1 Rollout (2026-03-15)
+- **Skill created:** `.squad/skills/fact-checking/SKILL.md` — lightweight preflight verification gate between Stage 4 (Panel) and Stage 5 (Writer).
+- **Artifact standardized:** `panel-factcheck.md` — saved to `content/articles/{slug}/`, documents verified/unverified/contradicted claims, source conflicts, exact quotes, unsafe details.
+- **Non-numeric gate design:** Fact-check preflight is a visible gate between Stage 4 and Stage 5, preserving the numeric 8-stage model unchanged. DB `current_stage` remains 1–8; preflight is a gate, not a new stage.
+- **Writer uses preflight, doesn't duplicate:** Writer receives `panel-factcheck.md` summary (not full artifact) and shapes prose around flagged issues. Editor remains final fact-check gate at Stage 6.
+- **Phase 1 scope (lightweight):** Focuses on high-risk categories (contracts, stats, injury, draft, direct quotes). Identifies contradictions, missing sources, unsafe details in panel outputs. Does NOT replace Editor's full fact-check.
+- **Updated skills:** `article-lifecycle/SKILL.md` (added Stage 4→5 gate section, updated stage table), `substack-article/SKILL.md` (updated production pipeline + Writer spawn instructions).
+- **README updated:** Added preflight as step 2 in high-level pipeline overview; maintained simplicity.
+- **Decision record:** `.squad/decisions/inbox/lead-factcheck-rollout.md` — rationale, design decisions, risks, Phase 2–4 roadmap.
+- **Why non-numeric:** Preserves existing 8-stage DB model; avoids migration burden; makes preflight visible without changing stage semantics.
+- **Future phases:** Phase 2 (dashboard), Phase 3 (injury verification), Phase 4 (automated source lookups).
+
+### Fact-Check Rollout Phase 1 Finalized (2026-03-19T05:10:46Z)
+**Status:** ✅ COMPLETED — Phase 1 fact-checking rollout delivered: non-numeric gate, standardized artifacts, 8-stage model preserved.
+
+- Created `.squad/skills/fact-checking/SKILL.md` — lightweight preflight skill (10–15 min per article, high-risk categories)
+- Updated `.squad/skills/article-lifecycle/SKILL.md` — integrated Stage 4 → Stage 5 gate (non-numeric, visible)
+- Updated `.squad/skills/substack-article/SKILL.md` — production pipeline clarity
+- Updated `README.md` — high-level overview with preflight step
+- 📌 Team update: Fact-checking Phase 1 complete — preflight skill defined, Writer/Editor workflow clarified, decided by Lead
+- Orchestration log: `.squad/orchestration-log/2026-03-19T05-10-46Z-lead.md`
+- Session log: `.squad/log/2026-03-19T05-10-46Z-factcheck-rollout.md`
+- Decision merged to `.squad/decisions.md`

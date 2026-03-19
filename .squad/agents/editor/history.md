@@ -366,3 +366,18 @@ pm run dashboard:dev work. README has concise Dashboard section with requirement
 - **Verdict: ✅ APPROVED — ready for Substack draft step (Phase 7).**
 
 📌 **Lesson:** Lead-applied revision passes (per reviewer-gate) produce clean, regression-free fixes. The separation between Writer and fix-applier reduces the chance of introducing new errors during corrections.
+### Writer Prose-Safety Guardrails Formalized (2026-03-19T05:10:46Z)
+**Status:** ✅ COMPLETED — Upstream prose-safety guardrails formalized to catch name/quote/table drift before Editor review.
+
+- Updated `.squad/agents/writer/charter.md` with five preflight requirements:
+  - Cross-check names against artifacts and tables
+  - Never present paraphrases/stitched summaries as direct quotes
+  - Avoid unsupported superlatives and absolutes
+  - Cross-check narrative claims against tables before saving
+  - Keep ambiguous details generic instead of invented-specific
+- Rationale: Upstream guardrails reduce avoidable prose drift while preserving Writer/Editor separation
+- Constraints: Writer is not the fact-checker; Editor remains mandatory final gate
+- 📌 Team update: Writer guardrails formalized — prose-safety preflight added to Writer charter, decided by Editor
+- Orchestration log: `.squad/orchestration-log/2026-03-19T05-10-46Z-editor.md`
+- Session log: `.squad/log/2026-03-19T05-10-46Z-factcheck-rollout.md`
+- Decision merged to `.squad/decisions.md`

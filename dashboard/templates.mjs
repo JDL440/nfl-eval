@@ -229,6 +229,7 @@ export function articlePage(detail) {
     const overviewDocs = docs.filter(d => d.group === "overview");
     const panelDocs   = docs.filter(d => d.group === "panel");
     const draftDocs   = docs.filter(d => d.group === "draft");
+    const verifyDocs  = docs.filter(d => d.group === "verify");
     const publishDocs = docs.filter(d => d.group === "publish");
     const otherDocs   = docs.filter(d => d.group === "other");
 
@@ -236,7 +237,7 @@ export function articlePage(detail) {
     const tabs = [
         { id: "overview", label: "Overview", content: overviewTab(inferred, artifacts, images, overviewDocs, slug) },
         { id: "panel", label: "Prompt & Panel", content: panelTab(prompt, panels, slug, artifacts, panelDocs) },
-        { id: "draft", label: "Draft & Edits", content: draftTab(slug, editorReviews, artifacts, draftDocs) },
+        { id: "draft", label: "Draft & Edits", content: draftTab(slug, editorReviews, artifacts, draftDocs, verifyDocs) },
         { id: "assets", label: "Assets", content: assetsTab(artifacts, images, otherDocs, slug) },
         { id: "preview", label: "Preview", content: `<div id="preview-pane"><a href="/preview/${encodeURIComponent(slug)}" target="_blank" class="btn">Open Canonical Preview →</a><p class="note">Preview renders draft.md through the publisher ProseMirror pipeline with subscribe-button injection, hero-image enforcement, and dense-table warnings.</p></div>` },
         { id: "validation", label: "Validation", content: validationTab(slug, article, validationResults) },
@@ -275,9 +276,10 @@ export function articlePage(detail) {
 // ── Tab renderers ────────────────────────────────────────────────────────────
 
 function overviewTab(inferred, artifacts, images, overviewDocs, slug) {
+    const hasFactCheck = artifacts.some(a => a.name === "panel-factcheck.md");
     let html = `
     <h3>Stage Inference</h3>
-    <p><strong>${esc(inferred.stageName)}</strong> — ${esc(inferred.detail)}</p>
+    <p><strong>${esc(inferred.stageName)}</strong> — ${esc(inferred.detail)}${hasFactCheck ? ` <span class="badge badge-green">✓ Fact-Checked</span>` : ""}</p>
     ${inferred.nextAction ? `<p>Next: <strong>${esc(inferred.nextAction)}</strong></p>` : ""}
     ${inferred.editorVerdict ? `<p>Editor: ${verdictBadge(inferred.editorVerdict)}</p>` : ""}`;
 
@@ -341,7 +343,7 @@ function panelTab(prompt, panels, slug, artifacts, panelDocs) {
     return html;
 }
 
-function draftTab(slug, editorReviews, artifacts, draftDocs) {
+function draftTab(slug, editorReviews, artifacts, draftDocs, verifyDocs) {
     let html = "<h3>Draft</h3>";
     const draftFileDocs = draftDocs.filter(d => /^draft(?:-.+)?\.md$/.test(d.name));
     if (draftFileDocs.length > 0) {
@@ -349,6 +351,14 @@ function draftTab(slug, editorReviews, artifacts, draftDocs) {
         html += docGroup(draftFileDocs, slug);
     } else {
         html += `<p class="dim">No draft.md found.</p>`;
+    }
+
+    html += "<h3>Fact-Check Verification</h3>";
+    if (verifyDocs && verifyDocs.length > 0) {
+        html += `<p><span class="badge badge-green">✓ Verification Complete</span></p>`;
+        html += docGroup(verifyDocs, slug);
+    } else {
+        html += `<p class="dim">No fact-check artifact found. Run the preflight gate between Stage 4 and Stage 5.</p>`;
     }
 
     html += "<h3>Editor Reviews</h3>";

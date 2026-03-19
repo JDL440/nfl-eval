@@ -382,6 +382,7 @@ function classifyDocumentGroup(name) {
     if (/^discussion-(summary|synthesis)\.md$/.test(name)) return "panel";
     if (/^draft(?:-.+)?\.md$/.test(name)) return "draft";
     if (/^editor-review(?:-\d+)?\.md$/.test(name) || name === "editor-image-review.md") return "draft";
+    if (name === "panel-factcheck.md") return "verify";
     if (name === "publisher-pass.md") return "publish";
     return "other";
 }
@@ -395,6 +396,7 @@ function documentSortKey(name) {
     if (/^draft(?:-.+)?\.md$/.test(name)) return 60;
     if (/^editor-review(?:-\d+)?\.md$/.test(name)) return 70;
     if (name === "editor-image-review.md") return 80;
+    if (name === "panel-factcheck.md") return 85;
     if (name === "publisher-pass.md") return 90;
     return 999;
 }

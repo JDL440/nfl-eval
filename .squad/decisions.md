@@ -1,3 +1,159 @@
+## Decisions — 2026-03-19
+
+### Dashboard Fact-Check UI Plumbing
+
+# Decision: Dashboard Fact-Check UI Plumbing
+
+**Date:** 2026-03-19
+**Decided by:** Lead
+**Scope:** dashboard/data.mjs, dashboard/templates.mjs
+
+## Decision
+
+`panel-factcheck.md` is classified into a new `"verify"` document group with sort key 85 (after editor-image-review, before publisher-pass). It renders in the Draft & Edits tab under a "Fact-Check Verification" section, and a green "✓ Fact-Checked" badge appears on the overview tab when the artifact exists.
+
+## Constraints Respected
+
+- `inferStage()` is **completely untouched** — `panel-factcheck.md` is not stage-defining.
+- No changes to the numeric stage model or stage inference semantics.
+- The artifact-first stage inference pipeline remains intact.
+
+## Rationale
+
+Fact-checking is a quality verification step that sits logically between the editor review (stage 6) and publisher pass (stage 7). The `"verify"` group keeps it distinct from both `"draft"` (editor artifacts) and `"publish"` (publisher artifacts) while placing it in the correct sort order. The badge on overview gives a quick visual signal without disrupting existing layout or semantics.
+
+
+---
+
+### Nick Emmanwori Rookie Eval — Article Kickoff
+
+# Decision: Nick Emmanwori Rookie Eval — Article Kickoff
+
+**Date:** 2026-03-19
+**Author:** Lead
+**Type:** Article pipeline — kickoff (Stages 1–2, data-populated)
+**GitHub Issue:** #80
+
+## Decision
+
+Kicked off and fully sharpened the article creation flow for issue #80: "Nick Emmanwori's Rookie Season — What the Analytics Say About Seattle's Defensive Chess Piece."
+
+**Slug:** `sea-emmanwori-rookie-eval`
+**Path:** `content/articles/sea-emmanwori-rookie-eval/`
+**Current stage:** 2 (Discussion Prompt written, data anchors populated)
+**Panel:** SEA + Analytics + Defense (3 agents, Level 2 minimum)
+
+## Key Corrections
+
+The original issue (#80) was created with Jacksonville context (see `lead-nick-emmanwori-article-issue.md`). The issue body has been corrected to Seattle. All kickoff artifacts use Seattle context exclusively. The prior inbox decision (`lead-nick-emmanwori-article-issue.md`) is now superseded by this document.
+
+## Specialist Inputs Integrated
+
+All three artifacts were sharpened with real specialist outputs:
+
+**Analytics delivered:**
+- Snap usage: 768 defensive snaps, 84.9%, 6th on SEA defense
+- Team efficiency: SEA defense -0.121 EPA/play allowed, 42.5% success rate, 47 sacks, 18 INTs
+- On-ball production (pfr_defense): 80 tackles, 90.9% efficiency, 74.2% comp allowed, 89.1 passer rating, 5.6 aDOT, 34 blitzes / 7 pressures
+- Draft value: R2 #35, AV 4 (Year 1); R2 S benchmark: 26 picks, 25.5 avg AV, 30.8% starter+
+- Tooling constraint: `query_player_epa.py` is offensive-only; do NOT use for safety evaluations
+
+**SEA delivered:**
+- Frame as Seattle/2025, not Jacksonville
+- Key tension: was he protected by a championship defense / Witherspoon-anchored deployment?
+- Draft capital fork: if Emmanwori is real, #32/#64 goes to CB/EDGE, not secondary insurance
+
+**Defense delivered:**
+- Evaluate through Macdonald's disguise-heavy rotation, not traditional safety box-score analysis
+- Key questions: post-snap rotation trust, big-nickel breadth, simulated-pressure/red-zone reps
+- Misleading evidence warnings: raw tackles, low INTs, simplistic snap% narratives
+- Comp family: chess-piece / hybrid deployments, not conventional box safety framing
+
+## Artifacts Created/Updated
+
+| Artifact | Status | Key Changes |
+|----------|--------|-------------|
+| `idea.md` | ✅ Updated | Real data points table (18 grounded metrics), sharpened angle with system-shelter tension, draft capital fork |
+| `panel-composition.md` | ✅ Updated | Data-grounded agent questions, misleading evidence warnings table, explicit comp-family guidance |
+| `discussion-prompt.md` | ✅ Updated | All data anchors populated (no more command stubs), 4 sharpened tensions with real numbers, "Metrics NOT To Use" table, scheme-aware paths, deployment-specific panel instructions |
+| Pipeline DB record | ✅ No change needed | Article row at stage 2, panel composition, discussion prompt already recorded |
+
+## What Remains Before Stage 3–4
+
+1. **Combine measurables** — one remaining query stub (`query_combine_comps.py --player "Nick Emmanwori"`). Run at panel time.
+2. **Lead spawns 3-agent panel** (SEA, Analytics, Defense) — artifacts are now data-complete enough to proceed.
+3. Analytics should produce a 3–5 player rookie safety comp table during their panel position.
+
+
+---
+
+### Emmanwori Rookie Evaluation — Defensive Scheme Lens
+
+# Decision: Emmanwori Rookie Evaluation — Defensive Scheme Lens
+
+**Date:** 2026-03-19
+**Author:** Defense
+**Type:** Panel kickoff — scheme evaluation framework
+**Article:** Nick Emmanwori Rookie Season (Issue #80)
+
+## Decision
+
+Emmanwori's rookie season must be evaluated through Macdonald's disguise-heavy, rotation-dependent defensive system — not through traditional box-score safety metrics. The article's Defense lane should anchor on **deployment trust signals** (alignment diversity, post-snap rotation inclusion, red-zone/passing-down usage) rather than counting stats (tackles, INTs, PBUs).
+
+## Scheme Context
+
+Seattle runs a multi-front, pre-snap-disguise system under Macdonald/Durde. Core defensive identity:
+
+- **Two-high shells pre-snap → post-snap rotation** to Cover 1, 3, or 6
+- **Disciplined 4-man rush** with simulated pressures (show 5–6, send 4)
+- **Complex safety rotation** orchestrated by Julian Love (FS, signal-caller)
+- **Big-nickel personnel** as a primary sub-package, not a niche look
+
+Emmanwori's 6'2"+ frame slots into the **big-nickel hybrid role** — matching big slot WRs and TEs that traditional small slot corners can't handle. This is a schematically distinct role, not interchangeable with standard nickel CB or traditional SS.
+
+## Evaluation Framework for the Panel
+
+### What Counts as Real Evidence of Scheme Integration
+
+| Signal | Why It Matters | Data Source |
+|--------|---------------|-------------|
+| Pre-snap alignment diversity (box, slot, deep) | Shows coaching staff trusts him in multiple disguise looks | Snap alignment data (PFF/nflverse) |
+| Post-snap rotation reps | Rotation trust = full scheme integration, not just "stand here" | Film / alignment charting |
+| Passing-down snap share vs. early-down snap share | Big-nickel is a passing-down role; higher passing-down % is a positive signal | Snap counts by down/distance |
+| Target rate in coverage (targets per coverage snap) | Low target rate = erasing receivers, not "failing to create turnovers" | PFF coverage stats |
+| Red-zone deployment | Covering TEs in compressed space = high-value trust | Snap counts by field zone |
+| Blitz reps in simulated pressure packages | Included in calculated blitz design = full playbook integration | Pressure/blitz snap data |
+
+### False Signals the Article Must Avoid
+
+1. **"Only X tackles" = limited impact.** Safeties who tackle a lot are often cleaning up missed fits. Low tackle totals from a deep/hybrid safety can mean the defense in front of him functioned correctly.
+
+2. **"Only X interceptions" = not a playmaker.** In zone-match/disguise schemes, safeties close windows rather than bait throws. INT-dependent evaluation misses the scheme function entirely.
+
+3. **"Didn't start over Julian Love."** Love is the signal-caller who makes the rotation system work. A rookie not supplanting a veteran FS in a Super Bowl defense is expected. The question is what Emmanwori did when deployed, not whether he started.
+
+4. **Comparing to traditional strong safeties.** Emmanwori's value is chess-piece versatility (Hamilton, Derwin James, Budda Baker archetype), not box-safety run-stuffing (Kam Chancellor archetype). Wrong comp set = wrong evaluation.
+
+5. **Raw snap percentage as a referendum on readiness.** In a Super Bowl-winning defense with established starters, 35–45% snap share for a rookie hybrid is a feature (targeted deployment), not a bug (limited trust).
+
+### Key Scheme-Fit Questions for the Panel
+
+1. Was Emmanwori included in Macdonald's **post-snap rotation sets**, or was he deployed in static roles only? Rotation inclusion is the clearest trust signal.
+2. Was his big-nickel usage **personnel-driven** (triggered by 12-personnel, heavy sets) or **situation-driven** (passing downs, score differential)? Personnel-driven is narrower; situation-driven suggests broader scheme integration.
+3. How did **Seattle's defensive EPA shift** with Emmanwori on vs. off the field? (Flag small-sample caveats.)
+4. Did he execute **simulated pressure** assignments (fake blitz → drop into zone)? This is Macdonald's defensive signature.
+5. What was his **red-zone snap share** relative to his overall snap share? Higher red-zone deployment = high-value trust.
+
+## 2026 Projection Lens
+
+The question isn't "will Emmanwori start?" — it's **"can his role expand from targeted big-nickel deployment to being a core rotation piece in all three levels of the defense?"** Seattle lost Woolen and Coby Bryant, thinning the secondary. If Emmanwori demonstrated alignment versatility as a rookie, the 2026 projection is: his snap share grows not because the depth chart demands it, but because the coaching staff already tested those reps and trusts them.
+
+## Rationale
+
+Standard safety evaluation (tackles, INTs, FF) is nearly useless for evaluating a hybrid defender in a disguise-heavy scheme. The article-discussion skill requires each panelist to have a distinct lane. Defense's lane here is scheme-fit interpretation — translating raw snap/alignment data (from Analytics) into what it means about coaching trust and role trajectory. Without this framework, the article risks either underselling a meaningful rookie contribution or overselling counting stats that don't reflect scheme function.
+
+
+
 # Decisions
 
 > Active decisions for the NFL 2026 Offseason project. Entries are organized by date (newest first). Older entries (30+ days) are archived in decisions-archive.md.
@@ -2048,6 +2204,35 @@ The original issue (#80) was created with Jacksonville context (see `lead-nick-e
 - **Data-first approach:** The issue explicitly requires analytics-backed evaluation. Discussion prompt marks all stats as required anchors rather than fabricating numbers. This respects the reviewer-gate convention.
 - **Slug convention:** `sea-emmanwori-rookie-eval` follows the `{team}-{player}-{topic}` pattern used by `ind-sauce-gardner-gamble`, `kc-fields-trade-evaluation`, etc.
 
+---
+
+# Decision: Writer Guardrails for Draft Fidelity
+
+**Date:** 2026-03-19
+**Decided by:** Editor
+**Scope:** `.squad/agents/writer/charter.md`
+
+## Decision
+
+Writer's charter now includes a lightweight prose-safety preflight before handoff to Editor. The preflight requires Writer to:
+
+- cross-check names in prose against supplied artifacts and in-article tables,
+- avoid presenting paraphrases or stitched summaries as direct quotes,
+- avoid unsupported superlatives and absolutes,
+- cross-check narrative claims against in-article tables before saving,
+- and keep ambiguous details generic instead of filling gaps with invented specifics.
+
+## Constraints Respected
+
+- Writer is still **not** the fact-checker.
+- Editor remains the **mandatory final gate** for article accuracy.
+- No independent outside-source verification was added to Writer's role.
+
+## Rationale
+
+Recent editorial history shows the recurring risk pattern is not just wrong numbers; it is prose that becomes more specific than the source support. Upstream guardrails reduce avoidable name/quote/table drift while preserving the Writer/Editor separation that exists to catch final factual errors.
+
+
 
 ---
 
@@ -2113,4 +2298,104 @@ The question isn't "will Emmanwori start?" — it's **"can his role expand from 
 ## Rationale
 
 Standard safety evaluation (tackles, INTs, FF) is nearly useless for evaluating a hybrid defender in a disguise-heavy scheme. The article-discussion skill requires each panelist to have a distinct lane. Defense's lane here is scheme-fit interpretation — translating raw snap/alignment data (from Analytics) into what it means about coaching trust and role trajectory. Without this framework, the article risks either underselling a meaningful rookie contribution or overselling counting stats that don't reflect scheme function.
+# Decision: Fact-Checking Phase 1 Rollout
+
+**Date:** 2026-03-15  
+**Owner:** Lead  
+**Status:** ✅ Implemented  
+
+## Context
+
+Implemented Phase 1 of the fact-checking rollout as requested. The goal was to add a lightweight preflight verification gate between panel outputs (Stage 4) and Writer drafting (Stage 5) without changing the numeric 8-stage model.
+
+## Decision
+
+1. **Created new skill:** `.squad/skills/fact-checking/SKILL.md`
+   - Defined the fact-check preflight as a **lightweight verification gate** (not a full fact-check)
+   - Focused on high-risk categories: contracts, stats, injury, draft, direct quotes
+   - Standardized artifact name as `panel-factcheck.md` (saved to `content/articles/{slug}/`)
+   - Documented execution workflow, output template, and anti-patterns
+
+2. **Updated article-lifecycle skill:** Added Stage 4 → Stage 5 Gate section
+   - Inserted fact-check preflight as a **non-numeric gate** between Stage 4 and Stage 5
+   - Kept the numeric 8-stage model intact (stages remain 1–8)
+   - Updated stage overview table to show preflight as a visible gate
+   - Updated Stage Transition Summary to show Gate transitions
+   - Updated Stage 5 Writer section to reference preflight guidance
+
+3. **Updated substack-article skill:** Clarified preflight in the production pipeline
+   - Updated Production Pipeline to show fact-check preflight as step 3 (Phase 2b)
+   - Updated Phase 3 (Writer) section to reference the preflight and clarify Writer role
+   - Updated Spawn Writer instructions to include preflight guidance
+   - Kept image generation and Editor review in their original positions
+
+4. **Updated README.md:** Added preflight to high-level pipeline overview
+   - Added step 2 (Preflight Verification) to the 6-step overview
+   - Clarified that preflight is lightweight and Editor does final fact-check
+   - Maintained simplicity for readers new to the system
+
+## Key Design Decisions
+
+### Artifact Standardization: `panel-factcheck.md`
+- Single standardized name for all fact-check preflight artifacts
+- Saved to `content/articles/{slug}/panel-factcheck.md` (co-located with discussion summary, draft, editor review)
+- Dashboard references will use this artifact name consistently
+
+### Non-Numeric Gate
+- Fact-check preflight is a **gate between Stage 4 and Stage 5**, not a new numeric stage
+- Preserves the 8-stage model in database and documentation
+- Clear in skills that numeric stages remain 1–8; preflight is a visible gate
+- Avoids migration burden on DB schema and existing article tracking
+
+### Lightweight Scope (Phase 1)
+- **In scope:** Flagging contradictions, missing sources, unsafe details in panel outputs
+- **Out of scope:** Full fact-check (Editor's job), player name verification, grammar review, Substack formatting
+- Expected execution time: 10–15 minutes per article
+- Future phases (2–4) can add plagiarism checks, injury verification, automated source lookups
+
+### Writer Does Not Re-Fact-Check
+- Writer receives `panel-factcheck.md` preflight summary (not full artifact)
+- Writer uses preflight to understand which claims are verified ✅ / flagged ⚠️ / halted 🔴
+- Writer shapes prose around flagged issues but does not reverify claims
+- Clear handoff: **Lead runs preflight, Writer drafts using guidance, Editor fact-checks final prose**
+
+### Editor Remains Final Gate
+- Editor still runs full fact-check at Stage 6 (unchanged)
+- Editor has authority over factual accuracy in published article
+- Preflight is an **upstream risk mitigation**, not a replacement for Editor
+
+## No Dashboard Changes in Phase 1
+
+Decision: **Dashboard reference will use `panel-factcheck.md` artifact name**, but dashboard UI/display logic is deferred to Phase 2. Phase 1 focuses on skill definition and writer/editor workflow integration.
+
+## Rationale
+
+1. **Standardized artifact name (`panel-factcheck.md`)** ensures consistency across skills, team agents, and future dashboard implementation
+2. **Non-numeric gate** keeps the 8-stage model intact while making the preflight visible and mandatory in workflows
+3. **Lightweight scope** prevents the preflight from becoming another full editorial pass; it's a risk-flagging tool, not a fact-checker
+4. **Clear role separation** (Lead → Writer → Editor) maintains the existing separation of concerns while adding an upstream safeguard
+
+## Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Preflight becomes too heavy | Phase 1 scope is narrow; team can monitor execution time and adjust in Phase 2 |
+| Writer ignores preflight flags | Include preflight summary in Writer spawn prompt; make it visible |
+| Duplicate effort with Editor | Preflight focuses on **panel contradictions** (where Editor might miss internal conflicts); Editor focuses on **final prose accuracy** |
+| Dashboard confusion over non-numeric gate | Document clearly in skills; future dashboard will have explicit preflight status column |
+
+## Next Steps (Phases 2–4)
+
+- **Phase 2:** Dashboard implementation of `panel-factcheck.md` display and preflight status tracking
+- **Phase 3:** Injury/medical claim verification (consult domain experts)
+- **Phase 4:** Automated source lookups (OTC/Spotrac API for contract figures)
+
+## Validation
+
+- **Skills created/updated:** ✅
+- **README updated:** ✅
+- **Numeric 8-stage model preserved:** ✅
+- **Artifact name standardized:** ✅ (`panel-factcheck.md`)
+- **Writer/Editor roles clarified:** ✅
+- **Dashboard deferred to Phase 2:** ✅
 

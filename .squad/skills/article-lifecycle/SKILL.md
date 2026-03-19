@@ -39,6 +39,8 @@ This is **coordinator-level guidance**. It tells Lead how to orchestrate the ful
 │  2   │ Discussion Prompt    │ Lead           │ Structured brief        │
 │  3   │ Panel Composition    │ Lead           │ Named panel + rationale │
 │  4   │ Panel Discussion     │ Panel agents   │ Raw expert analysis     │
+│      │ *→ Fact-Check        │ Lead           │ panel-factcheck.md      │
+│      │   Preflight (gate)*  │ (non-numeric)  │ (verification artifact) │
 │  5   │ Article Drafting     │ Writer         │ Draft in content/articles│
 │  6   │ Editor Pass          │ Editor         │ Verdict + corrections   │
 │  7   │ Publisher Pass       │ Lead → Joe     │ Dashboard-ready handoff │
@@ -300,10 +302,41 @@ Each panelist produces a raw analysis document. Lead collects all outputs and pa
 
 ---
 
+## Stage 4 → Stage 5 Gate: Fact-Check Preflight
+
+**Owner:** Lead
+**Input:** All raw panel outputs from Stage 4
+**Output:** `panel-factcheck.md` saved to `content/articles/{slug}/`
+**Status:** Gating condition before Writer proceeds
+
+### What This Gate Does
+
+After all panelists return their analysis, Lead runs a **lightweight preflight verification** on high-risk claims: contracts, stats, injury timelines, draft facts, and direct quotes. This is **not** a full fact-check — that's Editor's job in Stage 6. Instead, the preflight identifies contradictions, missing sources, and unsafe details in the expert analysis so Writer can craft the draft using verified/flagged information.
+
+### Execution
+
+1. **Extract high-risk claims** from panel outputs (see [fact-checking SKILL.md](../fact-checking/SKILL.md) for category definitions)
+2. **Cross-reference lightweight:** Note if claims are sourced within the panel outputs (e.g., "OTC shows", "Spotrac lists") or unsourced assertions
+3. **Identify conflicts:** If two panelists claim different numbers, flag and recommend a source resolution
+4. **Safe-to-publish assessment:** Mark each claim as ✅ Clear / ⚠️ Caution / 🔴 Halt
+5. **Document in `panel-factcheck.md`:** Save to `content/articles/{slug}/panel-factcheck.md` with verified claims, contradictions, source conflicts, quotable passages, and unsafe details
+
+### Done when
+
+- [ ] All panel outputs reviewed for high-risk categories
+- [ ] `panel-factcheck.md` saved to `content/articles/{slug}/`
+- [ ] Fact-check status is ✅ Clear to Draft / ⚠️ Caution / 🔴 Halt for Clarification
+- [ ] Writer receives preflight summary (via GitHub comment or direct handoff)
+- [ ] If 🔴 Halt status → request clarification from specific panelist(s) before proceeding to Stage 5
+
+> **Full reference:** See [fact-checking SKILL.md](../fact-checking/SKILL.md) for detailed artifact template, execution workflow, and anti-patterns.
+
+---
+
 ## Stage 5 — Article Drafting (Writer)
 
 **Owner:** Writer
-**Input:** Discussion Prompt + all raw panel outputs
+**Input:** Discussion Prompt + all raw panel outputs + `panel-factcheck.md` preflight
 **Output:** Draft article saved to `content/articles/{slug}/draft.md`
 
 Writer takes all panel outputs and assembles a polished article following the house style: **The Ringer meets OverTheCap** — informed but accessible, data-heavy but narrative-driven.
@@ -312,7 +345,9 @@ Writer takes all panel outputs and assembles a polished article following the ho
 
 ### Key reminders
 
-- Writer does **not** fact-check — that's Editor's job in Stage 6
+- Writer uses the **`panel-factcheck.md` preflight** to understand which claims are verified, flagged, or problematic
+- Writer does **not** re-fact-check claims — that's Editor's job in Stage 6
+- If a claim is flagged 🔴 Halt in the preflight, Writer either uses a safer version or skips it pending clarification
 - Disagreements between panelists are **content**, not problems to resolve
 - Draft goes to `content/articles/{slug}/draft.md` — not directly to Substack
 - Target length: 2,000–4,000 words (8–15 min read)
@@ -521,8 +556,9 @@ Lead reviews the recommendation and can override before spawning.
 | 1 → 2 | Idea approved by Joe | Joe |
 | 2 → 3 | Discussion Prompt complete, tension identified | Lead |
 | 3 → 4 | Panel finalized (2–5 agents), each with specific question | Lead |
-| 4 → 5 | All panelists returned analysis, Lead reviewed for gaps | Lead |
-| 5 → 6 | Draft saved to `content/articles/{slug}/draft.md` | Writer |
+| 4 → Fact-Check Gate | All panelists returned analysis, Lead reviewed for gaps | Lead |
+| Gate → 5 | `panel-factcheck.md` saved, status ✅ Clear to Draft / ⚠️ Caution / 🔴 Halt | Lead |
+| 5 → 6 | Draft saved to `content/articles/{slug}.md` | Writer |
 | 6 → 7 | Editor verdict is ✅ APPROVED (all 🔴 resolved) | Editor |
 | 7 → 8 | Joe approves the dashboard review and the live publish succeeds (`substack_url` recorded) | Joe |
 | 8 → Done | Article live on Substack, cleanup complete, promotions handled as needed | Joe |
