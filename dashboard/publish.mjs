@@ -29,6 +29,8 @@ const PIPELINE_STATE = join(REPO_ROOT, "content", "pipeline_state.py");
 const PYTHON = process.env.PYTHON || "python";
 
 const PUBLISH_BUTTON_PATTERNS = [
+    /^send to .+ now$/i,
+    /^publish to .+ now$/i,
     /^publish now$/i,
     /^send now$/i,
     /^publish$/i,

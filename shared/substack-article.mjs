@@ -32,6 +32,33 @@ function safeExtractSubdomain(url) {
     }
 }
 
+function sanitizeSubtitleText(value) {
+    return String(value || "")
+        .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+        .replace(/\*\*\*(.+?)\*\*\*/g, "$1")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/(^|[\s(])\*([^*\n]+)\*(?=[$\s).,;:!?]|$)/g, "$1$2")
+        .replace(/(^|[\s(])_([^_\n]+)_(?=[$\s).,;:!?]|$)/g, "$1$2")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+const SUBSTACK_SUBTITLE_MAX_LENGTH = 140;
+
+function clampSubtitleText(value, maxLength = SUBSTACK_SUBTITLE_MAX_LENGTH) {
+    const subtitle = sanitizeSubtitleText(value);
+    if (subtitle.length <= maxLength) return subtitle;
+
+    const clipped = subtitle.slice(0, maxLength - 1);
+    const lastSpace = clipped.lastIndexOf(" ");
+    const safeClip = lastSpace >= Math.floor(maxLength * 0.6)
+        ? clipped.slice(0, lastSpace)
+        : clipped;
+
+    return `${safeClip.trimEnd()}…`;
+}
+
 export async function lookupTeamFromDb(filePath, cwd = process.cwd()) {
     const dbPath = resolve(cwd, "content", "pipeline.db");
     if (!existsSync(dbPath)) return null;
@@ -210,7 +237,7 @@ export async function upsertSubstackDraftFromMarkdown({
     const markdown = readFileSync(filePath, "utf-8");
     const extracted = extractMetaFromMarkdown(markdown);
     const title = explicitTitle || extracted.title;
-    const subtitle = explicitSubtitle || extracted.subtitle || "";
+    const subtitle = clampSubtitleText(explicitSubtitle || extracted.subtitle || "");
     const bodyMarkdown = extracted.bodyMarkdown;
 
     if (!title) {
