@@ -122,6 +122,7 @@ function buildImagePrompt(imageType, context) {
 
     const teamStr = team ? `${team} NFL team` : "NFL";
     const playerStr = players?.length ? `featuring ${players.join(", ")}` : "";
+    const isPlayerCentric = players?.length > 0;
 
     const styleGuide = [
         "Photorealistic photograph, not an illustration or digital art.",
@@ -141,7 +142,10 @@ function buildImagePrompt(imageType, context) {
             `Subject: ${teamStr} ${playerStr}.`,
             styleGuide,
             "Wide aspect ratio. Hero image that captures the emotional core of the article.",
-            "Abstract or atmospheric interpretation — not literal. No people or faces visible.",
+            isPlayerCentric
+                ? "If the article is centered on a specific player, make that player the clear visual subject in a realistic game-action or sideline moment that reflects the headline."
+                : "If the story is team-wide or abstract, use a strong atmospheric team-driven scene tied to the headline.",
+            "The image should explain the article at a glance and feel social-share ready.",
         ].filter(Boolean).join(" ");
     }
 
@@ -152,7 +156,9 @@ function buildImagePrompt(imageType, context) {
             `Subject: ${teamStr} ${playerStr}.`,
             styleGuide,
             "Wide 16:9 landscape format. Banner-style image that breaks up body text.",
-            "No people or faces visible. Focus on atmosphere, environment, and objects.",
+            isPlayerCentric
+                ? "When the article is player-centric, use the player as the visual subject rather than a generic atmospheric scene."
+                : "When the article is not player-centric, focus on atmosphere, environment, and team-driven editorial storytelling.",
         ].filter(Boolean).join(" ");
     }
 
@@ -305,7 +311,7 @@ export async function generateArticleImages(params) {
                 filename: savedName,
                 absPath,
                 relativePath,
-                markdownRef: `![${altText}|${altText}](${relativePath})`,
+                markdownRef: `![${altText}](${relativePath})`,
                 prompt,
                 model: modelUsed,
             });
@@ -377,18 +383,18 @@ export const generateArticleImagesTool = {
                 items: { type: "string" },
                 description: "Player names to reference in image prompts. Both Imagen 4 and Gemini Flash can generate athlete likenesses in editorial sports contexts.",
             },
-            image_types: {
-                type: "array",
-                items: {
-                    type: "string",
-                    enum: ["cover", "inline"],
-                },
-                description: "Types of images to generate. 'cover' = 16:9 hero image (set manually in Substack editor). 'inline' = 16:9 wide banner image embedded in the article body. Default: ['inline']. For 2 inline images use ['inline', 'inline'] — they will be named -inline-1.png and -inline-2.png.",
-                default: ["inline"],
-            },
-            count_per_type: {
-                type: "integer",
-                minimum: 1,
+                    image_types: {
+                        type: "array",
+                        items: {
+                            type: "string",
+                            enum: ["cover", "inline"],
+                        },
+                        description: "Types of images to generate. 'cover' = 16:9 hero image placed at the top of the article body and also suitable for Substack/social sharing. 'inline' = 16:9 wide banner image embedded in the article body. Default: ['inline']. For 2 inline images use ['inline', 'inline'] — they will be named -inline-1.png and -inline-2.png.",
+                        default: ["inline"],
+                    },
+                    count_per_type: {
+                        type: "integer",
+                        minimum: 1,
                 maximum: 4,
                 description: "Number of images to generate per type. Default: 1",
                 default: 1,
@@ -401,11 +407,11 @@ export const generateArticleImagesTool = {
             use_model: {
                 type: "string",
                 enum: ["gemini", "auto", "imagen-4"],
-                description: "Image model to use. 'gemini' (default) uses Gemini 3 Pro Image. 'auto' tries Gemini first, falls back to Imagen 4. 'imagen-4' uses Imagen 4 Ultra directly.",
-                default: "gemini",
+                        description: "Image model to use. 'gemini' (default) uses Gemini 3 Pro Image. 'auto' tries Gemini first, falls back to Imagen 4. 'imagen-4' uses Imagen 4 Ultra directly.",
+                        default: "gemini",
+                    },
+                },
             },
-        },
-    },
 };
 
 export function formatGenerateArticleImagesResult({ results, errors, outputDir, telemetryWarnings }) {
@@ -434,9 +440,9 @@ export function formatGenerateArticleImagesResult({ results, errors, outputDir, 
         lines.push("");
         lines.push("1. Review the saved images in `" + outputDir + "`");
         lines.push("2. Paste the markdown references above into the article at the right positions:");
-        lines.push("   - Cover image: directly after the subtitle line (`*subtitle*`)");
+        lines.push("   - Cover image: at the very top of the article body, above the TLDR block");
         lines.push("   - Inline images: at natural section breaks or to illustrate specific points");
-        lines.push("3. The cover image will also be set in the Substack editor (Stage 8)");
+        lines.push("3. Use clean image markdown without captions; alt text stays, visible captions do not");
         lines.push("4. Proceed to the Editor pass — Editor can review images alongside the text");
 
         if (errors.length > 0) {

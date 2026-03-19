@@ -11,7 +11,7 @@ source: "designed 2026-03-15 — Gemini API docs + NFL Lab editorial standards"
 > **Confidence:** high — validated end-to-end 2026-03-15 (Imagen 4, cover + inline, seahawks-rb test article)
 > **Created:** 2026-03-15
 > **Last validated:** 2026-03-15 (Imagen 4 — 1.8MB cover + 1.2MB inline generated successfully)
-> **Owned by:** Writer (triggers generation after draft), Editor (reviews images), Joe (selects cover in Substack)
+> **Owned by:** Writer (triggers generation after draft), Editor (reviews images), Joe (final social/share review in Substack)
 
 ## Purpose
 
@@ -29,22 +29,23 @@ Images are generated at **Stage 5 — end of Article Drafting**, immediately aft
 Writer saves draft → generate_article_images → Editor reviews text + images → Publisher pass
 ```
 
-Generate **exactly 2 inline images** per article:
-- **No cover/banner image in markdown** — the Substack post cover is set manually in the Substack editor by Joe at Stage 8. Do not generate or embed a cover in the article body.
-- **2 inline images** (1:1 aspect ratio, rendered at `imageSize: "normal"`) — placed at the two best text breaks to keep mobile readers scrolling.
+Generate **exactly 1 cover image + 2 inline images** per article:
+- **1 cover image** — place it in article markdown at the very top of the body, above the TLDR block. This is the hero image for the article and should be strong enough for social sharing.
+- **2 inline images** (rendered at `imageSize: "normal"`) — placed at the two best text breaks to keep mobile readers scrolling.
 
-### ⚠️ First Image Must Be Hero-Safe (Social Share Rule)
+### First Image Must Be Hero-Safe (Social Share Rule)
 
 **The first image in the article drives the Substack social share thumbnail and email preview.** It must NOT be a chart, table, data visualization, or dense analytical image.
 
-- **`inline-1`** = **Hero/atmospheric image** — dramatic stadium scene, abstract team-color art, player silhouette, moody editorial imagery. This is the image readers see first in email/feed.
+- **`cover-1`** = **Hero image** — the image readers see first in the article and the one most likely to carry social/share duties.
+- **`inline-1`** = early supporting image — still editorial and visually strong, but secondary to the cover.
 - **`inline-2`** = Can be analytical, chart-adjacent, or more specific to the article's data angle.
 
 The publisher extension (`publish_to_substack`) enforces this at publish time: if the first image filename contains chart/table/data keywords, it will attempt to swap it with a later non-chart image. But generating the right image up front avoids the swap and produces a better result.
 
-**Safe inline-1 prompt patterns:** stadium atmosphere, team color palettes, abstract competition imagery, player silhouettes, dramatic lighting. See "Prompt Strategy" section below.
+**Safe cover prompt patterns:** team atmosphere, game-action, sideline tension, player-led editorial photography, dramatic stadium lighting. See "Prompt Strategy" section below.
 
-**Unsafe for inline-1:** anything with `-table`, `-chart`, `-data`, `-decision`, `-comparison`, `-breakdown`, `-salary`, `-contract` in the filename or prompt.
+**Unsafe for the first image:** anything with `-table`, `-chart`, `-data`, `-decision`, `-comparison`, `-breakdown`, `-salary`, `-contract` in the filename or prompt.
 
 ---
 
@@ -57,8 +58,8 @@ generate_article_images(
   article_summary: "Devon Witherspoon's contract extension negotiation analyzed by Cap, PlayerRep, and SEA agents — they disagree on value by $6M/year.",
   team: "Seattle Seahawks",
   players: ["Devon Witherspoon"],
-  image_types: ["inline"],
-  count_per_type: 2,
+  image_types: ["cover", "inline", "inline"],
+  count_per_type: 1,
   use_model: "gemini-flash"
 )
 ```
@@ -69,19 +70,25 @@ The tool:
 3. Saves images to `content/images/{slug}/`
 4. Returns markdown references ready to paste into the article
 
-### Inline image placement
+### Article image placement
 
-Insert inline images at natural content breaks — but keep `inline-1` early enough that it becomes the article's first body image.
+Insert the cover image before the TLDR block, then place inline images at natural content breaks.
 
-- **Inline 1:** Hero/editorial image placed after the opening setup and before any table/chart image
+- **Cover:** Hero/editorial image placed above the TLDR block
+- **Inline 1:** Supporting editorial image placed after the opening setup and before any table/chart image
 - **Inline 2:** Secondary editorial image at a natural mid-article tension point
 
 ```markdown
+![Devon Witherspoon extension analysis hero](../../images/witherspoon-extension-analysis/witherspoon-extension-analysis-cover-1.png)
+
+> **📋 TLDR**
+> - ...
+
 ## Section Heading
 
 {paragraph...}
 
-![Devon Witherspoon extension analysis — inline image 1|Seahawks cornerback market analysis](./images/witherspoon-extension-analysis/witherspoon-extension-analysis-inline-1.png)
+![Devon Witherspoon extension analysis inline image 1](../../images/witherspoon-extension-analysis/witherspoon-extension-analysis-inline-1.png)
 
 {next paragraph...}
 ```
@@ -92,9 +99,8 @@ Insert inline images at natural content breaks — but keep `inline-1` early eno
 
 | Type | Aspect Ratio | Use for | Placement |
 |------|-------------|---------|-----------|
-| `inline` | 1:1 | Body illustration, section break, text breaker | Between paragraphs/sections |
-
-> **Cover/banner images are not generated by the tool.** Joe sets the Substack post cover manually in the Substack editor.
+| `cover` | 16:9 | Hero image for top of article and social/share usage | Above TLDR |
+| `inline` | 16:9 | Body illustration, section break, text breaker | Between paragraphs/sections |
 
 ---
 
@@ -113,10 +119,13 @@ The tool auto-builds prompts, but you can override with `custom_prompts` for spe
 | Trade evaluation | Two team color palettes, exchange imagery |
 | Season preview | Stadium atmosphere, crowd energy, field overhead |
 | Cover art (general) | Dramatic stadium lighting, team colors, atmospheric weather |
+| Player-centric hero art | Realistic player-led game-action or sideline tension image tied to the headline |
 
 ### Important notes on athlete likenesses
 
 Both Imagen 4 and Gemini Flash can generate athlete likenesses in editorial sports contexts. Use `players` to pass player names — this improves both scene accuracy and likeness quality. **Gemini Flash tends to produce better player likenesses** (as seen with JSN cover); use `use_model: "gemini-flash"` when player likeness matters.
+
+**Hero-image rule:** if the headline or article is clearly player-centric, the cover image should show that player as the primary subject. If the article is more team-wide, strategic, or abstract, the cover can stay team-led or atmospheric.
 
 **⚠️ Known failure patterns — avoid these prompts:**
 
@@ -143,7 +152,7 @@ generate_article_images(
   article_slug: "seahawks-rb-depth-chart",
   article_title: "...",
   custom_prompts: {
-    "cover": "Aerial view of an NFL stadium at golden hour, Seattle skyline visible in background, dramatic storm clouds, moody cinematic lighting. No text or logos. Editorial sports photography style.",
+    "cover": "Game-action editorial photo of Devon Witherspoon as the clear subject, Seattle context, dramatic stadium lighting, realistic sports photography, no text or logos.",
     "inline": "Chess pieces on a football field, strategic positioning, shallow depth of field, team colors of navy blue and neon green. No text. Abstract editorial image."
   }
 )
@@ -162,8 +171,8 @@ content/
   images/
     witherspoon-extension-analysis/
       witherspoon-extension-analysis-cover-1.png
-      witherspoon-extension-analysis-cover-2.png
       witherspoon-extension-analysis-inline-1.png
+      witherspoon-extension-analysis-inline-2.png
 ```
 
 The tool returns markdown references for each image:
@@ -197,14 +206,14 @@ After generating multiple images for the same article:
 
 ## Cover Image Handling
 
-**Current policy:** Do NOT generate a cover image for the article body. The Substack post cover (thumbnail shown in email/feed) is set manually by Joe in the Substack editor at Stage 8. Article markdown contains only inline images.
+**Current policy:** Generate a cover image and place it in the article body above the TLDR block. That top image should also be good enough for Joe to reuse as the Substack post cover if desired.
 
 | | What it is | Where it lives | Who sets it |
 |---|---|---|---|
-| **Article body cover** | NOT USED — policy removed | N/A | N/A |
-| **Substack post cover** | The thumbnail shown in email/feed | Set in Substack editor, not in markdown | Joe at Stage 8 |
+| **Article body cover** | Hero image at top of article | In markdown, above TLDR | Writer |
+| **Substack post cover** | The thumbnail shown in email/feed | Usually reuse/select from generated hero art in Substack editor | Joe at Stage 8 |
 
-**Inline-1 IS the de facto hero image.** Generate it as a dramatic, atmospheric, hero-style image and place it early in the body (after the opening hook). Joe can reuse that image as the Substack post cover if appropriate. The publisher extension will warn/swap if inline-1 looks like a chart or table.
+**The cover image is the de facto hero image.** Generate it as a dramatic, article-explaining image and place it above TLDR. Joe can reuse that image as the Substack post cover if appropriate. The publisher extension will warn/swap if the first image looks like a chart or table.
 
 ---
 
@@ -216,10 +225,11 @@ Editor reviews images at Stage 6 alongside the text:
 
 - [ ] Images are visually appropriate for the article topic
 - [ ] No misleading, offensive, or inappropriate content
-- [ ] Cover image has strong visual impact (would a reader click on this?)
+- [ ] Cover image has strong visual impact and clearly tells the story at a glance
+- [ ] If the article is player-centric, the cover image is player-centric too
 - [ ] Inline images add value — they're not just filler
 - [ ] Alt text is descriptive and accurate (screenreader / SEO)
-- [ ] Captions (if used) are accurate and add context
+- [ ] No visible image captions are present unless there is a rare editorial reason
 - [ ] Image files exist and paths resolve correctly
 
 ### Editor image verdict format
@@ -255,7 +265,7 @@ The tool tries Imagen 3 first and falls back automatically. Override with `use_m
   - Markdown references produced correctly
 
 - ❌ Don't generate images before the article draft exists — prompts need the article context
-- ❌ Don't generate a cover/banner image for the article body — current policy: cover is set manually in Substack editor at Stage 8
+- ❌ Don't skip the cover image — it belongs at the top of the article body above TLDR
 - ❌ Don't generate more than 2 inline images per article — keeps costs down and mobile-friendly
 - ❌ Don't skip Editor image review — images can be off-brand or inappropriate
 - ❌ Don't leave `players: []` empty if the article is player-specific — names help guide both atmosphere and likeness

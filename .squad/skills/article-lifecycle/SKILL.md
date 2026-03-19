@@ -356,6 +356,7 @@ Writer takes all panel outputs and assembles a polished article following the ho
 
 - [ ] Draft saved to `content/articles/{slug}/draft.md`
 - [ ] Article follows the structure template from substack-article skill
+- [ ] Cover image is inserted above the TLDR block and uses the same normal text-column width as inline images
 - [ ] All panelists' analysis is represented (none dropped)
 - [ ] Headline follows the formula options in substack-article skill
 - [ ] Boilerplate footer included (expert panel description + CTA + cliffhanger-style next article tease)
@@ -409,6 +410,7 @@ Every article must pass three accuracy checks before moving to Stage 7 (Publishe
 - Cap figures, roster construction, and coaching staff reflect the current offseason (not last year's)
 
 ### Gate 2: TLDR Present
+- Cover image may appear before TLDR and should be the only content above it besides title/subtitle
 - Article must have a `> **📋 TLDR**` callout block immediately after the opening hook
 - TLDR must have 3-4 bullet points: situation, assets, verdict, central debate
 - Editor is responsible for verifying TLDR presence and accuracy

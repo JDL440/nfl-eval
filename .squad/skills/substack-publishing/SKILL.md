@@ -129,12 +129,11 @@ Use standard markdown image syntax. Both **local files** and **remote URLs** are
 ![Alt text](https://example.com/image.jpg)
 ```
 
-With a caption (two options — both work for local and remote):
+Visible captions are intentionally suppressed in this workflow, even though Substack supports them. Keep useful alt text, skip caption text:
 
 ```markdown
-![Alt text|This caption appears below the image](./images/my-chart.png)
-
-![Alt text](https://example.com/image.jpg "This caption appears below the image")
+![Alt text](./images/my-chart.png)
+![Alt text](https://example.com/image.jpg)
 ```
 
 **Local images are automatically uploaded.** If the path doesn't start with `http://` or `https://`, the extension uploads the file to Substack's CDN (S3) before creating the draft. The image is replaced with a permanent `substack-post-media.s3.amazonaws.com` URL in the draft. Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`.
@@ -143,9 +142,9 @@ Paths are resolved relative to the article file, so `./images/chart.png` means t
 
 **Remote URLs** are passed through as-is — no upload needed. Any publicly accessible URL works.
 
-**Cover image:** Set in the Substack editor during Stage 8 — not set via the publishing tool.
+**Cover image:** Include it directly in the article body as the first image, above the TLDR block. Joe can still reuse/select that hero image in the Substack editor during Stage 8 if needed.
 
-**Important social-share rule:** The **first body image** in the article becomes the social/email share image on Substack. That first image must be a **hero/editorial image tied to the headline**, not a chart, table, or data graphic. Use `inline-1` as the hero image and place it before any table render or chart image. If a draft accidentally starts with a table image, the publisher now auto-swaps in the first later hero-safe image when possible.
+**Important social-share rule:** The **first body image** in the article becomes the social/email share image on Substack. That first image must be a **hero/editorial image tied to the headline**, not a chart, table, or data graphic. Use the **cover image** as that hero image and place it above TLDR. If the article is player-centric, the cover should usually feature the player. If a draft accidentally starts with a table image, the publisher now auto-swaps in the first later hero-safe image when possible.
 
 ### Subscribe Widgets
 
@@ -183,7 +182,7 @@ A few things are best done by Joe during Stage 8 review — they don't need to b
 
 | Element | How to handle |
 |---------|--------------|
-| **Cover image** | Upload/select in Substack editor |
+| **Cover image** | Generate it and place it above TLDR in the article body; Joe may also reuse/select it in Substack editor |
 | **URL slug** | Edit in Substack editor (default: auto-generated from title) |
 | **Tags** | Auto-applied by the tool (team + specialist agents) |
 | **Scheduled publish time** | Set in Substack editor |
@@ -226,7 +225,7 @@ Content...
 
 ## Another Section
 
-![Descriptive alt text|Caption shown below image](./images/cap-chart.png)
+![Descriptive alt text](./images/cap-chart.png)
 
 ::youtube VIDEO_ID_HERE
 
@@ -248,7 +247,8 @@ Content...
 - Second non-blank line should be `*The subtitle in single asterisks*`
 - Every `---` becomes a visual divider (good for separating major sections)
 - The publish tool auto-adds two subscribe-with-caption widgets if they are missing
-- The first body image must be a hero/editorial image, not a table/chart render
+- The first body image must be the cover/hero image above TLDR, not a table/chart render
+- Do not include visible image captions in markdown
 - Image URLs must be publicly accessible — test by opening in a browser first
 - YouTube: use `::youtube` syntax, not markdown links
 
@@ -283,13 +283,14 @@ Discovered by inspecting real Substack drafts via the API:
 ### Writer
 - Use `# Title` as the very first line
 - Use `*Subtitle*` as the second line (single asterisks)
-- Use `![alt|caption](./images/file.jpg)` for local images — just drop the file next to the article or in an `images/` subfolder
-- Use `![alt|caption](https://url)` for remote images — any public URL works
+- Put the cover image at the top of the body above TLDR
+- Use `![alt](./images/file.jpg)` for local images — just drop the file next to the article or in an `images/` subfolder
+- Use `![alt](https://url)` for remote images — any public URL works
 - Use `::youtube VIDEO_ID` for video embeds
 - Use markdown tables for short ranking, checklist, or label/value tables only
 - Use `render_table_image` when a table is dense, comparison-heavy, or its layout carries editorial meaning
 - Treat Datawrapper as optional only; do not make it the default table workflow
-- Don't worry about cover image — Joe handles that in the editor
+- Keep visible image captions out of the article unless there is a rare editorial reason
 
 ### Editor
 - Check that the first line is `# Title` with no leading blank line

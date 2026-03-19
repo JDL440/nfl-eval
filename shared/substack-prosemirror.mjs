@@ -73,7 +73,7 @@ export function buildCaptionedImage(src, alt, caption) {
     const imageNode = {
         type: "image2",
         attrs: {
-            src, alt: alt || null, title: caption || null,
+            src, alt: alt || null, title: null,
             srcNoWatermark: null, fullscreen: null, imageSize: "normal",
             height: null, width: null, resizeWidth: null, bytes: null,
             type: null, href: null, belowTheFold: false, topImage: false,
@@ -82,7 +82,7 @@ export function buildCaptionedImage(src, alt, caption) {
     };
     const captionNode = {
         type: "caption",
-        content: caption ? [{ type: "text", text: caption }] : [],
+        content: [],
     };
     return { type: "captionedImage", attrs: {}, content: [imageNode, captionNode] };
 }
