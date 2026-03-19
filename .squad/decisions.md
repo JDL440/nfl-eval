@@ -355,6 +355,67 @@ This decision was implemented by Analytics on 2026-03-19 with Lead's prior appro
 3. Synced skill/decision/history text to the verified 2024 SEA output after the red-zone fix.
 
 ---
+
+### 2026-03-19: Puka Nacua Deep Dive — Writer Draft Framing
+
+# Decision: Puka Nacua Deep Dive — Writer Draft Framing
+
+**Date:** 2026-03-19
+**Author:** Writer
+**Type:** Article framing — Stage 5 draft
+**Article:** `puka-nacua-seahawks-2025-deep-dive`
+
+## Decision
+
+Framed the central tension as "structural exploit vs. volume at baseline rate" rather than defaulting to a single explanatory narrative. The article presents the 4-1 panel split honestly, then resolves it at a higher layer: McVay found unlimited *access* (scheme camp) at the *going rate* (data camp). Neither side is wrong — they're measuring different things.
+
+## Key Framing Choices
+
+1. **Did not choose sides in the scheme-vs-volume debate.** Instead, layered both arguments and showed how they operate at different analytical levels. This preserves the panel's genuine disagreement as the article's engine rather than collapsing it into a false consensus.
+
+2. **Led with the per-target EPA reframe (Analytics' non-obvious finding).** The table showing Seattle as Puka's LEAST efficient top-3 split is the article's signature data point — it reframes the entire "300 yards" narrative and distinguishes this from a standard game recap.
+
+3. **Hedged all ⚠️ items without losing narrative momentum.** Bryant → "expected to depart in free agency" (no destination, no dollar figure). Woolen → same treatment. Scheme adjustments → "film suggests" and "consistent with" framing. Unanchored stats (Lawrence pressures, Emmanwori blitzes) → omitted entirely.
+
+4. **Used the Emmanwori layer as the convergence point.** All 5 panelists agreed on this despite disagreeing on causation — making it the article's consensus anchor and the bridge between the scheme and data camps.
+
+## Reusable Patterns
+
+- **Disagreement-as-engine structure** works well for 5-agent panels. The X-of-Y split format (e.g., "4 of 5 panelists say...") creates instant dramatic tension.
+- **"Both right at different layers" resolution** is the cleanest way to handle genuine analytical disagreement without cheap both-sidesing. Reusable whenever scheme and data arguments appear to conflict.
+- **Transaction hedging template:** "is expected to depart in free agency" — works for any unverified roster move where the argument doesn't depend on the specific destination.
+
+---
+
+### 2026-03-19: Editor Review Patterns — Puka Nacua Deep Dive
+
+# Decision: Editor Review Patterns — Puka Nacua Deep Dive
+
+**From:** Editor
+**Date:** 2026-03-19
+**Context:** Stage 6 review of Puka Nacua Deep Dive (Depth Level 3)
+
+## Pattern 1: AI-Generated Jersey Numbers Need Verification Gate
+
+**Observation:** Image 2 (`inline-2.jpg`) shows "EMMANWORI #34" on a Seahawks defender's nameplate. The name is correct, but the jersey number is unverified. AI image generators fabricate jersey numbers that look plausible but may be wrong.
+
+**Recommendation:** Add to the image generation SKILL: when AI images include visible jersey numbers or nameplates, Writer or Lead must verify the number against roster data before the image passes to Editor. This is faster than regenerating rejected images.
+
+**Severity:** Medium — wrong jersey numbers undermine credibility with football-literate readers.
+
+## Pattern 2: Preflight Pipeline Is Working — Codify It
+
+**Observation:** This is the first article with zero 🔴 errors at Stage 6. The key differentiator was `panel-factcheck.md` quality: preflight flagged 14 ⚠️ items, Writer excluded all unanchored stats, and Editor found only process/polish issues. Compare to Miami Tua (3 🔴 errors from hallucinated historical comps) and Arizona (1 🔴 from wrong draft trade direction).
+
+**Recommendation:** Formalize the current preflight → Writer → Editor flow as the standard pipeline. Articles that skip preflight (or receive a thin preflight) should be flagged at Stage 5 before they reach Editor. The preflight investment is the single biggest factor in editorial quality.
+
+## Pattern 3: Unverified Quantitative Claims in Narrative Prose
+
+**Observation:** Two claims in the article ("25 points clear" EPA gap, "38-37" game score) are not in the data anchors but were stated as fact in narrative prose. Neither came from the panel — Writer likely added them as contextual color. They're not wrong, but they're unverified.
+
+**Recommendation:** Add a Writer guideline: any specific number not sourced from panel outputs or data anchors must be flagged with a `<!-- VERIFY: -->` comment for Editor. This makes the verification scope explicit rather than requiring Editor to guess which claims came from panels vs. Writer's general knowledge.
+
+---
 title: "nflverse Phase B Complete — Four Additional Query Scripts"
 status: "implemented"
 date: "2026-03-19"

@@ -381,3 +381,24 @@ pm run dashboard:dev work. README has concise Dashboard section with requirement
 - Orchestration log: `.squad/orchestration-log/2026-03-19T05-10-46Z-editor.md`
 - Session log: `.squad/log/2026-03-19T05-10-46Z-factcheck-rollout.md`
 - Decision merged to `.squad/decisions.md`
+
+
+📌 Puka Nacua Deep Dive — FULL EDITORIAL REVIEW (Stage 6) (2026-03-19)
+- **File:** `content/articles/puka-nacua-seahawks-2025-deep-dive/draft.md`
+- **Report saved:** `content/articles/puka-nacua-seahawks-2025-deep-dive/editor-review.md`
+- **Scope:** Depth Level 3 Deep Dive. Cross-checked 65+ stat claims, verified 14 derived calculations independently, reviewed 2 AI-generated images with vision.
+- **Result:** 0 🔴 errors, 4 🟡 suggestions, 10 🟢 notes.
+- **Key findings:**
+  - All stats verified clean against data anchors — zero factual errors on first pass (first time in pipeline history)
+  - All 14 derived calculations (EPA/target, percentages, fold-increases) independently reproduced and confirmed
+  - Nick Emmanwori spelled correctly throughout — no Nehemiah error
+  - All ⚠️ preflight items properly hedged (Bryant/Woolen departures as "expected," scheme claims use "film suggests")
+  - All unanchored stats from preflight correctly excluded (Lawrence pressures, Emmanwori blitzes, Woolen aDOT)
+  - 2 unverified claims flagged: "25 points clear of next man" (EPA gap), "38-37 shootout" (game score)
+  - Image 2 shows "EMMANWORI #34" nameplate — number unverified, needs confirmation before publish
+  - Headline comment block (lines 1-5) must be stripped before publish
+  - Table rounding inconsistency: +4% in table vs 4.3% in text
+- **What went right:** This is the cleanest first-pass draft in the pipeline. Writer's internalization of the panel-factcheck.md preflight was exceptional — every unanchored stat was excluded, every caution item was hedged. The 4-1 panel structure is expertly balanced.
+- **Verdict: ✅ APPROVED** — publish-ready pending 4 minor suggestions and image jersey number verification.
+- **Lesson:** The preflight-to-Writer-to-Editor pipeline is maturing. When Writer receives a thorough panel-factcheck.md, the editorial review finds process/polish issues rather than factual errors. The preflight investment pays off downstream.
+- **Recorded by:** Editor (2026-03-19)

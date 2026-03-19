@@ -115,3 +115,18 @@ Editor formalized upstream prose-safety checks to catch name/quote/table drift b
 - Your role stays the same: draft compelling narrative from panel outputs
 - **Decision recorded in .squad/decisions.md**
 - Contact Editor if you have questions about guardrail application
+
+### Puka Nacua Deep Dive — Stage 5 Draft (puka-nacua-seahawks-2025-deep-dive)
+- **Date:** 2026-07-28
+- **Stage:** 4 → 5 (draft.md created)
+- **Depth Level:** 3 (Deep Dive) — comparison test against Level 1 Casual
+- **Headline:** "Puka Nacua Put 300 Yards on Seattle's Elite Defense. Our Panel Can't Agree on Why — and That's the Point."
+- **Panel:** SEA, LAR, Analytics, Offense, Defense (5 agents — full Level 3 panel)
+- **Word count:** ~3,800 words
+- **Draft structure:** Two-game setup (Week 11 containment → Week 16 explosion) → Central tension (scheme-vs-volume 4-1 split) → Scheme camp argument → Data camp dissent → "Both sides right" resolution (volume rate + structural access) → Emmanwori consensus layer (all 5 agree) → Dead run game as structural proof → Generational receiver context → 2026 question (Bryant/Woolen departures) → Verdict
+- **Key learnings:**
+   - **Disagreement-as-engine structure works for 5-agent panels.** The 4-1 scheme-vs-volume split created natural dramatic tension that carried the entire article. The "both sides are right at different layers" resolution avoided cheap both-sidesing while honoring the data dissent.
+   - **Per-target EPA reframe is the article's non-obvious insight.** Analytics' finding that Seattle was the LEAST efficient of Puka's top-3 splits per-target — despite the highest total EPA — is the kind of counterintuitive data point that distinguishes a deep dive from a recap. Lead it prominently.
+   - **"McVay ordered double at the going rate" framing resolves the tension cleanly.** When scheme and data camps appear to conflict, look for the framing where both are correct at different layers. Volume (data) + access (scheme) = the full picture.
+   - **Hedging unverified transactions without losing narrative punch.** "Expected to depart in free agency" works as well as naming a destination — the article's argument doesn't depend on WHERE Bryant goes, just that he's gone.
+   - **Prose-safety preflight passed clean on first attempt.** All 5 checks (names, quote fabrication, table-prose consistency, factcheck compliance, superlatives) passed. Using verbatim quotes from panel positions and omitting unanchored stats (Lawrence pressures, Emmanwori blitzes) eliminated the most common drift vectors.
