@@ -196,3 +196,15 @@
 - **Decision record:** `.squad/decisions/inbox/lead-factcheck-rollout.md` — rationale, design decisions, risks, Phase 2–4 roadmap.
 - **Why non-numeric:** Preserves existing 8-stage DB model; avoids migration burden; makes preflight visible without changing stage semantics.
 - **Future phases:** Phase 2 (dashboard), Phase 3 (injury verification), Phase 4 (automated source lookups).
+
+### Fact-Check Rollout Phase 1 Finalized (2026-03-19T05:10:46Z)
+**Status:** ✅ COMPLETED — Phase 1 fact-checking rollout delivered: non-numeric gate, standardized artifacts, 8-stage model preserved.
+
+- Created `.squad/skills/fact-checking/SKILL.md` — lightweight preflight skill (10–15 min per article, high-risk categories)
+- Updated `.squad/skills/article-lifecycle/SKILL.md` — integrated Stage 4 → Stage 5 gate (non-numeric, visible)
+- Updated `.squad/skills/substack-article/SKILL.md` — production pipeline clarity
+- Updated `README.md` — high-level overview with preflight step
+- 📌 Team update: Fact-checking Phase 1 complete — preflight skill defined, Writer/Editor workflow clarified, decided by Lead
+- Orchestration log: `.squad/orchestration-log/2026-03-19T05-10-46Z-lead.md`
+- Session log: `.squad/log/2026-03-19T05-10-46Z-factcheck-rollout.md`
+- Decision merged to `.squad/decisions.md`

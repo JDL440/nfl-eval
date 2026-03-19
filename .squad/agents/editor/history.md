@@ -329,3 +329,19 @@ pm run dashboard:dev work. README has concise Dashboard section with requirement
   - Three batch utility scripts (`batch-publish-prod.mjs`, `publish-stage-validation.mjs`, `repair-prod-drafts.mjs`) still define their own `markdownToProseMirror`. These are one-off scripts, not the core consumers the plan targeted. Consolidation is a separate cleanup task.
 - **Verdict: ✅ APPROVED** — All 5 plan requirements now satisfied. The blocking artifact (`render.mjs`) has been properly refactored to use `shared/substack-prosemirror.mjs`. The publisher extension was also migrated, achieving the plan's goal of a single canonical source. Dashboard is plan-complete.
 - **Recorded by:** Editor (2026-07-26)
+
+### Writer Prose-Safety Guardrails Formalized (2026-03-19T05:10:46Z)
+**Status:** ✅ COMPLETED — Upstream prose-safety guardrails formalized to catch name/quote/table drift before Editor review.
+
+- Updated `.squad/agents/writer/charter.md` with five preflight requirements:
+  - Cross-check names against artifacts and tables
+  - Never present paraphrases/stitched summaries as direct quotes
+  - Avoid unsupported superlatives and absolutes
+  - Cross-check narrative claims against tables before saving
+  - Keep ambiguous details generic instead of invented-specific
+- Rationale: Upstream guardrails reduce avoidable prose drift while preserving Writer/Editor separation
+- Constraints: Writer is not the fact-checker; Editor remains mandatory final gate
+- 📌 Team update: Writer guardrails formalized — prose-safety preflight added to Writer charter, decided by Editor
+- Orchestration log: `.squad/orchestration-log/2026-03-19T05-10-46Z-editor.md`
+- Session log: `.squad/log/2026-03-19T05-10-46Z-factcheck-rollout.md`
+- Decision merged to `.squad/decisions.md`
