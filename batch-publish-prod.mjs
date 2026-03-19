@@ -467,9 +467,9 @@ const FOOTER_PARAGRAPH_PATTERNS = [
     /\bWant us to evaluate\b/i,
     /\bDrop (?:it|your take) in the comments\b/i,
     /^\s*Next from the panel:/i,
-    // New "War Room" brand footer (2026-07-25)
+    // New "Welcome to the Lab" brand footer (2026-07-25)
     /\bvirtual front office\b/i,
-    /\bWelcome to the War Room\b/i,
+    /\bWelcome to the (?:War Room|Lab)\b/i,
     /\bwant us to break down\b/i,
 ];
 

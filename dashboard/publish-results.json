@@ -1,1 +1,14 @@
-{}
+{
+  "puka-nacua-seahawks-2025-deep-dive": {
+    "status": "PREREQ_FAIL",
+    "error": "Publisher pass incomplete: Cover image set, Paywall set Canonical preview blocker: Dense table near line 25 (Targets | Rec | Yards | TD) — must be rendered as image before publishing. Density score: 19.0. Canonical preview blocker: Dense table near line 65 (Opponent | Targets | Total EPA | EPA/Target) — must be rendered as image before publishing. Density score: 13.0. Canonical preview blocker: Dense table near line 98 (Defender | Pos | Comp% Allowed | Passer Rating) — must be rendered as image before publishing. Density score: 14.0.",
+    "blockedReasons": [
+      "Publisher pass incomplete: Cover image set, Paywall set",
+      "Canonical preview blocker: Dense table near line 25 (Targets | Rec | Yards | TD) — must be rendered as image before publishing. Density score: 19.0.",
+      "Canonical preview blocker: Dense table near line 65 (Opponent | Targets | Total EPA | EPA/Target) — must be rendered as image before publishing. Density score: 13.0.",
+      "Canonical preview blocker: Dense table near line 98 (Defender | Pos | Comp% Allowed | Passer Rating) — must be rendered as image before publishing. Density score: 14.0."
+    ],
+    "filePath": "content/articles/puka-nacua-seahawks-2025-deep-dive/draft.md",
+    "timestamp": "2026-03-19T22:18:44.669Z"
+  }
+}

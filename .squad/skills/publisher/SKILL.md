@@ -41,7 +41,7 @@ Open `content/articles/{slug}.md` and verify:
 - [ ] No `TODO`, `[PLACEHOLDER]`, `{FIXME}`, or `...fill in...` markers remain
 - [ ] No stale date references (e.g., "upcoming Draft" when it already happened)
 - [ ] Author line present: `**By: The NFL Lab Expert Panel**`
-- [ ] Boilerplate footer present: "War Room" brand footer (virtual front office + human editor + War Room) + CTA + next article tease
+- [ ] Boilerplate footer present: "Welcome to the Lab" brand footer (virtual front office + human editor + Lab brand) + CTA + next article tease
 - [ ] "Next from the panel" tease references a real upcoming article idea and reads like a cliffhanger
 
 ### Step 2 — Image Placement Verification

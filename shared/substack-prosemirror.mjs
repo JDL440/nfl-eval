@@ -108,7 +108,7 @@ export const FOOTER_PARAGRAPH_PATTERNS = [
     /\bDrop (?:it|your take) in the comments\b/i,
     /^\s*Next from the panel:/i,
     /\bvirtual front office\b/i,
-    /\bWelcome to the War Room\b/i,
+    /\bWelcome to the (?:War Room|Lab)\b/i,
     /\bwant us to break down\b/i,
 ];
 

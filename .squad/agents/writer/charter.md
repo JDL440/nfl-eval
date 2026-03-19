@@ -116,7 +116,7 @@ Writer sits between the experts and the editor. Experts provide the substance. W
 
 ### Boilerplate (end of every article)
 ```
-*The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
+*The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the Lab.*
 
 *Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
 

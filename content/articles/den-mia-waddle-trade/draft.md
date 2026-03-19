@@ -213,7 +213,7 @@ For the first time since Peyton Manning's final ride, the Broncos have a receive
 
 ---
 
-*The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the War Room.*
+*The NFL Lab is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement is the analysis. Welcome to the Lab.*
 
 *Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.*
 
