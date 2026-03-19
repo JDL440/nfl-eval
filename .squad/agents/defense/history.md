@@ -229,3 +229,7 @@ When evaluating hybrid safeties for the chess-piece label, distinguish three tie
 - Tier 2: Simulated-pressure + coverage hybrid (two-role breadth)
 - Tier 3: Full post-snap rotation piece across all three levels (Hamilton/James archetype)
 Each tier is valuable; only Tier 3 justifies the premium comp set. Evaluate which tier the evidence supports, not a binary earned/not-earned.
+
+### Emmanwori Rookie Evaluation Framework (2026-03-19T05:08:13Z)
+**Status:** ✅ COMPLETED — Defense established scheme-fit lens for Nick Emmanwori (SEA hybrid defender) in Macdonald's disguise-heavy system. Framework repositioned Emmanwori for Stage 3 panel work.
+- Decision merged to \.squad/decisions.md

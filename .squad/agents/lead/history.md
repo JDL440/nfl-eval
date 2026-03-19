@@ -190,3 +190,19 @@
 - **Fix:** Added `tableFramePaddingX` (4px mobile, 0 desktop) to layout constants, switched to `border-collapse: separate; border-spacing: 0`, increased mobile canvas width by `2 × framePadding` to compensate. Updated height estimation functions to account for frame border + padding.
 - **Reusable:** Fix applies to all future mobile table renders automatically — not article-specific.
 - **Re-rendered:** Emmanwori "Tier" and "Position Need" mobile PNGs regenerated and verified.
+### Stage 7/8 Operator Guidance Cleanup (2026-03-19)
+- **Stage 7 is a dashboard-ready pause — no Substack publish happens in the autonomous pipeline.** The dashboard article page is the final review surface. The dashboard publish action performs live publish and can dispatch the Substack Note.
+- **Stage 8 means truly live published only** — reached only after the dashboard publish flow records a live `substack_url`. Lead should treat Stage 7 as the handoff boundary and Stage 8 as the proof-of-publication state.
+- **Key files corrected in this pass:**
+  - `README.md` — Publishing setup, pipeline summary, and dashboard section now describe dashboard review as the default stop point before live publish.
+  - `ralph/prompt.md` — Ralph now aims for dashboard-ready Stage 7 or live-published Stage 8, and no longer instructs the main loop to call `publish_to_substack`.
+  - `ralph/AGENTS.md` — Stage labels and lifecycle summary now frame Stage 7 as dashboard handoff and Stage 8 as the live-published state.
+  - `.squad/skills/publisher/SKILL.md` — Joe-facing checklist, Note fallback, and cover-image guidance now match dashboard-led publish semantics.
+  - `.squad/agents/lead/charter.md` — Lead's GitHub issue pipeline contract now explicitly ends autonomous work at Stage 7 and hands Stage 8 to Joe on the dashboard.
+- **Verified aligned and left unchanged:** `.squad/skills/article-lifecycle/SKILL.md`.
+- **`publish_to_substack` role:** Draft helper and manual fallback only. It is not the default Stage 7 step; the dashboard publish action is the live-publish entry point.
+
+
+### Stage 7/8 Operator Guidance Audit (2026-03-19T05:08:13Z)
+**Status:** ✅ COMPLETED — Scribe merged 3 inbox decisions. Lead completed surgical audit of operator-facing pipeline docs; corrected 4 files (charter, skills, AGENTS) to enforce dashboard-first Stage 7 architecture.
+- Decision merged to \.squad/decisions.md

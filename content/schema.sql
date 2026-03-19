@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS articles (
     current_stage   INTEGER NOT NULL DEFAULT 1,
     discussion_path TEXT,                       -- relative path to discussion summary, e.g. content/articles/{slug}/discussion-summary.md
     article_path    TEXT,                       -- relative path to final draft, e.g. content/articles/{slug}/draft.md
-    substack_draft_url TEXT,                    -- draft editor URL used during stages 7-8
+    substack_draft_url TEXT,                    -- draft editor URL used for stage 7 review and live-publish retries
     substack_url    TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
@@ -230,7 +230,7 @@ SELECT
         WHEN 5 THEN 'Article Drafting'
         WHEN 6 THEN 'Editor Pass'
         WHEN 7 THEN 'Publisher Pass'
-        WHEN 8 THEN 'Approval / Publish'
+        WHEN 8 THEN 'Published'
         ELSE 'Unknown'
     END AS stage_name,
     a.discussion_path,

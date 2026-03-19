@@ -14,12 +14,15 @@ import { getBoardData, getArticleDetail, readArtifact } from "./data.mjs";
 import { boardPage, articlePage, previewPage, notFoundPage } from "./templates.mjs";
 import { renderPreview } from "./render.mjs";
 import { getValidationResults } from "./validation.mjs";
+import { getPublishResults } from "./publish.mjs";
 
 const DEFAULT_PORT = 3456;
 const PUBLIC_DIR = resolve(import.meta.dirname, "public");
 const REPO_ROOT = resolve(import.meta.dirname, "..");
 const VALIDATION_WORKER = join(import.meta.dirname, "validation-worker.mjs");
+const PUBLISH_WORKER = join(import.meta.dirname, "publish-worker.mjs");
 const validationJobs = new Map();
+const publishJobs = new Map();
 
 function parsePortValue(rawValue, sourceLabel) {
     const port = Number.parseInt(rawValue, 10);
@@ -123,10 +126,33 @@ function sendJson(res, data, status = 200) {
     res.end(JSON.stringify(data));
 }
 
+async function readJsonBody(req) {
+    const chunks = [];
+    for await (const chunk of req) {
+        chunks.push(chunk);
+    }
+    if (chunks.length === 0) return {};
+
+    const raw = Buffer.concat(chunks).toString("utf-8").trim();
+    if (!raw) return {};
+
+    try {
+        return JSON.parse(raw);
+    } catch {
+        throw new Error("Request body must be valid JSON.");
+    }
+}
+
 function getMergedValidationResults(slug) {
     const persisted = getValidationResults(slug) || {};
     const running = validationJobs.get(slug) || {};
     return { ...persisted, ...running };
+}
+
+function getMergedPublishResults(slug) {
+    const persisted = getPublishResults(slug) || {};
+    const running = publishJobs.get(slug) || {};
+    return { ...persisted, ...running.publish };
 }
 
 function startValidationJob(slug, type) {
@@ -187,6 +213,71 @@ function startValidationJob(slug, type) {
     return { started: true, state: current[type] };
 }
 
+function startPublishJob(slug, channels) {
+    const current = publishJobs.get(slug) || {};
+    if (current.publish?.status === "RUNNING") {
+        return { started: false, state: current.publish };
+    }
+
+    current.publish = {
+        status: "RUNNING",
+        reason: "Publishing live article… this can take 30–90 seconds.",
+        requestedChannels: channels,
+        timestamp: new Date().toISOString(),
+    };
+    publishJobs.set(slug, current);
+
+    const child = spawn(process.execPath, [
+        PUBLISH_WORKER,
+        "--slug",
+        slug,
+        "--channels",
+        channels.join(","),
+    ], {
+        cwd: REPO_ROOT,
+        windowsHide: true,
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+    });
+
+    child.on("close", (code) => {
+        const jobs = publishJobs.get(slug) || {};
+        const markerLine = stdout
+            .split(/\r?\n/)
+            .find((line) => line.startsWith("__PUBLISH_RESULT__"));
+
+        if (markerLine) {
+            try {
+                jobs.publish = JSON.parse(markerLine.slice("__PUBLISH_RESULT__".length));
+            } catch {
+                jobs.publish = {
+                    status: "ERROR",
+                    error: `Publish result parse failed (exit ${code ?? "?"}).`,
+                };
+            }
+        } else {
+            jobs.publish = {
+                status: "ERROR",
+                error: stderr.trim() || `Publish worker exited without a result (exit ${code ?? "?"}).`,
+            };
+        }
+
+        jobs.publish.timestamp = new Date().toISOString();
+        publishJobs.set(slug, jobs);
+    });
+
+    return { started: true, state: current.publish };
+}
+
 function escapeHtmlBasic(text) {
     return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -244,6 +335,13 @@ async function handleRequest(req, res) {
         return;
     }
 
+    if (path.startsWith("/api/publish/") && req.method === "GET") {
+        const slug = decodeURIComponent(path.slice("/api/publish/".length));
+        const results = getMergedPublishResults(slug);
+        sendJson(res, results || {});
+        return;
+    }
+
     // API: trigger editor validation (POST only, manual action)
     if (path.startsWith("/api/validate/editor/") && req.method === "POST") {
         const slug = decodeURIComponent(path.slice("/api/validate/editor/".length));
@@ -272,6 +370,23 @@ async function handleRequest(req, res) {
         return;
     }
 
+    if (path.startsWith("/api/publish/") && req.method === "POST") {
+        const slug = decodeURIComponent(path.slice("/api/publish/".length));
+        console.log(`[publish] Live publish triggered for: ${slug}`);
+        try {
+            const body = await readJsonBody(req);
+            const channels = Array.isArray(body.channels)
+                ? body.channels.filter((value) => typeof value === "string")
+                : [];
+            const result = startPublishJob(slug, channels);
+            sendJson(res, result.state, result.started ? 202 : 200);
+        } catch (err) {
+            console.error(`[publish] Live publish error:`, err);
+            sendJson(res, { status: "ERROR", error: err.message }, 500);
+        }
+        return;
+    }
+
     // Board page
     if (path === "/" || path === "/board") {
         const board = getBoardData();
@@ -287,6 +402,7 @@ async function handleRequest(req, res) {
             sendHtml(res, notFoundPage(`Article "${slug}" not found in DB or on disk.`), 404);
         } else {
             detail.validationResults = getMergedValidationResults(slug);
+            detail.publishResults = getMergedPublishResults(slug);
             sendHtml(res, articlePage(detail));
         }
         return;

@@ -28,7 +28,7 @@ export const STAGE_NAMES = {
     5: "Article Drafting",
     6: "Editor Pass",
     7: "Publisher Pass",
-    8: "Approval / Publish",
+    8: "Published",
 };
 
 export const DEPTH_NAMES = {
@@ -36,6 +36,20 @@ export const DEPTH_NAMES = {
     2: "The Beat",
     3: "Deep Dive",
 };
+
+export const PUBLISHER_PASS_FIELDS = [
+    { key: "title_final", label: "Title final" },
+    { key: "subtitle_final", label: "Subtitle final" },
+    { key: "body_clean", label: "Body clean" },
+    { key: "section_assigned", label: "Section assigned" },
+    { key: "tags_set", label: "Tags set" },
+    { key: "url_slug_set", label: "URL slug set" },
+    { key: "cover_image_set", label: "Cover image set" },
+    { key: "paywall_set", label: "Paywall set" },
+    { key: "names_verified", label: "Names verified" },
+    { key: "numbers_current", label: "Numbers current" },
+    { key: "no_stale_refs", label: "No stale refs" },
+];
 
 // ── DB helpers ───────────────────────────────────────────────────────────────
 
@@ -102,6 +116,83 @@ export function getPublisherPass(slug) {
     } finally {
         db.close();
     }
+}
+
+export function resolveArticleMarkdownPath(slug, article = null) {
+    const candidates = [];
+    if (article?.article_path) {
+        candidates.push(article.article_path);
+    }
+    candidates.push(`content/articles/${slug}/draft.md`);
+    candidates.push(`content/articles/${slug}.md`);
+
+    for (const relativePath of candidates) {
+        const absolutePath = resolve(REPO_ROOT, relativePath);
+        if (existsSync(absolutePath)) {
+            return {
+                exists: true,
+                relativePath: relative(REPO_ROOT, absolutePath).replace(/\\/g, "/"),
+                absolutePath,
+            };
+        }
+    }
+
+    return {
+        exists: false,
+        relativePath: article?.article_path || null,
+        absolutePath: article?.article_path ? resolve(REPO_ROOT, article.article_path) : null,
+    };
+}
+
+export function buildPublishState(article, publisherPass, notes, slug) {
+    const articleFile = resolveArticleMarkdownPath(slug, article);
+    const missingPublisherChecks = publisherPass
+        ? PUBLISHER_PASS_FIELDS
+            .filter(({ key }) => !publisherPass[key])
+            .map(({ label }) => label)
+        : [];
+
+    const isPublished = Boolean(
+        article?.substack_url ||
+        article?.status === "published" ||
+        article?.current_stage === 8
+    );
+    const hasPromotionNote = notes.some(
+        (note) => note.note_type === "promotion" && note.target === "prod"
+    );
+    const noteBlockedReason = hasPromotionNote
+        ? "A production promotion Note is already recorded for this article."
+        : null;
+
+    const blockedReasons = [];
+    if (!article) blockedReasons.push("Article not found in pipeline.db.");
+    if (!articleFile.exists) blockedReasons.push("No canonical article markdown file found for live publish.");
+    if (!publisherPass) {
+        blockedReasons.push("No publisher pass recorded.");
+    } else if (missingPublisherChecks.length > 0) {
+        blockedReasons.push(`Publisher pass incomplete: ${missingPublisherChecks.join(", ")}`);
+    }
+    if (isPublished) blockedReasons.push("Article is already live on Substack.");
+
+    return {
+        canPublish: blockedReasons.length === 0,
+        blockedReasons,
+        filePath: articleFile.relativePath,
+        hasDraftUrl: Boolean(article?.substack_draft_url),
+        draftUrl: article?.substack_draft_url || null,
+        isPublished,
+        hasPromotionNote,
+        publisherPassComplete: Boolean(publisherPass) && missingPublisherChecks.length === 0,
+        missingPublisherChecks,
+        promotionChannels: {
+            substack_note: {
+                id: "substack_note",
+                label: "Substack Note",
+                defaultSelected: !noteBlockedReason,
+                blockedReason: noteBlockedReason,
+            },
+        },
+    };
 }
 
 export function getArticlePanels(slug) {
@@ -220,7 +311,7 @@ export function inferStage(slug) {
     const hasComposition = hasFile(dirpath, "panel-composition.md");
     const imageCount = countImages(slug);
 
-    if (hasPublisher) return { stage: 7, stageName: STAGE_NAMES[7], nextAction: "Publish confirmation", editorVerdict: editor?.verdict || null, detail: "Publisher pass found" };
+    if (hasPublisher) return { stage: 7, stageName: STAGE_NAMES[7], nextAction: "Dashboard review / live publish", editorVerdict: editor?.verdict || null, detail: "Publisher pass found" };
 
     if (editor) {
         if (editor.verdict === "APPROVED") {
@@ -357,7 +448,10 @@ export function getBoardData() {
 
     for (const slug of allSlugs) {
         const db = dbMap.get(slug);
-        const inferred = inferStage(slug);
+        const inferredBase = inferStage(slug);
+        const inferred = db && (db.substack_url || db.status === "published" || db.current_stage === 8)
+            ? { ...inferredBase, stage: 8, stageName: STAGE_NAMES[8], nextAction: null, detail: "Published URL recorded in pipeline.db" }
+            : inferredBase;
         const imageCount = countImages(slug);
 
         const row = {
@@ -404,7 +498,10 @@ export function getBoardData() {
 
 export function getArticleDetail(slug) {
     const article = getArticle(slug);
-    const inferred = inferStage(slug);
+    const inferredBase = inferStage(slug);
+    const inferred = article && (article.substack_url || article.status === "published" || article.current_stage === 8)
+        ? { ...inferredBase, stage: 8, stageName: STAGE_NAMES[8], nextAction: null, detail: "Published URL recorded in pipeline.db" }
+        : inferredBase;
     const artifacts = getArticleArtifacts(slug);
     const images = getArticleImages(slug);
     const documents = getArticleDocuments(slug);
@@ -414,6 +511,7 @@ export function getArticleDetail(slug) {
     const panels = getArticlePanels(slug);
     const notes = getNotes(slug);
     const prompt = getDiscussionPrompt(slug);
+    const publishState = buildPublishState(article, publisherPass, notes, slug);
 
     return {
         slug,
@@ -428,6 +526,7 @@ export function getArticleDetail(slug) {
         panels,
         notes,
         prompt,
+        publishState,
         hasDrift: article ? (typeof article.current_stage === "number" && article.current_stage !== inferred.stage) : false,
     };
 }
