@@ -8,6 +8,17 @@
 
 ## Recent Sessions
 
+### Puka Nacua Casual Article Pipeline Logging (2026-03-19T21:16:28Z)
+**Status:** ✅ LOGGED — Full pipeline run documented with orchestration logs, session summary, decision merges, and inbox cleanup.
+
+- Processed 12 decision inbox files from Emmanwori article into `decisions.md`
+- Created 8 orchestration logs covering Lead (2x), SEA, LAR, Writer, Editor, Coordinator, and cross-agent context
+- Created session log summarizing full Stages 1–7 pipeline with key learnings
+- Deleted all merged inbox files; .squad/decisions/inbox/ now clean (only .gitkeep)
+- Updated agent histories: SEA (pass-rush context), LAR (scheme/volume), Coordinator verification memo
+- No duplicate decisions detected in 12-file merge (each file addresses distinct pipeline stage)
+- **Merged files:** lead-emmanwori-summary, lead-emmanwori-revise, lead-nick-emmanwori-article-issue, writer-emmanwori-draft, editor-emmanwori-review, editor-emmanwori-rereview, sea-emmanwori-kickoff, sea-emmanwori-panel, analytics-emmanwori-kickoff, analytics-emmanwori-panel, defense-emmanwori-panel, lead-mobile-table-render-fix
+
 ### Token-Usage Telemetry Test Logging (2026-03-18T22:30Z)
 **Status:** ✅ LOGGED — Documented the Denver telemetry run, merged the decision, and recorded the new orchestration + session artifacts.
 

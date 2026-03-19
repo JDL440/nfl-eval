@@ -2399,3 +2399,495 @@ Decision: **Dashboard reference will use `panel-factcheck.md` artifact name**, b
 - **Writer/Editor roles clarified:** ✅
 - **Dashboard deferred to Phase 2:** ✅
 
+
+---
+
+# Decision: Emmanwori Discussion Synthesis — Modified Path 1
+
+**Date:** 2026-03-19
+**Agent:** Lead
+**Article:** `sea-emmanwori-rookie-eval` (Issue #80)
+**Status:** DECIDED — synthesis complete, article ready for Writer (Stage 5)
+
+## Decision
+
+Lead recommends **modified Path 1 ("earned with conditions")** — closest to Defense's framing. Emmanwori earned the big-nickel hybrid role (proven). The full Hamilton/James chess-piece archetype remains a projection (unproven without film-charted alignment data). All three panelists agree CB/EDGE at #32/#64 is the correct draft strategy regardless of where they land on the confidence spectrum.
+
+## Panel Summary
+
+- **SEA (Path 1):** Earned the role. Secondary exodus makes CB/EDGE the priority. Witherspoon ecosystem is the key dependency.
+- **Analytics (Path 2):** Promising but data doesn't settle S2. 70.4% comp allowed, 66.2% YAC rate, 27.6% R2 starter+ base rate all argue for caution.
+- **Defense (Conditional Path 1):** Big-nickel tier validated, Hamilton/James tier unproven. Two of three deployment tiers confirmed; third requires film.
+
+## Key Insight for Writer
+
+Defense's reframe of the short aDOT (5.6 yards) as the *harder* assignment in Macdonald's scheme — not the sheltered one — is the article's most counter-intuitive point and should be surfaced prominently.
+
+## Artifacts
+
+- `content/articles/sea-emmanwori-rookie-eval/discussion-summary.md` — synthesis
+- `pipeline.db` — `current_stage=4`, `discussion_path` set
+- Stage transition recorded (3 → 4)
+
+## Next
+
+Writer (Stage 5) can proceed immediately. Six open questions flagged in the synthesis for Writer to address during drafting.
+
+---
+
+# Decision: Lead Owns Emmanwori Revision Pass
+
+**Date:** 2026-07-26
+**Decided by:** Lead
+**Article:** `sea-emmanwori-rookie-eval`
+
+## Context
+
+Editor flagged 2 mandatory name errors (🔴) and 5 strong cleanup items (🟡) on the Emmanwori draft. Governance note: Writer authored the draft; Editor reviewed it; Lead owns this revision pass — no round-trip back to Writer.
+
+## Fixes Applied
+
+1. **Devon Woolen → Tariq Woolen** (2 instances) — first-name cross-contamination from Devon Witherspoon
+2. **Uchenna Mafe → Boye Mafe** (2 instances) — first-name cross-contamination from Uchenna Nwosu
+3. **$15M AAV → 1yr / $15M** — one-year deal; AAV misleading for single-year contracts
+4. **Coby Bryant CB/S → S** — Bryant signed with Chicago as a safety
+5. **DeMarcus Lawrence age 34 → 33** — born April 1992, is 33 during March 2026 evaluation window
+6. **Inserted 2 inline images** — inline-1 after "The Secondary After the Exodus", inline-2 before "The Central Disagreement"
+
+## Rationale
+
+All six changes are factual corrections or low-risk formatting cleanups. No thesis, structure, or analytical framing was altered. This is a surgical pass consistent with Lead's charter (orchestrator handles post-Editor fixes without re-entering the Writer loop).
+
+## Status
+
+Draft is ready for Editor re-review and Substack publish (Stage 7).
+
+---
+
+# Decision: Nick Emmanwori Rookie Season Article Issue
+
+**Date:** 2026-03-19
+**Author:** Lead
+**Type:** Article pipeline — issue creation
+
+## Decision
+
+Created GitHub issue #80 requesting an analytics-backed evaluation of Nick Emmanwori's 2024 rookie season with the Jacksonville Jaguars. Selected Depth Level 2 (The Beat) and a 3-agent panel: JAX, Analytics, Defense.
+
+## Rationale
+
+- **Depth Level 2** chosen over Level 3: The article is a single-player season evaluation, not a multi-player roster construction deep dive. Level 2 provides sufficient analytical rigor (2000–3500 words) without over-investing tokens on a focused scope.
+- **Panel composition (JAX + Analytics + Defense):** JAX provides roster context and Year 2 projection; Analytics owns the nflverse data queries and statistical interpretation; Defense evaluates scheme fit and coverage/run support split. Cap and Draft excluded — not a contract or draft-capital article, it's a performance evaluation.
+- **Six nflverse queries specified** in the issue body to ensure panel agents have real data anchors (player EPA, team efficiency, snap counts, positional comparison, combine measurables, draft value context).
+
+## Labels
+
+`squad`, `article`, `article:beat`
+
+## URL
+
+https://github.com/JDL440/nfl-eval/issues/80
+
+---
+
+# Decision: Emmanwori Draft — Analytics Data Discrepancy Handling
+
+**Date:** 2026-07-28
+**Agent:** Writer
+**Article:** `sea-emmanwori-rookie-eval`
+**Scope:** Team-wide (applies to all future articles where panel positions contain queried data)
+
+## Decision
+
+When a panelist's position contains data from actual query runs that differs from the discussion prompt's pre-populated data anchors, **use the panelist's queried numbers as primary** in the draft. Flag the discrepancy for Editor review.
+
+## Context
+
+The discussion prompt listed Emmanwori at 80 tackles / 90.9% efficiency / 34 blitzes / 7 pressures (from the idea brief). Analytics ran the actual nflverse queries and returned 93 tackles / 90.3% efficiency / 39 blitzes / 8 pressures. The draft uses Analytics' numbers because they represent the executed query, but Editor needs to verify which set is correct.
+
+## Rationale
+
+- Discussion prompts are written before panel agents run queries; the anchors are estimates or earlier data pulls
+- Panel agents (especially Analytics) are the data-of-record agents — their queried output supersedes prompt estimates
+- Editor's fact-check pass (Stage 6) is designed to catch exactly this kind of discrepancy
+
+## Reuse
+
+Apply this pattern to any article where prompt anchors and panel-queried data diverge. Always flag for Editor.
+
+---
+
+# Decision: Emmanwori Article Editor Review
+
+**Author:** Editor
+**Date:** 2026-07-26
+**Article:** `sea-emmanwori-rookie-eval`
+**Status:** ✅ APPROVED (with mandatory fixes)
+
+## What Was Decided
+
+The Emmanwori rookie evaluation article is editorially approved. Two critical name errors must be fixed before the article advances to the Substack draft stage:
+
+1. **"Devon Woolen" → "Tariq Woolen"** — Writer cross-contaminated Devon Witherspoon's first name onto Tariq Woolen (2 occurrences)
+2. **"Uchenna Mafe" → "Boye Mafe"** — Writer cross-contaminated Uchenna Nwosu's first name onto Boye Mafe (2 occurrences)
+
+## Team-Relevant Takeaway
+
+This is the **third time** the Writer has cross-contaminated first names between same-team, same-position-group players on the Seahawks:
+
+| Error | Source Name | Target Name | Article |
+|-------|------------|-------------|---------|
+| Nehemiah Emmanwori | Nehemiah Pritchett (CB) | Nick Emmanwori (S) | (founding error in charter) |
+| Devon Woolen | Devon Witherspoon (CB) | Tariq Woolen (CB) | sea-emmanwori-rookie-eval |
+| Uchenna Mafe | Uchenna Nwosu (EDGE) | Boye Mafe (EDGE) | sea-emmanwori-rookie-eval |
+
+**Recommendation for Lead/Writer:** Add an explicit "Name Verification Checklist" to the Writer prompt for all Seahawks articles. The checklist should require the Writer to list every player mentioned with full name, position, and team, verified against roster data before draft completion. This is a systemic pattern, not a one-off.
+
+## Next Steps
+
+- Writer or Coordinator applies the 2 name fixes
+- Second inline image should be generated (only 1 of required 2 exists)
+- Images inserted into draft markdown
+- Article advances to publisher/Substack draft stage
+
+---
+
+# Decision: Emmanwori Article — Editor Re-Review Approval
+
+**Agent:** Editor
+**Date:** 2026-07-27
+**Article:** `sea-emmanwori-rookie-eval`
+
+## Decision
+
+✅ **APPROVED** — Article is clear to move to Substack draft step (Phase 7 / Publisher pass).
+
+## Context
+
+- R1 review (2026-07-26) found 2 🔴 mandatory name errors and 5 🟡 suggestions.
+- Lead applied all 6 fixes in a revision pass (per reviewer-gate rules: Writer cannot self-approve).
+- R2 re-review confirms all fixes are clean with zero regressions.
+
+## What Was Verified
+
+| Fix | Status |
+|-----|--------|
+| "Devon Woolen" → "Tariq Woolen" | ✅ |
+| "Uchenna Mafe" → "Boye Mafe" | ✅ |
+| Woolen contract format | ✅ |
+| Bryant position label | ✅ |
+| Lawrence age | ✅ |
+| 2 inline images placed in markdown | ✅ |
+
+## Next Step
+
+The article should proceed to the Publisher pass / `publish_to_substack` call. No further Editor review needed unless the article text is modified after this point.
+
+## Team Note
+
+The reviewer-gate process (Lead applies fixes, Editor re-reviews) worked cleanly here. Recommend continuing this pattern for future revision cycles.
+
+---
+
+# Decision: SEA Kickoff Brief — Nick Emmanwori Rookie Season Article
+
+**Date:** 2026-03-19
+**Author:** SEA
+**Type:** Article kickoff — team context brief
+**GitHub Issue:** #80
+
+## Context Correction
+
+The existing Lead decision file (`lead-nick-emmanwori-article-issue.md`) incorrectly frames this article as evaluating Emmanwori's 2024 season with Jacksonville and assigns a JAX panel. **The actual GitHub issue #80 explicitly states:** "This article is about Nick Emmanwori on Seattle, not Jacksonville." The correct panel is SEA + Analytics + Defense. Lead should update the stale decision file before advancing the pipeline.
+
+## Seattle Roster Context
+
+### 2025 Secondary Depth Chart (Championship Season)
+
+| Pos | Starter | Role | Status Entering 2026 |
+|-----|---------|------|---------------------|
+| CB1 | Devon Witherspoon | Lockdown shadow / blitzer / scheme enabler | Extension pending (~$31-32.5M AAV expected) |
+| CB2 | Josh Jobe | Physical press-bail boundary corner | Re-signed 3yr/$24M |
+| NB | **Nick Emmanwori** | Big-nickel hybrid / safety-sized slot | Under rookie contract (Rd 2 pick) |
+| FS | Rodney Thomas II | Deep-field safety (from IND) | New signing |
+| SS | Julian Love | Coverage organizer, deep range | $12.9M cap hit |
+
+### Key Departures That Elevate Emmanwori's Importance
+
+| Player | Pos | Destination | Why It Matters |
+|--------|-----|-------------|---------------|
+| Riq Woolen | CB | PHI ($15M/1yr) | Removed the athletic freak who provided CB2/CB3 flexibility |
+| Coby Bryant | S/CB | CHI ($40M/3yr) | Versatile hybrid — his departure removes a coverage rotation piece |
+| Boye Mafe | EDGE | CIN ($60M/3yr) | Pass-rush loss means secondary must hold coverage longer |
+
+### CB Depth Behind Starters (Alarming)
+
+- Nehemiah Pritchett — expanded role but unproven
+- Noah Igbinoghene — journeyman (ex-MIA 1st rounder), 1yr deal
+- Shemar Jean-Charles — practice squad re-sign
+
+**Bottom line:** One Witherspoon or Jobe injury away from a catastrophic secondary breakdown. Emmanwori's ability to flex across coverage positions is no longer just a nice-to-have — it's load-bearing depth insurance.
+
+## Emmanwori's Scheme Role
+
+In Macdonald's 3-4 multiple-front defense, Emmanwori occupies a **unique deployment** that standard depth charts don't capture:
+
+- **Big-nickel hybrid:** At 6'2"+, he's a safety-sized defender playing the slot — can match big WRs (e.g., Cooper Kupp types) AND tight ends
+- **Coverage chess piece:** Enables Macdonald's pre-snap disguises by fitting into safety rotations while also covering slot receivers
+- **Not a traditional nickel corner:** His value is positional ambiguity — opponents can't formation-match against him the way they can against a 5'10" slot corner
+
+This role was explicitly designed for the championship defense. The question is whether his 2025 rookie production validated the deployment or whether the scheme masked limited individual ability.
+
+## Key Tensions the Article Must Resolve
+
+### 1. Production vs. Scheme Shelter (Primary Tension)
+Seattle's 2025 defense was elite — Super Bowl champions, under 19 PPG, top 10 in yards and points. In that context, how do you isolate Emmanwori's individual contribution? A rookie big-nickel on a championship defense could look productive simply by being surrounded by Witherspoon, Love, and Williams. The article needs snap-level data (alignment, target rate, completion % allowed, missed tackle rate) to distinguish real production from ambient excellence.
+
+### 2. Role Escalation: Earned or Forced?
+With Woolen and Bryant gone, Seattle's 2026 secondary plan almost certainly includes a bigger Emmanwori role. But does his rookie tape justify that promotion, or is the front office projecting upside onto narrow evidence? This is the tension between what you hope he becomes and what 2025 actually showed.
+
+### 3. Positional Identity: Safety Who Plays Nickel, or Nickel Who Happens to Be Big?
+This matters for 2026 roster construction. If Emmanwori is a genuine versatile coverage piece (capable of playing nickel, slot, box safety, and deep safety in various packages), then Seattle's secondary is less desperate than it looks. If he's really just a big nickel with limited range, then the depth problem is worse than the depth chart suggests.
+
+### 4. The Witherspoon Dependency
+The Witherspoon extension article established that losing Witherspoon would drag Emmanwori "out of the big-nickel/chess role that maximizes him and into more true corner responsibility." The article should quantify this: how many of Emmanwori's 2025 snaps came in packages that REQUIRED Witherspoon's presence on the other side? If the answer is "most of them," that's a structural vulnerability the 2026 plan must address.
+
+## What the Article Should NOT Miss
+
+1. **Round 2 safety/hybrid benchmark comps** — What does the typical Year 1 production curve look like for Round 2 safeties deployed as big-nickel hybrids? Is Emmanwori ahead, behind, or on schedule? Without this, the evaluation has no baseline.
+
+2. **The four-pick draft constraint** — Seattle has only picks #32, #64, #96, ~#188 in the 2026 draft. If Emmanwori's rookie year was genuinely good, Seattle can use those precious picks on CB and EDGE instead of safety/nickel. If his year was shaky, Seattle may need to spend draft capital on a secondary competitor — which means EDGE or CB gets deprioritized. The Emmanwori evaluation directly affects Seattle's draft board.
+
+3. **The "Nehemiah Emmanwori" name trap** — Multiple prior articles have had name confusion issues (Nehemiah Pritchett vs. Nick Emmanwori). Editor must verify the correct name throughout. This is a known error pattern in the pipeline.
+
+## Recommended Panel Lanes
+
+| Agent | Lane | Do This | Don't Do This |
+|-------|------|---------|---------------|
+| **SEA** | Roster context + depth-chart implications + 2026 projection | Provide the "why this matters now" framing — secondary departures, draft constraint, Witherspoon dependency | Don't duplicate snap count analysis (that's Analytics) |
+| **Analytics** | Snap data, efficiency metrics, benchmark comps | Pull nflverse defensive data, produce comparison tables, quantify production vs. scheme effect | Don't use offense-only metrics (no EPA for a safety); don't speculate on scheme fit (that's Defense) |
+| **Defense** | Scheme fit, deployment interpretation, 2026 role projection | Evaluate how Macdonald used Emmanwori, what alignments he played, and whether the usage suggests expanding or maintaining his role | Don't overlap with SEA on roster depth; focus on football X's and O's |
+
+## Decision
+
+SEA recommends proceeding with issue #80 as written (corrected: Seattle context, not Jacksonville). The article fills a genuine gap — Emmanwori has appeared in multiple prior articles as a supporting character (Witherspoon extension, RB pick #64 evaluation) but has never been evaluated as the subject. Given the secondary departures and four-pick draft constraint, understanding what Seattle actually has in Emmanwori is a prerequisite for any credible 2026 draft/secondary analysis.
+
+**Priority:** High — should move through the pipeline before draft coverage begins.
+
+---
+
+# Decision: SEA Emmanwori Panel Position
+
+**Agent:** SEA
+**Article:** sea-emmanwori-rookie-eval (Issue #80)
+**Date:** 2026-03-19
+**Type:** Panel position — roster/draft lane
+
+## Decision
+
+Emmanwori's 768-snap rookie year is sufficient evidence to treat him as Seattle's S2/big-nickel building block for 2026. Seattle should NOT spend #32 or #64 on safety or secondary insurance.
+
+## Reasoning
+
+- Four-pick draft constraint (#32, #64, #96, ~#188) makes opportunity cost extreme
+- CB losses (Woolen, Bryant) and EDGE losses (Mafe, Lawrence retirement risk) are more acute than S2
+- 84.9% snap share on a -0.121 EPA/play defense reflects coaching trust, not default
+- Witherspoon dependency is acknowledged as the primary risk — extension must happen
+
+## Implication
+
+This position is consistent with the RB-at-#64 panel (issue #71) where SEA also argued CB/EDGE priority. If the Emmanwori panel reaches consensus on Path 1, it strengthens the case that Seattle's first two picks are locked into CB and EDGE.
+
+## Risk
+
+If Witherspoon extension stalls or he misses time, Emmanwori's role viability degrades. The stance assumes Witherspoon remains the anchor.
+
+---
+
+# Decision: Emmanwori Article Analytics Kickoff — Tooling Gap & Path Forward
+
+**Date:** 2026-07-27
+**Author:** Analytics
+**Issue:** #80
+**Status:** proposed
+
+## Context
+
+Issue #80 requests an analytics-driven evaluation of Nick Emmanwori's 2025 rookie season as a Seattle safety. The article needs defensive snap share, on-ball production, coverage metrics, Seattle defensive context, and Round 2 safety / big-nickel hybrid benchmark comps.
+
+The explicit constraint is: **do NOT use offense-only metrics** like `query_player_epa.py` or WR/QB positional comparison metrics for a safety.
+
+## Assessment: What Works Now
+
+Five of seven canned query scripts produce usable tables immediately:
+
+| Command | Table It Produces | Status |
+|---------|-------------------|--------|
+| `query_snap_usage.py --player "Nick Emmanwori" --season 2025` | Defensive snap share (768 snaps, 84.9%) | ✅ Validated |
+| `query_snap_usage.py --team SEA --season 2025 --position-group defense --top 15` | Full SEA defensive snap hierarchy (Emmanwori #6) | ✅ Validated |
+| `query_team_efficiency.py --team SEA --season 2025` | SEA defensive EPA/play (-0.121), success rate allowed (42.5%), 47 sacks, 18 INTs | ✅ Validated |
+| `query_draft_value.py --position S --round 2 --since 2015` | R2 safety hit rates (26 picks, 25.5 avg AV, 30.8% starter rate) | ✅ Validated |
+| `query_combine_comps.py --player "Nick Emmanwori"` | 6-3, 220 lbs, 4.38 forty, 43" vert, 138" broad | ✅ Validated |
+| `query_draft_value.py --player "Nick Emmanwori"` | R2 #35, SEA, AV 4 (Year 1) | ✅ Validated |
+
+## Assessment: What Doesn't Work
+
+| Script | Problem |
+|--------|---------|
+| `query_player_epa.py` | Returns "Limited metrics available for this position" for SAF. Offense-only; explicitly excluded. |
+| `query_positional_comparison.py` | Only supports QB/RB/WR/TE. No defensive position support. |
+
+## The Gap: No `query_pfr_defense.py` Script
+
+The `pfr_defense` dataset is fetched and cached (7,926 rows for 2025), and contains exactly the columns a safety article needs:
+
+- `def_tackles_combined`, `def_missed_tackles`, `def_missed_tackle_pct` — on-ball production
+- `def_targets`, `def_completions_allowed`, `def_yards_allowed`, `def_completion_pct` — coverage volume
+- `def_passer_rating_allowed`, `def_adot` — coverage efficiency
+- `def_ints` — playmaking
+- `def_times_blitzed`, `def_pressures` — deployment versatility
+- `def_yards_after_catch` — tackling context
+
+**Emmanwori's full-season aggregation from pfr_defense (manually computed):**
+
+| Metric | Value |
+|--------|------:|
+| Games | 13 |
+| Tackles | 80 |
+| Missed Tackles | 8 |
+| Tackle Efficiency | 90.9% |
+| Targets Against | 66 |
+| Completions Allowed | 49 |
+| Comp% Allowed | 74.2% |
+| Yards Allowed | 424 |
+| TDs Allowed | 3 |
+| INTs | 1 |
+| Avg Passer Rating Allowed | 89.1 |
+| Avg aDOT | 5.6 |
+| YAC Allowed | 267 |
+| Blitzes | 34 |
+| Pressures | 7 |
+
+## Recommendation
+
+**Create `content/data/query_pfr_defense.py`** — a canned script following Phase A/B patterns that:
+1. Queries individual player defensive production from `pfr_defense` dataset
+2. Supports `--player` mode (individual aggregation) and `--team` mode (team defensive roster)
+3. Supports `--position-group` filter for safeties/CBs/LBs/DL
+4. Outputs markdown tables matching the existing script format
+
+This is a reusable investment — any future defensive player article (edge rushers, CBs, LBs) will need the same script. It follows the existing Phase A/B pattern exactly.
+
+**Until the script is built**, the article can proceed using:
+- The 5 validated canned commands above
+- A short inline Python snippet to aggregate `pfr_defense` for Emmanwori (the data is cached and the aggregation is trivial)
+
+## Decision
+
+- **Short-term:** Proceed with 5 canned commands + manual `pfr_defense` aggregation for the kickoff brief.
+- **Medium-term:** Build `query_pfr_defense.py` as a Phase C script before article goes to panel (Stage 3). This closes the defensive tooling gap permanently.
+
+---
+
+# Decision: Analytics Panel Pattern for Defensive Player Articles
+
+**Filed by:** Analytics
+**Date:** 2026-07-27
+**Article:** `sea-emmanwori-rookie-eval`
+**Status:** Proposed
+
+## Decision
+
+When Analytics writes a panel position for a **defensive player article**, the following patterns should be standard:
+
+### Required Analytical Components
+
+1. **Within-team coverage comparison table.** Compare the player's passer rating allowed, comp% allowed, and aDOT to teammates on the same defense. This controls for system inflation far better than league-wide benchmarks and directly addresses the "system-sheltered" tension common to all players on elite defenses.
+
+2. **YAC% derived metric.** Calculate `def_yards_after_catch / def_yards_allowed` from `pfr_defense`. This ratio separates "targeted short and beaten at the catch point" from "completed short but tackled" — a distinction raw comp% cannot make.
+
+3. **Re-run all data queries at panel time.** Discussion prompt data anchors should be treated as approximate. Fresh aggregation from nflverse ensures consistency between the position statement and the actual dataset.
+
+4. **Explicit data-gap disclosure.** Name what the analytics cannot answer: alignment diversity (box/slot/deep), zone vs. man assignment, and system-adjusted individual value. Direct the reader to the Defense agent's scheme interpretation for those questions.
+
+### Tooling Dependency
+
+This pattern currently requires ad-hoc Python against the `pfr_defense` parquet file. A canned `query_pfr_defense.py` script (Phase C) would reduce execution time from ~10 minutes to ~30 seconds and eliminate aggregation errors. **Phase C should be prioritized before the next defensive player article enters the pipeline.**
+
+## Rationale
+
+The Emmanwori article was the first defensive player through the panel process. The offense-biased query library (`query_player_epa.py`, `query_positional_comparison.py`) was unusable. The workaround — inline Polars queries against `pfr_defense` — produced high-quality analysis but was slow and fragile. Codifying the pattern now prevents re-learning on the next defensive article.
+
+---
+
+# Decision: Emmanwori Panel — Tiered Chess-Piece Evaluation Framework
+
+**Date:** 2026-03-19
+**Author:** Defense
+**Type:** Reusable evaluation framework
+**Article:** sea-emmanwori-rookie-eval (Issue #80)
+
+## Decision
+
+When evaluating hybrid safeties for the "chess piece" label in disguise-heavy systems, use a **three-tier deployment framework** rather than a binary earned/not-earned judgment:
+
+| Tier | Role | Evidence Required | Label |
+|------|------|-------------------|-------|
+| 1 | Big-nickel / sub-package specialist | Matchup-specific snap share, personnel-triggered deployment | Useful hybrid |
+| 2 | Simulated-pressure + coverage hybrid | Blitz reps in designed packages + coverage assignment breadth across two roles | Scheme-integrated starter |
+| 3 | Full post-snap rotation across all three coverage levels | Film-confirmed alignment diversity (deep half, box, slot, robber, pressure) within single games | Chess piece (Hamilton/James archetype) |
+
+Each tier is valuable. Only Tier 3 justifies the premium comp set (Hamilton, Derwin James, Budda Baker).
+
+## Application to Emmanwori
+
+- **Tier 1 — confirmed.** Big-nickel deployment, 768 snaps at 84.9%, matchup role against TEs and big-slot WRs.
+- **Tier 2 — confirmed.** 34 blitzes with 7 pressures demonstrate simulated-pressure inclusion (full playbook access). Coverage + pressure = two-role breadth.
+- **Tier 3 — unconfirmed.** Post-snap rotation diversity from two-high shell into single-high, robber, or deep-half assignments cannot be validated from snap-count data alone. Requires film charting.
+
+**Verdict:** Conditionally earned at Tier 2. Tier 3 is a Year 2 developmental question.
+
+## Why This Is Reusable
+
+This framework applies to any hybrid safety evaluation in modern disguise-heavy defenses (Macdonald, Fangio tree, Zimmer systems). It prevents the two most common evaluation errors:
+1. Overcrediting raw snap share as chess-piece evidence (Tier 1 ≠ Tier 3)
+2. Undercrediting simulated-pressure inclusion, which is the clearest coaching-trust signal available in box-score-adjacent data
+
+## Scope
+
+Applies to Defense panel positions whenever evaluating hybrid/chess-piece safeties. Does not apply to traditional single-high FS or box SS evaluations where deployment breadth isn't the primary question.
+
+---
+
+# Decision: Mobile Table Render Right-Edge Clipping Fix
+
+**Date:** 2026-07-26
+**Author:** Lead
+**Status:** ✅ APPLIED (updated)
+
+## Problem
+
+Mobile table PNG images (generated by `.github/extensions/table-image-renderer/renderer-core.mjs`) were clipping text on the right edge. Affected any table with dense text in the rightmost column — visible on the Emmanwori article's "Tier vs What It Requires" and "Position Need vs Why" tables.
+
+## Root Cause
+
+The original fix (commit `fcd6daa`) introduced `tableFramePaddingX: 4` and switched to `border-collapse: separate`, but 4 CSS px was insufficient. Chrome's subpixel column-width rounding at 2× DPR, combined with anti-aliased `border-radius: 10px` bleeding on the frame's `overflow: hidden` clip boundary, consumed the 4px margin. The effective visible buffer between text and the clip edge was ≈1–2px — too thin for 22px mobile body font.
+
+## Fix (round 2)
+
+1. **Increased `tableFramePaddingX` from 4 → 10** in `MOBILE_RENDER_LAYOUT`. The additional 6px provides a clearly visible safety margin at mobile font sizes.
+2. **Added `word-break: break-word` to `tbody td`** CSS — matches `thead th` for defensive consistency.
+3. **No change to desktop layout** (`tableFramePaddingX: 0` is fine at smaller font sizes).
+4. `chooseMobileCanvasWidth()` already compensates via `framePad * 2`, so effective table content area is unchanged (canvas widens by 12px from 508 → 520 for ≤3 columns).
+
+## Impact
+
+- Canvas width for ≤3-column mobile tables: 508 → 520px (+12px)
+- Effective font size at 375px viewport: ~15.7px (vs ~16.2px before) — well above 10px readability floor
+- All existing mobile images should be re-rendered when their articles next pass through the pipeline
+- Emmanwori article images re-rendered and verified clean
+
+---
+
+
+
