@@ -27,6 +27,16 @@
 
 ## Recent Sessions
 
+### nflverse Detailed Implementation Plan (2026-03-19T02:31:01Z)
+**Status:** ✅ APPROVED — Lead converted 5-tier research proposal into actionable Phase A scope with explicit Phase B+ defer triggers.
+
+- Phase A scope locked: `requirements.txt` + cache script + 3 query scripts + skill doc + Analytics charter patch
+- Timeline: 2-3 sessions max (must not delay article publication)
+- No new agents; Analytics absorbs upgrade
+- Deferred Tiers 2-5 with explicit entry triggers: frequency bottleneck, article throughput, custom Python, regular season
+- 📌 Team update (2026-03-19T02:31:01Z): nflverse Phase A approved — build next 2-3 sessions, defer advanced tiers, decided by Lead
+- Session log: `.squad/log/2026-03-19T02-31-01Z-nflverse-detailed-plan.md`
+
 ### nflverse Platform-Fit Review (2026-03-19T02:20:14Z)
 **Status:** ✅ LOGGED — Lead assessed nflverse/nflreadpy integration report against platform state; recommended Tier 0–1 (data cache script + 3 query scripts), deferred Tiers 2–5 (DataScience agent, extension, gameday pipeline).
 
@@ -148,3 +158,12 @@ Sessions archived:
 - **Risks flagged:** Python+Node dual-runtime management, offseason data is static (limits near-term uplift), token cost of large data tables in 1,500-token panel budget, ~300MB parquet cache needs `.gitignore`.
 - **Quick wins:** `requirements.txt`, `content/data/fetch_nflverse.py`, `.squad/skills/nflverse-data/SKILL.md`, Analytics charter PFR→nflverse update, 2–3 query scripts (`query_player_epa.py`, `query_team_efficiency.py`, `query_positional_comparison.py`).
 - **Platform bottleneck today:** Publishing and audience validation, not data sophistication. Content quality upgrades matter but shouldn't distract from getting articles live.
+
+### nflverse Detailed Implementation Plan (2026-03-19)
+- **Upgraded research → plan:** Converted the 5-tier nflverse research report into an execution-ready implementation plan with phased rollout (Phase A/B/C), concrete deliverables per step, file locations, validation checkpoints, risk register, and dependency sequencing.
+- **Phase A = build-ready:** 6 steps (Python env → fetch script → 3 query scripts → SKILL.md → Analytics charter patch → smoke test). Capped at 2-3 sessions. Gate: first article uses real nflverse data in a discussion prompt.
+- **Phase B = on-demand:** 4 more query scripts + first published article with nflverse-sourced stats. Triggered after Phase A proves out.
+- **Deferred tiers (C+):** Each tier now has an explicit entry trigger (Analytics bottleneck, 2+/week article cadence, regular season start). No premature investment.
+- **Decision filed:** `.squad/decisions/inbox/lead-nflverse-detailed-plan.md`
+- **Open questions flagged:** Python version requirement, cache warm-up scope (2025 only vs. 2020-2025), FTN charting copyleft license, DVOA gap in nflverse.
+- **Key constraint:** Phase A must not delay next article publication. If it blocks article production, stop and reassess.

@@ -5,6 +5,52 @@
 ---
 
 ---
+title: "nflverse Detailed Implementation Plan"
+status: "approved"
+date: "2026-03-19"
+decider: "Lead"
+context: "Converted 5-tier nflverse research report into actionable Phase A scope tied to current platform state."
+---
+
+# nflverse Detailed Implementation Plan
+
+## Decision
+
+Approve the detailed implementation plan for nflverse integration. Build Phase A (Tier 0 + selective Tier 1) in the next 2-3 sessions. Defer all other tiers.
+
+## Phase A Scope (approved)
+
+1. `requirements.txt` at repo root — `nflreadpy>=0.2.0`, `polars>=1.0`
+2. `content/data/fetch_nflverse.py` — cache script for parquet downloads
+3. `content/data/cache/` — gitignored local data store
+4. 3 query scripts: `query_player_epa.py`, `query_team_efficiency.py`, `query_positional_comparison.py`
+5. `.squad/skills/nflverse-data/SKILL.md` — data dictionary and usage guide
+6. Analytics charter patch — nflverse replaces PFR as primary structured data source
+
+## Constraints
+
+- Phase A is capped at 2-3 sessions. Must not delay next article publication.
+- No new agents. Analytics absorbs the data access upgrade.
+- Deferred work (Tiers 2-5: full charter rewrite, extension, DataScience agent, gameday pipeline) requires Phase 1 publishing goals to be met first.
+- Cache parquet files must be gitignored (~300 MB for multi-season).
+
+## Entry triggers for deferred work
+
+| Tier | Trigger |
+|------|---------|
+| Tier 2 (Analytics upgrade) | Analytics frequently bottlenecked by missing queries |
+| Tier 3 (Extension) | Article production reaches 2+/week |
+| Tier 4 (DataScience agent) | Analytics needs custom Python beyond pre-built scripts |
+| Tier 5 (Gameday review) | Regular season begins + Tiers 0-2 proven |
+
+## Source
+
+Full plan: session workspace `research/i-want-to-add-another-expert-for-more-advanced-dat.md`
+Prior platform-fit decision: `.squad/decisions/inbox/lead-nflverse-platform-fit.md` (2026-03-19)
+
+---
+
+---
 title: "Dashboard Validation Integration — Implementation Brief"
 status: "proposed"
 date: "2026-07-25"
