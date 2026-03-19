@@ -87,56 +87,56 @@
 - Scribe merged the Lead decision for published-URL backfill + Note card-render fix into `decisions.md`, cleared the decision inbox, and recorded the session artifacts under `.squad/log/` and `.squad/orchestration-log/`.
 - Shared memory now reflects the durable rule: Note URLs need ProseMirror link marks for article-card rendering, and missing `substack_url` values can be backfilled from the production archive API.
 
-## Learnings
+## Summarized Sessions (2026-03-17 and Earlier)
 
-### Stage vs. Production Notes Lifecycle Pattern (2026-03-18)
-- Stage Notes are **always temporary review artifacts** — posted for Joe's editorial review on nfllabstage, then deleted after approval
-- Production Notes are **permanent engagement tools** — posted to nfllab.substack.com after Joe approves stage batch, kept live indefinitely
-- Pattern: Post to stage → Joe reviews → Delete stage → Post to production (if approved)
-- Reusable scripts: `retry-stage-notes.mjs` (delete + repost), `delete-notes-api.mjs` (cleanup), `publish-prod-notes.mjs` (production posting)
-- Decision history lives in `.squad/decisions/inbox/lead-notes-lifecycle-pattern.md` (to be created for future reference)
+> Condensed by Scribe on 2026-03-19T02:20:14Z. Detailed session notes for Dashboard (2026-03-18), Notes workflow (2026-03-17/18), and earlier work preserved in `history-archive.md`.
 
-### Production Notes Rollout — All 12 Articles (2026-03-18)
-- Posted 12 production promotion Notes to nfllab.substack.com using card-first mechanism (registerPostAttachment + attachmentIds). Note IDs: 229406564–229406730.
-- Reused approved stage-review teaser copy; lightly improved den-mia-waddle-trade and welcome-post teasers that were placeholder-short.
-- Script: `publish-prod-notes.mjs` — adapted from `retry-stage-notes.mjs` but targets PROD (SUBSTACK_PUBLICATION_URL), has no delete phase, and reuses a single Playwright browser session across all 12 posts for speed.
-- pipeline.db notes table: 12 new rows (IDs 18–29) with target='prod', preserving stage rows (6–17) as audit trail. Both stage and prod notes coexist per article.
-- Key pattern: `registerPostAttachment()` does NOT require CF bypass — plain fetch works. But the `POST /api/v1/comment/feed` (note creation) DOES require Playwright browser context to pass Cloudflare.
-- 1.5s delay between posts prevents rate limiting. Full batch ran in ~90s.
-- Results JSON: `publish-prod-notes-results.json`. Decision: `.squad/decisions/inbox/lead-prod-notes.md`.
+Sessions archived:
+- Dashboard Implementation Session (2026-03-18T04:48Z) — Dashboard architecture, source-map audit, shared preview wiring
+- Dashboard Implementation Sprint (2026-03-18T045148Z) — Dashboard foundation completion, validation integration
+- Notes Card Render Fix & URL Backfill Verification (2026-03-17T16:28Z) — ProseMirror link marks, URL backfill
+- Notes workflow consolidation (2026-03-17 to 2026-03-18) — Card-first bodies, stage → prod pattern, Issue #75 mobile table, Issue #78 Waddle article (full pipeline), Issue #79 NYJ follow-on
+- Notes Card Render Fix + URL Backfill Logged (2026-03-17) — Scribe merge of published-URL decision
+- Stage vs. Production Notes Lifecycle Pattern (2026-03-18) — Stage as temporary review artifacts, prod as permanent engagement
+- Production Notes Rollout — All 12 Articles (2026-03-18) — 12 promotion Notes posted to prod (IDs 229406564–229406730)
+- Stage Note Retry — Idempotent Cleanup (2026-03-18) — 5-note repost, article-card rendering
+- Stage-review note retry logged (2026-03-17T17:07Z) — Attachment-backed flow verification
+- Stage Notes Cleanup Scope (2026-03-18) — Cleanup go/no-go checks, delete patterns, cleanup list scope
+- Stage Teaser Posted + Stage Cleanup Executed (2026-03-18T02:30Z) — Teaser c-229449096 posted + protected, 12 superseded notes marked deleted, DELETE endpoint fixed
+- Post-Stage-7 Cleanup Scope Verification (2026-03-18T02:24:01Z) — Team updates, 10 decision merges, orchest logs
+- Stage 7 Teaser Flow Disabled (2026-03-18) — Deprecate post-stage-teaser.mjs, remove MISSING_TEASER, teaser deletion (endpoint fix)
+- Local Pipeline Dashboard (2026-03-17T21:23Z) — Zero-dependency Node server, JS stage-inference, markdown preview, routes/tabs
+- nflverse Platform-Fit Review (2026-03-19) — *See Recent Sessions for full details*
 
-### Stage Note Retry — Idempotent Cleanup (2026-03-18)
-- Previous note batch (229384944–229385077) returned HTTP 404 on delete — they were already cleaned up in an earlier session. DELETE on non-existent notes is harmless (not 500-class).
-- Fresh 5-note batch posted with `registerPostAttachment()` + `attachmentIds` on nfllabstage. All 5 rendered article cards (hero image + NFL Lab logo + title). Verified via web fetch on c-229399257.
-- The `retry-stage-notes.mjs` script is a parameterized fork of `replace-stage-notes-v2.mjs` — change the `PREVIOUS_NOTES` array to target any batch. Two-phase (delete-all-first, then post-all) avoids interleaving failures.
-- Pipeline.db `notes` table updated with new URLs in-place (same row IDs 6–10, new `substack_note_url` values).
-### Stage-review note retry logged (2026-03-17T17:07Z)
-- Reran the nfllabstage stage-review Notes through the attachment-backed article-card flow and confirmed the five replacements render as cards.
-- Durable architecture recorded in .squad/decisions.md under 2026-03-18: Stage-Review Note Retry — Two-Phase Delete-then-Post; orchestration trace saved at .squad/orchestration-log/20260317T170758Z-lead.md.
+## Recent Sessions
 
-### Stage Notes Cleanup Scope (2026-03-18)
-- `python content/article_board.py notes-sweep --json` is the go/no-go check for Notes cleanup timing. Current state still shows `witherspoon-extension-v2` at Stage 7 with `MISSING_TEASER`, so stage-note cleanup should wait until that teaser is posted to nfllabstage.
-- Once a matching prod promotion Note exists, the stage Note itself is disposable review residue — delete the external nfllabstage Note, but keep both stage and prod `pipeline.db` rows plus `publish-prod-notes-results.json` as the audit trail.
-- Current first-pass cleanup list is the 12 live nfllabstage Note IDs `229399257, 229399279, 229399303, 229399326, 229399346, 229402275, 229402289, 229402302, 229402322, 229402343, 229402254, 229402366`; each already has a paired prod Note row (`18`–`29`).
-- `delete-notes-api.mjs` is still the referenced cleanup mechanism in decisions/history, but it is absent from the current working tree. Restore or recreate that delete-only helper before executing stage-note cleanup.
+### nflverse Platform-Fit Review (2026-03-19T02:20:14Z)
+**Status:** ✅ LOGGED — Lead assessed nflverse/nflreadpy integration report against platform state; recommended Tier 0–1 (data cache script + 3 query scripts), deferred Tiers 2–5 (DataScience agent, extension, gameday pipeline).
 
-### Stage Teaser Posted + Stage Cleanup Executed (2026-03-18T02:30Z)
-- **Teaser posted:** `witherspoon-extension-v2` Stage 7 teaser live on nfllabstage at `c-229449096`. Used recommended Writer copy: "Cap says $27M. The agent demands $33M. Our experts re-examine Seattle's most important extension decision." Text-only (no article card — v2 not yet published). `notes-sweep` now returns `[]` — zero gaps.
-- **Cleanup executed:** All 12 superseded stage-review Notes (IDs 229399257–229402366) confirmed already deleted externally (all returned 404). Marked pipeline.db rows 6–17 as `[DELETED]` for audit trail. 12 prod notes (IDs 18–29) untouched. New teaser (ID 30) protected.
-- **`delete-notes-api.mjs` absent:** Confirmed the file doesn't exist in the working tree. Used the DELETE endpoint from `retry-stage-notes.mjs` pattern instead — same validated path. Created `cleanup-stage-notes.mjs` (reusable) and `post-stage-teaser.mjs` (single-article) as purpose-built scripts.
-- **Key learning:** For articles not yet published (Stage 7, no `substack_url`), post text-only teasers — card attachment requires a live `/p/` URL. Add the card retroactively when the article reaches Stage 8.
-- **Decision:** `.squad/decisions/inbox/lead-stage-teaser-clean.md`
+- Reviewed 5-tier proposal: determined Analytics gap is data access (PFR blocked), not scope.
+- Recommended immediate: `pip install nflreadpy` + cache script + 3 query scripts (EPA, efficiency, positional comparison).
+- Deferred DataScience agent (premature; no evidence Analytics will bottleneck; Phase 2+ investment).
+- Flagged two-runtime overhead (Python + Node) — mitigate via `.squad/skills/nflverse-data/SKILL.md` + isolated `content/data/`.
+- Identified Stage 2 integration point: data anchors for discussion prompts (automated aggregation replaces hand-assembly).
+- Captured risk: offseason data is static; real value is historical comparisons for current articles (Witherspoon, JSN, draft).
+- 📌 Team update (2026-03-19T02:20:14Z): nflverse Tier 0–1 integration strategy — do now + defer 2–5 until Phase 1 goals proven, decided by Lead.
 
-### Post-Stage-7 Cleanup Scope Verification (2026-03-18T02:24:01Z)
-- 📌 **Team update:** Verified stage teaser status and documented reusable Notes lifecycle pattern. Stage review batch (5 articles, IDs 229399257/279/303/326/346) is **PENDING Joe's review** on nfllabstage. Production promotion batch (12 articles, IDs 229406564–229406730) is **already live** on nfllab.substack.com. Cleanup is safe after Joe approves. Merged 10 decision artifacts into `.squad/decisions.md` covering: Stage vs. Production Notes lifecycle, Production rollout execution, Full backlog coverage, Cleanup scope + archival recommendations, Telemetry infrastructure design, and Production conventions. Orchest ration logs created at `.squad/orchestration-log/{timestamp}-lead.md` and `.squad/orchestration-log/{timestamp}-writer.md`. Session log created at `.squad/log/2026-03-18T02-24-01Z-notes-cleanup-scope.md`.
+### Teaser Flow Disablement & Notes Cleanup (2026-03-18T03:18:41Z – 2026-03-18)
+**Status:** ✅ LOGGED — Disabled Stage 7 teaser Notes flow per Joe directive; fixed API endpoint in cleanup scripts; verified teaser deletion and audit trail closure.
 
-### Stage 7 Teaser Flow Disabled (2026-03-18)
-- **Directive:** Joe deprioritized teasers — "they need more work." Promotion-note flow for published articles remains active.
-- **Changes:** Removed `MISSING_TEASER` from `notes-sweep`, deprecated `post-stage-teaser.mjs`, updated feature design doc Phase 5 cadence, unprotected the live stage teaser c-229449096 for cleanup.
-- **Key pattern:** When disabling a feature, deprecate the script (early exit + message) rather than deleting it — preserves reference code and makes the deprecation visible to anyone who runs it.
-- **Post-disable workflow:** After publishing an article, agents should surface that a promotion Note *can* be posted (optional). The sweep still catches `MISSING_PROMOTION` and `STALE_PROMOTION` for published articles. No teaser enforcement at Stage 7.
-- **Teaser deletion completed:** c-229449096 deleted via `DELETE /api/v1/comment/{id}` on nfllabstage (plain fetch, HTTP 200). Key finding: the delete endpoint for Notes is `/api/v1/comment/{id}`, NOT `/api/v1/notes/{id}` (which returns 404). The existing `cleanup-stage-notes.mjs` and `retry-stage-notes.mjs` use the wrong endpoint (`/api/v1/notes/`). CDN caching can delay deletion visibility by several minutes.
-- **Decision:** `.squad/decisions/inbox/lead-disable-teaser-flow.md`
+- Merged directive (teaser disablement, notes flow active) + two follow-up decisions (endpoint fix + cleanup verification).
+- Confirmed teaser note c-229449096 deleted (GET returns 404); updated `now.md` status.
+- Fixed wrong DELETE endpoint in `cleanup-stage-notes.mjs` and `retry-stage-notes.mjs`: `/api/v1/notes/{id}` → `/api/v1/comment/{id}`.
+- Updated feature design doc (Phase 5 cadence); disabled `post-stage-teaser.mjs`.
+- Verified `notes-sweep` clean — zero gaps remaining; promotion Notes still active.
+- Session log: `.squad/log/2026-03-18T02-24-01Z-lead.md`
+
+### Token-Usage Telemetry Test — Issue #54 (2026-03-18T22:30Z)
+**Status:** ✅ LOGGED — Telemetry instrumentation verified, the missing Stage 4 synthesis created, and Backend received the summary totals.
+
+- Added `content/model_policy.py`, `usage_events`, and `stage_runs`, then recorded 10 usage events apiece for DEN (~80,850 tokens) and MIA (~78,400 tokens).
+- Created `content/articles/den-2026-offseason/discussion-summary.md` and updated `pipeline.db` so `discussion_path` points to the new artifact.
+- Logged the decision entry (`2026-03-18: Token-Usage Telemetry Test — Issue #54`) plus the session log (`.squad/log/2026-03-18T223000Z-den-telemetry-test.md`) and orchestration trace (`.squad/orchestration-log/2026-03-18T223000Z-lead.md`).
 
 ## Learnings
 
@@ -148,14 +148,3 @@
 - **Risks flagged:** Python+Node dual-runtime management, offseason data is static (limits near-term uplift), token cost of large data tables in 1,500-token panel budget, ~300MB parquet cache needs `.gitignore`.
 - **Quick wins:** `requirements.txt`, `content/data/fetch_nflverse.py`, `.squad/skills/nflverse-data/SKILL.md`, Analytics charter PFR→nflverse update, 2–3 query scripts (`query_player_epa.py`, `query_team_efficiency.py`, `query_positional_comparison.py`).
 - **Platform bottleneck today:** Publishing and audience validation, not data sophistication. Content quality upgrades matter but shouldn't distract from getting articles live.
-
-### Local Pipeline Dashboard (2026-03-17T21:23Z)
-- **Architecture:** Zero-dependency Node server (`node:http` + `node:sqlite`). No Express, no React, no build step.
-- **Key decision:** Reimplement `article_board.py` stage-inference in JavaScript (`dashboard/data.mjs`) rather than shelling out to Python. This keeps the dashboard pure-Node and avoids cross-runtime coordination.
-- **Key decision:** Approximate markdown preview (`dashboard/render.mjs`) rather than full ProseMirror round-trip for v1. The preview banner warns about Substack fidelity gap. Canonical preview via publisher validation is the upgrade path.
-- **File structure:** `dashboard/server.mjs` (HTTP + routing), `data.mjs` (read model), `render.mjs` (md→HTML), `templates.mjs` (server-rendered HTML), `public/style.css`.
-- **Data model:** Unified board payload merges DB rows (`pipeline.db`) with filesystem artifact scanning. Drift (DB vs artifact stage mismatch) is surfaced as a first-class column.
-- **Routes:** `/` (board), `/article/:slug` (detail with 7 tabs), `/preview/:slug` (draft.md rendered), `/api/board` and `/api/article/:slug` (JSON).
-- **Token telemetry:** Placeholder section ("not yet instrumented") on overview tab per plan. Schema-ready slot exists.
-- **Baseline:** `npm test` exits 1 — intentionally left unchanged (no test specified).
-- **Node requirement:** 22+ (`node:sqlite` is experimental). The `ExperimentalWarning` is expected.
