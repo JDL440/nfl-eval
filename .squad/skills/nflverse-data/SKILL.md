@@ -93,11 +93,28 @@ python content/data/fetch_nflverse.py --dataset combine
 
 ---
 
-## Query Scripts (Phase A + Phase B)
+## Query Scripts (Phase A + Phase B + Phase C)
 
-Seven query scripts are production-ready. All output **pre-aggregated markdown tables** to control token cost when injected into agent prompts.
+Nine query scripts are production-ready. All output **pre-aggregated markdown tables** to control token cost when injected into agent prompts. All scripts also support `--format json` for MCP tool consumers.
 
-### 1. Player EPA & Efficiency — `query_player_epa.py`
+### MCP Tools (Tier 3 — preferred access method)
+
+All query scripts are exposed as native MCP tools via `.github/extensions/nflverse-query/tool.mjs`, registered in `mcp/server.mjs`. Any agent can call these tools directly without shell-out or prompt engineering.
+
+| MCP Tool | Wraps Script | Description |
+|----------|-------------|-------------|
+| `query_player_stats` | `query_player_epa.py` | Offensive player EPA + efficiency + positional rank |
+| `query_team_efficiency` | `query_team_efficiency.py` | Team off/def EPA, success rate, situational stats |
+| `query_positional_rankings` | `query_positional_comparison.py` | League-wide top-N by position and metric |
+| `query_snap_counts` | `query_snap_usage.py` | Snap counts (team or player level) |
+| `query_draft_history` | `query_draft_value.py` | Draft pick value, hit rates, player history |
+| `query_ngs_passing` | `query_ngs_passing.py` | QB Next Gen Stats (2016+) |
+| `query_combine_profile` | `query_combine_comps.py` | Combine measurables and leaderboards |
+| `query_pfr_defense` | `query_pfr_defense.py` | PFR defensive stats (tackles, coverage, pass rush) |
+| `query_historical_comps` | `query_historical_comps.py` | Multi-season statistical player comparisons |
+| `refresh_nflverse_cache` | `fetch_nflverse.py` | Download or refresh local parquet cache |
+
+### CLI Scripts
 
 **Usage:**
 ```bash
@@ -362,6 +379,77 @@ python content/data/query_combine_comps.py --player "Drake Maye" --format json
 
 ---
 
+### 8. PFR Defensive Stats — `query_pfr_defense.py`
+
+**Usage:**
+```bash
+python content/data/query_pfr_defense.py --player "Boye Mafe" --season 2025
+python content/data/query_pfr_defense.py --team SEA --season 2025 --top 15
+python content/data/query_pfr_defense.py --position CB --season 2025 --top 20
+python content/data/query_pfr_defense.py --player "Nehemiah Pritchett" --season 2025 --format json
+```
+
+**Three query modes:**
+- **Player mode:** Full stat sheet (tackles, coverage, pass rush, turnovers) + position rank
+- **Team mode:** All defenders on a team sorted by tackles — key columns in a compact table
+- **Positional comparison:** League-wide ranking by position (CB/S by passer rating allowed; LB/DE/DT by tackles)
+
+**Output columns:**
+- Tackles (combined, missed, missed tackle %)
+- Coverage: targets, completions allowed, completion %, yards allowed, yards/target, passer rating allowed, aDOT, YAC
+- Pass rush: blitzes, hurries, QB hits, sacks, pressures
+- Turnovers: INTs, TDs allowed
+
+**Position aliases:** DB (→CB+S), EDGE (→DE+OLB), DL (→DE+DT+NT)
+
+**Minimum thresholds:** ≥20 targets for coverage rankings, ≥50 tackles for tackle rankings
+
+**Note:** PFR defense data available 2018–present. Position data is joined from nflverse rosters using `depth_chart_position` for granular positions (CB, SS, DE, DT, ILB, OLB).
+
+---
+
+### 9. Historical Player Comps — `query_historical_comps.py`
+
+**Usage:**
+```bash
+python content/data/query_historical_comps.py --player "Jaxon Smith-Njigba" --season 2025
+python content/data/query_historical_comps.py --player "Drake Maye" --season 2025 --seasons-back 5 --top 10
+python content/data/query_historical_comps.py --player "Bijan Robinson" --season 2025 --format json
+```
+
+**How it works:**
+1. Loads `player_stats` for the target season + N prior seasons (default: 5)
+2. Filters to same position with minimum volume thresholds
+3. Z-score normalizes position-specific metrics across all player-seasons
+4. Computes Euclidean distance from target to every other player-season
+5. Returns top-N closest matches with a similarity percentage
+
+**Position-specific metrics:**
+- **QB:** completions, attempts, yards, TDs, INTs, EPA, CPOE, Dakota (min 200 attempts)
+- **RB:** carries, rush yards, rush TDs, rush EPA, targets, receptions, rec yards (min 100 carries)
+- **WR:** targets, receptions, rec yards, rec TDs, rec EPA, RACR, target share, air yards share (min 50 targets)
+- **TE:** Same as WR (min 30 targets)
+
+**Output (markdown mode):**
+```markdown
+### Historical Comps for Jaxon Smith-Njigba (2025 WR, SEA)
+
+Comparing against 245 WR seasons (2020–2025, min 50 targets)
+
+| Rank | Player | Season | Team | Similarity | Key Stats |
+|-----:|--------|-------:|------|-----------:|-----------|
+| 1 | CeeDee Lamb | 2022 | DAL | 87% | 107 rec, 1,359 yds, 9 TD |
+| 2 | Amon-Ra St. Brown | 2023 | DET | 82% | 119 rec, 1,515 yds, 10 TD |
+...
+```
+
+**Use cases:**
+- "Who had a statistically similar age-25 season?" for projection modeling
+- Historical context for contract valuation
+- Draft prospect comparison to NFL player archetypes
+
+---
+
 ## Integration with Article Pipeline
 
 ### Data anchors for discussion prompts
@@ -435,10 +523,9 @@ Include the actual numbers from the output in your analysis.
 
 ## Future Phases (Deferred)
 
-- **Phase B complete ✅ (2026-03-19):** 4 additional query scripts added (snap usage, draft value, NGS passing, combine comps). Seven total scripts now production-ready.
-- **Tier 2:** Analytics charter upgrade — nflverse as primary data source, auto-generated data anchors
-- **Tier 3:** Copilot extension — native tool calling for any agent (no shell-out)
-- **Tier 4:** DataScience agent — writes Python for custom models (aging curves, statistical comps)
+- **Phase B complete ✅ (2026-03-19):** 4 additional query scripts added (snap usage, draft value, NGS passing, combine comps). Seven total scripts production-ready.
+- **Phase C complete ✅ (2026-03-19):** Tier 2 (Analytics charter rewrite with PBP/tracking/FTN/defense/historical comps) + Tier 3 (10 MCP tools in `nflverse-query` extension). Nine total scripts, all exposed as native tools.
+- **Tier 4:** DataScience agent — writes Python for custom models (aging curves, statistical comps, visualizations)
 - **Tier 5:** Gameday review pipeline — same-day article production after NFL games
 
 See `.squad/decisions/inbox/lead-nflverse-detailed-plan.md` for full roadmap.

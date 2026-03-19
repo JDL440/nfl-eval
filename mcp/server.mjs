@@ -16,6 +16,18 @@ import {
     handlePublishToSubstack,
     handlePublishNoteToSubstack,
 } from "../.github/extensions/substack-publisher/tool.mjs";
+import {
+    queryPlayerStatsTool, handleQueryPlayerStats,
+    queryTeamEfficiencyTool, handleQueryTeamEfficiency,
+    queryPositionalRankingsTool, handleQueryPositionalRankings,
+    querySnapCountsTool, handleQuerySnapCounts,
+    queryDraftHistoryTool, handleQueryDraftHistory,
+    queryNgsPassingTool, handleQueryNgsPassing,
+    queryCombineProfileTool, handleQueryCombineProfile,
+    queryPfrDefenseTool, handleQueryPfrDefense,
+    queryHistoricalCompsTool, handleQueryHistoricalComps,
+    refreshNflverseCacheTool, handleRefreshNflverseCache,
+} from "../.github/extensions/nflverse-query/tool.mjs";
 
 const server = new McpServer({
     name: "nfl-eval-local-tools",
@@ -104,6 +116,106 @@ server.registerTool(publishNoteToSubstackTool.name, {
         target: z.enum(["stage", "prod"]).optional().describe(publishNoteToSubstackTool.parameters.properties.target.description),
     },
 }, async (args) => runWithNormalization(handlePublishNoteToSubstack, args));
+
+// ─── nflverse-query tools ─────────────────────────────────────────────────────
+
+server.registerTool(queryPlayerStatsTool.name, {
+    description: queryPlayerStatsTool.description,
+    inputSchema: {
+        player: z.string().describe(queryPlayerStatsTool.parameters.properties.player.description),
+        season: z.number().int().describe(queryPlayerStatsTool.parameters.properties.season.description),
+    },
+}, async (args) => runWithNormalization(handleQueryPlayerStats, args));
+
+server.registerTool(queryTeamEfficiencyTool.name, {
+    description: queryTeamEfficiencyTool.description,
+    inputSchema: {
+        team: z.string().describe(queryTeamEfficiencyTool.parameters.properties.team.description),
+        season: z.number().int().describe(queryTeamEfficiencyTool.parameters.properties.season.description),
+    },
+}, async (args) => runWithNormalization(handleQueryTeamEfficiency, args));
+
+server.registerTool(queryPositionalRankingsTool.name, {
+    description: queryPositionalRankingsTool.description,
+    inputSchema: {
+        position: z.string().describe(queryPositionalRankingsTool.parameters.properties.position.description),
+        metric: z.string().describe(queryPositionalRankingsTool.parameters.properties.metric.description),
+        season: z.number().int().describe(queryPositionalRankingsTool.parameters.properties.season.description),
+        top: z.number().int().optional().describe(queryPositionalRankingsTool.parameters.properties.top.description),
+    },
+}, async (args) => runWithNormalization(handleQueryPositionalRankings, args));
+
+server.registerTool(querySnapCountsTool.name, {
+    description: querySnapCountsTool.description,
+    inputSchema: {
+        team: z.string().optional().describe(querySnapCountsTool.parameters.properties.team.description),
+        player: z.string().optional().describe(querySnapCountsTool.parameters.properties.player.description),
+        season: z.number().int().describe(querySnapCountsTool.parameters.properties.season.description),
+        position_group: z.string().optional().describe(querySnapCountsTool.parameters.properties.position_group.description),
+        top: z.number().int().optional().describe(querySnapCountsTool.parameters.properties.top.description),
+    },
+}, async (args) => runWithNormalization(handleQuerySnapCounts, args));
+
+server.registerTool(queryDraftHistoryTool.name, {
+    description: queryDraftHistoryTool.description,
+    inputSchema: {
+        player: z.string().optional().describe(queryDraftHistoryTool.parameters.properties.player.description),
+        position: z.string().optional().describe(queryDraftHistoryTool.parameters.properties.position.description),
+        pick_range: z.string().optional().describe(queryDraftHistoryTool.parameters.properties.pick_range.description),
+        round: z.number().int().optional().describe(queryDraftHistoryTool.parameters.properties.round.description),
+        since: z.number().int().optional().describe(queryDraftHistoryTool.parameters.properties.since.description),
+    },
+}, async (args) => runWithNormalization(handleQueryDraftHistory, args));
+
+server.registerTool(queryNgsPassingTool.name, {
+    description: queryNgsPassingTool.description,
+    inputSchema: {
+        player: z.string().optional().describe(queryNgsPassingTool.parameters.properties.player.description),
+        season: z.number().int().describe(queryNgsPassingTool.parameters.properties.season.description),
+        top: z.number().int().optional().describe(queryNgsPassingTool.parameters.properties.top.description),
+        metric: z.string().optional().describe(queryNgsPassingTool.parameters.properties.metric.description),
+    },
+}, async (args) => runWithNormalization(handleQueryNgsPassing, args));
+
+server.registerTool(queryCombineProfileTool.name, {
+    description: queryCombineProfileTool.description,
+    inputSchema: {
+        player: z.string().optional().describe(queryCombineProfileTool.parameters.properties.player.description),
+        position: z.string().optional().describe(queryCombineProfileTool.parameters.properties.position.description),
+        metric: z.string().optional().describe(queryCombineProfileTool.parameters.properties.metric.description),
+        top: z.number().int().optional().describe(queryCombineProfileTool.parameters.properties.top.description),
+    },
+}, async (args) => runWithNormalization(handleQueryCombineProfile, args));
+
+server.registerTool(queryPfrDefenseTool.name, {
+    description: queryPfrDefenseTool.description,
+    inputSchema: {
+        player: z.string().optional().describe(queryPfrDefenseTool.parameters.properties.player.description),
+        team: z.string().optional().describe(queryPfrDefenseTool.parameters.properties.team.description),
+        position: z.string().optional().describe(queryPfrDefenseTool.parameters.properties.position.description),
+        season: z.number().int().describe(queryPfrDefenseTool.parameters.properties.season.description),
+        top: z.number().int().optional().describe(queryPfrDefenseTool.parameters.properties.top.description),
+    },
+}, async (args) => runWithNormalization(handleQueryPfrDefense, args));
+
+server.registerTool(queryHistoricalCompsTool.name, {
+    description: queryHistoricalCompsTool.description,
+    inputSchema: {
+        player: z.string().describe(queryHistoricalCompsTool.parameters.properties.player.description),
+        season: z.number().int().describe(queryHistoricalCompsTool.parameters.properties.season.description),
+        seasons_back: z.number().int().optional().describe(queryHistoricalCompsTool.parameters.properties.seasons_back.description),
+        top: z.number().int().optional().describe(queryHistoricalCompsTool.parameters.properties.top.description),
+    },
+}, async (args) => runWithNormalization(handleQueryHistoricalComps, args));
+
+server.registerTool(refreshNflverseCacheTool.name, {
+    description: refreshNflverseCacheTool.description,
+    inputSchema: {
+        datasets: z.array(z.string()).describe(refreshNflverseCacheTool.parameters.properties.datasets.description),
+        seasons: z.string().optional().describe(refreshNflverseCacheTool.parameters.properties.seasons.description),
+        refresh: z.boolean().optional().describe(refreshNflverseCacheTool.parameters.properties.refresh.description),
+    },
+}, async (args) => runWithNormalization(handleRefreshNflverseCache, args));
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

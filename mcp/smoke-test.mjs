@@ -84,6 +84,50 @@ try {
         },
     });
     printToolResult("publish_note_to_substack", noteResult);
+
+    // ─── nflverse-query tools ─────────────────────────────────────────────────
+    // These tools shell out to Python — validate they register and handle
+    // errors gracefully when data isn't cached.
+
+    const nflverseTools = [
+        "query_player_stats",
+        "query_team_efficiency",
+        "query_positional_rankings",
+        "query_snap_counts",
+        "query_draft_history",
+        "query_ngs_passing",
+        "query_combine_profile",
+        "query_pfr_defense",
+        "query_historical_comps",
+        "refresh_nflverse_cache",
+    ];
+
+    const registeredNames = tools.tools.map((t) => t.name);
+    for (const name of nflverseTools) {
+        if (!registeredNames.includes(name)) {
+            console.log(`[FAIL] nflverse tool not registered: ${name}`);
+        }
+    }
+    console.log(`\nnflverse tools registered: ${nflverseTools.filter((n) => registeredNames.includes(n)).length}/${nflverseTools.length}`);
+
+    // Smoke-test one nflverse tool (will fail gracefully if no cache)
+    const playerStatsResult = await client.callTool({
+        name: "query_player_stats",
+        arguments: {
+            player: "Jaxon Smith-Njigba",
+            season: 2025,
+        },
+    });
+    printToolResult("query_player_stats", playerStatsResult);
+
+    const teamEffResult = await client.callTool({
+        name: "query_team_efficiency",
+        arguments: {
+            team: "SEA",
+            season: 2025,
+        },
+    });
+    printToolResult("query_team_efficiency", teamEffResult);
 } finally {
     await transport.close();
 }
