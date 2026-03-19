@@ -1,154 +1,221 @@
-# Table Renderer Deep Dive: Options & Comparison
+# Table Renderer Comparison: Chrome vs Playwright vs Canvas
 
-*Evaluating rendering approaches for NFL Lab table images*
+*Side-by-side visual comparison across 6 scenarios, 3 backends, desktop + mobile*
 
-This post compares different table rendering approaches — our current custom headless Chrome renderer, and potential alternatives — to help decide the best path forward for professional-quality table images.
-
----
-
-## Bug Fix: Separator Row Showing as Text
-
-The `:-- — --:` text appearing at the top of tables in the Puka article preview was caused by a regex bug. The separator detector required 3+ dashes (`-{3,}`) but our tables use 2-dash separators (`:--`, `--:`). Fixed by changing to 1+ dashes (`-+`) across all 7 files that parse tables.
+Three rendering approaches evaluated:
+- **A) Chrome spawnSync** — Current system. Headless Edge/Chrome via raw process spawn + PowerShell crop
+- **B) Playwright** — Same HTML/CSS, but captured via Playwright's element screenshot API
+- **C) Canvas** — Pure @napi-rs/canvas rendering. No browser, no HTML — all drawing is manual
 
 ---
 
-## Current System: Headless Chrome Screenshot
+## Performance Summary
 
-Our custom renderer (`renderer-core.mjs`) builds HTML/CSS from markdown tables, then screenshots via headless Edge/Chrome at 2× DPI. It supports 4 template presets, column role inference, mobile layouts, and automatic bottom-whitespace cropping.
-
-### Desktop Templates (4 Presets)
-
-All 4 templates use the same sample data to show color/style differences:
-
-**Generic Comparison** (Blue accent — default for most tables):
-
-![Generic Comparison Desktop](../../images/table-renderer-comparison/table-renderer-comparison-desktop-generic.png)
-
-**Cap Comparison** (Green accent — for salary cap / contract tables):
-
-![Cap Comparison Desktop](../../images/table-renderer-comparison/table-renderer-comparison-desktop-cap.png)
-
-**Draft Board** (Purple accent — for draft analysis):
-
-![Draft Board Desktop](../../images/table-renderer-comparison/table-renderer-comparison-desktop-draft.png)
-
-**Priority List** (Orange accent — for ranked lists / priorities):
-
-![Priority List Desktop](../../images/table-renderer-comparison/table-renderer-comparison-desktop-priority.png)
-
-### Mobile Variants
-
-The mobile renderer uses larger fonts (22px vs 17px body), tighter padding, and a narrower canvas (680px). All 4 templates:
-
-![Generic Comparison Mobile](../../images/table-renderer-comparison/table-renderer-comparison-mobile-generic-mobile.png)
-
-![Cap Comparison Mobile](../../images/table-renderer-comparison/table-renderer-comparison-mobile-cap-mobile.png)
-
-![Draft Board Mobile](../../images/table-renderer-comparison/table-renderer-comparison-mobile-draft-mobile.png)
-
-![Priority List Mobile](../../images/table-renderer-comparison/table-renderer-comparison-mobile-priority-mobile.png)
-
-### Dense Table Stress Test (7 Columns)
-
-How the system handles a wider table with more data:
-
-**Desktop (7 columns):**
-
-![Dense Table Desktop](../../images/table-renderer-comparison/table-renderer-comparison-dense-desktop.png)
-
-**Mobile (7 columns — does it scale down cleanly?):**
-
-![Dense Table Mobile](../../images/table-renderer-comparison/table-renderer-comparison-dense-mobile-mobile.png)
+| Backend | Avg Time | Browser? | CSS Support | Element Clip | Cross-Platform |
+| :-- | --: | :-- | :-- | :-- | :-- |
+| Chrome | 1273ms | Yes | Full | PowerShell crop | Windows only |
+| Playwright | 179ms | Yes | Full | Native element | Yes |
+| Canvas | 29ms | No | None | N/A | Yes |
 
 ---
 
-## Current System Assessment
+## Simple (3 columns, 3 rows)
 
-**What's working well:**
-- Template color presets provide visual variety across article types
-- Column role inference (auto-detecting rank, number, status columns) is solid
-- Desktop rendering quality is professional-grade
-- Alternating row colors, gradient headers, and rank pills look polished
+### Desktop
 
-**Areas for improvement:**
-- Mobile text can feel cramped on 7+ column tables
-- PowerShell-based bottom-whitespace cropping is Windows-only and fragile
-- `spawnSync(chrome)` is a blunt instrument — no control over font loading timing
-- No element-level clipping; relies on fixed viewport + post-crop
+**Chrome** (2040×367, 1255ms):
 
----
+![Simple (3 columns, 3 rows) desktop chrome](../../images/table-renderer-comparison/simple-desktop-chrome.png)
 
-## Alternative A: Satori + Resvg (SVG-based, No Browser)
+**Playwright** (2016×352, 243ms):
 
-**How it works:** JSX → SVG (via Satori) → PNG (via Resvg). No browser needed.
+![Simple (3 columns, 3 rows) desktop playwright](../../images/table-renderer-comparison/simple-desktop-playwright.png)
 
-| Aspect | Detail |
-| :-- | :-- |
-| Speed | ~200ms per render (10× faster) |
-| Browser | Not required |
-| CSS | Flexbox only — no `<table>`, no `border-collapse`, no `nth-child` |
-| Fonts | Must embed as binary (no system fonts) |
-| Quality | Vector-sharp text, but limited table layout |
+**Canvas** (2040×436, 24ms):
 
-**Verdict:** Great for OG cards and simple layouts. Cannot replicate our gradient headers, rank pills, or alternating row styles. Would require rewriting all templates as Flexbox JSX — massive effort for worse results.
+![Simple (3 columns, 3 rows) desktop canvas](../../images/table-renderer-comparison/simple-desktop-canvas.png)
 
----
+### Mobile
 
-## Alternative B: Playwright Element Screenshot
+**Chrome** (1040×414, 1198ms):
 
-**How it works:** Render HTML in Playwright's Chromium, screenshot the `<table>` element directly.
+![Simple (3 columns, 3 rows) mobile chrome](../../images/table-renderer-comparison/simple-mobile-chrome.png)
 
-| Aspect | Detail |
-| :-- | :-- |
-| Speed | ~1-2s per render (comparable) |
-| Browser | Required (Chromium, already in package.json) |
-| CSS | Full browser CSS — identical to current |
-| Fonts | System fonts work |
-| Quality | Pixel-perfect, with native element clipping |
+**Playwright** (1016×398, 171ms):
 
-**Verdict:** Most promising upgrade. Same rendering quality, eliminates PowerShell cropping, adds proper font-load awaiting and device emulation. The HTML/CSS templates stay exactly the same.
+![Simple (3 columns, 3 rows) mobile playwright](../../images/table-renderer-comparison/simple-mobile-playwright.png)
 
-**What would change:**
-1. ~~PowerShell crop~~ → `locator.screenshot()` clips to exact element bounds
-2. ~~`spawnSync(chrome)`~~ → `page.goto()` + `await page.waitForLoadState()`
-3. ~~`--force-device-scale-factor=2`~~ → `deviceScaleFactor: 2` in viewport config
-4. ~~Windows-only~~ → Cross-platform
-5. Template HTML/CSS → **unchanged**
+**Canvas** (1040×430, 12ms):
+
+![Simple (3 columns, 3 rows) mobile canvas](../../images/table-renderer-comparison/simple-mobile-canvas.png)
 
 ---
 
-## Alternative C: Canvas-Table (node-canvas / Cairo)
+## Standard (5 columns, 4 rows)
 
-**How it works:** Draw tables directly on Canvas 2D using Cairo graphics. No HTML, no browser.
+### Desktop
 
-| Aspect | Detail |
-| :-- | :-- |
-| Speed | ~50ms per render (fastest) |
-| Browser | Not required |
-| CSS | None — all layout is manual |
-| Fonts | Cairo fonts (limited cross-platform) |
-| Quality | Clean but basic — no gradients, rank pills, or rich inline formatting |
+**Chrome** (2200×456, 1282ms):
 
-**Verdict:** Fastest option but poorest visual fidelity. Cannot support our design language (gradient headers, rank pills, status chips, alternating rows, bold/italic mixing). Would require rebuilding the entire visual system from scratch.
+![Standard (5 columns, 4 rows) desktop chrome](../../images/table-renderer-comparison/standard-desktop-chrome.png)
+
+**Playwright** (2176×440, 183ms):
+
+![Standard (5 columns, 4 rows) desktop playwright](../../images/table-renderer-comparison/standard-desktop-playwright.png)
+
+**Canvas** (2200×536, 27ms):
+
+![Standard (5 columns, 4 rows) desktop canvas](../../images/table-renderer-comparison/standard-desktop-canvas.png)
+
+### Mobile
+
+**Chrome** (1360×575, 1354ms):
+
+![Standard (5 columns, 4 rows) mobile chrome](../../images/table-renderer-comparison/standard-mobile-chrome.png)
+
+**Playwright** (1336×560, 182ms):
+
+![Standard (5 columns, 4 rows) mobile playwright](../../images/table-renderer-comparison/standard-mobile-playwright.png)
+
+**Canvas** (1360×591, 21ms):
+
+![Standard (5 columns, 4 rows) mobile canvas](../../images/table-renderer-comparison/standard-mobile-canvas.png)
 
 ---
 
-## Recommendation
+## Dense (7 columns, 6 rows)
 
-| Criteria | Current (Chrome) | Playwright | Satori | Canvas-Table |
-| :-- | :-- | :-- | :-- | :-- |
-| Rendering quality | ★★★★★ | ★★★★★ | ★★★☆☆ | ★★☆☆☆ |
-| CSS support | Full | Full | Flexbox only | None |
-| Speed | ~2-3s | ~1-2s | ~200ms | ~50ms |
-| Browser required | Yes | Yes | No | No |
-| Mobile faithful | Good | Excellent | Limited | Manual |
-| Element clipping | PowerShell crop | Native | N/A | N/A |
-| Cross-platform | Windows only | Yes | Yes | Partial |
-| Migration effort | N/A | Low | Very high | Very high |
+### Desktop
 
-**Recommended path:**
+**Chrome** (2320×634, 1292ms):
 
-1. ✅ **Done**: Fix separator regex bug (`:--` not detected)
-2. **Next**: Migrate screenshot engine from `spawnSync(chrome)` to Playwright API
-3. **Keep**: The HTML/CSS template system, column inference, and 4 template presets
-4. **Skip**: Satori and Canvas-Table — both sacrifice too much CSS capability for insufficient gains
+![Dense (7 columns, 6 rows) desktop chrome](../../images/table-renderer-comparison/dense-desktop-chrome.png)
+
+**Playwright** (2296×618, 184ms):
+
+![Dense (7 columns, 6 rows) desktop playwright](../../images/table-renderer-comparison/dense-desktop-playwright.png)
+
+**Canvas** (2320×736, 43ms):
+
+![Dense (7 columns, 6 rows) desktop canvas](../../images/table-renderer-comparison/dense-desktop-canvas.png)
+
+### Mobile
+
+**Chrome** (1520×999, 1286ms):
+
+![Dense (7 columns, 6 rows) mobile chrome](../../images/table-renderer-comparison/dense-mobile-chrome.png)
+
+**Playwright** (1496×984, 173ms):
+
+![Dense (7 columns, 6 rows) mobile playwright](../../images/table-renderer-comparison/dense-mobile-playwright.png)
+
+**Canvas** (1520×853, 33ms):
+
+![Dense (7 columns, 6 rows) mobile canvas](../../images/table-renderer-comparison/dense-mobile-canvas.png)
+
+---
+
+## Cap Table (salary data)
+
+### Desktop
+
+**Chrome** (2080×488, 1186ms):
+
+![Cap Table (salary data) desktop chrome](../../images/table-renderer-comparison/cap-desktop-chrome.png)
+
+**Playwright** (2056×472, 166ms):
+
+![Cap Table (salary data) desktop playwright](../../images/table-renderer-comparison/cap-desktop-playwright.png)
+
+**Canvas** (2200×637, 36ms):
+
+![Cap Table (salary data) desktop canvas](../../images/table-renderer-comparison/cap-desktop-canvas.png)
+
+### Mobile
+
+**Chrome** (1360×835, 1457ms):
+
+![Cap Table (salary data) mobile chrome](../../images/table-renderer-comparison/cap-mobile-chrome.png)
+
+**Playwright** (1336×820, 180ms):
+
+![Cap Table (salary data) mobile playwright](../../images/table-renderer-comparison/cap-mobile-playwright.png)
+
+**Canvas** (1360×1016, 34ms):
+
+![Cap Table (salary data) mobile canvas](../../images/table-renderer-comparison/cap-mobile-canvas.png)
+
+---
+
+## Draft Board (prospect eval)
+
+### Desktop
+
+**Chrome** (2160×376, 1162ms):
+
+![Draft Board (prospect eval) desktop chrome](../../images/table-renderer-comparison/draft-desktop-chrome.png)
+
+**Playwright** (2136×362, 160ms):
+
+![Draft Board (prospect eval) desktop playwright](../../images/table-renderer-comparison/draft-desktop-playwright.png)
+
+**Canvas** (2200×436, 31ms):
+
+![Draft Board (prospect eval) desktop canvas](../../images/table-renderer-comparison/draft-desktop-canvas.png)
+
+### Mobile
+
+**Chrome** (1360×533, 1337ms):
+
+![Draft Board (prospect eval) mobile chrome](../../images/table-renderer-comparison/draft-mobile-chrome.png)
+
+**Playwright** (1336×518, 177ms):
+
+![Draft Board (prospect eval) mobile playwright](../../images/table-renderer-comparison/draft-mobile-playwright.png)
+
+**Canvas** (1360×612, 21ms):
+
+![Draft Board (prospect eval) mobile canvas](../../images/table-renderer-comparison/draft-mobile-canvas.png)
+
+---
+
+## Priority List (ranked needs)
+
+### Desktop
+
+**Chrome** (1920×560, 1232ms):
+
+![Priority List (ranked needs) desktop chrome](../../images/table-renderer-comparison/priority-desktop-chrome.png)
+
+**Playwright** (1896×546, 156ms):
+
+![Priority List (ranked needs) desktop playwright](../../images/table-renderer-comparison/priority-desktop-playwright.png)
+
+**Canvas** (2040×636, 33ms):
+
+![Priority List (ranked needs) desktop canvas](../../images/table-renderer-comparison/priority-desktop-canvas.png)
+
+### Mobile
+
+**Chrome** (1160×897, 1231ms):
+
+![Priority List (ranked needs) mobile chrome](../../images/table-renderer-comparison/priority-mobile-chrome.png)
+
+**Playwright** (1136×882, 170ms):
+
+![Priority List (ranked needs) mobile playwright](../../images/table-renderer-comparison/priority-mobile-playwright.png)
+
+**Canvas** (1360×935, 36ms):
+
+![Priority List (ranked needs) mobile canvas](../../images/table-renderer-comparison/priority-mobile-canvas.png)
+
+---
+
+## Verdict
+
+Review the images above and decide:
+1. **Playwright** — Same quality as Chrome, but faster, cross-platform, no PowerShell hack
+2. **Canvas** — Fastest, but visually basic (no gradients, rank pills, status chips, or rich formatting)
+3. **Current (Chrome)** — Already works well, but Windows-only cropping is fragile
+
+The HTML/CSS template system is the real asset. The screenshot backend is just a capture mechanism.

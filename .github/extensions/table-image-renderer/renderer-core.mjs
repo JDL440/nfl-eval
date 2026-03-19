@@ -1221,6 +1221,9 @@ function buildSuggestedTakeaway(table, model) {
     return `Quick read: ${leadCell} is the lead row in this ${table.rowCount}-row comparison table.`;
 }
 
+// Exports for alternative renderer backends and comparison harness
+export { parseMarkdownTable, buildHtml, renderTablePng, buildAltText, buildSuggestedTakeaway, TEMPLATE_PRESETS };
+
 export function formatRenderSuccess(result) {
     const lines = [
         "✅ Rendered table image.",
