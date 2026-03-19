@@ -180,6 +180,11 @@
 - **Seahawks first-name cross-contamination is a recurring pattern.** Devon Woolen (should be Tariq), Uchenna Mafe (should be Boye) — both borrowed first names from teammates (Witherspoon, Nwosu). Future SEA articles should include a name-verification checklist in the Writer prompt.
 - **One-year contracts should never use "AAV" formatting.** AAV implies multi-year; use "1yr / $XM" for consistency with how multi-year deals are formatted in tables.
 
+### Mobile Table Right-Edge Clipping Fix (2026-07-26)
+- **`tableFramePaddingX: 4` was insufficient for mobile renders at 22px body font.** Chrome's subpixel column-width rounding at 2× DPR plus `border-radius` anti-aliasing on the `overflow: hidden` frame consumed the 4px buffer. Increased to 10px — the `chooseMobileCanvasWidth()` auto-compensates so effective table content area stays constant.
+- **Always pair `overflow-wrap: anywhere` with `word-break: break-word` on table cells.** Header (`thead th`) already had both; body cells (`tbody td`) only had `overflow-wrap`. Adding the defensive `word-break` ensures consistent wrapping across all browser edge cases.
+- **When diagnosing table rendering bugs, render the exact same table markdown at the same options.** Reconstructing the source markdown from the image content is necessary when the draft has already been patched to reference image files instead of inline tables.
+
 ### Mobile Table Image Right-Edge Clipping Fix (2026-07-26)
 - **Root cause:** `border-collapse: collapse` + `table-layout: fixed` in Chrome causes subpixel column-width rounding that can overflow the `.table-frame` by 1-4px. With `overflow: hidden` and zero frame padding, the rightmost column's text gets clipped.
 - **Fix:** Added `tableFramePaddingX` (4px mobile, 0 desktop) to layout constants, switched to `border-collapse: separate; border-spacing: 0`, increased mobile canvas width by `2 × framePadding` to compensate. Updated height estimation functions to account for frame border + padding.

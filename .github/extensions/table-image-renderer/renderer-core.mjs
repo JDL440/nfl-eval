@@ -88,11 +88,13 @@ const RENDER_LAYOUT = Object.freeze({
 // Mobile-optimized layout: larger fonts and tighter padding for 375px viewport readability.
 // At ~58% scaling (600px canvas → 343px content area), 20px body → ~11.7px effective,
 // which is legible on retina screens (23.4 physical pixels).
-// tableFramePaddingX adds a safety buffer inside the table frame so that subpixel
-// column-width rounding in Chrome never clips the rightmost column's text.
+// tableFramePaddingX adds a safety buffer inside the table frame so that
+// Chrome's subpixel column-width rounding at 2× DPR never clips the
+// rightmost column's text.  4 px was insufficient — anti-aliased border-
+// radius bleeding plus percentage-width rounding consumed the margin.
 const MOBILE_RENDER_LAYOUT = Object.freeze({
     canvasPadding: 6,
-    tableFramePaddingX: 4,
+    tableFramePaddingX: 10,
     tableRadius: 10,
     tableHeaderHeight: 50,
     tableHeadFontSize: 17,
@@ -460,7 +462,7 @@ function chooseCanvasWidth(columnCount, templateName) {
 }
 
 function chooseMobileCanvasWidth(columnCount) {
-    // Extra width compensates for tableFramePaddingX (4px each side = 8px)
+    // Extra width compensates for tableFramePaddingX (each side)
     // so the effective table content area stays the same.
     const framePad = MOBILE_RENDER_LAYOUT.tableFramePaddingX * 2;
     if (columnCount <= 3) return 500 + framePad;
@@ -866,6 +868,7 @@ function buildHtml(table, options = {}) {
       line-height: ${layout.tableCellLineHeight};
       vertical-align: top;
       overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .table-row--summary {
       background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 56%, var(--accent-tint) 100%);
