@@ -119,6 +119,30 @@
 
 ### Phase B Validation Strategy
 
+### GitHub Issue #80 — Nick Emmanwori Rookie Season Article (2026-03-19)
+**Status:** ✅ CREATED — Issue #80 opened via `gh` CLI with full template-aligned body.
+
+- **Title:** "Article: Nick Emmanwori's Rookie Season — What the Analytics Say About Seattle's Defensive Chess Piece"
+- **Labels:** `squad`, `squad:lead`, `article`, `article:beat`, `go:needs-research` (Depth Level 2)
+- **Panel:** SEA + Analytics + Defense (3 agents)
+- **Key convention:** Issue title uses `Article:` prefix for triage routing; body populates all template fields from `article-idea.yml`
+- **Data queries specified:** 4 nflverse commands (snap usage, team efficiency, draft value, combine comps)
+- **⚠️ Correction:** Original issue was created with Jacksonville context; corrected to Seattle per issue body note
+- **URL:** https://github.com/JDL440/nfl-eval/issues/80
+
+### Issue #80 Kickoff — Article Pipeline Stages 1–2 (2026-03-19)
+**Status:** ✅ DONE — Full kickoff artifact set created; article at Stage 2 (Discussion Prompt written).
+
+- **Slug:** `sea-emmanwori-rookie-eval`
+- **Path:** `content/articles/sea-emmanwori-rookie-eval/`
+- **Artifacts:** `idea.md`, `panel-composition.md`, `discussion-prompt.md`
+- **DB:** Article record inserted at `current_stage=2`, 3 panel members (SEA, Analytics, Defense), discussion prompt record, 2 stage transitions
+- **Decision brief:** `.squad/decisions/inbox/lead-emmanwori-kickoff.md`
+- **GitHub comment posted:** Kickoff status on issue #80
+- **Key design choice:** Data anchors are command stubs (not populated tables) — no stats fabricated. Analytics must run 4 nflverse queries to populate anchors before panel spawn.
+- **Panel lanes:** SEA owns roster/depth chart; Analytics owns numbers/benchmarks; Defense owns scheme interpretation. Explicit lane boundaries documented in `panel-composition.md`.
+- **Next:** Analytics runs data queries → Lead populates data anchors → Panel spawn (Stage 3→4)
+
 ## Learnings
 
 ### nflverse Integration & Platform Prioritization
@@ -129,3 +153,8 @@
 - **DataScience agent decision:** Do NOT create. Extend Analytics instead — it owns the analytical domain; it lacks data access, not scope.
 - **Phase B validation strategy:** Use in-flight article work (Stage 6+) to prove nflverse integration, not new test articles. Grounds abstract capability in real publishing workflow. `buf-2026-offseason` is ideal: complex roster story, multiple data anchor types, benefits from snap counts + draft history + team efficiency queries.
 - **Silent-success merge repairs must normalize the canonical decision, not append another plan.** Once validation lands, update the Lead path to say Buffalo is complete, note the exact validation artifacts, and move draft refresh + stale-article planning into deferred work with the lockout stated explicitly.
+
+### Data-First Discussion Prompts for Defensive Player Evaluations
+- **Offensive-only nflverse queries don't work for defensive players.** `query_player_epa.py` and positional comparison scripts are WR/QB/RB-oriented. For safety/DB evaluations, use `snap_counts` + `pfr_defense` datasets directly, plus `query_snap_usage.py --position-group defense` and `query_draft_value.py --position S`.
+- **Command stubs > fabricated stats.** When data queries haven't been run yet, write the commands as placeholders in the discussion prompt and mark them as required anchors. Never invent numbers to fill anchor tables. This preserves reviewer-gate integrity.
+- **Lane boundaries in panel-composition.md prevent duplicate work.** Explicitly stating what each agent owns and what they should NOT do (e.g., "Analytics: don't interpret scheme fit — that's Defense's lane") produces better panel output than vague instructions.
