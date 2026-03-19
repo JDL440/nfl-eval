@@ -64,7 +64,7 @@ function renderSimpleTable(tableLines) {
 
     if (rows.length < 2) return "";
 
-    const hasSeparator = rows[1].every((cell) => /^:?-{3,}:?$/.test(cell));
+    const hasSeparator = rows[1].every((cell) => /^:?-+:?$/.test(cell));
     const header = rows[0];
     const body = rows.slice(hasSeparator ? 2 : 1);
 

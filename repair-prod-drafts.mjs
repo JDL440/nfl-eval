@@ -195,7 +195,7 @@ function splitMarkdownTableRow(line) {
 }
 
 function isMarkdownTableSeparatorRow(row) {
-    return row.length > 0 && row.every(cell => /^:?-{3,}:?$/.test(String(cell || "").trim()));
+    return row.length > 0 && row.every(cell => /^:?-+:?$/.test(String(cell || "").trim()));
 }
 
 function normalizeTableCells(row, length, fill = "") {

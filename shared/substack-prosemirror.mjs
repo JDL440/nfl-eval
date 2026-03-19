@@ -318,7 +318,7 @@ export function splitMarkdownTableRow(line) {
 }
 
 export function isMarkdownTableSeparatorRow(row) {
-    return row.length > 0 && row.every((cell) => /^:?-{3,}:?$/.test(String(cell || "").trim()));
+    return row.length > 0 && row.every((cell) => /^:?-+:?$/.test(String(cell || "").trim()));
 }
 
 export function normalizeTableCells(row, length, fill = "") {

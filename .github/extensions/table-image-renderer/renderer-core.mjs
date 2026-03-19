@@ -254,7 +254,7 @@ function splitMarkdownRow(line) {
 }
 
 function isSeparatorCell(cell) {
-    return /^:?-{3,}:?$/.test(String(cell || "").trim());
+    return /^:?-+:?$/.test(String(cell || "").trim());
 }
 
 function deriveAlignment(cell) {
