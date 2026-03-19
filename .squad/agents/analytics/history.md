@@ -70,3 +70,40 @@ PR #77 merged `feature/mobiletable` → `main` (merge commit 477d7b8). Issue #75
 - The Dashboard Preview Renderer decision (Editor) ensures the shared `shared/substack-prosemirror.mjs` pipeline is used by both the dashboard and the publisher extension.
 - 📌 Team update (2026-03-18T04:48Z): Local Pipeline Dashboard Architecture (Lead) maps how `dashboard/` routes merge `pipeline_board`, artifact scans, and note-gap telemetry for the board and detail surfaces.
 - 📌 Team update (2026-03-18T04:48Z): Dashboard Preview Renderer Must Use Shared Module (Editor) confirms the preview renders canonical ProseMirror output with subscribe buttons, hero enforcement, and dense-table warnings.
+
+### nflverse Phase A Implementation (2026-03-19)
+
+**Context:** Phase A implementation of nflverse/nflreadpy integration to address Analytics' primary data access gap (PFR blocked, ESPN requires scraping).
+
+**Deliverables completed:**
+1. ✅ Root `requirements.txt` with nflreadpy 0.1.5 + polars ≥1.0
+2. ✅ `.gitignore` update for `content/data/cache/` (parquet files excluded from git)
+3. ✅ `content/data/_shared.py` — Shared auto-fetch helper (cache miss → auto-download)
+4. ✅ `content/data/fetch_nflverse.py` — CLI cache script with 18 datasets, --list, --refresh, season filtering
+5. ✅ `content/data/query_player_epa.py` — Player EPA/efficiency + position rank (e.g., #11 among WRs)
+6. ✅ `content/data/query_team_efficiency.py` — Team EPA/success rates from pbp, 3rd down %, red zone TD %, turnovers
+7. ✅ `content/data/query_positional_comparison.py` — Positional rankings league-wide by metric (top-N, season-aggregated)
+8. ✅ `.squad/skills/nflverse-data/SKILL.md` — Dataset catalog, auto-fetch behavior, query usage, real examples from 2024 data
+9. ✅ Analytics charter updated — nflverse as primary data source, PFR accessible via nflverse
+
+**Revision (same session):** Fixed auto-fetch, pbp integration, position rank, and documentation accuracy per user feedback.
+
+**Validation results (post-revision):**
+- Auto-fetch tested: `player_stats_2024.parquet` (18,981 rows, 0.6 MB) auto-downloaded on cache miss ✅
+- PBP auto-fetch tested: `pbp_2024.parquet` (49,492 rows, 12.8 MB) auto-downloaded by team-efficiency query ✅
+- JSN 2024: 137 targets, 100 rec, 1,130 yards, 6 TDs, 48.4 receiving EPA, **rank #11 among WRs** ✅
+- SEA 2024 efficiency: -0.012 EPA/play offense, **47.5% offensive success rate**, **36.7% 3rd down**, **43.5% red zone TD**, -0.010 EPA/play allowed, **46.5% success rate allowed**, -1 turnover differential ✅
+- Top 5 WRs by receiving EPA: Amon-Ra St. Brown leads at 96.4 EPA ✅
+
+**Key implementation notes:**
+- Auto-fetch: Query scripts call `_shared.load_cached_or_fetch()` which automatically downloads missing datasets via subprocess call to `fetch_nflverse.py`
+- Team efficiency: Derives success rates, 3rd down %, red zone %, and defensive EPA from `pbp` dataset (play-level data)
+- Player EPA: Calculates position rank by aggregating all players at position, sorting by primary metric (passing_epa for QB, rushing_epa for RB, receiving_epa for WR/TE)
+- nflverse datasets are weekly (not seasonal totals) — query scripts aggregate by player/team using Polars group_by
+- Regular season filter applied (season_type == "REG") to exclude preseason/playoffs
+- Unicode output sanitized (removed emoji) to avoid Windows console encoding errors
+
+**Phase B deferred:** 4 additional query scripts (snap usage, draft value, NGS passing, combine comps) approved on-demand after first article uses Phase A data.
+
+📌 Team update (2026-03-19): nflverse Phase A complete and revised — Analytics now has auto-fetch programmatic access to 372-col PBP data (with situational metrics), player/team stats, position rankings, and all PFR advanced stats (2018+). Charter updated. All Phase A success criteria met.
+

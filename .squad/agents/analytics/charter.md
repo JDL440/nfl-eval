@@ -31,7 +31,9 @@
 - QBR (ESPN) — context-adjusted QB efficiency, EPA-based with clutch weighting
 - Win Probability Added (WPA) — how much a player's plays shifted game outcome likelihood
 - Success Rate — percentage of plays gaining "enough" (40% of needed on 1st, 60% on 2nd, 100% on 3rd/4th)
-- Next Gen Stats — completion probability, separation, speed, route data (tracking-based)
+- Next Gen Stats — completion probability, separation, speed, route data (tracking-based via nflverse)
+- nflverse play-by-play — 372-column EPA/WPA/CPOE dataset (1999–present)
+- nflverse player/team stats — 114-column seasonal aggregations with EPA, success rate, efficiency metrics
 - ELO ratings — team strength models (FiveThirtyEight-style)
 - Draft pick trade value charts (Johnson, Stuart, Fitzgerald) and historical hit rate models
 - Positional spending efficiency — cap dollars per unit of production by position
@@ -40,15 +42,14 @@
 
 | Source | What It Provides | Access |
 |--------|-----------------|--------|
+| **nflverse** (primary) | Play-by-play (372 cols: EPA, WPA, CPOE), player/team stats, Next Gen Stats, snap counts, PFR advanced stats, combine, contracts, draft picks | ✅ **Local parquet cache** — see `.squad/skills/nflverse-data/SKILL.md` |
 | PFF | Grades (0–100), snap counts, pressures, coverage stats | ⚠️ Paywalled — cite grades from public articles/references |
 | ESPN | QBR, team stats, player stats, win probability | ✅ Fetchable via web_fetch |
-| Pro Football Reference | AV, advanced stats, historical comps | 🔴 Blocked (403) — use cached/known data only |
-| Next Gen Stats (NFL) | Tracking data: separation, speed, completion probability | ⚠️ Limited — available via NFL.com articles |
 | Football Outsiders | DVOA, DYAR, opponent-adjusted metrics | ⚠️ Partial — some data public, deep stats paywalled |
 | FiveThirtyEight / similar | ELO, season projections, playoff odds | ✅ Public models when available |
 | OTC / Spotrac | Cap data for contract value modeling | ✅ Fetchable (see Cap agent skills) |
 
-**Critical:** Pro Football Reference returns HTTP 403 on all automated fetches. Do NOT attempt PFR URLs. Reference PFR stats from known/cached data or cite specific values from prior research. See `.squad/skills/nfl-roster-research/SKILL.md` for fetchable source patterns.
+**Primary structured data source:** nflverse datasets via `nflreadpy` library. PFR advanced stats (passing, rushing, receiving, defense) are available through nflverse without 403 blocks. Historical play-by-play back to 1999, player/team stats, Next Gen Stats (2016+), snap counts (2012+), and more. Query via `content/data/query_*.py` scripts or cache directly with `content/data/fetch_nflverse.py`.
 
 ## Analytical Frameworks
 

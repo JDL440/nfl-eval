@@ -5,6 +5,204 @@
 ---
 
 ---
+title: "nflverse Phase A Implementation — Decision Brief"
+status: "implemented"
+date: "2026-03-19"
+decider: "Analytics, Lead"
+context: "Analytics agent delivered Phase A of nflverse integration: Python deps, cache tooling, 3 query scripts, skill documentation, charter update, auto-fetch behavior, pbp-backed situational metrics, safer player disambiguation."
+---
+
+# nflverse Phase A Implementation — Decision Brief
+
+## Context
+
+The Analytics agent's charter promised access to advanced NFL statistics (EPA, DVOA, success rate, PFF grades, Pro Football Reference metrics) but had no programmatic data access:
+- Pro Football Reference returns HTTP 403 on all automated fetches
+- ESPN requires web scraping with inconsistent HTML structure
+- No play-by-play data for custom queries
+- Historical comparisons impossible without cached datasets
+
+This gap meant Analytics could interpret stats but not generate them, limiting discussion prompt quality and article data anchors to hand-typed web scrapes or training data citations.
+
+## Decision
+
+Implement **nflverse Phase A** (Tier 0 + selective Tier 1) to establish a local parquet cache layer for structured NFL analytics data via the nflreadpy Python library.
+
+**Scope:**
+1. Python dependency manifest (requirements.txt)
+2. Cache management script (fetch_nflverse.py)
+3. Three query scripts (player EPA, team efficiency, positional comparison)
+4. SKILL documentation (nflverse-data)
+5. Analytics charter update (nflverse as primary data source)
+
+**Deferred:**
+- Phase B (4 additional query scripts): On-demand after first article uses Phase A data
+- Tier 2 (Analytics charter upgrade): After Phase B proves bottleneck
+- Tier 3 (Copilot extension): Pre-season if article production hits 2+/week
+- Tier 4 (DataScience agent): If custom Python models needed
+- Tier 5 (Gameday review pipeline): Regular season + Tiers 0–2 proven
+
+## Implementation Details
+
+### Deliverables
+
+| Artifact | Location | Purpose |
+|----------|----------|---------|
+| `requirements.txt` | repo root | Python deps: nflreadpy 0.1.5, polars ≥1.0 |
+| `.gitignore` update | repo root | Exclude `content/data/cache/` (10–50 MB parquet files) |
+| `_shared.py` | `content/data/` | Auto-fetch helper: cache miss → subprocess call to fetch script |
+| `fetch_nflverse.py` | `content/data/` | CLI cache script: 18 datasets, --list, --refresh, season filtering |
+| `query_player_epa.py` | `content/data/` | Player EPA/efficiency + position rank (e.g., #11 among WRs) |
+| `query_team_efficiency.py` | `content/data/` | Team EPA/success rates (from pbp), 3rd down %, red zone %, turnovers |
+| `query_positional_comparison.py` | `content/data/` | Positional rankings (top-N by metric, season-aggregated) |
+| `SKILL.md` | `.squad/skills/nflverse-data/` | Dataset catalog, auto-fetch behavior, query usage, real 2024 examples |
+| Charter update | `.squad/agents/analytics/charter.md` | nflverse primary data source, PFR accessible via nflverse |
+
+### Data Model
+
+**nflverse datasets are weekly, not seasonal totals.**
+- Query scripts aggregate by `player_id` or `team` using Polars `group_by`
+- Regular season filter (`season_type == "REG"`) excludes preseason/playoffs
+- Rate stats (CPOE, RACR, target share) are **averaged**
+- Counting stats (yards, TDs) and EPA metrics are **summed**
+
+**Auto-fetch on cache miss:**
+- Query scripts use `_shared.load_cached_or_fetch()` helper
+- Cache miss triggers subprocess call to `fetch_nflverse.py --dataset X --seasons Y`
+- First run may take 30-90 seconds to download (especially `pbp`: ~13 MB for one season)
+- Subsequent runs use cached parquet files (instant load)
+
+**Team efficiency data sources:**
+- Basic stats (yards, sacks, turnovers) from `team_stats` dataset
+- EPA, success rates, situational metrics (3rd down, red zone) from `pbp` dataset (play-level aggregation)
+- Defensive EPA = EPA allowed (higher is worse for defense)
+- Success rate allowed = opponent success rate when this team is on defense
+
+**Player EPA includes position rank:**
+- Primary metric by position: passing_epa (QB), rushing_epa (RB), receiving_epa (WR/TE)
+- Rank calculated by aggregating all players at position, sorting descending
+- Displayed in header: "Jaxon Smith-Njigba — 2024 Season (Rank #11 among WRs)"
+
+## Validation Results
+
+**Environment:**
+- Python 3.14.0 confirmed compatible (≥3.9 required)
+- nflreadpy 0.1.5 + polars 1.39.2 installed successfully
+- Unicode output sanitized (removed emoji) to avoid Windows console encoding errors
+
+**Auto-fetch smoke tests:**
+```bash
+# Test 1: Player EPA with auto-fetch (cache cleared first)
+python content/data/query_player_epa.py --player "Jaxon Smith-Njigba" --season 2024
+# Cache miss → auto-downloaded player_stats_2024.parquet (18,981 rows, 0.6 MB)
+# ✅ 137 targets, 100 rec, 1,130 yards, 6 TDs, 48.4 receiving EPA, rank #11 among WRs
+
+# Test 2: Team efficiency with pbp auto-fetch
+python content/data/query_team_efficiency.py --team SEA --season 2024
+# Cache miss → auto-downloaded pbp_2024.parquet (49,492 rows, 12.8 MB)
+# ✅ -0.012 EPA/play offense, 47.5% offensive success rate, 36.7% 3rd down, 43.5% red zone TD
+# ✅ -0.010 EPA/play allowed, 46.5% success rate allowed, 44 sacks, 13 INTs, -1 turnover diff
+
+# Test 3: Positional comparison (using cached data)
+python content/data/query_positional_comparison.py --position WR --metric receiving_epa --season 2024 --top 5
+# ✅ Top 5 WRs: Amon-Ra St. Brown (96.4), Ja'Marr Chase (77.0), Terry McLaurin (70.8), Ladd McConkey (65.7), Justin Jefferson (64.2)
+```
+
+**Cache contents after validation:**
+- `pbp_2024.parquet` — 12.8 MB
+- `player_stats_2024.parquet` — 0.6 MB  
+- `team_stats_2024.parquet` — 0.1 MB
+
+## Impact on Pipeline
+
+### Discussion Prompts (Stage 2)
+
+Analytics or Lead can now generate real data anchors:
+
+```markdown
+## Data Anchors
+
+### WR Market Comps — 2024 Receiving EPA Leaders
+
+[Run: python content/data/query_positional_comparison.py --position WR --metric receiving_epa --season 2024 --top 10]
+
+| Rank | Player | Team | Targets | Rec | Rec Yds | EPA |
+|-----:|--------|------|--------:|----:|--------:|----:|
+| 1 | Amon-Ra St. Brown | DET | 141 | 115 | 1,263 | 96.4 |
+...
+```
+
+### Team Agent Prompts (Stage 3)
+
+Panel prompts can include direct CLI instructions (auto-fetch handles cache misses):
+
+```markdown
+## Your Task
+
+Before writing your position, run this command to get current stats:
+
+    python content/data/query_player_epa.py --player "Jaxon Smith-Njigba" --season 2024
+
+Include the actual numbers from the output in your analysis. The player's position rank will be shown in the header.
+```
+
+### Analytics Charter Update
+
+**Before:** "Pro Football Reference — 🔴 Blocked (403) — use cached/known data only"
+
+**After:** "nflverse (primary) — ✅ Local parquet cache — PFR advanced stats (2018+) accessible via nflverse without 403 blocks"
+
+## Known Constraints
+
+1. **Offseason data is static:** PBP and player stats update nightly during regular season only. Offseason articles rely on prior-season data + historical comps.
+2. **Injury data outdated:** `load_injuries()` covers 2009–2024 only (source died post-2024). Use ESPN web_fetch for current injuries.
+3. **Weekly data model:** All datasets are weekly snapshots, requiring aggregation for season totals.
+4. **Token budget:** Data anchor tables must stay <400 tokens. Use --top and --limit flags to trim output.
+
+## Success Criteria (Phase A)
+
+- ✅ `requirements.txt` installs cleanly
+- ✅ `content/data/cache/` is gitignored
+- ✅ `_shared.py` provides auto-fetch on cache miss
+- ✅ `fetch_nflverse.py` caches at least 3 datasets (player_stats, team_stats, pbp)
+- ✅ 3 query scripts produce markdown tables from cached data (auto-fetch if needed)
+- ✅ Player EPA includes position rank (#11 among WRs)
+- ✅ Team efficiency includes situational metrics from pbp (success rates, 3rd down, red zone, defensive EPA)
+- ✅ `.squad/skills/nflverse-data/SKILL.md` documents real behavior (auto-fetch, pbp integration, position rank)
+- ✅ Analytics charter references nflverse as primary data source
+- ⏳ At least one article discussion prompt uses real nflverse data (Phase B gate)
+
+## Next Steps
+
+**Immediate (Phase B gate):**
+- Produce a discussion prompt for an in-progress or upcoming article using at least 2 nflverse query scripts for data anchors
+- Validate token budget: combined data anchor tables <400 tokens
+- Measure: did the Writer cite more specific numbers? Did the Editor flag fewer "vague stat" issues?
+
+**On-demand (Phase B):**
+- Add 4 query scripts: snap_usage, draft_value, ngs_passing, combine_comps
+- Update discussion prompt templates in article-discussion SKILL with "run these commands for data" instruction block
+
+**Deferred (Tier 2+):**
+- Analytics charter rewrite (nflverse as primary data source, auto-generated data anchors)
+- Copilot extension (native tool calling, no shell-out)
+- DataScience agent (writes Python for custom models)
+- Gameday review pipeline (same-day article production after NFL games)
+
+## Team Agreement
+
+This decision was implemented by Analytics on 2026-03-19 with Lead's prior approval (Tier 0–1 roadmap approved 2026-03-19T02:20:14Z). **Revised same session** to address auto-fetch, pbp integration, position rank, and documentation accuracy per user feedback.
+
+**Coordinator follow-up fixes:**
+1. Fixed ambiguous partial-name player matching so multi-player matches error instead of aggregating multiple players.
+2. Fixed red-zone drive grouping to use per-game drive identity instead of season-wide drive numbers.
+3. Synced skill/decision/history text to the verified 2024 SEA output after the red-zone fix.
+
+**No objections raised.** Phase A is production-ready and validated.
+
+---
+
+---
 title: "nflverse Detailed Implementation Plan"
 status: "approved"
 date: "2026-03-19"
