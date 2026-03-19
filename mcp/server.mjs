@@ -5,11 +5,11 @@ import * as z from "zod/v4";
 import {
     generateArticleImagesTool,
     handleGenerateArticleImages,
-} from "../.github/extensions/gemini-imagegen/extension.mjs";
+} from "../.github/extensions/gemini-imagegen/tool.mjs";
 import {
     renderTableImageTool,
     handleRenderTableImage,
-} from "../.github/extensions/table-image-renderer/extension.mjs";
+} from "../.github/extensions/table-image-renderer/tool.mjs";
 import {
     publishToSubstackTool,
     publishNoteToSubstackTool,

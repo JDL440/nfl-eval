@@ -479,18 +479,6 @@ export async function handleGenerateArticleImages(params) {
 
 // ─── Extension Entrypoint ─────────────────────────────────────────────────────
 
-// Conditionally import SDK only when run as extension (not when imported by MCP)
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-    const { approveAll } = await import("@github/copilot-sdk");
-    const { joinSession } = await import("@github/copilot-sdk/extension");
-    
-    await joinSession({
-        onPermissionRequest: approveAll,
-        tools: [
-            {
-                ...generateArticleImagesTool,
-                handler: handleGenerateArticleImages,
-            },
-        ],
-    });
-}
+// This extension is designed for MCP server use.
+// Tool definition and handler are exported for mcp/server.mjs to register.
+// For native Copilot CLI extension support, use the MCP server configuration.
