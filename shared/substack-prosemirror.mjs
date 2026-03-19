@@ -205,7 +205,7 @@ export function ensureSubscribeButtons(doc) {
 // ─── Hero-image safety ───────────────────────────────────────────────────────
 
 export const CHART_TABLE_IMAGE_PATH_RE =
-    /(?:^|[-_/])(table|chart|data|decision|priority|comparison|breakdown|salary|contract|depth-chart|matrix|targets|snapshot|blueprint|paths|question-vs|panelist-vs|year-vs|expert-vs|prospect-vs|path-vs|model-vs|move-vs|deployment-model|dead-cap-comparison|engram-decision|pick-30-options)(?:[-_.\\/]|$)/i;
+    /(?:^|[-_/])(table|chart|data|decision|priority|comparison|salary|contract|depth-chart|matrix|targets|snapshot|blueprint|paths|question-vs|panelist-vs|year-vs|expert-vs|prospect-vs|path-vs|model-vs|move-vs|deployment-model|dead-cap-comparison|engram-decision|pick-30-options)(?:[-_.\\/]|$)/i;
 export const CHART_TABLE_IMAGE_TEXT_RE =
     /\b(rows?|columns?|table|comparison|decision matrix|blueprint|depth chart|cap hit|dead cap|projected cap|draft targets|question vs|panelist vs|path vs|year vs|expert vs)\b/i;
 

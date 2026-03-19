@@ -440,6 +440,9 @@ function publishTab(publisherPass, notes, article, publishDocs, slug, publishSta
             <dt>Current draft URL</dt><dd>${publishState?.draftUrl ? `<a href="${esc(publishState.draftUrl)}" target="_blank">Open Draft ↗</a>` : "No production draft stored yet — one will be created during publish."}</dd>
             <dt>Live publish target</dt><dd>Production Substack publication</dd>
         </dl>
+        ${publishState?.previewWarnings?.length
+            ? `<div class="publish-prereq-warn"><p><strong>Canonical preview blockers</strong></p><ul>${publishState.previewWarnings.map((warning) => `<li>${esc(warning.message)}</li>`).join("")}</ul></div>`
+            : ""}
         ${publishState?.blockedReasons?.length
             ? `<div class="publish-prereq-warn"><p>⚠️ <strong>Publish blocked</strong></p><ul>${publishState.blockedReasons.map((reason) => `<li>${esc(reason)}</li>`).join("")}</ul></div>`
             : `<div class="validation-result validation-pass"><p><strong>✅ Ready for dashboard publish</strong></p><p>Publisher pass is complete and the dashboard can publish this article live.</p></div>`}

@@ -11,12 +11,9 @@
 import { posix as pathPosix } from "node:path";
 
 import {
-    extractMetaFromMarkdown,
-    markdownToProseMirror,
-    ensureSubscribeButtons,
-    ensureHeroFirstImage,
     getNodeText,
 } from "../shared/substack-prosemirror.mjs";
+import { buildCanonicalPreview } from "../shared/substack-preview.mjs";
 
 function esc(text) {
     return String(text ?? "")
@@ -308,31 +305,17 @@ function renderChildren(node) {
 export async function renderPreview(markdown, options = {}) {
     if (!markdown) return { title: null, subtitle: null, html: "", warnings: [] };
 
-    const meta = extractMetaFromMarkdown(markdown);
     const imageResolver = options.slug
         ? async (rawSrc) => toDashboardImageUrl(options.slug, rawSrc)
         : null;
-    const doc = await markdownToProseMirror(meta.bodyMarkdown, imageResolver, { previewMode: true });
+    const preview = await buildCanonicalPreview(markdown, { imageResolver });
 
-    const warnings = [...(doc._warnings || [])];
-
-    ensureSubscribeButtons(doc);
-
-    const heroResult = ensureHeroFirstImage(doc);
-    if (heroResult.warning) {
-        warnings.push({
-            type: "hero_image",
-            message: heroResult.warning,
-            safe: heroResult.safe,
-        });
-    }
-
-    const html = renderNode(doc);
+    const html = renderNode(preview.doc);
 
     return {
-        title: meta.title,
-        subtitle: meta.subtitle,
+        title: preview.title,
+        subtitle: preview.subtitle,
         html,
-        warnings,
+        warnings: preview.warnings,
     };
 }
