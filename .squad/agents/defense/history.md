@@ -182,3 +182,26 @@ The trade works defensively IF: (1) Crosby and Madubuike stay healthy, (2) Minte
 **Decision to file:** None — standard panel position execution per article-discussion skill.
 
 **Skill to update:** None — no new workflow pattern discovered. Applied existing scheme analysis framework from IND-sauce-gardner and BUF-2026 panels.
+
+### 2026-03-19 — SEA Emmanwori Kickoff: Safety/Hybrid Evaluation Framework
+
+**Article:** nick-emmanwori-rookie-season (Issue #80)
+**Context:** Kickoff brief for evaluating Nick Emmanwori's 2025 rookie season with Seattle. Panel: SEA + Analytics + Defense.
+
+**Durable scheme insight — evaluating hybrid safeties in disguise-heavy systems:**
+
+1. **Box-score stats are nearly useless for hybrid safeties in rotation schemes.** Tackles, INTs, and PBUs don't capture whether a safety was trusted with post-snap rotation assignments, which is the actual integration signal in a Macdonald-style defense.
+
+2. **Deployment trust hierarchy for rookie safeties:**
+   - Static assignment only → lowest trust (stand here, cover that)
+   - Post-snap rotation inclusion → medium trust (scheme integration)
+   - Simulated pressure assignments → high trust (full playbook access)
+   - Red-zone deployment covering TEs → highest value (compressed-space matchup trust)
+
+3. **Low snap share in a Super Bowl defense is not a negative signal.** A rookie playing 35–45% of defensive snaps on a championship team is being deployed in targeted, high-value situations — not being benched. Evaluate snap quality (which downs, which personnel groupings, which field zones), not snap quantity.
+
+4. **Correct comp set for big-nickel hybrids:** Kyle Hamilton, Derwin James, Budda Baker — chess-piece defenders who play 3–5 roles per game. Incorrect: traditional box SS (Chancellor type) or ball-hawking FS (Ed Reed type). Wrong comp set = wrong evaluation.
+
+5. **Target rate in coverage > interception count.** In zone-match systems, safeties close windows. A safety targeted 20 times in 400+ coverage snaps is elite even with 0 INTs.
+
+**Decision filed:** `defense-emmanwori-kickoff.md` in decisions/inbox — scheme evaluation framework for the panel.
