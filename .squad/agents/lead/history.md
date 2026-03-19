@@ -143,6 +143,15 @@
 - **Panel lanes:** SEA owns roster/depth chart; Analytics owns numbers/benchmarks; Defense owns scheme interpretation. Explicit lane boundaries documented in `panel-composition.md`.
 - **Next:** Analytics runs data queries → Lead populates data anchors → Panel spawn (Stage 3→4)
 
+### Issue #80 Sharpening — Specialist Data Integrated (2026-03-19)
+**Status:** ✅ DONE — All three kickoff artifacts rewritten with real Analytics/SEA/Defense specialist outputs. Data anchors now populated, not command stubs.
+
+- **Analytics integration:** 768 defensive snaps (84.9%, 6th on SEA), team efficiency (-0.121 EPA/play), on-ball production (80 TKL, 90.9% efficiency, 74.2% comp allowed, 89.1 PR allowed, 5.6 aDOT, 34 blitzes), R2 S benchmark (26 picks, 30.8% starter+), draft value (R2 #35, AV 4)
+- **SEA input:** Championship-defense shelter tension, Woolen/Bryant secondary changes, draft capital fork (#32/#64 goes to CB/EDGE if Emmanwori is real)
+- **Defense input:** Macdonald disguise-rotation framing, post-snap rotation trust, big-nickel breadth, misleading-evidence warnings (raw tackles, low INTs, simplistic snap%)
+- **Key upgrade:** Discussion prompt now has populated data tables, "Metrics NOT To Use" warning table, scheme-aware tensions, deployment-specific panel instructions. Ready for panel spawn — only combine measurables remain as a query stub.
+- **Decision brief updated:** `.squad/decisions/inbox/lead-emmanwori-kickoff.md` now documents all specialist inputs and remaining steps
+
 ## Learnings
 
 ### nflverse Integration & Platform Prioritization
