@@ -679,6 +679,48 @@ export const publishNoteToSubstackTool = {
     },
 };
 
+export const publishTweetTool = {
+    name: "publish_tweet",
+    description:
+        "Posts a tweet to X (Twitter) to promote an article. " +
+        "Uses OAuth 1.0a credentials from .env (TWITTER_API_KEY, TWITTER_API_SECRET, " +
+        "TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET). " +
+        "If article_slug is provided, auto-links to the published article URL. " +
+        "X auto-unfurls Substack URLs into link cards. " +
+        "Use target='stage' for dry-run (no tweet posted).",
+    parameters: {
+        type: "object",
+        properties: {
+            content: {
+                type: "string",
+                description:
+                    "Tweet body text. Plain text, max 280 characters " +
+                    "(URLs count as 23 chars via t.co). Keep concise for engagement.",
+            },
+            image_path: {
+                type: "string",
+                description:
+                    "Optional path to a local image file to attach to the tweet. " +
+                    "Uploaded to Twitter via the media upload endpoint.",
+            },
+            article_slug: {
+                type: "string",
+                description:
+                    "Optional article slug (pipeline.db id) to link this tweet to. " +
+                    "If provided, the published article URL is looked up from pipeline.db " +
+                    "and appended to the tweet text.",
+            },
+            target: {
+                type: "string",
+                description:
+                    '"prod" (default) or "stage". Stage is a dry-run — no tweet is actually posted.',
+                enum: ["stage", "prod"],
+            },
+        },
+        required: ["content"],
+    },
+};
+
 function createToolLogger(context = {}) {
     if (typeof context.log === "function") return context.log;
     return createNoopLogger();
@@ -1102,6 +1144,138 @@ export async function handlePublishNoteToSubstack(args, context = {}) {
     } catch (err) {
         return {
             textResultForLlm: `Error in publish_note_to_substack: ${err.message}`,
+            resultType: "failure",
+        };
+    }
+}
+
+export async function handlePublishTweet(args, context = {}) {
+    const log = createToolLogger(context);
+
+    try {
+        const { loadTwitterCredentials, postTweet, uploadMediaForTweet, buildPromotionTweetText }
+            = await import("../../../shared/twitter-client.mjs");
+
+        const creds = loadTwitterCredentials(process.cwd());
+        if (!creds.valid) {
+            return {
+                textResultForLlm:
+                    `Error: Missing Twitter credentials in .env: ${creds.missing.join(", ")}.\n\n` +
+                    "Setup:\n" +
+                    "  1. Go to https://developer.x.com/portal/dashboard\n" +
+                    "  2. Create a project + app with Read and Write permissions\n" +
+                    "  3. Generate OAuth 1.0a tokens\n" +
+                    "  4. Add to .env:\n" +
+                    "     TWITTER_API_KEY=<consumer key>\n" +
+                    "     TWITTER_API_SECRET=<consumer secret>\n" +
+                    "     TWITTER_ACCESS_TOKEN=<access token>\n" +
+                    "     TWITTER_ACCESS_TOKEN_SECRET=<access token secret>",
+                resultType: "failure",
+            };
+        }
+
+        const target = args.target || "prod";
+
+        let linkedArticleUrl = null;
+        if (args.article_slug) {
+            const articleInfo = await lookupArticleUrlFromDb(args.article_slug, process.cwd());
+            if (!articleInfo) {
+                return {
+                    textResultForLlm:
+                        `Error: Article '${args.article_slug}' not found in pipeline.db. ` +
+                        "Verify the slug is correct, or omit article_slug for a standalone tweet.",
+                    resultType: "failure",
+                };
+            }
+            if (!articleInfo.substackUrl) {
+                return {
+                    textResultForLlm:
+                        `Error: Article '${args.article_slug}' has no published URL ` +
+                        `(current_stage=${articleInfo.currentStage}, status=${articleInfo.status}). ` +
+                        "Publish the article first, or omit article_slug for a standalone tweet.",
+                    resultType: "failure",
+                };
+            }
+            linkedArticleUrl = articleInfo.substackUrl;
+            await log(`Linked article URL: ${linkedArticleUrl}`);
+        }
+
+        if (!args.content || !args.content.trim()) {
+            return {
+                textResultForLlm: "Error: Tweet content cannot be empty or whitespace-only.",
+                resultType: "failure",
+            };
+        }
+
+        const tweetText = linkedArticleUrl
+            ? buildPromotionTweetText(args.content, linkedArticleUrl)
+            : args.content.trim();
+
+        const noteType = args.article_slug ? "twitter_promotion" : "twitter_standalone";
+
+        // Stage = dry-run
+        if (target === "stage") {
+            return (
+                `🟡 DRY-RUN — Tweet NOT sent (target=stage)\n\n` +
+                `**Tweet text (${tweetText.length} chars):**\n${tweetText}\n\n` +
+                `**Tweet type:** ${noteType}\n` +
+                (linkedArticleUrl ? `**Linked article:** ${linkedArticleUrl}\n` : "") +
+                (args.image_path ? `**Image:** ${args.image_path}\n` : "") +
+                (args.article_slug ? `**Article slug:** ${args.article_slug}\n` : "")
+            );
+        }
+
+        // Upload image if provided
+        const mediaIds = [];
+        if (args.image_path) {
+            const absPath = /^([A-Za-z]:[\\/]|\/)/.test(args.image_path)
+                ? args.image_path
+                : resolve(process.cwd(), args.image_path);
+            if (!existsSync(absPath)) {
+                return {
+                    textResultForLlm: `Error: Image file not found: ${absPath}`,
+                    resultType: "failure",
+                };
+            }
+            await log("Uploading image to Twitter…");
+            const mediaId = await uploadMediaForTweet(absPath, creds);
+            mediaIds.push(mediaId);
+            await log(`Media uploaded: ${mediaId}`);
+        }
+
+        // Post the tweet
+        await log("Posting tweet…");
+        const result = await postTweet({ text: tweetText, creds, mediaIds });
+
+        const targetLabel = "🔴 PRODUCTION";
+        const writebackBlock =
+            `\n**⚡ DB Writeback required (record tweet):**\n` +
+            "```python\n" +
+            `from content.pipeline_state import PipelineState\n` +
+            `with PipelineState() as ps:\n` +
+            `    ps.record_note(` +
+            `${args.article_slug ? `'${args.article_slug}'` : "None"}, ` +
+            `'${noteType}', ` +
+            `${JSON.stringify(tweetText)}, ` +
+            `${result.tweetUrl ? JSON.stringify(result.tweetUrl) : "None"}, ` +
+            `target='${target}', agent='Publisher')\n` +
+            "```\n";
+
+        return (
+            `✅ Tweet posted!\n\n` +
+            `**Target:** ${targetLabel}\n` +
+            `**Tweet ID:** ${result.tweetId}\n` +
+            (result.tweetUrl ? `**Tweet URL:** ${result.tweetUrl}\n` : "") +
+            `**Tweet type:** ${noteType}\n` +
+            (linkedArticleUrl ? `**Linked article:** ${linkedArticleUrl}\n` : "") +
+            `**Content preview:** ${args.content.slice(0, 150)}${args.content.length > 150 ? "…" : ""}\n` +
+            (args.article_slug ? `**Article slug:** ${args.article_slug}\n` : "") +
+            writebackBlock +
+            `\nThe tweet should now be visible on X/Twitter.`
+        );
+    } catch (err) {
+        return {
+            textResultForLlm: `Error in publish_tweet: ${err.message}`,
             resultType: "failure",
         };
     }

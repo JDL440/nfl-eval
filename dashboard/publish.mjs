@@ -10,8 +10,8 @@ import {
     resolveArticleMarkdownPath,
 } from "./data.mjs";
 import {
-    createSubstackBrowserSession,
     extractSubdomain,
+    makeSubstackHeaders,
     resolvePublicationConfig,
 } from "../shared/substack-session.mjs";
 import { upsertSubstackDraftFromMarkdown } from "../shared/substack-article.mjs";
@@ -24,21 +24,8 @@ import {
 
 const REPO_ROOT = resolve(import.meta.dirname, "..");
 const RESULTS_PATH = join(import.meta.dirname, "publish-results.json");
-const ARTIFACTS_BASE = join(REPO_ROOT, "content", "images", "publish-artifacts");
 const PIPELINE_STATE = join(REPO_ROOT, "content", "pipeline_state.py");
 const PYTHON = process.env.PYTHON || "python";
-
-const PUBLISH_BUTTON_PATTERNS = [
-    /^send to .+ now$/i,
-    /^publish to .+ now$/i,
-    /^publish now$/i,
-    /^send now$/i,
-    /^publish$/i,
-    /^continue$/i,
-    /^next$/i,
-    /^confirm$/i,
-    /^done$/i,
-];
 
 function loadResults() {
     if (!existsSync(RESULTS_PATH)) return {};
@@ -74,203 +61,34 @@ function runPipelineStateCommand(args) {
     return (result.stdout || "").trim();
 }
 
-function collectCandidateUrls(value, subdomain, bucket) {
-    if (typeof value === "string") {
-        if (/^https?:\/\/.+/i.test(value) && value.includes("substack.com")) {
-            bucket.push(value);
-        } else if (value.startsWith("/")) {
-            bucket.push(`https://${subdomain}.substack.com${value}`);
-        }
-        return;
-    }
-
-    if (Array.isArray(value)) {
-        for (const item of value) collectCandidateUrls(item, subdomain, bucket);
-        return;
-    }
-
-    if (value && typeof value === "object") {
-        for (const nested of Object.values(value)) collectCandidateUrls(nested, subdomain, bucket);
-    }
-}
-
-function isPublishedArticleUrl(url, subdomain) {
-    return typeof url === "string" &&
-        url.includes(`${subdomain}.substack.com`) &&
-        /\/p\//.test(url);
-}
-
-async function collectVisibleButtons(page) {
-    return await page.evaluate(() => {
-        const isVisible = (element) => {
-            const style = window.getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-            return style.display !== "none" &&
-                style.visibility !== "hidden" &&
-                rect.width > 0 &&
-                rect.height > 0;
-        };
-
-        return Array.from(document.querySelectorAll("button, [role='button'], [role='menuitem']"))
-            .map((element) => ({
-                text: (element.innerText || element.getAttribute("aria-label") || "").trim(),
-                disabled:
-                    Boolean(element.disabled) ||
-                    element.getAttribute("aria-disabled") === "true",
-                visible: isVisible(element),
-            }))
-            .filter((button) => button.visible && !button.disabled && button.text);
-    });
-}
-
-async function clickNextPublishButton(page) {
-    const buttons = await collectVisibleButtons(page);
-    for (const pattern of PUBLISH_BUTTON_PATTERNS) {
-        const match = buttons.find((button) => pattern.test(button.text));
-        if (!match) continue;
-
-        const locator = page
-            .locator("button, [role='button'], [role='menuitem']")
-            .filter({ hasText: match.text })
-            .first();
-
-        try {
-            await locator.click({ timeout: 5000 });
-            return { clickedLabel: match.text, visibleButtons: buttons.map((button) => button.text) };
-        } catch {
-            // Keep trying lower-priority labels in the same state snapshot.
-        }
-    }
-
-    return { clickedLabel: null, visibleButtons: buttons.map((button) => button.text) };
-}
-
-async function discoverPublishedUrl(page, subdomain, responsePayloads) {
-    const currentUrl = page.url();
-    if (isPublishedArticleUrl(currentUrl, subdomain)) {
-        return currentUrl;
-    }
-
-    const domCandidate = await page.evaluate(() => {
-        const candidates = [
-            document.querySelector("meta[property='og:url']")?.content,
-            document.querySelector("link[rel='canonical']")?.href,
-            ...Array.from(document.querySelectorAll("a[href]")).map((anchor) => anchor.href),
-        ].filter(Boolean);
-
-        return candidates.find((candidate) => /\/p\//.test(candidate)) || null;
-    });
-    if (isPublishedArticleUrl(domCandidate, subdomain)) {
-        return domCandidate;
-    }
-
-    for (const payload of responsePayloads) {
-        const urls = [];
-        collectCandidateUrls(payload.json, subdomain, urls);
-        const match = urls.find((candidate) => isPublishedArticleUrl(candidate, subdomain));
-        if (match) return match;
-    }
-
-    return null;
-}
-
-async function waitForEditor(page) {
-    try {
-        await page.locator('[contenteditable="true"], .ProseMirror, [role="textbox"]').first().waitFor({
-            state: "visible",
-            timeout: 15000,
-        });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function publishDraftThroughBrowser({ slug, draftUrl, token, screenshotAbsPath }) {
-    const subdomain = extractSubdomain(draftUrl);
-    const session = await createSubstackBrowserSession({
-        subdomain,
-        token,
-        startUrl: draftUrl,
+async function publishDraftViaApi({ slug, draftId, subdomain, token }) {
+    const headers = makeSubstackHeaders(token, subdomain);
+    const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draftId}/publish`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({}),
     });
 
-    const responsePayloads = [];
-    session.page.on("response", async (response) => {
-        const url = response.url();
-        const contentType = response.headers()["content-type"] || "";
-        if (!contentType.includes("json")) return;
-        if (!url.includes(`${subdomain}.substack.com`)) return;
-        if (!/api|publish|draft|post|newsletter/i.test(url)) return;
-        try {
-            responsePayloads.push({
-                url,
-                json: await response.json(),
-            });
-        } catch {
-            // Ignore unreadable responses.
-        }
-    });
-
-    try {
-        const editorReady = await waitForEditor(session.page);
-        if (!editorReady) {
-            const currentUrl = session.page.url();
-            if (/sign-in|login/i.test(currentUrl)) {
-                throw new Error("Redirected to login while opening the Substack draft. SUBSTACK_TOKEN may be expired.");
-            }
-        }
-
-        const clickedButtons = [];
-        let lastVisibleButtons = [];
-
-        for (let step = 0; step < 5; step += 1) {
-            const publishedUrl = await discoverPublishedUrl(session.page, subdomain, responsePayloads);
-            if (publishedUrl) {
-                if (screenshotAbsPath) {
-                    await session.page.screenshot({ path: screenshotAbsPath, fullPage: true }).catch(() => {});
-                }
-                return { publishedUrl, clickedButtons };
-            }
-
-            const { clickedLabel, visibleButtons } = await clickNextPublishButton(session.page);
-            lastVisibleButtons = visibleButtons;
-            if (!clickedLabel) {
-                break;
-            }
-
-            clickedButtons.push(clickedLabel);
-            await Promise.race([
-                session.page.waitForLoadState("networkidle", { timeout: 6000 }),
-                session.page.waitForTimeout(2500),
-            ]).catch(() => {});
-        }
-
-        const publishedUrl = await discoverPublishedUrl(session.page, subdomain, responsePayloads);
-        if (publishedUrl) {
-            if (screenshotAbsPath) {
-                await session.page.screenshot({ path: screenshotAbsPath, fullPage: true }).catch(() => {});
-            }
-            return { publishedUrl, clickedButtons };
-        }
-
-        if (screenshotAbsPath) {
-            await session.page.screenshot({ path: screenshotAbsPath, fullPage: true }).catch(() => {});
-        }
-
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
         throw new Error(
-            `Could not confirm a live publish for "${slug}". ` +
-            `Visible buttons: ${lastVisibleButtons.length > 0 ? lastVisibleButtons.join(", ") : "(none)"}`
+            `Substack API publish failed for "${slug}" (draft ${draftId}): HTTP ${res.status} — ${text.slice(0, 300)}`
         );
-    } finally {
-        await session.close();
     }
+
+    const data = await res.json();
+    const publishedSlug = data.slug || slug;
+    const publishedUrl = data.canonical_url || `https://${subdomain}.substack.com/p/${publishedSlug}`;
+
+    return { publishedUrl, postId: data.id || draftId };
 }
 
 function normalizeRequestedChannels(requestedChannels) {
+    const allowed = new Set(["substack_note", "twitter"]);
     return Array.from(
         new Set(
             (Array.isArray(requestedChannels) ? requestedChannels : [])
-                .filter((channel) => channel === "substack_note")
+                .filter((channel) => allowed.has(channel))
         )
     );
 }
@@ -285,7 +103,7 @@ function buildFailureResult(slug, status, message, extra = {}) {
     return result;
 }
 
-export async function runPublishWorkflow(slug, requestedChannels = []) {
+export async function runPublishWorkflow(slug, requestedChannels = [], target = "prod") {
     const article = getArticle(slug);
     const publisherPass = getPublisherPass(slug);
     const notes = getNotes(slug);
@@ -315,7 +133,7 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
 
     let publicationConfig;
     try {
-        publicationConfig = resolvePublicationConfig("prod", REPO_ROOT);
+        publicationConfig = resolvePublicationConfig(target, REPO_ROOT);
     } catch (error) {
         return buildFailureResult(slug, "PREREQ_FAIL", error.message);
     }
@@ -324,11 +142,6 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
     if (!token) {
         return buildFailureResult(slug, "PREREQ_FAIL", "Missing SUBSTACK_TOKEN in .env.");
     }
-
-    const artifactDir = join(ARTIFACTS_BASE, slug);
-    mkdirSync(artifactDir, { recursive: true });
-    const screenshotAbsPath = join(artifactDir, "publish-live.png");
-    const screenshotRelPath = relative(REPO_ROOT, screenshotAbsPath).replace(/\\/g, "/");
 
     let draftResult = null;
     let liveResult = null;
@@ -352,11 +165,11 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
             draftResult.draftUrl,
         ]);
 
-        liveResult = await publishDraftThroughBrowser({
+        liveResult = await publishDraftViaApi({
             slug,
-            draftUrl: draftResult.draftUrl,
+            draftId: draftResult.draftId,
+            subdomain: publicationConfig.subdomain,
             token,
-            screenshotAbsPath,
         });
 
         runPipelineStateCommand([
@@ -372,7 +185,6 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
         return buildFailureResult(slug, "ERROR", error.message, {
             draftUrl: draftResult?.draftUrl || null,
             publishedUrl: liveResult?.publishedUrl || null,
-            screenshotPath: existsSync(screenshotAbsPath) ? screenshotRelPath : null,
         });
     }
 
@@ -413,7 +225,7 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
                     "--content",
                     teaserText,
                     "--target",
-                    "prod",
+                    target,
                     "--agent",
                     "Dashboard",
                 ];
@@ -438,12 +250,63 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
         }
     }
 
+    if (channels.includes("twitter")) {
+        const twitterChannel = publishState.promotionChannels.twitter;
+        if (!twitterChannel || twitterChannel.blockedReason) {
+            channelResults.twitter = {
+                status: "SKIPPED",
+                reason: twitterChannel?.blockedReason || "Twitter channel not configured.",
+            };
+            warnings.push(twitterChannel?.blockedReason || "Twitter channel not configured.");
+        } else {
+            try {
+                const { loadTwitterCredentials, postTweet, uploadMediaForTweet, buildPromotionTweetText }
+                    = await import("../shared/twitter-client.mjs");
+
+                const twitterCreds = loadTwitterCredentials(REPO_ROOT);
+                const teaserText = String(draftResult.subtitle || "").trim();
+                const tweetText = buildPromotionTweetText(teaserText, liveResult.publishedUrl);
+
+                const mediaIds = [];
+
+                const tweetResult = await postTweet({ text: tweetText, creds: twitterCreds, mediaIds });
+
+                const tweetArgs = [
+                    "record-note",
+                    "--article-id", slug,
+                    "--note-type", "twitter_promotion",
+                    "--content", tweetText,
+                    "--target", target,
+                    "--agent", "Dashboard",
+                ];
+                if (tweetResult.tweetUrl) {
+                    tweetArgs.push("--note-url", tweetResult.tweetUrl);
+                }
+                runPipelineStateCommand(tweetArgs);
+
+                channelResults.twitter = {
+                    status: "PASS",
+                    tweetId: tweetResult.tweetId,
+                    tweetUrl: tweetResult.tweetUrl,
+                    tweetText,
+                };
+            } catch (error) {
+                channelResults.twitter = {
+                    status: "ERROR",
+                    error: error.message,
+                };
+                warnings.push(`Twitter post failed: ${error.message}`);
+            }
+        }
+    }
+
     const result = {
         status: warnings.length > 0 ? "PARTIAL" : "PASS",
         reason: warnings.length > 0
             ? "Article published live, but one or more promotion steps were skipped or failed."
-            : "Article published live and requested promotion channels completed.",
+            : `Article published live on ${target} and requested promotion channels completed.`,
         filePath: articleFile.relativePath,
+        target,
         draftAction: draftResult.isUpdate ? "updated" : "created",
         draftUrl: draftResult.draftUrl,
         publishedUrl: liveResult.publishedUrl,
@@ -452,7 +315,6 @@ export async function runPublishWorkflow(slug, requestedChannels = []) {
         requestedChannels: channels,
         channelResults,
         warnings,
-        screenshotPath: existsSync(screenshotAbsPath) ? screenshotRelPath : null,
     };
 
     saveResult(slug, result);

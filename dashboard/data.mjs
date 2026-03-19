@@ -165,6 +165,21 @@ export async function buildPublishState(article, publisherPass, notes, slug) {
         ? "A production promotion Note is already recorded for this article."
         : null;
 
+    const hasTwitterPromotion = notes.some(
+        (note) => note.note_type === "twitter_promotion" && note.target === "prod"
+    );
+
+    let twitterCredsAvailable = false;
+    try {
+        const { loadTwitterCredentials } = await import("../shared/twitter-client.mjs");
+        twitterCredsAvailable = loadTwitterCredentials(REPO_ROOT).valid;
+    } catch { /* twitter client not available */ }
+    const twitterBlockedReason = hasTwitterPromotion
+        ? "A production Twitter promotion tweet is already recorded for this article."
+        : !twitterCredsAvailable
+        ? "Twitter credentials not configured in .env."
+        : null;
+
     const blockedReasons = [];
     const previewWarnings = [];
     if (!article) blockedReasons.push("Article not found in pipeline.db.");
@@ -205,6 +220,12 @@ export async function buildPublishState(article, publisherPass, notes, slug) {
                 label: "Substack Note",
                 defaultSelected: !noteBlockedReason,
                 blockedReason: noteBlockedReason,
+            },
+            twitter: {
+                id: "twitter",
+                label: "Twitter/X",
+                defaultSelected: !twitterBlockedReason,
+                blockedReason: twitterBlockedReason,
             },
         },
     };

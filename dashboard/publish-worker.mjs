@@ -17,12 +17,13 @@ async function main() {
     const channels = args.channels
         ? args.channels.split(",").map((value) => value.trim()).filter(Boolean)
         : [];
+    const target = args.target || "prod";
 
     if (!slug) {
-        throw new Error("Usage: node dashboard/publish-worker.mjs --slug <slug> [--channels substack_note]");
+        throw new Error("Usage: node dashboard/publish-worker.mjs --slug <slug> [--channels substack_note] [--target prod|stage]");
     }
 
-    const result = await runPublishWorkflow(slug, channels);
+    const result = await runPublishWorkflow(slug, channels, target);
     process.stdout.write(`__PUBLISH_RESULT__${JSON.stringify(result)}\n`);
     process.exit(result.status === "PASS" || result.status === "PARTIAL" ? 0 : 1);
 }

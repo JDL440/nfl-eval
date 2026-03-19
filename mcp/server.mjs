@@ -13,8 +13,10 @@ import {
 import {
     publishToSubstackTool,
     publishNoteToSubstackTool,
+    publishTweetTool,
     handlePublishToSubstack,
     handlePublishNoteToSubstack,
+    handlePublishTweet,
 } from "../.github/extensions/substack-publisher/tool.mjs";
 import {
     queryPlayerStatsTool, handleQueryPlayerStats,
@@ -116,6 +118,16 @@ server.registerTool(publishNoteToSubstackTool.name, {
         target: z.enum(["stage", "prod"]).optional().describe(publishNoteToSubstackTool.parameters.properties.target.description),
     },
 }, async (args) => runWithNormalization(handlePublishNoteToSubstack, args));
+
+server.registerTool(publishTweetTool.name, {
+    description: publishTweetTool.description,
+    inputSchema: {
+        content: z.string().describe(publishTweetTool.parameters.properties.content.description),
+        image_path: z.string().optional().describe(publishTweetTool.parameters.properties.image_path.description),
+        article_slug: z.string().optional().describe(publishTweetTool.parameters.properties.article_slug.description),
+        target: z.enum(["stage", "prod"]).optional().describe(publishTweetTool.parameters.properties.target.description),
+    },
+}, async (args) => runWithNormalization(handlePublishTweet, args));
 
 // ─── nflverse-query tools ─────────────────────────────────────────────────────
 

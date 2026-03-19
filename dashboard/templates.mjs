@@ -241,7 +241,7 @@ export function articlePage(detail) {
         { id: "assets", label: "Assets", content: assetsTab(artifacts, images, otherDocs, slug) },
         { id: "preview", label: "Preview", content: `<div id="preview-pane"><a href="/preview/${encodeURIComponent(slug)}" target="_blank" class="btn">Open Canonical Preview →</a><p class="note">Preview renders draft.md through the publisher ProseMirror pipeline with subscribe-button injection, hero-image enforcement, and dense-table warnings.</p></div>` },
         { id: "validation", label: "Validation", content: validationTab(slug, article, validationResults) },
-        { id: "publish", label: "Publish / Notes", content: publishTab(publisherPass, notes, article, publishDocs, slug, publishState, publishResults) },
+        { id: "publish", label: "Publish & Notes", content: publishTab(publisherPass, notes, article, publishDocs, slug, publishState, publishResults) },
         { id: "timeline", label: "Timeline", content: timelineTab(transitions) },
     ];
 
@@ -254,6 +254,7 @@ export function articlePage(detail) {
     ).join("");
 
     const body = `
+    ${publishBar(slug, publishState, publishResults)}
     <div class="detail-layout">
         ${leftRail}
         <div class="detail-content">
@@ -261,16 +262,198 @@ export function articlePage(detail) {
             ${tabPanes}
         </div>
     </div>
-    <script>
+    ${publishBarScript(slug)}`;
+
+    return layout(title, body, "");
+}
+
+// ── Publish bar (always visible at top of article page) ─────────────────────
+
+function publishBar(slug, publishState, publishResults) {
+    const noteChannel = publishState?.promotionChannels?.substack_note;
+    const noteDefaultChecked = noteChannel?.defaultSelected ? "checked" : "";
+    const noteDisabled = noteChannel?.blockedReason ? "disabled" : "";
+
+    const twitterChannel = publishState?.promotionChannels?.twitter;
+    const twitterDefaultChecked = twitterChannel?.defaultSelected ? "checked" : "";
+    const twitterDisabled = twitterChannel?.blockedReason ? "disabled" : "";
+
+    const isPublished = publishState?.isPublished;
+    const canPublish = publishState?.canPublish;
+
+    if (isPublished) {
+        return `<div class="publish-bar publish-bar-done">
+            <div class="publish-bar-status">✅ Published</div>
+            <div class="publish-bar-links">
+                ${publishResults?.publishedUrl ? `<a href="${esc(publishResults.publishedUrl)}" target="_blank" class="btn btn-sm">View Live Article ↗</a>` : ""}
+                ${publishResults?.draftUrl ? `<a href="${esc(publishResults.draftUrl)}" target="_blank" class="btn btn-sm btn-outline">Edit Draft ↗</a>` : ""}
+            </div>
+        </div>`;
+    }
+
+    const blockedHtml = publishState?.blockedReasons?.length
+        ? `<details class="publish-bar-blockers"><summary>⚠️ ${publishState.blockedReasons.length} blocking issue(s)</summary><ul>${publishState.blockedReasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></details>`
+        : "";
+
+    return `<div class="publish-bar${canPublish ? " publish-bar-ready" : " publish-bar-blocked"}">
+        <div class="publish-bar-main">
+            <div class="publish-bar-controls">
+                <button class="btn btn-publish${canPublish ? "" : " btn-disabled"}"
+                    id="bar-btn-publish"
+                    ${canPublish ? "" : "disabled"}>🚀 Publish Live</button>
+                <div class="publish-bar-channels">
+                    <label class="channel-toggle${noteChannel?.blockedReason ? " channel-toggle-disabled" : ""}" title="${esc(noteChannel?.blockedReason || "Post a Substack Note with article card")}">
+                        <input type="checkbox" id="bar-channel-note" ${noteDefaultChecked} ${noteDisabled}>
+                        <span>📝 Note</span>
+                    </label>
+                    <label class="channel-toggle${twitterChannel?.blockedReason ? " channel-toggle-disabled" : ""}" title="${esc(twitterChannel?.blockedReason || "Post article link to Twitter/X")}">
+                        <input type="checkbox" id="bar-channel-twitter" ${twitterDefaultChecked} ${twitterDisabled}>
+                        <span>🐦 Tweet</span>
+                    </label>
+                </div>
+            </div>
+            <div class="publish-bar-info">
+                ${canPublish
+                    ? `<span class="publish-bar-status-text">✅ Ready to publish</span>`
+                    : `<span class="publish-bar-status-text">🚫 Not ready</span>`}
+                ${publishState?.draftUrl
+                    ? `<a href="${esc(publishState.draftUrl)}" target="_blank" class="dim">Draft ↗</a>`
+                    : ""}
+                <a href="/preview/${encodeURIComponent(slug)}" target="_blank" class="dim">Preview ↗</a>
+            </div>
+        </div>
+        ${blockedHtml}
+        <div id="bar-publish-result">${renderPublishResultCard(publishResults)}</div>
+    </div>`;
+}
+
+function publishBarScript(slug) {
+    return `<script>
     function showTab(id) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
         document.querySelector('[onclick="showTab(\\'' + id + '\\')"]').classList.add('active');
         document.getElementById('tab-' + id).classList.add('active');
     }
-    </script>`;
 
-    return layout(title, body, "");
+    (function() {
+        const publishBtn = document.getElementById('bar-btn-publish');
+        if (!publishBtn) return;
+
+        publishBtn.addEventListener('click', async function() {
+            const noteCheckbox = document.getElementById('bar-channel-note');
+            const twitterCheckbox = document.getElementById('bar-channel-twitter');
+            const channels = [];
+            if (noteCheckbox && noteCheckbox.checked && !noteCheckbox.disabled) channels.push('substack_note');
+            if (twitterCheckbox && twitterCheckbox.checked && !twitterCheckbox.disabled) channels.push('twitter');
+
+            publishBtn.disabled = true;
+            publishBtn.textContent = '⏳ Publishing…';
+            const barResult = document.getElementById('bar-publish-result');
+            const tabResult = document.getElementById('publish-result');
+            const statusHtml = '<div class="validation-running"><span class="spinner"></span> Publishing live article… this can take 15–30 seconds.</div>';
+            barResult.innerHTML = statusHtml;
+            if (tabResult) tabResult.innerHTML = statusHtml;
+
+            try {
+                const resp = await fetch('/api/publish/' + encodeURIComponent('${slug}'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channels, target: 'prod' }),
+                });
+                const data = await resp.json();
+                barResult.innerHTML = renderPublishResultCard(data);
+                if (tabResult) tabResult.innerHTML = renderPublishResultCard(data);
+                if (data.status === 'RUNNING') {
+                    await pollPublishStatus('${slug}', barResult, tabResult);
+                }
+            } catch (err) {
+                const errHtml = '<div class="validation-result validation-error"><strong>Publish request failed:</strong> ' + publishEscHtml(err.message || err) + '</div>';
+                barResult.innerHTML = errHtml;
+                if (tabResult) tabResult.innerHTML = errHtml;
+            } finally {
+                publishBtn.disabled = false;
+                publishBtn.textContent = '🚀 Publish Live';
+            }
+        });
+    })();
+
+    async function pollPublishStatus(slug, barResult, tabResult) {
+        for (let attempt = 0; attempt < 50; attempt += 1) {
+            const resp = await fetch('/api/publish/' + encodeURIComponent(slug));
+            const data = await resp.json();
+            const html = renderPublishResultCard(data);
+            barResult.innerHTML = html;
+            if (tabResult) tabResult.innerHTML = html;
+            if (!data || data.status !== 'RUNNING') return;
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+    }
+
+    function renderPublishResultCard(data) {
+        if (!data || (!data.status && !data.error)) return '<p class="dim">No publish attempts recorded yet.</p>';
+
+        const statusIcon = { RUNNING: '⏳', PASS: '✅', PARTIAL: '⚠️', PREREQ_FAIL: '🚫', ERROR: '💥' }[data.status] || '❓';
+        const statusClass = { RUNNING: 'validation-running-state', PASS: 'validation-pass', PARTIAL: 'validation-warn', PREREQ_FAIL: 'validation-prereq', ERROR: 'validation-error' }[data.status] || 'validation-warn';
+
+        let html = '<div class="validation-result ' + statusClass + '">';
+        html += '<p><strong>' + statusIcon + ' ' + publishEscHtml(data.status) + '</strong>';
+        if (data.timestamp) html += ' <span class="dim">— ' + new Date(data.timestamp).toLocaleString() + '</span>';
+        html += '</p>';
+
+        if (data.reason) html += '<p>' + publishEscHtml(data.reason) + '</p>';
+        if (data.error) html += '<p class="validation-error-text">' + publishEscHtml(data.error) + '</p>';
+        if (data.target) html += '<p class="dim">Target: <strong>' + publishEscHtml(data.target) + '</strong></p>';
+        if (data.filePath) html += '<p class="dim">Source: <code>' + publishEscHtml(data.filePath) + '</code></p>';
+        if (data.draftUrl) html += '<p class="dim">Draft: <a href="' + publishEscHtml(data.draftUrl) + '" target="_blank">' + publishEscHtml(data.draftUrl) + '</a></p>';
+        if (data.publishedUrl) html += '<p><strong>🔗 Live article:</strong> <a href="' + publishEscHtml(data.publishedUrl) + '" target="_blank">' + publishEscHtml(data.publishedUrl) + '</a></p>';
+        if (data.heroWarning) html += '<p class="dim">' + publishEscHtml(data.heroWarning) + '</p>';
+        if (data.tags && data.tags.length > 0) html += '<p class="dim">Tags: ' + data.tags.map(publishEscHtml).join(', ') + '</p>';
+
+        if (data.warnings && data.warnings.length > 0) {
+            html += '<details><summary>' + data.warnings.length + ' warning(s)</summary><ul>';
+            data.warnings.forEach(function(w) { html += '<li>' + publishEscHtml(w) + '</li>'; });
+            html += '</ul></details>';
+        }
+
+        if (data.channelResults && data.channelResults.substack_note) {
+            const note = data.channelResults.substack_note;
+            html += '<div class="publish-channel-card">';
+            html += '<p><strong>📝 Substack Note</strong> — ' + publishEscHtml(note.status) + '</p>';
+            if (note.teaserText) html += '<p class="dim">' + publishEscHtml(note.teaserText) + '</p>';
+            if (note.noteUrl) html += '<p><a href="' + publishEscHtml(note.noteUrl) + '" target="_blank">View Note ↗</a></p>';
+            if (note.error) html += '<p class="validation-error-text">' + publishEscHtml(note.error) + '</p>';
+            if (note.reason) html += '<p class="dim">' + publishEscHtml(note.reason) + '</p>';
+            html += '</div>';
+        }
+
+        if (data.channelResults && data.channelResults.twitter) {
+            const tw = data.channelResults.twitter;
+            html += '<div class="publish-channel-card">';
+            html += '<p><strong>🐦 Twitter/X</strong> — ' + publishEscHtml(tw.status) + '</p>';
+            if (tw.tweetText) html += '<p class="dim">' + publishEscHtml(tw.tweetText) + '</p>';
+            if (tw.tweetUrl) html += '<p><a href="' + publishEscHtml(tw.tweetUrl) + '" target="_blank">View Tweet ↗</a></p>';
+            if (tw.error) html += '<p class="validation-error-text">' + publishEscHtml(tw.error) + '</p>';
+            if (tw.reason) html += '<p class="dim">' + publishEscHtml(tw.reason) + '</p>';
+            html += '</div>';
+        }
+
+        if (data.blockedReasons && data.blockedReasons.length > 0) {
+            html += '<details><summary>' + data.blockedReasons.length + ' blocking reason(s)</summary><ul>';
+            data.blockedReasons.forEach(function(reason) { html += '<li>' + publishEscHtml(reason) + '</li>'; });
+            html += '</ul></details>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function publishEscHtml(value) {
+        const element = document.createElement('div');
+        element.textContent = value == null ? '' : String(value);
+        return element.innerHTML;
+    }
+    </script>`;
 }
 
 // ── Tab renderers ────────────────────────────────────────────────────────────
@@ -428,17 +611,13 @@ function publishTab(publisherPass, notes, article, publishDocs, slug, publishSta
         html += docGroup(publishDocs, slug);
     }
 
-    const noteChannel = publishState?.promotionChannels?.substack_note;
-    const noteDefaultChecked = noteChannel?.defaultSelected ? "checked" : "";
-    const noteDisabled = noteChannel?.blockedReason ? "disabled" : "";
-
-    html += `<h3>Dashboard Publish</h3>
+    html += `<h3>Publish Details</h3>
     <div class="publish-section">
-        <p class="note">Use the canonical dashboard preview as the final review surface. When you publish here, the dashboard will create or refresh the production draft behind the scenes, publish it live, and then run the selected promotion channels.</p>
+        <p class="note">The publish button at the top of the page creates or refreshes the Substack draft, publishes it live via the Substack API, and runs any selected promotion channels.</p>
         <dl class="publish-meta">
             <dt>Source article</dt><dd>${esc(publishState?.filePath || "—")}</dd>
             <dt>Current draft URL</dt><dd>${publishState?.draftUrl ? `<a href="${esc(publishState.draftUrl)}" target="_blank">Open Draft ↗</a>` : "No production draft stored yet — one will be created during publish."}</dd>
-            <dt>Live publish target</dt><dd>Production Substack publication</dd>
+            <dt>Publish method</dt><dd>Direct Substack API (no browser automation)</dd>
         </dl>
         ${publishState?.previewWarnings?.length
             ? `<div class="publish-prereq-warn"><p><strong>Canonical preview blockers</strong></p><ul>${publishState.previewWarnings.map((warning) => `<li>${esc(warning.message)}</li>`).join("")}</ul></div>`
@@ -446,22 +625,6 @@ function publishTab(publisherPass, notes, article, publishDocs, slug, publishSta
         ${publishState?.blockedReasons?.length
             ? `<div class="publish-prereq-warn"><p>⚠️ <strong>Publish blocked</strong></p><ul>${publishState.blockedReasons.map((reason) => `<li>${esc(reason)}</li>`).join("")}</ul></div>`
             : `<div class="validation-result validation-pass"><p><strong>✅ Ready for dashboard publish</strong></p><p>Publisher pass is complete and the dashboard can publish this article live.</p></div>`}
-        <div class="channel-list">
-            <label class="channel-item${noteChannel?.blockedReason ? " channel-item-disabled" : ""}">
-                <input type="checkbox" id="channel-substack-note" ${noteDefaultChecked} ${noteDisabled}>
-                <span>
-                    <strong>Substack Note</strong>
-                    <span class="dim">Default format: article subtitle above the article card.</span>
-                    ${noteChannel?.blockedReason ? `<span class="dim"> ${esc(noteChannel.blockedReason)}</span>` : ""}
-                </span>
-            </label>
-        </div>
-        <p>
-            <button class="btn${publishState?.canPublish ? "" : " btn-disabled"}"
-                id="btn-publish-live"
-                onclick="runPublishAction('${encodeURIComponent(slug)}')"
-                ${publishState?.canPublish ? "" : "disabled"}>Publish Live + Selected Promotions</button>
-        </p>
         <div id="publish-result">${renderPublishResultCard(publishResults)}</div>
     </div>`;
 
@@ -477,104 +640,6 @@ function publishTab(publisherPass, notes, article, publishDocs, slug, publishSta
     } else {
         html += `<p class="dim">No notes recorded.</p>`;
     }
-
-    html += `
-    <script>
-    async function runPublishAction(slug) {
-        const btn = document.getElementById('btn-publish-live');
-        const resultDiv = document.getElementById('publish-result');
-        const noteCheckbox = document.getElementById('channel-substack-note');
-        const channels = [];
-        if (noteCheckbox && noteCheckbox.checked && !noteCheckbox.disabled) {
-            channels.push('substack_note');
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Publishing…';
-        resultDiv.innerHTML = '<div class="validation-running"><span class="spinner"></span> Publishing live article and selected promotions… this can take 30–90 seconds.</div>';
-
-        try {
-            const resp = await fetch('/api/publish/' + slug, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ channels }),
-            });
-            const data = await resp.json();
-            resultDiv.innerHTML = renderPublishResultCard(data);
-            if (data.status === 'RUNNING') {
-                await pollPublishStatus(slug, resultDiv);
-            }
-        } catch (err) {
-            resultDiv.innerHTML = '<div class="validation-result validation-error"><strong>Publish request failed:</strong> ' + publishEscHtml(err.message || err) + '</div>';
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Publish Live + Selected Promotions';
-        }
-    }
-
-    async function pollPublishStatus(slug, resultDiv) {
-        for (let attempt = 0; attempt < 50; attempt += 1) {
-            const resp = await fetch('/api/publish/' + slug);
-            const data = await resp.json();
-            resultDiv.innerHTML = renderPublishResultCard(data);
-            if (!data || data.status !== 'RUNNING') return;
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-    }
-
-    function renderPublishResultCard(data) {
-        if (!data || (!data.status && !data.error)) return '<p class="dim">No publish attempts recorded yet.</p>';
-
-        const statusIcon = { RUNNING: '⏳', PASS: '✅', PARTIAL: '⚠️', PREREQ_FAIL: '🚫', ERROR: '💥' }[data.status] || '❓';
-        const statusClass = { RUNNING: 'validation-running-state', PASS: 'validation-pass', PARTIAL: 'validation-warn', PREREQ_FAIL: 'validation-prereq', ERROR: 'validation-error' }[data.status] || 'validation-warn';
-
-        let html = '<div class="validation-result ' + statusClass + '">';
-        html += '<p><strong>' + statusIcon + ' ' + publishEscHtml(data.status) + '</strong>';
-        if (data.timestamp) html += ' <span class="dim">— ' + new Date(data.timestamp).toLocaleString() + '</span>';
-        html += '</p>';
-
-        if (data.reason) html += '<p>' + publishEscHtml(data.reason) + '</p>';
-        if (data.error) html += '<p class="validation-error-text">' + publishEscHtml(data.error) + '</p>';
-        if (data.filePath) html += '<p class="dim">Source: <code>' + publishEscHtml(data.filePath) + '</code></p>';
-        if (data.draftUrl) html += '<p class="dim">Draft: <a href="' + publishEscHtml(data.draftUrl) + '" target="_blank">' + publishEscHtml(data.draftUrl) + '</a></p>';
-        if (data.publishedUrl) html += '<p class="dim">Live article: <a href="' + publishEscHtml(data.publishedUrl) + '" target="_blank">' + publishEscHtml(data.publishedUrl) + '</a></p>';
-        if (data.screenshotPath) html += '<p class="dim">Screenshot: <code>' + publishEscHtml(data.screenshotPath) + '</code> <a href="/image/' + encodeURIComponent(data.screenshotPath) + '" target="_blank">View</a></p>';
-        if (data.heroWarning) html += '<p class="dim">' + publishEscHtml(data.heroWarning) + '</p>';
-        if (data.tags && data.tags.length > 0) html += '<p class="dim">Tags: ' + data.tags.map(publishEscHtml).join(', ') + '</p>';
-
-        if (data.warnings && data.warnings.length > 0) {
-            html += '<details><summary>' + data.warnings.length + ' warning(s)</summary><ul>';
-            data.warnings.forEach(function(w) { html += '<li>' + publishEscHtml(w) + '</li>'; });
-            html += '</ul></details>';
-        }
-
-        if (data.channelResults && data.channelResults.substack_note) {
-            const note = data.channelResults.substack_note;
-            html += '<div class="publish-channel-card">';
-            html += '<p><strong>Substack Note</strong> — ' + publishEscHtml(note.status) + '</p>';
-            if (note.teaserText) html += '<p class="dim">' + publishEscHtml(note.teaserText) + '</p>';
-            if (note.noteUrl) html += '<p><a href="' + publishEscHtml(note.noteUrl) + '" target="_blank">View Note ↗</a></p>';
-            if (note.error) html += '<p class="validation-error-text">' + publishEscHtml(note.error) + '</p>';
-            if (note.reason) html += '<p class="dim">' + publishEscHtml(note.reason) + '</p>';
-            html += '</div>';
-        }
-
-        if (data.blockedReasons && data.blockedReasons.length > 0) {
-            html += '<details><summary>' + data.blockedReasons.length + ' blocking reason(s)</summary><ul>';
-            data.blockedReasons.forEach(function(reason) { html += '<li>' + publishEscHtml(reason) + '</li>'; });
-            html += '</ul></details>';
-        }
-
-        html += '</div>';
-        return html;
-    }
-
-    function publishEscHtml(value) {
-        const element = document.createElement('div');
-        element.textContent = value == null ? '' : String(value);
-        return element.innerHTML;
-    }
-    </script>`;
 
     return html;
 }
@@ -592,10 +657,10 @@ function renderPublishResultCard(result) {
 
     if (result.reason) html += `<p>${esc(result.reason)}</p>`;
     if (result.error) html += `<p class="validation-error-text">${esc(result.error)}</p>`;
+    if (result.target) html += `<p class="dim">Target: <strong>${esc(result.target)}</strong></p>`;
     if (result.filePath) html += `<p class="dim">Source: <code>${esc(result.filePath)}</code></p>`;
     if (result.draftUrl) html += `<p class="dim">Draft: <a href="${esc(result.draftUrl)}" target="_blank">${esc(result.draftUrl)}</a></p>`;
-    if (result.publishedUrl) html += `<p class="dim">Live article: <a href="${esc(result.publishedUrl)}" target="_blank">${esc(result.publishedUrl)}</a></p>`;
-    if (result.screenshotPath) html += `<p class="dim">Screenshot: <code>${esc(result.screenshotPath)}</code> <a href="/image/${encodeURIComponent(result.screenshotPath)}" target="_blank">View</a></p>`;
+    if (result.publishedUrl) html += `<p><strong>🔗 Live article:</strong> <a href="${esc(result.publishedUrl)}" target="_blank">${esc(result.publishedUrl)}</a></p>`;
     if (result.warnings?.length) {
         html += `<details><summary>${result.warnings.length} warning(s)</summary><ul>`;
         html += result.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("");

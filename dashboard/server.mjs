@@ -213,7 +213,7 @@ function startValidationJob(slug, type) {
     return { started: true, state: current[type] };
 }
 
-function startPublishJob(slug, channels) {
+function startPublishJob(slug, channels, target) {
     const current = publishJobs.get(slug) || {};
     if (current.publish?.status === "RUNNING") {
         return { started: false, state: current.publish };
@@ -221,8 +221,9 @@ function startPublishJob(slug, channels) {
 
     current.publish = {
         status: "RUNNING",
-        reason: "Publishing live article… this can take 30–90 seconds.",
+        reason: `Publishing live article to ${target}… this can take 15–30 seconds.`,
         requestedChannels: channels,
+        target,
         timestamp: new Date().toISOString(),
     };
     publishJobs.set(slug, current);
@@ -233,6 +234,8 @@ function startPublishJob(slug, channels) {
         slug,
         "--channels",
         channels.join(","),
+        "--target",
+        target,
     ], {
         cwd: REPO_ROOT,
         windowsHide: true,
@@ -372,13 +375,14 @@ async function handleRequest(req, res) {
 
     if (path.startsWith("/api/publish/") && req.method === "POST") {
         const slug = decodeURIComponent(path.slice("/api/publish/".length));
-        console.log(`[publish] Live publish triggered for: ${slug}`);
         try {
             const body = await readJsonBody(req);
             const channels = Array.isArray(body.channels)
                 ? body.channels.filter((value) => typeof value === "string")
                 : [];
-            const result = startPublishJob(slug, channels);
+            const target = body.target === "stage" ? "stage" : "prod";
+            console.log(`[publish] Live publish triggered for: ${slug} (target=${target}, channels=${channels.join(",")})`);
+            const result = startPublishJob(slug, channels, target);
             sendJson(res, result.state, result.started ? 202 : 200);
         } catch (err) {
             console.error(`[publish] Live publish error:`, err);
