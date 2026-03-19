@@ -81,7 +81,7 @@ You can also kick off the full article pipeline:
 "Team, let's write an article on the Seahawks running back situation."
 ```
 
-This triggers the expert panel → Writer → Editor → human review flow (see below).
+This triggers the expert panel → preflight verification → Writer → Editor → human review flow (see below).
 
 ---
 
@@ -95,19 +95,25 @@ Every article follows the same path. No shortcuts.
    and — critically — disagree with each other when the data supports it.
    (Cap says $27M. PlayerRep says $33M. Both are right. That's the article.)
 
-2. WRITER
+2. PREFLIGHT VERIFICATION
+   A lightweight fact-check of panel outputs flags high-risk claims:
+   contradictions, missing sources, unsafe details. Writer gets a summary
+   (panel-factcheck.md) to craft around known issues. Editor does full
+   fact-check later.
+
+3. WRITER
    Takes the raw expert output and crafts it into a Substack article.
    Voice: data-driven, opinionated, readable. Ringer meets OverTheCap.
 
-3. EDITOR
+4. EDITOR
    Fact-checks everything. Player names, contract figures, draft positions,
    statistical claims. Catches errors before they embarrass anyone.
    (Editor caught 6 factual errors in one article. The system works.)
 
-4. HUMAN REVIEW
+5. HUMAN REVIEW
    Joe reads the final draft. Approves, requests changes, or kills it.
 
-5. PUBLISH
+6. PUBLISH
    Goes live on the NFL Lab (Substack).
 ```
 
