@@ -89,6 +89,8 @@ Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 
 *{Subheadline describing the expert panel angle}*
 
+![{Hero image alt text}](../../images/{slug}/{slug}-cover-1.png)
+
 > **📋 TLDR**
 > - {1-line on the player/situation heading into the upcoming season}
 > - {1-line on key assets / resources available}
@@ -174,19 +176,22 @@ generate_article_images(
   article_summary: "{1-3 sentence summary of the article's core argument}",
   team: "{Primary NFL team, e.g. 'Seattle Seahawks'}",
   players: ["{Key players mentioned}"],
-  image_types: ["inline"],
-  count_per_type: 2
+  image_types: ["cover", "inline", "inline"],
+  count_per_type: 1
 )
 ```
 
 The tool saves images to `content/images/{slug}/` and returns markdown references to paste into the article.
 
-**Image policy (current):**
-- **NO cover image** in article markdown — cover is set manually in Substack editor by Joe at Stage 8
+**Image policy (updated):**
+- **Exactly 1 cover image** in article markdown — place it at the very top of the article body, above the `> **📋 TLDR**` block
 - **Exactly 2 inline images** — placed at natural section breaks to keep mobile readers scrolling
-- **inline-1 MUST be a hero/atmospheric image** (not a chart/table) — it drives the social share thumbnail
+- **Cover image is the hero image** — it should be the first body image and should drive the social/share thumbnail
+- **For player-centric headlines or articles, the cover image should feature the player in a strong editorial/game-action image**
+- **For team-wide or abstract pieces, the cover image can be atmospheric/team-led**
 - **inline-2** can be analytical or data-adjacent
-- Inline images use 1:1 aspect ratio, rendered at `imageSize: "normal"` (text column width)
+- All article images render at `imageSize: "normal"` (text column width)
+- **Do not use visible image captions** in article markdown; keep alt text, skip caption text
 
 **Full guidance:** See [`image-generation` SKILL.md](../image-generation/SKILL.md) for prompting strategy, custom prompts, and Editor review format.
 

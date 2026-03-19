@@ -47,18 +47,20 @@ Open `content/articles/{slug}.md` and verify:
 ### Step 2 — Image Placement Verification
 
 **Image policy (current):**
-- **Exactly 2 inline images** in article markdown body
-- **NO cover image** in article markdown — cover handling happens outside the markdown body and is reviewed from the dashboard article page at publish time
-- **inline-1 MUST be a hero/atmospheric image** — it drives the social share thumbnail. NOT a chart, table, or dense data image.
+- **Exactly 1 cover image** at the top of the article markdown body, above the TLDR block
+- **Exactly 2 inline images** in the article markdown body
+- **The cover image MUST be hero-safe** — it drives the social share thumbnail. NOT a chart, table, or dense data image.
 - **inline-2** can be analytical or data-adjacent
 - Images rendered at `imageSize: "normal"` (text column width), NOT full-bleed
 
 **Checklist:**
 
-- [ ] **No cover image** in the article markdown body — cover is NOT rendered inline; it is handled separately during dashboard review/publish
+- [ ] **Cover image is present** in the article markdown body and sits above the TLDR block
 - [ ] **Exactly 2 inline images** present in the article body
-- [ ] **First image (inline-1) is hero-safe** — not a chart, table, or data visualization (the publisher extension will warn/swap if not, but it's better to get this right)
+- [ ] **First image (the cover) is hero-safe** — not a chart, table, or data visualization (the publisher extension will warn/swap if not, but it's better to get this right)
+- [ ] If the story is player-centric, the cover image is player-centric too
 - [ ] Both inline images use correct syntax: `![alt text](../../images/{slug}/filename.png)`
+- [ ] Images do not use visible markdown captions
 - [ ] Both inline images are named `{slug}-inline-1.png` and `{slug}-inline-2.png`
 - [ ] Both inline images have descriptive alt text (no empty `![]()`)
 - [ ] Both image files exist: verify `content/images/{slug}/` contains the referenced filenames
