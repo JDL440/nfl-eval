@@ -61,7 +61,7 @@ To enable automated Substack publishing:
    ```
 5. Create a `.env` file from `.env.example` and fill in `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL`
 
-Once configured, agents can call `publish_to_substack` to push any article to Substack as a draft.
+Once configured, agents can use `publish_to_substack` when a draft push is needed, while the default article flow now pauses at dashboard-ready Stage 7 before any Substack publish step.
 
 ### Talking to Agents
 
@@ -104,11 +104,13 @@ Every article follows the same path. No shortcuts.
    statistical claims. Catches errors before they embarrass anyone.
    (Editor caught 6 factual errors in one article. The system works.)
 
-4. HUMAN REVIEW
-   Joe reads the final draft. Approves, requests changes, or kills it.
+4. DASHBOARD REVIEW
+   Joe reviews the final article in the local dashboard, using preview and validation
+   before the live publish step.
 
-5. PUBLISH
-   Goes live on the NFL Lab (Substack).
+5. LIVE PUBLISH + PROMOTION
+   The dashboard publish action sends the article live to the NFL Lab (Substack)
+   and can dispatch the default Substack Note in the same step.
 ```
 
 The expert disagreement isn't a bug — it's the product. When Cap and PlayerRep argue about Devon Witherspoon's extension value, readers get two expert perspectives backed by real data. That's what makes this different from a single columnist's opinion.
@@ -136,8 +138,8 @@ All agent knowledge comes from public sources:
 Planned but not yet built:
 
 - [ ] **Image creation** — Article header images, player graphics, data visualizations
-- [x] **Automated publishing** — `publish_to_substack` Copilot extension creates Substack drafts directly from article markdown files, tagged with team + specialist tags for categorization
-- [x] **MCP servers / extensions** — `publish_to_substack` Copilot extension (`.github/extensions/substack-publisher/`) enables automated Substack publishing with tag-based routing
+- [x] **Automated publishing** — Dashboard review can publish live to Substack and trigger the default promotion Note; shared Substack tooling still supports draft create/update where needed
+- [x] **MCP servers / extensions** — `publish_to_substack` plus the dashboard publish flow handle Substack draft/live publishing with tag-based routing
 - [x] **32-team sections** — All NFL teams have dedicated Substack sections with official brand colors on both `nfllab` and `nfllabstage`
 - [ ] **New agent roles** — Growth/Distribution agent (audience strategy, SEO, social), Graphic Designer agent
 - [ ] **Automated pipeline** — Cron-triggered Media sweeps → auto-draft → Editor review → publish queue
@@ -174,7 +176,7 @@ nfl-eval/
 
 ## Dashboard
 
-A local read-only dashboard for the article pipeline. Shows every article's stage, artifacts, drift status, editor verdicts, and a canonical publisher-aligned preview.
+A local pipeline dashboard for the article workflow. It shows every article's stage, artifacts, drift status, editor verdicts, a canonical publisher-aligned preview, and the live publish / Notes action from the article detail page.
 
 ```bash
 npm run dashboard          # start at http://localhost:3456
@@ -186,11 +188,12 @@ DASHBOARD_PORT=8080 npm run dashboard        # custom port from bash/zsh
 
 If `3456` is already in use, the dashboard now prints the existing URL and alternate-port commands instead of crashing with a raw stack trace.
 
-**Pages:**
+**Pages / actions:**
 - **Board** (`/`) — All articles with stage, status, drift, and next-action columns. Filter by text, stage, or status.
 - **Article detail** (`/article/:slug`) — Left-rail summary + tabs: Overview, Prompt & Panel, Draft & Edits, Assets, Preview, Publish/Notes, Timeline.
 - **Preview** (`/preview/:slug`) — Renders `draft.md` through the canonical ProseMirror pipeline (subscribe buttons, hero-image safety, dense-table warnings).
-- **API** (`/api/board`, `/api/article/:slug`) — JSON endpoints for tooling.
+- **Live publish** (`POST /api/publish/:slug`) — Creates or refreshes the production draft, publishes it live, and optionally posts the default Substack Note from the dashboard article page.
+- **API** (`/api/board`, `/api/article/:slug`, `/api/publish/:slug`) — JSON endpoints for tooling.
 
 **Requirements:** Node 22+ (uses `node:sqlite`). Zero external dependencies.
 
@@ -201,4 +204,5 @@ If `3456` is already in use, the dashboard now prints the existing URL and alter
 - Validation runs in a background child process and calls the existing Playwright CLI scripts; original validation scripts are not modified.
 - Validation artifacts (screenshots) are stored under `content/images/stage-validation-screenshots/{slug}/` and results are persisted to `dashboard/validation-results.json`.
 - Trigger validation manually from the article page Validation tab or via POST `/api/validate/editor/{slug}` and `/api/validate/mobile/{slug}`; poll `/api/validation/{slug}` for status updates.
+- Live publish results are persisted to `dashboard/publish-results.json`, and publish screenshots are stored under `content/images/publish-artifacts/{slug}/`.
 

@@ -41,7 +41,7 @@ This is **coordinator-level guidance**. It tells Lead how to orchestrate the ful
 │  4   │ Panel Discussion     │ Panel agents   │ Raw expert analysis     │
 │  5   │ Article Drafting     │ Writer         │ Draft in content/articles│
 │  6   │ Editor Pass          │ Editor         │ Verdict + corrections   │
-│  7   │ Publisher Pass       │ Lead → Joe     │ Dashboard-ready publish │
+│  7   │ Publisher Pass       │ Lead → Joe     │ Dashboard-ready handoff │
 │      │                      │                │ package                 │
 │  8   │ Published            │ Joe via        │ Live on Substack        │
 │      │                      │ dashboard      │                         │
@@ -589,7 +589,7 @@ conn = sqlite3.connect('content/pipeline.db')
 | 6 | Editor | `INSERT INTO editor_reviews` with verdict + counts; advance to current_stage=6 | Numeric stage=6 |
 | 7 | Lead / Publisher | `INSERT INTO publisher_pass`; advance to current_stage=7 | Numeric stage=7 |
 | 8 | Joe | Set published_at, substack_url, status='published', current_stage=8 | Numeric stage=8 (final) |
-| 8+ | Lead / Agent | `ps.record_note()` in `notes` table (optional, post-publish) | Notes are a post-publish action, not a new stage. `publish_note_to_substack` tool is currently ⛔ **gated** (dry-run only) pending Phase 0 browser interception — see `docs/substack-notes-feature-design.md`. DB support (`notes` table, `article_board.py` note count) is shipped. |
+| 8+ | Lead / Agent | `ps.record_note()` in `notes` table (optional, post-publish) | Notes are a post-publish action, not a new stage. Default path: let the dashboard publish action send the Note with live publish. Use `publish_note_to_substack` only for retry/manual follow-up after the article is live. |
 
 ### Stage transition helper
 

@@ -5,7 +5,7 @@
  * returns a complete HTML string ready to send as a response.
  */
 
-import { STAGE_NAMES, DEPTH_NAMES } from "./data.mjs";
+import { STAGE_NAMES, DEPTH_NAMES, PUBLISHER_PASS_FIELDS } from "./data.mjs";
 import { renderMarkdownFragment } from "./render.mjs";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ function layout(title, body, activeNav = "") {
     </nav>
 </header>
 <main>${body}</main>
-<footer><p>NFL Lab Dashboard v1 · Read-only · Data from pipeline.db + article artifacts</p></footer>
+<footer><p>NFL Lab Dashboard v1 · Preview, validate, and publish from pipeline.db + article artifacts</p></footer>
 </body>
 </html>`;
 }
@@ -200,7 +200,7 @@ function docGroup(docs, slug, emptyMsg = "No documents found.") {
 // ── Article detail page ──────────────────────────────────────────────────────
 
 export function articlePage(detail) {
-    const { slug, article, inferred, artifacts, images, documents, transitions, editorReviews, publisherPass, panels, notes, prompt, hasDrift, validationResults } = detail;
+    const { slug, article, inferred, artifacts, images, documents, transitions, editorReviews, publisherPass, panels, notes, prompt, hasDrift, validationResults, publishState, publishResults } = detail;
     const title = article?.title || slug;
 
     // Left rail summary
@@ -240,7 +240,7 @@ export function articlePage(detail) {
         { id: "assets", label: "Assets", content: assetsTab(artifacts, images, otherDocs, slug) },
         { id: "preview", label: "Preview", content: `<div id="preview-pane"><a href="/preview/${encodeURIComponent(slug)}" target="_blank" class="btn">Open Canonical Preview →</a><p class="note">Preview renders draft.md through the publisher ProseMirror pipeline with subscribe-button injection, hero-image enforcement, and dense-table warnings.</p></div>` },
         { id: "validation", label: "Validation", content: validationTab(slug, article, validationResults) },
-        { id: "publish", label: "Publish / Notes", content: publishTab(publisherPass, notes, article, publishDocs, slug) },
+        { id: "publish", label: "Publish / Notes", content: publishTab(publisherPass, notes, article, publishDocs, slug, publishState, publishResults) },
         { id: "timeline", label: "Timeline", content: timelineTab(transitions) },
     ];
 
@@ -402,25 +402,12 @@ function assetsTab(artifacts, images, otherDocs, slug) {
     return html;
 }
 
-function publishTab(publisherPass, notes, article, publishDocs, slug) {
+function publishTab(publisherPass, notes, article, publishDocs, slug, publishState, publishResults) {
     let html = "<h3>Publisher Pass</h3>";
     if (publisherPass) {
-        const checks = [
-            ["Title final", publisherPass.title_final],
-            ["Subtitle final", publisherPass.subtitle_final],
-            ["Body clean", publisherPass.body_clean],
-            ["Section assigned", publisherPass.section_assigned],
-            ["Tags set", publisherPass.tags_set],
-            ["URL slug set", publisherPass.url_slug_set],
-            ["Cover image set", publisherPass.cover_image_set],
-            ["Paywall set", publisherPass.paywall_set],
-            ["Names verified", publisherPass.names_verified],
-            ["Numbers current", publisherPass.numbers_current],
-            ["No stale refs", publisherPass.no_stale_refs],
-        ];
         html += '<div class="checklist">';
-        for (const [label, val] of checks) {
-            html += `<div class="check-item">${val ? "✅" : "❌"} ${esc(label)}</div>`;
+        for (const { key, label } of PUBLISHER_PASS_FIELDS) {
+            html += `<div class="check-item">${publisherPass[key] ? "✅" : "❌"} ${esc(label)}</div>`;
         }
         html += "</div>";
     } else {
@@ -430,6 +417,40 @@ function publishTab(publisherPass, notes, article, publishDocs, slug) {
     if (publishDocs.length > 0) {
         html += docGroup(publishDocs, slug);
     }
+
+    const noteChannel = publishState?.promotionChannels?.substack_note;
+    const noteDefaultChecked = noteChannel?.defaultSelected ? "checked" : "";
+    const noteDisabled = noteChannel?.blockedReason ? "disabled" : "";
+
+    html += `<h3>Dashboard Publish</h3>
+    <div class="publish-section">
+        <p class="note">Use the canonical dashboard preview as the final review surface. When you publish here, the dashboard will create or refresh the production draft behind the scenes, publish it live, and then run the selected promotion channels.</p>
+        <dl class="publish-meta">
+            <dt>Source article</dt><dd>${esc(publishState?.filePath || "—")}</dd>
+            <dt>Current draft URL</dt><dd>${publishState?.draftUrl ? `<a href="${esc(publishState.draftUrl)}" target="_blank">Open Draft ↗</a>` : "No production draft stored yet — one will be created during publish."}</dd>
+            <dt>Live publish target</dt><dd>Production Substack publication</dd>
+        </dl>
+        ${publishState?.blockedReasons?.length
+            ? `<div class="publish-prereq-warn"><p>⚠️ <strong>Publish blocked</strong></p><ul>${publishState.blockedReasons.map((reason) => `<li>${esc(reason)}</li>`).join("")}</ul></div>`
+            : `<div class="validation-result validation-pass"><p><strong>✅ Ready for dashboard publish</strong></p><p>Publisher pass is complete and the dashboard can publish this article live.</p></div>`}
+        <div class="channel-list">
+            <label class="channel-item${noteChannel?.blockedReason ? " channel-item-disabled" : ""}">
+                <input type="checkbox" id="channel-substack-note" ${noteDefaultChecked} ${noteDisabled}>
+                <span>
+                    <strong>Substack Note</strong>
+                    <span class="dim">Default format: article subtitle above the article card.</span>
+                    ${noteChannel?.blockedReason ? `<span class="dim"> ${esc(noteChannel.blockedReason)}</span>` : ""}
+                </span>
+            </label>
+        </div>
+        <p>
+            <button class="btn${publishState?.canPublish ? "" : " btn-disabled"}"
+                id="btn-publish-live"
+                onclick="runPublishAction('${encodeURIComponent(slug)}')"
+                ${publishState?.canPublish ? "" : "disabled"}>Publish Live + Selected Promotions</button>
+        </p>
+        <div id="publish-result">${renderPublishResultCard(publishResults)}</div>
+    </div>`;
 
     html += "<h3>Notes</h3>";
     if (notes.length > 0) {
@@ -444,6 +465,140 @@ function publishTab(publisherPass, notes, article, publishDocs, slug) {
         html += `<p class="dim">No notes recorded.</p>`;
     }
 
+    html += `
+    <script>
+    async function runPublishAction(slug) {
+        const btn = document.getElementById('btn-publish-live');
+        const resultDiv = document.getElementById('publish-result');
+        const noteCheckbox = document.getElementById('channel-substack-note');
+        const channels = [];
+        if (noteCheckbox && noteCheckbox.checked && !noteCheckbox.disabled) {
+            channels.push('substack_note');
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Publishing…';
+        resultDiv.innerHTML = '<div class="validation-running"><span class="spinner"></span> Publishing live article and selected promotions… this can take 30–90 seconds.</div>';
+
+        try {
+            const resp = await fetch('/api/publish/' + slug, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channels }),
+            });
+            const data = await resp.json();
+            resultDiv.innerHTML = renderPublishResultCard(data);
+            if (data.status === 'RUNNING') {
+                await pollPublishStatus(slug, resultDiv);
+            }
+        } catch (err) {
+            resultDiv.innerHTML = '<div class="validation-result validation-error"><strong>Publish request failed:</strong> ' + publishEscHtml(err.message || err) + '</div>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Publish Live + Selected Promotions';
+        }
+    }
+
+    async function pollPublishStatus(slug, resultDiv) {
+        for (let attempt = 0; attempt < 50; attempt += 1) {
+            const resp = await fetch('/api/publish/' + slug);
+            const data = await resp.json();
+            resultDiv.innerHTML = renderPublishResultCard(data);
+            if (!data || data.status !== 'RUNNING') return;
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+    }
+
+    function renderPublishResultCard(data) {
+        if (!data || (!data.status && !data.error)) return '<p class="dim">No publish attempts recorded yet.</p>';
+
+        const statusIcon = { RUNNING: '⏳', PASS: '✅', PARTIAL: '⚠️', PREREQ_FAIL: '🚫', ERROR: '💥' }[data.status] || '❓';
+        const statusClass = { RUNNING: 'validation-running-state', PASS: 'validation-pass', PARTIAL: 'validation-warn', PREREQ_FAIL: 'validation-prereq', ERROR: 'validation-error' }[data.status] || 'validation-warn';
+
+        let html = '<div class="validation-result ' + statusClass + '">';
+        html += '<p><strong>' + statusIcon + ' ' + publishEscHtml(data.status) + '</strong>';
+        if (data.timestamp) html += ' <span class="dim">— ' + new Date(data.timestamp).toLocaleString() + '</span>';
+        html += '</p>';
+
+        if (data.reason) html += '<p>' + publishEscHtml(data.reason) + '</p>';
+        if (data.error) html += '<p class="validation-error-text">' + publishEscHtml(data.error) + '</p>';
+        if (data.filePath) html += '<p class="dim">Source: <code>' + publishEscHtml(data.filePath) + '</code></p>';
+        if (data.draftUrl) html += '<p class="dim">Draft: <a href="' + publishEscHtml(data.draftUrl) + '" target="_blank">' + publishEscHtml(data.draftUrl) + '</a></p>';
+        if (data.publishedUrl) html += '<p class="dim">Live article: <a href="' + publishEscHtml(data.publishedUrl) + '" target="_blank">' + publishEscHtml(data.publishedUrl) + '</a></p>';
+        if (data.screenshotPath) html += '<p class="dim">Screenshot: <code>' + publishEscHtml(data.screenshotPath) + '</code> <a href="/image/' + encodeURIComponent(data.screenshotPath) + '" target="_blank">View</a></p>';
+        if (data.heroWarning) html += '<p class="dim">' + publishEscHtml(data.heroWarning) + '</p>';
+        if (data.tags && data.tags.length > 0) html += '<p class="dim">Tags: ' + data.tags.map(publishEscHtml).join(', ') + '</p>';
+
+        if (data.warnings && data.warnings.length > 0) {
+            html += '<details><summary>' + data.warnings.length + ' warning(s)</summary><ul>';
+            data.warnings.forEach(function(w) { html += '<li>' + publishEscHtml(w) + '</li>'; });
+            html += '</ul></details>';
+        }
+
+        if (data.channelResults && data.channelResults.substack_note) {
+            const note = data.channelResults.substack_note;
+            html += '<div class="publish-channel-card">';
+            html += '<p><strong>Substack Note</strong> — ' + publishEscHtml(note.status) + '</p>';
+            if (note.teaserText) html += '<p class="dim">' + publishEscHtml(note.teaserText) + '</p>';
+            if (note.noteUrl) html += '<p><a href="' + publishEscHtml(note.noteUrl) + '" target="_blank">View Note ↗</a></p>';
+            if (note.error) html += '<p class="validation-error-text">' + publishEscHtml(note.error) + '</p>';
+            if (note.reason) html += '<p class="dim">' + publishEscHtml(note.reason) + '</p>';
+            html += '</div>';
+        }
+
+        if (data.blockedReasons && data.blockedReasons.length > 0) {
+            html += '<details><summary>' + data.blockedReasons.length + ' blocking reason(s)</summary><ul>';
+            data.blockedReasons.forEach(function(reason) { html += '<li>' + publishEscHtml(reason) + '</li>'; });
+            html += '</ul></details>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function publishEscHtml(value) {
+        const element = document.createElement('div');
+        element.textContent = value == null ? '' : String(value);
+        return element.innerHTML;
+    }
+    </script>`;
+
+    return html;
+}
+
+function renderPublishResultCard(result) {
+    if (!result || (!result.status && !result.error)) return `<p class="dim">No publish attempts recorded yet.</p>`;
+
+    const statusIcon = { RUNNING: "⏳", PASS: "✅", PARTIAL: "⚠️", PREREQ_FAIL: "🚫", ERROR: "💥" }[result.status] || "❓";
+    const statusClass = { RUNNING: "validation-running-state", PASS: "validation-pass", PARTIAL: "validation-warn", PREREQ_FAIL: "validation-prereq", ERROR: "validation-error" }[result.status] || "validation-warn";
+
+    let html = `<div class="validation-result ${statusClass}">`;
+    html += `<p><strong>${statusIcon} ${esc(result.status)}</strong>`;
+    if (result.timestamp) html += ` <span class="dim">— ${esc(result.timestamp)}</span>`;
+    html += `</p>`;
+
+    if (result.reason) html += `<p>${esc(result.reason)}</p>`;
+    if (result.error) html += `<p class="validation-error-text">${esc(result.error)}</p>`;
+    if (result.filePath) html += `<p class="dim">Source: <code>${esc(result.filePath)}</code></p>`;
+    if (result.draftUrl) html += `<p class="dim">Draft: <a href="${esc(result.draftUrl)}" target="_blank">${esc(result.draftUrl)}</a></p>`;
+    if (result.publishedUrl) html += `<p class="dim">Live article: <a href="${esc(result.publishedUrl)}" target="_blank">${esc(result.publishedUrl)}</a></p>`;
+    if (result.screenshotPath) html += `<p class="dim">Screenshot: <code>${esc(result.screenshotPath)}</code> <a href="/image/${encodeURIComponent(result.screenshotPath)}" target="_blank">View</a></p>`;
+    if (result.warnings?.length) {
+        html += `<details><summary>${result.warnings.length} warning(s)</summary><ul>`;
+        html += result.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("");
+        html += `</ul></details>`;
+    }
+    if (result.channelResults?.substack_note) {
+        const note = result.channelResults.substack_note;
+        html += `<div class="publish-channel-card">`;
+        html += `<p><strong>Substack Note</strong> — ${esc(note.status)}</p>`;
+        if (note.teaserText) html += `<p class="dim">${esc(note.teaserText)}</p>`;
+        if (note.noteUrl) html += `<p><a href="${esc(note.noteUrl)}" target="_blank">View Note ↗</a></p>`;
+        if (note.error) html += `<p class="validation-error-text">${esc(note.error)}</p>`;
+        if (note.reason) html += `<p class="dim">${esc(note.reason)}</p>`;
+        html += `</div>`;
+    }
+    html += `</div>`;
     return html;
 }
 

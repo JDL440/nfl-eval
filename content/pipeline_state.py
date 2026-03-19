@@ -37,7 +37,7 @@ STAGE_NAMES = {
     5: "Article Drafting",
     6: "Editor Pass",
     7: "Publisher Pass",
-    8: "Approval / Publish",
+    8: "Published",
 }
 
 # Default DB path relative to this file
@@ -580,6 +580,10 @@ class PipelineState:
         Insert or replace a publisher_pass row.
         Accepts keyword args matching publisher_pass columns.
         """
+        article = self.get_article(article_id)
+        if article is None:
+            raise ValueError(f"Article '{article_id}' not found in pipeline.db")
+
         defaults = {
             "title_final": 0,
             "subtitle_final": 0,
@@ -620,6 +624,18 @@ class PipelineState:
                 defaults["no_stale_refs"],
             ),
         )
+
+        if isinstance(article["current_stage"], int) and 6 <= article["current_stage"] < 7:
+            now = _now_iso()
+            self._conn.execute(
+                "INSERT INTO stage_transitions (article_id, from_stage, to_stage, agent, notes, transitioned_at) VALUES (?,?,?,?,?,?)",
+                (article_id, article["current_stage"], 7, "Publisher", "Publisher pass recorded; ready for dashboard review", now),
+            )
+            self._conn.execute(
+                "UPDATE articles SET current_stage = ?, updated_at = ? WHERE id = ?",
+                (7, now, article_id),
+            )
+
         self._conn.commit()
 
     # ── Notes ────────────────────────────────────────────────────────────────
@@ -833,6 +849,24 @@ def _build_cli_parser():
     usage = subparsers.add_parser("record-usage-event", help="Insert a usage event")
     _add_common_usage_event_args(usage)
 
+    set_draft = subparsers.add_parser("set-draft-url", help="Persist a Substack draft URL")
+    set_draft.add_argument("--article-id", required=True)
+    set_draft.add_argument("--draft-url", required=True)
+
+    record_publish = subparsers.add_parser("record-publish", help="Mark an article as live-published")
+    record_publish.add_argument("--article-id", required=True)
+    record_publish.add_argument("--substack-url", required=True)
+    record_publish.add_argument("--agent", default="Joe")
+
+    record_note = subparsers.add_parser("record-note", help="Insert a note row")
+    record_note.add_argument("--article-id")
+    record_note.add_argument("--note-type", required=True)
+    record_note.add_argument("--content", required=True)
+    record_note.add_argument("--note-url")
+    record_note.add_argument("--target", default="prod")
+    record_note.add_argument("--agent")
+    record_note.add_argument("--image-path")
+
     return parser
 
 
@@ -928,6 +962,29 @@ def _run_cli():
                 metadata=metadata,
                 run_id=args.run_id,
                 stage_run_id=args.stage_run_id,
+            )
+            print("ok")
+            return 0
+
+        if args.command == "set-draft-url":
+            ps.set_draft_url(args.article_id, args.draft_url)
+            print(args.draft_url)
+            return 0
+
+        if args.command == "record-publish":
+            ps.record_publish(args.article_id, args.substack_url, agent=args.agent)
+            print(args.substack_url)
+            return 0
+
+        if args.command == "record-note":
+            ps.record_note(
+                args.article_id or None,
+                args.note_type,
+                args.content,
+                note_url=args.note_url,
+                target=args.target,
+                agent=args.agent,
+                image_path=args.image_path,
             )
             print("ok")
             return 0

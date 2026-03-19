@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-This Ralph loop drives GitHub Copilot CLI against the **nfl-eval** repository to advance the team-article backlog through an 8-stage article lifecycle. The target output is Substack draft posts for all 32 NFL teams' 2026 offseason articles.
+This Ralph loop drives GitHub Copilot CLI against the **nfl-eval** repository to advance the team-article backlog through an 8-stage article lifecycle. The target output is dashboard-ready Stage 7 articles and live published Stage 8 articles for all 32 NFL teams' 2026 offseason articles.
 
-The nfl-eval repo is an AI-powered NFL analysis engine with 47 specialized agents orchestrated through markdown files, persistent memory, and structured prompts. Articles flow through expert panel discussions, Writer drafting, Editor fact-checking, and Substack publishing.
+The nfl-eval repo is an AI-powered NFL analysis engine with 47 specialized agents orchestrated through markdown files, persistent memory, and structured prompts. Articles flow through expert panel discussions, Writer drafting, Editor fact-checking, dashboard review, and Substack publishing.
 
 ## Target Repository
 
@@ -24,9 +24,9 @@ The nfl-eval repo is an AI-powered NFL analysis engine with 47 specialized agent
 | 5 | Article Drafting | Writer | substack-article |
 | 6 | Editor Pass | Editor | editor charter |
 | 7 | Publisher Pass | Lead | publisher |
-| 8 | Joe Publishes | Human | — |
+| 8 | Published | Joe via dashboard | — |
 
-The loop advances items through stages 1–7. Stage 8 is manual (Joe clicks Publish).
+The loop advances items through stages 1–7. Stage 8 is reached from the dashboard publish flow after review.
 
 ## Key Conventions
 
@@ -48,8 +48,8 @@ The loop advances items through stages 1–7. Stage 8 is manual (Joe clicks Publ
 | `stage:panel-ready` | Panel composed |
 | `stage:draft` | Panel complete, ready for Writer |
 | `stage:review` | Draft exists, needs Editor |
-| `stage:publisher` | Editor approved, needs Substack draft |
-| `stage:published` | Substack draft created |
+| `stage:publisher` | Editor approved, needs dashboard review / publish |
+| `stage:published` | Live article published |
 
 ## Agent Roster (in nfl-eval)
 
@@ -95,4 +95,4 @@ content/
 
 - If a required data source is unavailable, document the blocker and skip to the next item
 - If the Editor rejects an article (🔴 REJECT), fix the errors and re-submit in the same iteration
-- If `publish_to_substack` fails, record the error and move on — Joe can publish manually
+- If the Stage 7 handoff is blocked or the dashboard publish flow fails, record the error and move on — Joe can retry from the dashboard or publish manually if needed

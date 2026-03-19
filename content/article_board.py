@@ -238,7 +238,7 @@ def infer_stage(article_dir):
         return {
             "stage": 7,
             "stage_name": STAGE_NAMES[7],
-            "next_action": "Publish confirmation (manual by Joe)",
+            "next_action": "Dashboard review / live publish",
             "editor_verdict": editor["verdict"] if editor else None,
             "detail": "Publisher pass artifact found",
         }
@@ -359,8 +359,15 @@ def scan_articles():
     Returns list of dicts with keys: slug, dir_path, and all infer_stage keys.
     """
     results = []
+    db_articles = {}
     if not os.path.isdir(_ARTICLES_DIR):
         return results
+
+    try:
+        with PipelineState() as ps:
+            db_articles = {article["id"]: article for article in ps.get_all_articles()}
+    except FileNotFoundError:
+        db_articles = {}
 
     for entry in sorted(os.listdir(_ARTICLES_DIR)):
         full_path = os.path.join(_ARTICLES_DIR, entry)
@@ -368,6 +375,12 @@ def scan_articles():
             info = infer_stage(full_path)
             info["slug"] = entry
             info["dir_path"] = full_path
+            db_row = db_articles.get(entry)
+            if db_row and (db_row.get("substack_url") or db_row.get("status") == "published" or db_row.get("current_stage") == 8):
+                info["stage"] = 8
+                info["stage_name"] = STAGE_NAMES[8]
+                info["next_action"] = None
+                info["detail"] = "Published URL recorded in pipeline.db"
             results.append(info)
         elif entry.endswith(".md"):
             # Legacy flat files
@@ -375,6 +388,12 @@ def scan_articles():
             info = infer_stage(full_path)
             info["slug"] = slug
             info["dir_path"] = full_path
+            db_row = db_articles.get(slug)
+            if db_row and (db_row.get("substack_url") or db_row.get("status") == "published" or db_row.get("current_stage") == 8):
+                info["stage"] = 8
+                info["stage_name"] = STAGE_NAMES[8]
+                info["next_action"] = None
+                info["detail"] = "Published URL recorded in pipeline.db"
             results.append(info)
 
     return results

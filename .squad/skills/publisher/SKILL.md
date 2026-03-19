@@ -48,14 +48,14 @@ Open `content/articles/{slug}.md` and verify:
 
 **Image policy (current):**
 - **Exactly 2 inline images** in article markdown body
-- **NO cover image** in article markdown — Substack post cover is set manually in the Substack editor by Joe at Stage 8
+- **NO cover image** in article markdown — cover handling happens outside the markdown body and is reviewed from the dashboard article page at publish time
 - **inline-1 MUST be a hero/atmospheric image** — it drives the social share thumbnail. NOT a chart, table, or dense data image.
 - **inline-2** can be analytical or data-adjacent
 - Images rendered at `imageSize: "normal"` (text column width), NOT full-bleed
 
 **Checklist:**
 
-- [ ] **No cover image** in the article markdown body — cover is NOT rendered inline; it's set in Substack editor
+- [ ] **No cover image** in the article markdown body — cover is NOT rendered inline; it is handled separately during dashboard review/publish
 - [ ] **Exactly 2 inline images** present in the article body
 - [ ] **First image (inline-1) is hero-safe** — not a chart, table, or data visualization (the publisher extension will warn/swap if not, but it's better to get this right)
 - [ ] Both inline images use correct syntax: `![alt text](../../images/{slug}/filename.png)`
@@ -157,7 +157,7 @@ Post the following to the article thread:
 
 **Dashboard review URL:** http://localhost:3456/article/{slug}
 
-**Pre-publish checklist for Joe (Stage 8):**
+**Dashboard review / publish checklist for Joe (Stage 7 handoff):**
 - [ ] Review the canonical dashboard preview
 - [ ] Confirm publisher checklist is complete
 - [ ] Publish live from the dashboard article page
@@ -175,11 +175,11 @@ Post the following to the article thread:
 - Images: {N} (cover: {N}, inline: {N})
 ```
 
-### Step 6b — Post-Publish Promotion Note (⛔ Gated)
+### Step 6b — Promotion Note fallback (only if the dashboard publish step skipped or failed it)
 
-After Joe publishes the article live (Stage 8), Lead or Publisher should prompt for a promotion Note. The `publish_note_to_substack` tool is **fully operational** — Phase 5 validated end-to-end with article card rendering.
+The default Stage 8 flow is to let the **dashboard publish action** send the live article and dispatch the default Substack Note in the same step. Use `publish_note_to_substack` only after the article is live if the Note was intentionally skipped, failed, or needs a manual retry / alternate variant.
 
-**Note posting workflow:**
+**Fallback Note workflow:**
 - The tool validates auth, looks up the article URL, assembles ProseMirror body text, registers a **post-type attachment** for the article card, and POSTs via Playwright.
 - Article cards (hero image + publication logo + article title) require explicit attachment registration — ProseMirror link marks alone only produce plain hyperlinks.
 - The tool automatically registers post attachments when `linkedArticleUrl` contains a `substack.com/p/` URL.
@@ -224,5 +224,5 @@ Once Joe publishes the article live, Lead (or the publishing owner) should creat
 - **Before Publisher:** [`article-lifecycle`](../article-lifecycle/SKILL.md) Stage 6 (Editor must be ✅ APPROVED)
 - **Image source:** [`image-generation`](../image-generation/SKILL.md) — images should already exist from Stage 5
 - **Publishing mechanics:** [`substack-publishing`](../substack-publishing/SKILL.md) — full syntax reference
-- **After Publisher:** Joe runs Stage 8 (Approval / Publish)
-- **Post-publish Notes:** [`substack-publishing`](../substack-publishing/SKILL.md) → `publish_note_to_substack` (✅ fully operational — article cards via post attachments)
+- **After Publisher:** Joe runs Stage 8 (Published) from the dashboard article page
+- **Post-publish Notes:** [`substack-publishing`](../substack-publishing/SKILL.md) → `publish_note_to_substack` for retry/manual follow-up after live publish

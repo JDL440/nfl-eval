@@ -49,7 +49,7 @@ Lead does NOT do the specialist work — Lead orchestrates it. When a question s
 
 ## GitHub Issue → Article Pipeline
 
-When Lead is assigned a GitHub issue with the `article` label (or any issue whose title starts with "Article:"), Lead runs the **full 8-stage article lifecycle automatically**. No human hand-holding required between stages.
+When Lead is assigned a GitHub issue with the `article` label (or any issue whose title starts with "Article:"), Lead runs the article lifecycle autonomously through **Stage 7 (Publisher Pass)**, then hands Stage 8 to Joe on the dashboard for final review and live publish. No human hand-holding is required during Stages 1–7.
 
 ### Protocol
 
