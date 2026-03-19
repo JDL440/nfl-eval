@@ -94,8 +94,20 @@ export function boardPage(board) {
         <div class="kpi kpi-warn"><span class="kpi-val">${needsImages}</span><span class="kpi-label">Need Images</span></div>
     </div>`;
 
-    const tableRows = board.map(row => `
-        <tr class="${row.hasDrift ? "drift-row" : ""}">
+    const tableRows = board.map(row => {
+        const canQuickPublish = row.inferredStage === 7 && row.status !== "published";
+        const isPublished = row.inferredStage === 8 || row.status === "published" || !!row.substackUrl;
+        const actionHtml = isPublished
+            ? `<span class="badge badge-green" style="font-size:0.75rem">Published</span>`
+            : canQuickPublish
+                ? `<button class="btn-board-publish" data-slug="${esc(row.slug)}" title="Publish ${esc(row.title)}">🚀 Publish</button>`
+                : `<span class="dim" style="font-size:0.8rem">S${row.inferredStage}</span>`;
+        const checkboxHtml = canQuickPublish
+            ? `<input type="checkbox" class="board-select" data-slug="${esc(row.slug)}" title="Select for batch publish">`
+            : "";
+        return `
+        <tr class="${row.hasDrift ? "drift-row" : ""}" data-slug="${esc(row.slug)}" data-stage="${row.inferredStage}" data-published="${isPublished}">
+            <td class="col-select">${checkboxHtml}</td>
             <td><a href="/article/${encodeURIComponent(row.slug)}">${esc(row.title)}</a></td>
             <td>${esc(row.primaryTeam || "—")}</td>
             <td>${statusBadge(row.status)}</td>
@@ -103,10 +115,10 @@ export function boardPage(board) {
             <td>${row.hasDrift ? `<span class="drift-flag" title="DB says S${row.dbStage}, artifacts say S${row.inferredStage}">⚠ DB:S${row.dbStage}</span>` : ""}</td>
             <td>${esc(row.nextAction || "—")}</td>
             <td>${verdictBadge(row.editorVerdict)}</td>
-            <td>${esc(row.depthName)}</td>
+            <td>${actionHtml}</td>
             <td>${row.substackUrl ? `<a href="${esc(row.substackUrl)}" target="_blank">Live</a>` : row.draftUrl ? `<a href="${esc(row.draftUrl)}" target="_blank">Draft</a>` : "—"}</td>
-        </tr>`
-    ).join("");
+        </tr>`;
+    }).join("");
 
     const body = `
     <h1>Pipeline Board</h1>
@@ -130,6 +142,7 @@ export function boardPage(board) {
     <table class="board-table" id="board-table">
         <thead>
             <tr>
+                <th class="col-select"><input type="checkbox" id="select-all" title="Select all publishable"></th>
                 <th>Title</th>
                 <th>Team</th>
                 <th>Status</th>
@@ -137,7 +150,7 @@ export function boardPage(board) {
                 <th>Drift</th>
                 <th>Next Action</th>
                 <th>Editor</th>
-                <th>Depth</th>
+                <th>Actions</th>
                 <th>Link</th>
             </tr>
         </thead>
@@ -145,6 +158,25 @@ export function boardPage(board) {
             ${tableRows}
         </tbody>
     </table>
+    </div>
+
+    <div class="batch-bar" id="batch-bar" style="display:none">
+        <div class="batch-bar-inner">
+            <span id="batch-count">0 selected</span>
+            <div class="batch-bar-channels">
+                <label class="channel-toggle" title="Post a Substack Note for each article">
+                    <input type="checkbox" id="batch-channel-note" checked>
+                    <span>📝 Note</span>
+                </label>
+                <label class="channel-toggle" title="Post to Twitter/X for each article">
+                    <input type="checkbox" id="batch-channel-twitter">
+                    <span>🐦 Tweet</span>
+                </label>
+            </div>
+            <button class="btn btn-publish" id="batch-publish-btn">🚀 Publish Selected</button>
+            <button class="btn btn-sm btn-outline" id="batch-clear-btn">Clear</button>
+        </div>
+        <div id="batch-results"></div>
     </div>
     <script>
     function filterTable(query) {
@@ -156,18 +188,150 @@ export function boardPage(board) {
     function filterByStage(val) {
         document.querySelectorAll('#board-table tbody tr').forEach(tr => {
             if (!val) { tr.style.display = ''; return; }
-            const badge = tr.querySelector('td:nth-child(4) .badge');
-            const match = badge?.textContent?.startsWith('S' + val);
-            tr.style.display = match ? '' : 'none';
+            const stage = tr.getAttribute('data-stage');
+            tr.style.display = stage === val ? '' : 'none';
         });
     }
     function filterByStatus(val) {
         document.querySelectorAll('#board-table tbody tr').forEach(tr => {
             if (!val) { tr.style.display = ''; return; }
-            const badge = tr.querySelector('td:nth-child(3) .badge');
+            const badge = tr.querySelector('td:nth-child(4) .badge');
             tr.style.display = badge?.textContent === val ? '' : 'none';
         });
     }
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Batch selection ──
+    function updateBatchBar() {
+        const checked = document.querySelectorAll('.board-select:checked');
+        const bar = document.getElementById('batch-bar');
+        const count = document.getElementById('batch-count');
+        if (checked.length > 0) {
+            bar.style.display = 'block';
+            count.textContent = checked.length + ' selected';
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    document.getElementById('select-all').addEventListener('change', function() {
+        const all = document.querySelectorAll('.board-select');
+        all.forEach(cb => { if (cb.closest('tr').style.display !== 'none') cb.checked = this.checked; });
+        updateBatchBar();
+    });
+
+    document.querySelectorAll('.board-select').forEach(cb => {
+        cb.addEventListener('change', updateBatchBar);
+    });
+
+    document.getElementById('batch-clear-btn').addEventListener('click', function() {
+        document.querySelectorAll('.board-select').forEach(cb => cb.checked = false);
+        document.getElementById('select-all').checked = false;
+        updateBatchBar();
+    });
+
+    // ── Single-row publish ──
+    document.querySelectorAll('.btn-board-publish').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const slug = this.dataset.slug;
+            const row = this.closest('tr');
+            this.disabled = true;
+            this.textContent = '⏳…';
+
+            try {
+                const resp = await fetch('/api/publish/' + encodeURIComponent(slug), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channels: ['substack_note'], target: 'prod' }),
+                });
+                let data = await resp.json();
+
+                if (data.status === 'RUNNING') {
+                    for (let i = 0; i < 40; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        const poll = await fetch('/api/publish/' + encodeURIComponent(slug));
+                        data = await poll.json();
+                        if (data.status !== 'RUNNING') break;
+                    }
+                }
+
+                if (data.status === 'PASS') {
+                    this.textContent = '✅ Done';
+                    this.classList.add('btn-board-done');
+                    if (data.publishedUrl) {
+                        const linkTd = row.querySelector('td:last-child');
+                        linkTd.innerHTML = '<a href="' + escHtml(data.publishedUrl) + '" target="_blank">Live</a>';
+                    }
+                } else {
+                    this.textContent = '❌ Error';
+                    this.title = data.error || data.reason || 'Unknown error';
+                }
+            } catch (err) {
+                this.textContent = '❌ Failed';
+                this.title = err.message;
+            }
+        });
+    });
+
+    // ── Batch publish ──
+    document.getElementById('batch-publish-btn').addEventListener('click', async function() {
+        const selected = Array.from(document.querySelectorAll('.board-select:checked')).map(cb => cb.dataset.slug);
+        if (selected.length === 0) return;
+
+        const channels = [];
+        if (document.getElementById('batch-channel-note').checked) channels.push('substack_note');
+        if (document.getElementById('batch-channel-twitter').checked) channels.push('twitter');
+
+        this.disabled = true;
+        this.textContent = '⏳ Publishing ' + selected.length + '…';
+        const resultsDiv = document.getElementById('batch-results');
+        resultsDiv.innerHTML = '';
+
+        for (const slug of selected) {
+            const item = document.createElement('div');
+            item.className = 'batch-result-item';
+            item.innerHTML = '<span class="batch-slug">' + escHtml(slug) + '</span> <span class="batch-status">⏳ Publishing…</span>';
+            resultsDiv.appendChild(item);
+
+            const rowBtn = document.querySelector('.btn-board-publish[data-slug="' + slug + '"]');
+            if (rowBtn) { rowBtn.disabled = true; rowBtn.textContent = '⏳…'; }
+
+            try {
+                const resp = await fetch('/api/publish/' + encodeURIComponent(slug), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channels, target: 'prod' }),
+                });
+                let data = await resp.json();
+
+                if (data.status === 'RUNNING') {
+                    for (let i = 0; i < 40; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        const poll = await fetch('/api/publish/' + encodeURIComponent(slug));
+                        data = await poll.json();
+                        if (data.status !== 'RUNNING') break;
+                    }
+                }
+
+                if (data.status === 'PASS') {
+                    item.querySelector('.batch-status').innerHTML = '✅ Published' + (data.publishedUrl ? ' — <a href="' + escHtml(data.publishedUrl) + '" target="_blank">View ↗</a>' : '');
+                    if (rowBtn) { rowBtn.textContent = '✅ Done'; rowBtn.classList.add('btn-board-done'); }
+                } else {
+                    item.querySelector('.batch-status').innerHTML = '❌ ' + escHtml(data.error || data.reason || data.status);
+                    if (rowBtn) { rowBtn.textContent = '❌ Error'; rowBtn.title = data.error || ''; }
+                }
+            } catch (err) {
+                item.querySelector('.batch-status').innerHTML = '❌ ' + escHtml(err.message);
+                if (rowBtn) { rowBtn.textContent = '❌ Failed'; }
+            }
+        }
+
+        this.disabled = false;
+        this.textContent = '🚀 Publish Selected';
+    });
     </script>`;
 
     return layout("Board", body, "board");

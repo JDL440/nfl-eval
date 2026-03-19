@@ -638,6 +638,69 @@ footer {
     font-size: 0.75rem;
 }
 
+/* ── Board page publish actions ────────────────────────────────────────────── */
+
+.col-select { width: 2rem; text-align: center; }
+.col-select input[type="checkbox"] { cursor: pointer; accent-color: var(--accent); }
+
+.btn-board-publish {
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.25rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+.btn-board-publish:hover { background: #2ea043; }
+.btn-board-publish:disabled { opacity: 0.6; cursor: default; }
+.btn-board-done { background: var(--border); color: var(--green); cursor: default; }
+
+.batch-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-top: 2px solid var(--green);
+    padding: 0.75rem 1.5rem;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+}
+.batch-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.batch-bar-inner #batch-count {
+    font-weight: 600;
+    color: var(--green);
+    min-width: 80px;
+}
+.batch-bar-channels {
+    display: flex;
+    gap: 0.75rem;
+}
+#batch-results {
+    max-width: 1400px;
+    margin: 0.5rem auto 0;
+}
+.batch-result-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+}
+.batch-slug { color: var(--accent); min-width: 200px; }
+.batch-status { color: var(--text-dim); }
+.batch-status a { color: var(--accent); }
+
 /* ── Publish bar (always visible at top of article page) ───────────────────── */
 
 .publish-bar {
