@@ -8,8 +8,8 @@
  * Usage: node render-comparison.mjs
  */
 
-import { parseMarkdownTable, buildHtml, renderTablePng, TEMPLATE_PRESETS } from "./.github/extensions/table-image-renderer/renderer-core.mjs";
-import { renderTablePngPlaywright, closeBrowser } from "./.github/extensions/table-image-renderer/renderer-playwright.mjs";
+import { parseMarkdownTable, buildHtml, renderTablePng, closeBrowser as closeCoreBrowser, TEMPLATE_PRESETS } from "./.github/extensions/table-image-renderer/renderer-core.mjs";
+import { renderTablePngPlaywright, closeBrowser as closePlaywrightBrowser } from "./.github/extensions/table-image-renderer/renderer-playwright.mjs";
 import { renderTablePngCanvas } from "./.github/extensions/table-image-renderer/renderer-canvas.mjs";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -180,7 +180,8 @@ for (const scenario of SCENARIOS) {
     console.log();
 }
 
-await closeBrowser();
+await closeCoreBrowser();
+await closePlaywrightBrowser();
 
 // ─── Generate Article ──────────────────────────────────────────────
 

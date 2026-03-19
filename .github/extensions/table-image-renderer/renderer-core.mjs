@@ -2,22 +2,18 @@
  * Table Image Renderer — Copilot CLI Extension
  *
  * Deterministically renders markdown tables to publication-grade PNGs using
- * local HTML/CSS templates and a headless Chromium/Edge screenshot pass.
+ * local HTML/CSS templates and Playwright element-level screenshots.
  */
 
 import {
     existsSync,
     mkdirSync,
-    mkdtempSync,
     readFileSync,
-    rmSync,
     writeFileSync,
 } from "node:fs";
-import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
 
 const TEMPLATE_PRESETS = {
     "generic-comparison": {
@@ -365,22 +361,6 @@ function extractTableBlock(markdown, tableIndex = 1) {
     }
 
     return tables[tableIndex - 1];
-}
-
-function findBrowserExecutable() {
-    const candidates = [
-        process.env.TABLE_IMAGE_BROWSER,
-        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
-        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-    ].filter(Boolean);
-
-    const match = candidates.find((candidate) => existsSync(candidate));
-    if (!match) {
-        throw new Error("No supported headless browser found. Set TABLE_IMAGE_BROWSER to Edge or Chrome.");
-    }
-    return match;
 }
 
 function isAbsoluteWindowsPath(pathValue) {
@@ -967,216 +947,59 @@ function readPngMetadata(outputPath) {
     };
 }
 
-function validateRenderedPng(outputPath, expectedViewport) {
-    if (!existsSync(outputPath)) {
-        throw new Error("Browser completed without creating the PNG output.");
-    }
+// ─── Playwright Browser Lifecycle ──────────────────────────────────────────────
 
-    const metadata = readPngMetadata(outputPath);
+let _browser = null;
 
-    if (metadata.bytes < 12000) {
-        throw new Error(`Rendered PNG is unexpectedly small (${metadata.bytes} bytes).`);
+async function getBrowser() {
+    if (!_browser || !_browser.isConnected()) {
+        _browser = await chromium.launch({ headless: true });
     }
-    if (metadata.width < Math.floor(expectedViewport.width * 0.95)) {
-        throw new Error(`Rendered PNG width ${metadata.width}px is smaller than expected viewport ${expectedViewport.width}px.`);
-    }
-    if (metadata.height < Math.floor(expectedViewport.height * 0.95)) {
-        throw new Error(`Rendered PNG height ${metadata.height}px is smaller than expected viewport ${expectedViewport.height}px.`);
-    }
-
-    return metadata;
+    return _browser;
 }
 
-function trimBottomWhitespace(outputPath, bottomPadding = 4) {
-    if (process.platform !== "win32") {
-        return readPngMetadata(outputPath);
-    }
-
-    const cropScript = `& {
-param([string] $ImagePath, [int] $BottomPadding)
-Add-Type -AssemblyName System.Drawing
-
-$imageBytes = [System.IO.File]::ReadAllBytes($ImagePath)
-$stream = [System.IO.MemoryStream]::new($imageBytes)
-$bitmap = [System.Drawing.Bitmap]::new($stream)
-$tempPath = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), ".png")
-try {
-    $width = $bitmap.Width
-    $height = $bitmap.Height
-    $background = $bitmap.GetPixel(0, $height - 1)
-    $tolerance = 8
-    $requiredMismatches = [Math]::Max(6, [Math]::Floor($width / 180))
-    $step = [Math]::Max(1, [Math]::Floor($width / 800))
-    $lastContentRow = -1
-
-    for ($y = $height - 1; $y -ge 0; $y--) {
-        $mismatches = 0
-
-        for ($x = 0; $x -lt $width; $x += $step) {
-            $pixel = $bitmap.GetPixel($x, $y)
-            $delta = [Math]::Abs([int]$pixel.R - [int]$background.R) +
-                [Math]::Abs([int]$pixel.G - [int]$background.G) +
-                [Math]::Abs([int]$pixel.B - [int]$background.B)
-
-            if ($delta -gt $tolerance) {
-                $mismatches++
-                if ($mismatches -ge $requiredMismatches) {
-                    break
-                }
-            }
-        }
-
-        if ($mismatches -ge $requiredMismatches) {
-            $lastContentRow = $y
-            break
-        }
-    }
-
-    if ($lastContentRow -lt 0) {
-        return
-    }
-
-    $cropHeight = [Math]::Min($height, $lastContentRow + 1 + $BottomPadding)
-    if ($cropHeight -ge $height) {
-        return
-    }
-
-    $cropped = [System.Drawing.Bitmap]::new($width, $cropHeight)
-    try {
-        $graphics = [System.Drawing.Graphics]::FromImage($cropped)
-        try {
-            $graphics.DrawImage(
-                $bitmap,
-                [System.Drawing.Rectangle]::new(0, 0, $width, $cropHeight),
-                [System.Drawing.Rectangle]::new(0, 0, $width, $cropHeight),
-                [System.Drawing.GraphicsUnit]::Pixel
-            )
-        } finally {
-            $graphics.Dispose()
-        }
-
-        $cropped.Save($tempPath, [System.Drawing.Imaging.ImageFormat]::Png)
-    } finally {
-        $cropped.Dispose()
-    }
-} finally {
-    if ($null -ne $bitmap) {
-        $bitmap.Dispose()
-    }
-    if ($null -ne $stream) {
-        $stream.Dispose()
+export async function closeBrowser() {
+    if (_browser) {
+        await _browser.close();
+        _browser = null;
     }
 }
 
-if (Test-Path $tempPath) {
-    [System.IO.File]::Copy($tempPath, $ImagePath, $true)
-    Remove-Item $tempPath -Force
-}
-}`;
+// ─── Playwright Renderer ──────────────────────────────────────────────────────
 
-    const result = spawnSync(
-        "powershell.exe",
-        [
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            cropScript,
-            outputPath,
-            String(bottomPadding),
-        ],
-        {
-            encoding: "utf-8",
-            timeout: 20000,
-            windowsHide: true,
-        }
-    );
+async function renderTablePng({ html, width, height, outputPath }) {
+    mkdirSync(dirname(outputPath), { recursive: true });
 
-    if (result.error) {
-        throw result.error;
-    }
-    if (result.status !== 0) {
-        throw new Error((result.stderr || result.stdout || "Failed to trim bottom whitespace.").trim());
-    }
+    const browser = await getBrowser();
+    const context = await browser.newContext({
+        viewport: { width, height },
+        deviceScaleFactor: 2,
+        colorScheme: "light",
+    });
 
-    return readPngMetadata(outputPath);
-}
-
-function renderTablePng({ html, width, height, outputPath }) {
-    const browser = findBrowserExecutable();
-    const tempRoot = mkdtempSync(join(tmpdir(), `table-image-render-${randomUUID()}-`));
-    const tempHtmlPath = join(tempRoot, "render.html");
+    const page = await context.newPage();
 
     try {
-        writeFileSync(tempHtmlPath, html, "utf-8");
-        const url = pathToFileURL(tempHtmlPath).href;
-        const attempts = ["--headless=new", "--headless"];
-        let lastError = null;
+        await page.setContent(html, { waitUntil: "load" });
+        await page.evaluate(() => document.fonts.ready);
 
-        for (let attemptIndex = 0; attemptIndex < attempts.length; attemptIndex += 1) {
-            const headlessFlag = attempts[attemptIndex];
-            const userDataDir = join(tempRoot, `profile-${attemptIndex + 1}`);
-            rmSync(userDataDir, { recursive: true, force: true });
-            mkdirSync(userDataDir, { recursive: true });
-            rmSync(outputPath, { force: true });
+        const tableFrame = page.locator(".table-frame");
+        await tableFrame.waitFor({ state: "visible", timeout: 5000 });
 
-            try {
-                const args = [
-                    headlessFlag,
-                    "--disable-gpu",
-                    "--hide-scrollbars",
-                    "--mute-audio",
-                    "--allow-file-access-from-files",
-                    "--disable-background-networking",
-                    "--disable-background-timer-throttling",
-                    "--disable-breakpad",
-                    "--disable-client-side-phishing-detection",
-                    "--disable-component-update",
-                    "--disable-default-apps",
-                    "--disable-domain-reliability",
-                    "--disable-extensions",
-                    "--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter",
-                    "--disable-hang-monitor",
-                    "--disable-popup-blocking",
-                    "--disable-renderer-backgrounding",
-                    "--disable-sync",
-                    "--force-color-profile=srgb",
-                    "--force-device-scale-factor=2",
-                    "--metrics-recording-only",
-                    "--no-default-browser-check",
-                    "--no-first-run",
-                    "--run-all-compositor-stages-before-draw",
-                    "--virtual-time-budget=2500",
-                    `--window-size=${width},${height}`,
-                    `--user-data-dir=${userDataDir}`,
-                    `--screenshot=${outputPath}`,
-                    url,
-                ];
+        const screenshot = await tableFrame.screenshot({
+            type: "png",
+            omitBackground: false,
+        });
 
-                const result = spawnSync(browser, args, {
-                    encoding: "utf-8",
-                    timeout: 25000,
-                    windowsHide: true,
-                });
+        writeFileSync(outputPath, screenshot);
 
-                if (result.error) {
-                    throw result.error;
-                }
-                if (result.status !== 0 && !existsSync(outputPath)) {
-                    throw new Error((result.stderr || result.stdout || `Browser exited with code ${result.status}`).trim());
-                }
-
-                validateRenderedPng(outputPath, { width, height });
-                const metadata = trimBottomWhitespace(outputPath, 4);
-                return { ...metadata, attempts: attemptIndex + 1 };
-            } catch (error) {
-                lastError = new Error(`Attempt ${attemptIndex + 1} failed: ${error.message}`);
-            }
-        }
-
-        throw lastError || new Error("Browser screenshot failed.");
+        return {
+            width: screenshot.readUInt32BE(16),
+            height: screenshot.readUInt32BE(20),
+            bytes: screenshot.length,
+        };
     } finally {
-        rmSync(tempRoot, { recursive: true, force: true });
+        await context.close();
     }
 }
 
@@ -1232,7 +1055,7 @@ export function formatRenderSuccess(result) {
         `**Article markdown:** ${result.markdown}`,
         `**Alt text:** ${result.altText}`,
         `**Template:** ${result.template}`,
-        `**PNG:** ${result.image.width}×${result.image.height}px (${result.image.bytes} bytes, ${result.image.attempts} browser attempt${result.image.attempts === 1 ? "" : "s"})`,
+        `**PNG:** ${result.image.width}×${result.image.height}px (${result.image.bytes} bytes)`,
     ];
 
     if (result.takeaway) {
@@ -1278,7 +1101,7 @@ export async function renderTableImage(args) {
     const outputStem = slugify(args.output_name || args.title || `table-${tableIndex}`);
     const outputFilename = `${articleSlug}-${outputStem}${mobileSuffix}.png`;
     const outputPath = join(outputDir, outputFilename);
-    const image = renderTablePng({ html, width, height, outputPath });
+    const image = await renderTablePng({ html, width, height, outputPath });
 
     let relativeImagePath = relative(articleDir, outputPath).replace(/\\/g, "/");
     if (!relativeImagePath.startsWith(".")) {

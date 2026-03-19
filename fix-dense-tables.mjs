@@ -19,11 +19,12 @@ const ROOT = resolve(import.meta.dirname || process.cwd());
 
 // Import the renderer core
 const rendererPath = resolve(ROOT, ".github", "extensions", "table-image-renderer", "renderer-core.mjs");
-let renderTableImage, formatRenderSuccess;
+let renderTableImage, formatRenderSuccess, closeBrowser;
 try {
     const mod = await import(`file:///${rendererPath.replace(/\\/g, "/")}`);
     renderTableImage = mod.renderTableImage;
     formatRenderSuccess = mod.formatRenderSuccess;
+    closeBrowser = mod.closeBrowser;
 } catch (err) {
     console.error(`Failed to import renderer-core: ${err.message}`);
     console.error("Make sure you're running from the repo root.");
@@ -432,7 +433,9 @@ async function main() {
     console.log("═".repeat(60));
 }
 
-main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-});
+main()
+    .finally(() => closeBrowser && closeBrowser())
+    .catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
