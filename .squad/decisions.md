@@ -2117,3 +2117,138 @@ When a production promotion Note exists for an article, the matching stage Note 
 ---
 
 
+
+
+---
+
+# Decision: Writer Guardrails for Draft Fidelity
+
+**Date:** 2026-03-19
+**Decided by:** Editor
+**Scope:** `.squad/agents/writer/charter.md`
+
+## Decision
+
+Writer's charter now includes a lightweight prose-safety preflight before handoff to Editor. The preflight requires Writer to:
+
+- cross-check names in prose against supplied artifacts and in-article tables,
+- avoid presenting paraphrases or stitched summaries as direct quotes,
+- avoid unsupported superlatives and absolutes,
+- cross-check narrative claims against in-article tables before saving,
+- and keep ambiguous details generic instead of filling gaps with invented specifics.
+
+## Constraints Respected
+
+- Writer is still **not** the fact-checker.
+- Editor remains the **mandatory final gate** for article accuracy.
+- No independent outside-source verification was added to Writer's role.
+
+## Rationale
+
+Recent editorial history shows the recurring risk pattern is not just wrong numbers; it is prose that becomes more specific than the source support. Upstream guardrails reduce avoidable name/quote/table drift while preserving the Writer/Editor separation that exists to catch final factual errors.
+
+
+
+---
+
+# Decision: Fact-Checking Phase 1 Rollout
+
+**Date:** 2026-03-15  
+**Owner:** Lead  
+**Status:** ✅ Implemented  
+
+## Context
+
+Implemented Phase 1 of the fact-checking rollout as requested. The goal was to add a lightweight preflight verification gate between panel outputs (Stage 4) and Writer drafting (Stage 5) without changing the numeric 8-stage model.
+
+## Decision
+
+1. **Created new skill:** `.squad/skills/fact-checking/SKILL.md`
+   - Defined the fact-check preflight as a **lightweight verification gate** (not a full fact-check)
+   - Focused on high-risk categories: contracts, stats, injury, draft, direct quotes
+   - Standardized artifact name as `panel-factcheck.md` (saved to `content/articles/{slug}/`)
+   - Documented execution workflow, output template, and anti-patterns
+
+2. **Updated article-lifecycle skill:** Added Stage 4 → Stage 5 Gate section
+   - Inserted fact-check preflight as a **non-numeric gate** between Stage 4 and Stage 5
+   - Kept the numeric 8-stage model intact (stages remain 1–8)
+   - Updated stage overview table to show preflight as a visible gate
+   - Updated Stage Transition Summary to show Gate transitions
+   - Updated Stage 5 Writer section to reference preflight guidance
+
+3. **Updated substack-article skill:** Clarified preflight in the production pipeline
+   - Updated Production Pipeline to show fact-check preflight as step 3 (Phase 2b)
+   - Updated Phase 3 (Writer) section to reference the preflight and clarify Writer role
+   - Updated Spawn Writer instructions to include preflight guidance
+   - Kept image generation and Editor review in their original positions
+
+4. **Updated README.md:** Added preflight to high-level pipeline overview
+   - Added step 2 (Preflight Verification) to the 6-step overview
+   - Clarified that preflight is lightweight and Editor does final fact-check
+   - Maintained simplicity for readers new to the system
+
+## Key Design Decisions
+
+### Artifact Standardization: `panel-factcheck.md`
+- Single standardized name for all fact-check preflight artifacts
+- Saved to `content/articles/{slug}/panel-factcheck.md` (co-located with discussion summary, draft, editor review)
+- Dashboard references will use this artifact name consistently
+
+### Non-Numeric Gate
+- Fact-check preflight is a **gate between Stage 4 and Stage 5**, not a new numeric stage
+- Preserves the 8-stage model in database and documentation
+- Clear in skills that numeric stages remain 1–8; preflight is a visible gate
+- Avoids migration burden on DB schema and existing article tracking
+
+### Lightweight Scope (Phase 1)
+- **In scope:** Flagging contradictions, missing sources, unsafe details in panel outputs
+- **Out of scope:** Full fact-check (Editor's job), player name verification, grammar review, Substack formatting
+- Expected execution time: 10–15 minutes per article
+- Future phases (2–4) can add plagiarism checks, injury verification, automated source lookups
+
+### Writer Does Not Re-Fact-Check
+- Writer receives `panel-factcheck.md` preflight summary (not full artifact)
+- Writer uses preflight to understand which claims are verified ✅ / flagged ⚠️ / halted 🔴
+- Writer shapes prose around flagged issues but does not reverify claims
+- Clear handoff: **Lead runs preflight, Writer drafts using guidance, Editor fact-checks final prose**
+
+### Editor Remains Final Gate
+- Editor still runs full fact-check at Stage 6 (unchanged)
+- Editor has authority over factual accuracy in published article
+- Preflight is an **upstream risk mitigation**, not a replacement for Editor
+
+## No Dashboard Changes in Phase 1
+
+Decision: **Dashboard reference will use `panel-factcheck.md` artifact name**, but dashboard UI/display logic is deferred to Phase 2. Phase 1 focuses on skill definition and writer/editor workflow integration.
+
+## Rationale
+
+1. **Standardized artifact name (`panel-factcheck.md`)** ensures consistency across skills, team agents, and future dashboard implementation
+2. **Non-numeric gate** keeps the 8-stage model intact while making the preflight visible and mandatory in workflows
+3. **Lightweight scope** prevents the preflight from becoming another full editorial pass; it's a risk-flagging tool, not a fact-checker
+4. **Clear role separation** (Lead → Writer → Editor) maintains the existing separation of concerns while adding an upstream safeguard
+
+## Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Preflight becomes too heavy | Phase 1 scope is narrow; team can monitor execution time and adjust in Phase 2 |
+| Writer ignores preflight flags | Include preflight summary in Writer spawn prompt; make it visible |
+| Duplicate effort with Editor | Preflight focuses on **panel contradictions** (where Editor might miss internal conflicts); Editor focuses on **final prose accuracy** |
+| Dashboard confusion over non-numeric gate | Document clearly in skills; future dashboard will have explicit preflight status column |
+
+## Next Steps (Phases 2–4)
+
+- **Phase 2:** Dashboard implementation of `panel-factcheck.md` display and preflight status tracking
+- **Phase 3:** Injury/medical claim verification (consult domain experts)
+- **Phase 4:** Automated source lookups (OTC/Spotrac API for contract figures)
+
+## Validation
+
+- **Skills created/updated:** ✅
+- **README updated:** ✅
+- **Numeric 8-stage model preserved:** ✅
+- **Artifact name standardized:** ✅ (`panel-factcheck.md`)
+- **Writer/Editor roles clarified:** ✅
+- **Dashboard deferred to Phase 2:** ✅
+
