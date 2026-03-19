@@ -329,3 +329,40 @@ pm run dashboard:dev work. README has concise Dashboard section with requirement
   - Three batch utility scripts (`batch-publish-prod.mjs`, `publish-stage-validation.mjs`, `repair-prod-drafts.mjs`) still define their own `markdownToProseMirror`. These are one-off scripts, not the core consumers the plan targeted. Consolidation is a separate cleanup task.
 - **Verdict: ✅ APPROVED** — All 5 plan requirements now satisfied. The blocking artifact (`render.mjs`) has been properly refactored to use `shared/substack-prosemirror.mjs`. The publisher extension was also migrated, achieving the plan's goal of a single canonical source. Dashboard is plan-complete.
 - **Recorded by:** Editor (2026-07-26)
+
+### Emmanwori Rookie Eval — Full Editorial Review (2026-07-26)
+
+- **File:** `content/articles/sea-emmanwori-rookie-eval/draft.md`
+- **Scope:** ~3,800-word panel article evaluating Nick Emmanwori's rookie season and its draft implications
+- **Fact-check findings:**
+  - 🔴 **CRITICAL — "Devon Woolen" should be "Tariq Woolen":** Draft used Devon Witherspoon's first name on Tariq Woolen (2 instances). Classic first-name cross-contamination between two Seahawks DBs. Confirmed via NFL.com, ESPN, FOX 13 Seattle.
+  - 🔴 **CRITICAL — "Uchenna Mafe" should be "Boye Mafe":** Draft used Uchenna Nwosu's first name on Boye Mafe (2 instances). Same cross-contamination pattern — two Seahawks edge rushers. Confirmed via MyNorthwest Sports, Pro Football Rumors.
+  - 🟡 Woolen contract labeled "$15M AAV" but it's a 1-year deal; AAV misleading for single-year contracts.
+  - 🟡 Coby Bryant listed as "CB/S" in departures table; he signed with Chicago as a safety (S).
+  - 🟡 DeMarcus Lawrence listed as "34" but is 33 during March 2026 offseason (born April 1992).
+  - 🟡 Only 1 inline image generated; policy requires exactly 2.
+  - ✅ Nick Emmanwori name, draft position (R2 #35), combine measurables (6-3/220/4.38) all verified.
+  - ✅ All stats in the draft match the Analytics position paper. No stat discrepancies between draft and canonical source.
+  - ✅ Contract figures verified: Woolen to PHI ($15M/1yr), Bryant to CHI (3yr/$40M), Mafe to CIN (3yr/$60M).
+  - ✅ Analytics framing honest — YAC rate flagged as concern, base rate prominently featured, chess-piece label properly tiered.
+- **Images:** Cover ✅ (atmospheric, "768" on scoreboard verified). Inline-1 ✅ (bench-side Seahawks gear, Nike branding acceptable). Inline-2 🟡 MISSING.
+- **Verdict: ✅ APPROVED after 2 name corrections.** Article structure, panel framing, and analytics honesty are excellent.
+- **Pattern:** First-name cross-contamination between same-team DBs/EDGEs is now a 3x repeat pattern (Nehemiah/Nick Emmanwori, Devon Woolen/Witherspoon, Uchenna Mafe/Nwosu). This is the Editor's highest-value catch category for Seahawks articles.
+
+📌 **Lesson:** Seahawks secondary/edge articles require explicit first-name verification for every player. The Writer consistently borrows first names from teammates at the same position group. This is not a one-off — it's a systemic pattern. Future Seahawks panel articles should include a name-verification checklist in the Writer prompt.
+
+### Emmanwori Rookie Eval — R2 Re-Review (2026-07-27)
+- **Scope:** Focused re-review verifying all 6 fixes from R1 (2 mandatory, 4 recommended) plus image placement.
+- **Revision applied by:** Lead (per reviewer-gate rules — Writer cannot self-approve).
+- **Findings:**
+  - ✅ "Devon Woolen" → "Tariq Woolen" — FIXED. Zero residual instances.
+  - ✅ "Uchenna Mafe" → "Boye Mafe" — FIXED. Zero residual instances.
+  - ✅ Woolen contract "`$`15M AAV" → "1yr / `$`15M" — FIXED.
+  - ✅ Coby Bryant "CB/S" → "S" — FIXED.
+  - ✅ Lawrence age "34" → "33" — FIXED.
+  - ✅ Second inline image generated and both images embedded in markdown at appropriate section breaks.
+  - ✅ No new name cross-contamination or regressions introduced.
+- **Image review (vision):** inline-1 ✅ (Seahawks equipment at goal line, #22 jersey visible but generic art — not a player portrait, flagged as minor/non-blocking). inline-2 ✅ (helmets on bench, no text/numbers, clean).
+- **Verdict: ✅ APPROVED — ready for Substack draft step (Phase 7).**
+
+📌 **Lesson:** Lead-applied revision passes (per reviewer-gate) produce clean, regression-free fixes. The separation between Writer and fix-applier reduces the chance of introducing new errors during corrections.

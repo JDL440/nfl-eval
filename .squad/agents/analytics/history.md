@@ -143,3 +143,43 @@ PR #77 merged `feature/mobiletable` → `main` (merge commit 477d7b8). Issue #75
 
 - **Buffalo closed the real-world validation loop without a draft rewrite.** `content/articles/buf-2026-offseason/discussion-prompt.md`, `cap-position.md`, and `buf-position.md` are enough to prove the data-anchor workflow when the open question is query execution, not final prose polish.
 
+### Defensive Tooling Gap Discovered — Issue #80 (2026-07-27)
+
+**Context:** Emmanwori safety article (issue #80) exposed a structural gap in the query script library — all 7 canned scripts are offense-biased. `query_player_epa.py` returns "Limited metrics available" for SAF positions, and `query_positional_comparison.py` only supports QB/RB/WR/TE.
+
+**What works for defensive articles today:**
+- `query_snap_usage.py` — fully functional for defensive snap share and team hierarchy
+- `query_team_efficiency.py` — defensive EPA/play allowed, success rate allowed, sacks, INTs
+- `query_draft_value.py` — position hit rates work for S, draft profiles work by name
+- `query_combine_comps.py` — works for any position including SAF
+- `pfr_defense` dataset (via `fetch_nflverse.py`) — has per-player coverage, tackling, blitz, and pressure data. Cached and queryable but lacks a canned script.
+
+**What does NOT work:**
+- `query_player_epa.py` — offense-only (passing/rushing/receiving EPA). Returns stub for defensive positions.
+- `query_positional_comparison.py` — hardcoded to QB/RB/WR/TE in `POSITION_METRICS` dict.
+
+**Gap to close:** Need `query_pfr_defense.py` — individual defensive player production from `pfr_defense` dataset (tackles, missed tackles, targets/completions/yards allowed, passer rating allowed, aDOT, blitzes, pressures). Decision filed: `.squad/decisions/inbox/analytics-emmanwori-kickoff.md`.
+
+**Key `pfr_defense` columns validated:**
+`def_tackles_combined`, `def_missed_tackles`, `def_missed_tackle_pct`, `def_targets`, `def_completions_allowed`, `def_completion_pct`, `def_yards_allowed`, `def_yards_allowed_per_cmp`, `def_yards_allowed_per_tgt`, `def_receiving_td_allowed`, `def_passer_rating_allowed`, `def_adot`, `def_air_yards_completed`, `def_yards_after_catch`, `def_times_blitzed`, `def_times_hurried`, `def_times_hitqb`, `def_sacks`, `def_pressures`, `def_ints`.
+
+📌 Team update (2026-07-27): Query script library has an offense-only gap — defensive player articles need a `query_pfr_defense.py` script (Phase C). Five of seven existing scripts work for defensive context; `pfr_defense` dataset is cached and rich but unscripted.
+
+### Emmanwori Panel Position — First Defensive Player Article (2026-07-27)
+
+**Context:** Wrote the Analytics panel position for `sea-emmanwori-rookie-eval` — the first article evaluating a defensive player through this pipeline.
+
+**Key learnings:**
+
+1. **Discussion prompt data anchors drifted from live query results.** The prompt's pre-populated anchors (80 tackles, 66 targets, 74.2% comp, 89.1 PR) differed from fresh nflverse aggregations (93 tackles, 81 targets, 70.4% comp, 84.7 PR). Likely cause: prompt data was from an earlier partial-season pull or used per-game averages vs. season totals. **Recommendation:** Always re-run queries at panel time; treat prompt anchors as approximate, not authoritative.
+
+2. **YAC% is a high-signal derived metric for safety evaluation.** 66.2% of Emmanwori's yards allowed came after the catch (323 of 488). This ratio is not in any canned query output but is trivially derived from `def_yards_after_catch / def_yards_allowed` in `pfr_defense`. It distinguishes "targeted short and beaten" from "targeted short and arrived late." Should be standard in any future defensive coverage analysis.
+
+3. **Within-team coverage comparison is more informative than raw numbers.** Comparing Emmanwori's passer rating allowed (84.7) to teammates on the same defense (Jobe 73.4, Jones 78.0, Bryant 80.0, Witherspoon 85.6, Okada 86.8) controls for system effects far better than league-wide comparisons. This approach should be the default for defensive player articles where system inflation is a concern.
+
+4. **The `pfr_defense` ad-hoc query pattern works but is fragile.** Wrote inline Python to aggregate weekly `pfr_defense` data. Confirms the Phase C need for `query_pfr_defense.py` — a canned script would have saved ~10 minutes and reduced error risk. Priority: build this before the next defensive player article.
+
+5. **Alignment/coverage-type data remains the biggest analytical gap.** Cannot distinguish zone/man, box/slot/deep from any nflverse dataset. This is the hard ceiling for Analytics on defensive player articles — scheme interpretation must come from Defense agent. Flagged explicitly in position statement.
+
+📌 Team update (2026-07-27): First defensive player panel position delivered (`analytics-position.md`). YAC% and within-team coverage comparison are high-signal patterns for future defensive articles. `query_pfr_defense.py` (Phase C) remains the top priority for defensive tooling.
+

@@ -151,6 +151,16 @@ _Last updated: 2026-03-13 via ESPN transaction pages + web search_
 
 📌 Pattern (2026-03-16): When writing panel positions, the four-pick constraint (#32, #64, #96, ~#188) is the defining draft feature for SEA in 2026. Every position analysis must account for opportunity cost across only four selections. No R4/R5 picks available.
 
+📌 Article context (2026-03-19): Nick Emmanwori has appeared in Witherspoon extension and RB pick-64 articles as a supporting character (big-nickel depth, secondary flexibility) but has never been the subject of his own evaluation. His 2025 rookie year on the championship defense is unexamined as a standalone piece.
+
+📌 Secondary dependency (2026-03-19): Emmanwori's value is structurally tied to Witherspoon's presence. The Witherspoon extension panel established that losing Witherspoon would force Emmanwori out of the big-nickel chess role into traditional corner work — a mismatch. Any Emmanwori evaluation must account for this scheme dependency.
+
+📌 Kickoff brief filed (2026-03-19): `sea-emmanwori-kickoff.md` written to `.squad/decisions/inbox/` for issue #80. Key tensions: (1) production vs. scheme shelter on a championship defense, (2) whether 2026 role escalation is earned or forced by departures, (3) positional identity as safety-who-plays-nickel vs. pure big nickel, (4) Witherspoon dependency on Emmanwori's usage context. Recommended panel: SEA + Analytics + Defense with distinct lanes.
+
+📌 Panel position filed (2026-03-19): `content/articles/sea-emmanwori-rookie-eval/sea-position.md` — Stage 4 panel discussion for issue #80. Took Path 1: Emmanwori's 768-snap rookie year earned the role. Recommended CB/EDGE at #32/#64, no safety insurance needed. Key reasoning: four-pick constraint means the secondary's S2/big-nickel spot is covered, while actual departures (Woolen, Bryant, Mafe, Lawrence retirement risk) demand premium picks at CB and EDGE. Noted Witherspoon dependency as primary risk to this stance.
+
+📌 Cross-article pattern (2026-03-19): SEA's Emmanwori evaluation reinforces the same draft-board conclusion as the RB-at-#64 panel — CB and EDGE must be the first two picks regardless of whether the question is RB, safety, or secondary insurance. The four-pick constraint is the gravitational constant of every SEA draft analysis.
+
 ## Panel: seahawks-rb-pick64-v2 (Issue #71)
 
 📌 **Team update (2026-03-16T07:49:26Z):** RB at #64 evaluation complete. Consensus: Pass on RB due to CB/EDGE priority, despite scheme preference and manageable medical risk. Decision drivers: positional hierarchy (SEA), fair value not a steal (CollegeScout), insufficient medical urgency alone (Injury), scheme preference overridden (Offense).

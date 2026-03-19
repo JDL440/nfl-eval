@@ -205,3 +205,27 @@ The trade works defensively IF: (1) Crosby and Madubuike stay healthy, (2) Minte
 5. **Target rate in coverage > interception count.** In zone-match systems, safeties close windows. A safety targeted 20 times in 400+ coverage snaps is elite even with 0 INTs.
 
 **Decision filed:** `defense-emmanwori-kickoff.md` in decisions/inbox — scheme evaluation framework for the panel.
+
+### 2026-03-19 — SEA Emmanwori Panel Position: Deployment Trust Analysis
+
+**Article:** sea-emmanwori-rookie-eval (Issue #80)
+**Context:** Wrote Defense panel position evaluating whether Emmanwori's "chess piece" label is earned through Macdonald's scheme lens.
+
+**Stance:** Conditionally earned — validated at the big-nickel tier, unproven at the full Hamilton/James multi-level archetype.
+
+**Key findings:**
+
+1. **Simulated-pressure inclusion (34 blitzes, 7 pressures) is the strongest trust signal.** These are choreographed deception packages requiring full playbook access. A "stand here" safety doesn't get 34 blitz reps. This alone separates Emmanwori from system-sheltered deployment.
+
+2. **5.6 aDOT allowed is a deployment-intent signal, not a sheltering indicator.** In a defense with 47 sacks and Witherspoon anchoring deep, deploying a rookie hybrid to erase the short-to-intermediate window is the harder assignment — it's where big-nickel defenders create the most schematic value.
+
+3. **The chess-piece label has tiers.** Big-nickel hybrid who earned meaningful reps (confirmed) ≠ genuine chess piece operating at all three coverage levels (unconfirmed). The Hamilton/James archetype requires post-snap rotation across deep half, box, slot, and robber. Year 1 data confirms at least two tiers; the third requires film charting to validate.
+
+4. **Year 2 developmental gate:** The question isn't "will he play more?" but "will Macdonald unlock the third tier of deployment?" Moving from big-nickel specialist to full rotation piece across all three coverage levels is the progression that confirms or denies the archetype.
+
+**Reusable pattern — tiered chess-piece evaluation:**
+When evaluating hybrid safeties for the chess-piece label, distinguish three tiers:
+- Tier 1: Big-nickel/sub-package specialist (matchup-specific deployment)
+- Tier 2: Simulated-pressure + coverage hybrid (two-role breadth)
+- Tier 3: Full post-snap rotation piece across all three levels (Hamilton/James archetype)
+Each tier is valuable; only Tier 3 justifies the premium comp set. Evaluate which tier the evidence supports, not a binary earned/not-earned.

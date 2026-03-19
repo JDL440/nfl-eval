@@ -82,5 +82,17 @@ narrative.** "JSN at 90% below market" stops scrolling better than "extension de
    - **Stage 7 teaser guidelines:** Text + image only (no card, draft isn't public). Data hook (specific number) → panel voice → urgency frame. Target 15–22 words. Image carries 50% of message; text is thumb-stop.
    - **Reusable for:** All extension/negotiation/multi-perspective articles. Recorded in .squad/decisions/inbox/writer-stage-teaser-copy.md with template and dedupe rules.
 
+### Emmanwori Rookie Eval Draft (sea-emmanwori-rookie-eval)
+- **Date:** 2026-07-28
+- **Stage:** 4 → 5 (draft.md created)
+- **Headline:** "Nick Emmanwori Played 768 Snaps on Seattle's Championship Defense. Here's What That Actually Proves."
+- **Panel:** SEA (Path 1), Analytics (Path 2), Defense (conditional Path 1)
+- **Draft structure:** Secondary exodus context → on-ball production table → Defense's aDOT reframe (counter-intuitive argument: short aDOT = harder assignment in Macdonald's scheme) → Two-tier/three-tier chess-piece framework → Witherspoon ecosystem dependency → draft fork → verdict ("earned with conditions")
+- **Key learnings:**
+   - **Defense's reframe is the article's engine.** When the scheme expert flips the default reading of a metric (aDOT as harder assignment, not sheltered), surface it prominently — it's the moment that distinguishes the article from standard coverage.
+   - **Tier frameworks create clean disagreement structure.** Defense's two-tier/three-tier chess-piece taxonomy gave the panel disagreement a visual table format. Reusable whenever the debate is about *degree* of a label rather than yes/no.
+   - **Analytics positions with data discrepancies between prompt and actual queries:** Analytics ran actual queries and got slightly different numbers than the discussion prompt's pre-populated anchors (e.g., 93 tackles vs. 80, 39 blitzes vs. 34). Used Analytics' position numbers as primary since they represent the queried data. Editor should verify.
+   - **"Next from the panel" teaser:** Tied directly to the article's draft-fork conclusion (CB at #32) → teased the seahawks-cb-draft-pick-32-board article. This creates a natural reader pipeline.
+
 ### Post-Stage-7 Cleanup Inventory & Scope (2026-03-18T02:24:01Z)
 - 📌 **Team update:** Completed detailed asset inventory for post-Stage-7 cleanup. Identified 11 scripts + 3 manifests ready for archival to docs/archived-scripts/ and docs/{production-notes,stage7}-archive/. Active retention: publish-prod-notes.mjs + SKILLs + agent histories stay in repo. All audit trails preserved in docs/ for compliance. Documented reusable Notes copy patterns (Stage 7 teasers + production captions) with card-first format guidelines. Merged 10 decision artifacts into .squad/decisions.md + cleared decision inbox. Orchestration logs created at .squad/orchestration-log/{timestamp}-lead.md and .squad/orchestration-log/{timestamp}-writer.md. Session log created at .squad/log/2026-03-18T02-24-01Z-notes-cleanup-scope.md.
