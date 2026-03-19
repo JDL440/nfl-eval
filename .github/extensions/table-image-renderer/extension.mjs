@@ -117,13 +117,14 @@ export async function handleRenderTableImage(args) {
     }
 }
 
-async function main() {
-    const [{ approveAll }, { joinSession }] = await Promise.all([
-        import("@github/copilot-sdk"),
-        import("@github/copilot-sdk/extension"),
-    ]);
+// ─── Extension Entrypoint ─────────────────────────────────────────────────────
 
-    const session = await joinSession({
+// Conditionally import SDK only when run as extension (not when imported by MCP)
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    const { approveAll } = await import("@github/copilot-sdk");
+    const { joinSession } = await import("@github/copilot-sdk/extension");
+    
+    await joinSession({
         onPermissionRequest: approveAll,
         tools: [
             {
@@ -132,10 +133,4 @@ async function main() {
             },
         ],
     });
-
-    await session.wait();
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-    await main();
 }

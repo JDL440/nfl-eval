@@ -50,13 +50,25 @@ This is an interactive system. You talk to the agents through GitHub Copilot CLI
 
 ### Local MCP Server
 
-This repo also ships a local MCP server for non-Copilot clients.
+This repo ships a local MCP server for publishing and image generation tools.
 
 ```bash
 npm run mcp:server
 ```
 
-Client-specific config details for Codex, Codex Desktop, Claude Code, OpenCode, and GitHub Copilot live in [`docs/mcp-server.md`](./docs/mcp-server.md).
+**✨ MCP-first design** — All tools are built as MCP server endpoints for maximum compatibility across GitHub Copilot, Claude Code, Codex, and OpenCode. The repo includes `.copilot/mcp-config.json`, so GitHub Copilot CLI users get automatic tool access when opening the workspace. **See [`.github/extensions/README.md`](.github/extensions/README.md) for architecture guidance and why we prefer MCP over native extensions.**
+
+**Setup guides:**
+- **GitHub Copilot CLI:** Automatic via `.copilot/mcp-config.json` (repo-level) or [`docs/copilot-cli-mcp-setup.md`](./docs/copilot-cli-mcp-setup.md) (user-level)
+- **Other clients:** [`docs/mcp-server.md`](./docs/mcp-server.md) — Codex, Claude Code, OpenCode, VS Code
+
+**Available tools:**
+- `generate_article_images` — Generate editorial images using Gemini/Imagen
+- `render_table_image` — Convert markdown tables to polished PNG images  
+- `publish_to_substack` — Create/update Substack drafts
+- `publish_note_to_substack` — Create Substack Notes
+
+**For developers:** See [`.github/extensions/README.md`](.github/extensions/README.md) for creating new tools.
 
 ### Publishing Setup (one-time)
 
