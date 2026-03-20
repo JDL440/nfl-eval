@@ -41,6 +41,8 @@ export function renderLayout(title: string, content: string, labName: string): s
     <div class="header-inner">
       <a href="/" class="logo">${escapeHtml(labName)}</a>
       <nav class="header-nav">
+        <a href="/agents" class="btn btn-header">🤖 Agents</a>
+        <a href="/config" class="btn btn-header">⚙️ Config</a>
         <a href="/ideas/new" class="btn btn-header">+ New Idea</a>
         <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
         <span class="env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>

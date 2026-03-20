@@ -9,6 +9,7 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
 import { initDataDir, loadConfig } from '../config/index.js';
@@ -60,6 +61,15 @@ import { CopilotProvider } from '../llm/providers/copilot.js';
 import { MockProvider } from '../llm/providers/mock.js';
 import { LMStudioProvider } from '../llm/providers/lmstudio.js';
 import { EventBus, registerSSE } from '../dashboard/sse.js';
+import {
+  renderAgentsPage,
+  renderCharterDetail,
+  renderSkillDetail,
+  classifyCharter,
+  extractIdentity,
+} from './views/agents.js';
+import { renderConfigPage } from './views/config.js';
+import type { CharterSummary, SkillSummary } from './views/agents.js';
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
@@ -198,6 +208,104 @@ export function createApp(
 
   app.get('/ideas/new', (c) => {
     return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name }));
+  });
+
+  app.get('/config', (c) => {
+    const envVars = [
+      'LLM_PROVIDER',
+      'LMSTUDIO_URL',
+      'GEMINI_API_KEY',
+      'SUBSTACK_TOKEN',
+      'SUBSTACK_PUBLICATION_URL',
+      'TWITTER_API_KEY',
+      'DATA_SOURCE',
+    ];
+
+    const envStatus = envVars.map((key) => ({
+      key,
+      isSet: Boolean(process.env[key] && String(process.env[key]).trim()),
+    }));
+
+    const usingMock = process.env['MOCK_LLM'] === '1';
+    const usingLMStudio = process.env['LLM_PROVIDER'] === 'lmstudio' || Boolean(process.env['LMSTUDIO_URL']);
+
+    let providerName = 'Copilot';
+    if (usingMock) providerName = 'Mock';
+    else if (usingLMStudio) providerName = 'LM Studio';
+
+    const providerUrl = usingLMStudio
+      ? (() => {
+          let base = (process.env['LMSTUDIO_URL'] ?? 'http://localhost:1234/v1').replace(/\/+$/, '');
+          if (!base.endsWith('/v1')) base += '/v1';
+          return base;
+        })()
+      : undefined;
+
+    let modelPolicyError: string | undefined;
+    let modelRouting: Array<{ stageKey: string; model: string }> = [];
+    let activeModel = usingMock ? 'mock' : (usingLMStudio ? (process.env['LMSTUDIO_MODEL'] ?? '(auto)') : '');
+
+    try {
+      const policyPath = join(config.dataDir, 'config', 'models.json');
+      const modelPolicy = new ModelPolicy(policyPath);
+      modelRouting = Object.entries(modelPolicy.config.models)
+        .map(([stageKey, model]) => ({ stageKey, model }))
+        .sort((a, b) => a.stageKey.localeCompare(b.stageKey));
+
+      if (!activeModel && !usingLMStudio) {
+        activeModel = modelPolicy.resolve({ stageKey: 'lead' }).selectedModel;
+      }
+    } catch (err) {
+      modelPolicyError = `Model policy not available: ${err instanceof Error ? err.message : String(err)}`;
+      if (!activeModel) activeModel = '(unknown)';
+    }
+
+    const listCharterNames = (): string[] => {
+      if (!existsSync(config.chartersDir)) return [];
+      const entries = readdirSync(config.chartersDir, { withFileTypes: true });
+      const names: string[] = [];
+
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith('.md')) {
+          names.push(entry.name.replace(/\.md$/i, ''));
+        } else if (entry.isDirectory()) {
+          // Match AgentRunner behavior: require charter.md in subdir
+          const subCharter = join(config.chartersDir, entry.name, 'charter.md');
+          if (existsSync(subCharter)) names.push(entry.name);
+        }
+      }
+
+      return names.sort();
+    };
+
+    const listSkillNames = (): string[] => {
+      if (!existsSync(config.skillsDir)) return [];
+      const entries = readdirSync(config.skillsDir, { withFileTypes: true });
+      const names: string[] = [];
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith('.md')) {
+          names.push(entry.name.replace(/\.md$/i, ''));
+        }
+      }
+      return names.sort();
+    };
+
+    const charters = listCharterNames();
+    const skills = listSkillNames();
+
+    return c.html(renderConfigPage({
+      labName: config.leagueConfig.name,
+      provider: {
+        name: providerName,
+        url: providerUrl,
+        model: activeModel,
+      },
+      modelRouting,
+      modelPolicyError,
+      charters,
+      skills,
+      envStatus,
+    }));
   });
 
   // ── API routes (JSON) ─────────────────────────────────────────────────────
@@ -1183,6 +1291,66 @@ export function createApp(
     } catch {
       return c.html('<p class="empty-state">Invalid image manifest</p>');
     }
+  });
+
+  // ── Agent charter & skill viewer ──────────────────────────────────────────
+
+  function readCharterSummaries(): CharterSummary[] {
+    if (!existsSync(config.chartersDir)) return [];
+    return readdirSync(config.chartersDir)
+      .filter(f => f.endsWith('.md'))
+      .sort()
+      .map(f => {
+        const content = readFileSync(join(config.chartersDir, f), 'utf-8');
+        return {
+          name: f.replace(/\.md$/i, ''),
+          filename: f,
+          type: classifyCharter(f),
+          identity: extractIdentity(content),
+        };
+      });
+  }
+
+  function readSkillSummaries(): SkillSummary[] {
+    if (!existsSync(config.skillsDir)) return [];
+    return readdirSync(config.skillsDir)
+      .filter(f => f.endsWith('.md'))
+      .sort()
+      .map(f => ({
+        name: f.replace(/\.md$/i, ''),
+        filename: f,
+      }));
+  }
+
+  app.get('/agents', (c) => {
+    return c.html(
+      renderAgentsPage({
+        labName: config.leagueConfig.name,
+        charters: readCharterSummaries(),
+        skills: readSkillSummaries(),
+      }),
+    );
+  });
+
+  // skills/:name MUST come before :name to avoid the catch-all matching "skills"
+  app.get('/agents/skills/:name', (c) => {
+    const name = c.req.param('name');
+    const filePath = join(config.skillsDir, `${name}.md`);
+    if (!existsSync(filePath)) {
+      return c.html('<p class="empty-state">Skill not found</p>', 404);
+    }
+    const content = readFileSync(filePath, 'utf-8');
+    return c.html(renderSkillDetail(name, content, config.leagueConfig.name));
+  });
+
+  app.get('/agents/:name', (c) => {
+    const name = c.req.param('name');
+    const filePath = join(config.chartersDir, `${name}.md`);
+    if (!existsSync(filePath)) {
+      return c.html('<p class="empty-state">Charter not found</p>', 404);
+    }
+    const content = readFileSync(filePath, 'utf-8');
+    return c.html(renderCharterDetail(name, content, config.leagueConfig.name));
   });
 
   return app;
