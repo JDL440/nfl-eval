@@ -24,8 +24,10 @@ import {
   renderStageArticles,
   renderFilteredArticles,
 } from './views/home.js';
-import { renderArticleDetail, renderArtifactContent, renderAdvanceResult, renderUsagePanel, renderStageRunsPanel, ARTIFACT_FILES } from './views/article.js';
+import { renderArticleDetail, renderArtifactContent, renderAdvanceResult, renderUsagePanel, renderStageRunsPanel, renderImageGallery, ARTIFACT_FILES } from './views/article.js';
 import type { ArtifactName } from './views/article.js';
+import { ImageService } from '../services/image.js';
+import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
 import { escapeHtml } from './views/layout.js';
 import {
   renderNewIdeaPage,
@@ -111,11 +113,12 @@ function buildPipelineSummary(
 export function createApp(
   repo: Repository,
   config: AppConfig,
-  deps?: { substackService?: SubstackService; twitterService?: TwitterService; actionContext?: ActionContext },
+  deps?: { substackService?: SubstackService; twitterService?: TwitterService; actionContext?: ActionContext; imageService?: ImageService },
 ): Hono {
   const app = new Hono();
   const substackService = deps?.substackService;
   const twitterService = deps?.twitterService;
+  const imageService = deps?.imageService;
   const bus = new EventBus();
 
   // Register SSE event stream
@@ -1041,6 +1044,147 @@ export function createApp(
     }
   });
 
+  // ── API: Generate article images ────────────────────────────────────────
+
+  app.post('/api/articles/:id/generate-images', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.json({ error: 'Not found' }, 404);
+    if (article.current_stage < 5) {
+      return c.json({ error: 'Draft must exist first (Stage 5+)' }, 422);
+    }
+
+    if (!imageService) {
+      return c.json({ error: 'Image service not configured' }, 500);
+    }
+
+    try {
+      const draft = repo.artifacts.get(id, 'draft.md');
+      const summary = draft?.slice(0, 500) ?? '';
+      const team = article.primary_team ?? undefined;
+
+      const results = await imageService.generateArticleImages(id, {
+        cover: {
+          description: `Cover image for: ${article.title}. ${summary}`,
+          style: 'editorial sports photography, dramatic lighting, 16:9 hero image',
+          team,
+          aspectRatio: '16:9',
+        },
+        inline: [
+          {
+            description: `Inline image 1 for: ${article.title}. ${summary}`,
+            style: 'editorial sports analysis, clean wide banner',
+            team,
+            aspectRatio: '16:9',
+          },
+          {
+            description: `Inline image 2 for: ${article.title}. ${summary}`,
+            style: 'editorial sports context, wide banner',
+            team,
+            aspectRatio: '16:9',
+          },
+        ],
+      });
+
+      const imageManifest: { type: string; path: string; prompt: string }[] = [];
+      if (results.cover) {
+        imageManifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
+      }
+      for (const img of results.inline) {
+        imageManifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
+      }
+
+      repo.artifacts.put(id, 'images.json', JSON.stringify(imageManifest, null, 2));
+
+      return c.json({ success: true, count: imageManifest.length });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  // ── htmx: generate images (returns HTML fragment) ───────────────────────
+
+  app.post('/htmx/articles/:id/generate-images', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html(renderAdvanceResult(false, 'Article not found'), 404);
+    if (article.current_stage < 5) {
+      return c.html(renderAdvanceResult(false, 'Draft must exist first (Stage 5+)'), 422);
+    }
+
+    if (!imageService) {
+      return c.html(renderAdvanceResult(false, 'Image service not configured — set GEMINI_API_KEY'), 500);
+    }
+
+    try {
+      const draft = repo.artifacts.get(id, 'draft.md');
+      const summary = draft?.slice(0, 500) ?? '';
+      const team = article.primary_team ?? undefined;
+
+      const results = await imageService.generateArticleImages(id, {
+        cover: {
+          description: `Cover image for: ${article.title}. ${summary}`,
+          style: 'editorial sports photography, dramatic lighting, 16:9 hero image',
+          team,
+          aspectRatio: '16:9',
+        },
+        inline: [
+          {
+            description: `Inline image 1 for: ${article.title}. ${summary}`,
+            style: 'editorial sports analysis, clean wide banner',
+            team,
+            aspectRatio: '16:9',
+          },
+          {
+            description: `Inline image 2 for: ${article.title}. ${summary}`,
+            style: 'editorial sports context, wide banner',
+            team,
+            aspectRatio: '16:9',
+          },
+        ],
+      });
+
+      const imageManifest: { type: string; path: string; prompt: string }[] = [];
+      if (results.cover) {
+        imageManifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
+      }
+      for (const img of results.inline) {
+        imageManifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
+      }
+
+      repo.artifacts.put(id, 'images.json', JSON.stringify(imageManifest, null, 2));
+
+      return c.html(
+        `<div class="advance-result advance-success">✅ Generated ${imageManifest.length} image(s)</div>
+         <script>setTimeout(() => window.location.reload(), 1500);</script>`,
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.html(renderAdvanceResult(false, `Image generation failed: ${message}`), 500);
+    }
+  });
+
+  // ── htmx: image gallery ─────────────────────────────────────────────────
+
+  app.get('/htmx/articles/:id/images', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+    const manifestJson = repo.artifacts.get(id, 'images.json');
+    if (!manifestJson) {
+      return c.html('<p class="empty-state">No images generated yet</p>');
+    }
+
+    try {
+      const manifest = JSON.parse(manifestJson) as { type: string; path: string; prompt: string }[];
+      return c.html(renderImageGallery(manifest));
+    } catch {
+      return c.html('<p class="empty-state">Invalid image manifest</p>');
+    }
+  });
+
   return app;
 }
 
@@ -1103,7 +1247,25 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Agent runner not available — auto-advance will use lightweight mode: ${err instanceof Error ? err.message : err}`);
   }
 
-  const app = createApp(repo, config, { actionContext });
+  // Build ImageService (Gemini if key available, otherwise stub)
+  let imageService: ImageService | undefined;
+  try {
+    const geminiKey = process.env['GEMINI_API_KEY'];
+    const provider = geminiKey ? 'gemini' : 'stub';
+    if (!geminiKey) {
+      console.log('GEMINI_API_KEY not set — using stub image provider (placeholder PNGs)');
+    }
+    imageService = new ImageService({
+      provider,
+      apiKey: geminiKey,
+      outputDir: config.imagesDir,
+    });
+    console.log(`Image service initialized (provider: ${provider})`);
+  } catch (err) {
+    console.log(`Image service not available: ${err instanceof Error ? err.message : err}`);
+  }
+
+  const app = createApp(repo, config, { actionContext, imageService });
 
   serve({ fetch: app.fetch, port: config.port }, (info) => {
     console.log(`NFL Lab Dashboard running at http://localhost:${info.port}`);

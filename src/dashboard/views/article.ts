@@ -94,6 +94,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
       <div class="detail-grid">
         <div class="detail-main">
           ${renderActionPanel(article, advanceCheck, stageRuns)}
+          ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
           ${renderArtifactTabs(article, artifactNames)}
           ${reviews.length > 0 ? renderEditorReviews(reviews) : ''}
           ${publisherPass ? renderPublisherChecklist(publisherPass) : ''}
@@ -419,6 +420,58 @@ function renderGuardStatus(canAdvance: boolean, reason: string): string {
   const cls = canAdvance ? 'guard-pass' : 'guard-fail';
   const icon = canAdvance ? '✅' : '⚠️';
   return `<div class="guard-status ${cls}">${icon} ${escapeHtml(reason)}</div>`;
+}
+
+// ── Image Section ────────────────────────────────────────────────────────────
+
+function renderImageSection(article: Article, artifactNames?: string[]): string {
+  const hasImages = (artifactNames ?? []).includes('images.json');
+
+  return `
+    <section class="detail-section image-section">
+      <h2>Article Images</h2>
+      <div class="action-bar" style="margin-bottom: 0.75rem;">
+        <button class="btn btn-secondary"
+          hx-post="/htmx/articles/${escapeHtml(article.id)}/generate-images"
+          hx-target="#image-result-${escapeHtml(article.id)}"
+          hx-swap="innerHTML"
+          hx-indicator="#image-spinner-${escapeHtml(article.id)}"
+          hx-confirm="Generate cover + 2 inline images?">
+          🎨 Generate Images
+        </button>
+        <span id="image-spinner-${escapeHtml(article.id)}" class="htmx-indicator" style="margin-left:0.5rem">⏳ Generating…</span>
+      </div>
+      <div id="image-result-${escapeHtml(article.id)}"></div>
+      <div id="image-gallery-${escapeHtml(article.id)}"
+        hx-get="/htmx/articles/${escapeHtml(article.id)}/images"
+        hx-trigger="load"
+        hx-swap="innerHTML">
+        ${hasImages ? '<p class="empty-state">Loading images…</p>' : '<p class="empty-state">No images generated yet</p>'}
+      </div>
+    </section>`;
+}
+
+/** Render image gallery HTML from an image manifest. */
+export function renderImageGallery(manifest: { type: string; path: string; prompt: string }[]): string {
+  if (!manifest || manifest.length === 0) {
+    return '<p class="empty-state">No images in manifest</p>';
+  }
+
+  return `
+    <div class="image-gallery">
+      ${manifest.map((img, i) => {
+        const label = img.type === 'cover' ? '🖼 Cover' : `📷 Inline ${i}`;
+        return `
+          <div class="image-gallery-item">
+            <div class="image-gallery-label">${label}</div>
+            <div class="image-gallery-path"><code>${escapeHtml(img.path)}</code></div>
+            <details class="image-gallery-prompt">
+              <summary>View prompt</summary>
+              <p>${escapeHtml(img.prompt)}</p>
+            </details>
+          </div>`;
+      }).join('')}
+    </div>`;
 }
 
 /** Render the result of an htmx advance POST (HTML fragment). */

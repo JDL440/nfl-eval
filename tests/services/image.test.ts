@@ -103,6 +103,74 @@ describe('GeminiImageProvider', () => {
     const provider = new GeminiImageProvider('test-key-123');
     expect(provider.id).toBe('gemini');
   });
+
+  it('constructs correct API URL with key', async () => {
+    const provider = new GeminiImageProvider('test-api-key');
+    const tempDir = mkdtempSync(join(tmpdir(), 'nfl-img-gemini-'));
+
+    // Mock fetch to capture the request
+    const originalFetch = globalThis.fetch;
+    let capturedUrl = '';
+    let capturedBody: any = null;
+    globalThis.fetch = async (input: any, init: any) => {
+      capturedUrl = typeof input === 'string' ? input : input.url;
+      capturedBody = JSON.parse(init.body);
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ inlineData: {
+          data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8BQDwAEgAF/pooBPQAAAABJRU5ErkJggg=='
+        } }] } }]
+      }), { status: 200 });
+    };
+
+    try {
+      await provider.generate(
+        { description: 'Test image', team: 'Seattle Seahawks', aspectRatio: '16:9' },
+        join(tempDir, 'test.png'),
+      );
+      expect(capturedUrl).toContain('key=test-api-key');
+      expect(capturedUrl).toContain('generativelanguage.googleapis.com');
+      expect(capturedBody.contents[0].parts[0].text).toContain('Test image');
+      expect(capturedBody.contents[0].parts[0].text).toContain('Seattle Seahawks');
+      expect(capturedBody.generationConfig.responseModalities).toContain('IMAGE');
+    } finally {
+      globalThis.fetch = originalFetch;
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('throws on API error response', async () => {
+    const provider = new GeminiImageProvider('bad-key');
+    const tempDir = mkdtempSync(join(tmpdir(), 'nfl-img-gemini-err-'));
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response('Unauthorized', { status: 401 });
+
+    try {
+      await expect(
+        provider.generate({ description: 'fail' }, join(tempDir, 'test.png')),
+      ).rejects.toThrow('Gemini API error 401');
+    } finally {
+      globalThis.fetch = originalFetch;
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('throws when API returns no image data', async () => {
+    const provider = new GeminiImageProvider('valid-key');
+    const tempDir = mkdtempSync(join(tmpdir(), 'nfl-img-gemini-nodata-'));
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify({ candidates: [] }), { status: 200 });
+
+    try {
+      await expect(
+        provider.generate({ description: 'empty' }, join(tempDir, 'test.png')),
+      ).rejects.toThrow('no image data');
+    } finally {
+      globalThis.fetch = originalFetch;
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('ImageService', () => {
