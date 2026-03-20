@@ -45,6 +45,16 @@ export interface AgentRunParams {
   responseFormat?: 'text' | 'json';
 }
 
+// Map agent names to model-policy stage keys so the correct model tier is used
+const AGENT_STAGE_KEY: Record<string, string> = {
+  'lead': 'lead',
+  'writer': 'writer',
+  'editor': 'editor',
+  'publisher': 'lightweight',
+  'panel-moderator': 'lead',  // same tier as panel; avoids needing depthLevel
+  'scribe': 'scribe',
+};
+
 export interface AgentRunResult {
   content: string;
   model: string;
@@ -333,13 +343,15 @@ export class AgentRunner {
 
     // 7. Call LLM Gateway
     const model = charter.model && charter.model !== 'auto' ? charter.model : undefined;
+    const stageKey = AGENT_STAGE_KEY[agentName];
     const response = await this._gateway.chat({
       messages,
       model,
       temperature,
       maxTokens,
       responseFormat,
-      taskFamily: model ? undefined : 'balanced',
+      stageKey: model ? undefined : stageKey,
+      taskFamily: model || stageKey ? undefined : 'deep_reasoning',
     });
 
     // 8. Store learning memory
