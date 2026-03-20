@@ -857,3 +857,129 @@ footer {
 .btn-outline:hover {
     border-color: var(--accent);
 }
+
+/* ── Telemetry ─────────────────────────────────────────────── */
+
+.telemetry-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.telemetry-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+    min-width: 90px;
+    text-align: center;
+}
+
+.telemetry-val {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+}
+
+.telemetry-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.telemetry-details {
+    margin: 0.75rem 0;
+}
+
+.telemetry-details summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    padding: 0.3rem 0;
+    user-select: none;
+}
+
+.telemetry-details summary:hover {
+    color: var(--accent);
+}
+
+.telemetry-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
+}
+
+.telemetry-table th {
+    background: #1c2128;
+    font-weight: 600;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+}
+
+.telemetry-table td {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+}
+
+.telemetry-table-wide {
+    min-width: 800px;
+}
+
+.telemetry-table tbody tr:hover {
+    background: rgba(88, 166, 255, 0.05);
+}
+
+/* Timeline bar chart */
+
+.telemetry-timeline {
+    margin: 1rem 0 1.5rem;
+}
+
+.timeline-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+}
+
+.timeline-bar-date {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    min-width: 80px;
+    text-align: right;
+    font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.timeline-bar-track {
+    flex: 1;
+    height: 18px;
+    background: var(--surface);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.timeline-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    border-radius: 3px 0 0 3px;
+    min-width: 4px;
+    transition: width 0.3s ease;
+}
+
+.timeline-bar-val {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    min-width: 180px;
+}

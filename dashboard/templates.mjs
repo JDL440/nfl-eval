@@ -61,6 +61,7 @@ function layout(title, body, activeNav = "") {
     <nav>
         <a href="/" class="logo">🏈 NFL Lab Pipeline</a>
         <a href="/" class="${activeNav === "board" ? "active" : ""}">Board</a>
+        <a href="/telemetry" class="${activeNav === "telemetry" ? "active" : ""}">Telemetry</a>
     </nav>
 </header>
 <main>${body}</main>
@@ -364,7 +365,7 @@ function docGroup(docs, slug, emptyMsg = "No documents found.") {
 // ── Article detail page ──────────────────────────────────────────────────────
 
 export function articlePage(detail) {
-    const { slug, article, inferred, artifacts, images, documents, transitions, editorReviews, publisherPass, panels, notes, prompt, hasDrift, validationResults, publishState, publishResults } = detail;
+    const { slug, article, inferred, artifacts, images, documents, transitions, editorReviews, publisherPass, panels, notes, prompt, hasDrift, validationResults, publishState, publishResults, usageSummary } = detail;
     const title = article?.title || slug;
 
     // Left rail summary
@@ -399,7 +400,7 @@ export function articlePage(detail) {
 
     // Tabs
     const tabs = [
-        { id: "overview", label: "Overview", content: overviewTab(inferred, artifacts, images, overviewDocs, slug) },
+        { id: "overview", label: "Overview", content: overviewTab(inferred, artifacts, images, overviewDocs, slug, usageSummary) },
         { id: "panel", label: "Prompt & Panel", content: panelTab(prompt, panels, slug, artifacts, panelDocs) },
         { id: "draft", label: "Draft & Edits", content: draftTab(slug, editorReviews, artifacts, draftDocs, verifyDocs) },
         { id: "assets", label: "Assets", content: assetsTab(artifacts, images, otherDocs, slug) },
@@ -622,7 +623,7 @@ function publishBarScript(slug) {
 
 // ── Tab renderers ────────────────────────────────────────────────────────────
 
-function overviewTab(inferred, artifacts, images, overviewDocs, slug) {
+function overviewTab(inferred, artifacts, images, overviewDocs, slug, usageSummary) {
     const hasFactCheck = artifacts.some(a => a.name === "panel-factcheck.md");
     let html = `
     <h3>Stage Inference</h3>
@@ -641,10 +642,114 @@ function overviewTab(inferred, artifacts, images, overviewDocs, slug) {
     </ul>
     <h3>Images (${images.length})</h3>
     ${images.length > 0 ? `<div class="image-grid">${images.map(img => `<div class="thumb"><img src="/image/${encodeURIComponent(img.path)}" alt="${esc(img.name)}" loading="lazy"><span>${esc(img.name)}</span></div>`).join("")}</div>` : "<p class='dim'>No images found.</p>"}
-    <h3>Token / Cost Telemetry</h3>
-    <div class="placeholder-box">📊 Not yet instrumented — telemetry schema pending.</div>`;
+    <h3>Token / Cost Telemetry</h3>`;
+
+    html += renderUsageSummary(usageSummary);
 
     return html;
+}
+
+function renderUsageSummary(usage) {
+    if (!usage || usage.events === 0) {
+        return `<p class="dim">No usage events recorded for this article.</p>`;
+    }
+
+    const hasTokens = usage.totalPromptTokens > 0 || usage.totalOutputTokens > 0;
+
+    let html = `<div class="telemetry-cards">
+        <div class="telemetry-card">
+            <span class="telemetry-val">${usage.events}</span>
+            <span class="telemetry-label">Events</span>
+        </div>
+        <div class="telemetry-card">
+            <span class="telemetry-val">$${usage.totalCost.toFixed(2)}</span>
+            <span class="telemetry-label">Est. Cost</span>
+        </div>`;
+
+    if (hasTokens) {
+        const totalTokens = usage.totalPromptTokens + usage.totalOutputTokens;
+        html += `
+        <div class="telemetry-card">
+            <span class="telemetry-val">${fmtNum(totalTokens)}</span>
+            <span class="telemetry-label">Tokens</span>
+        </div>
+        <div class="telemetry-card">
+            <span class="telemetry-val">${fmtNum(usage.totalPromptTokens)}</span>
+            <span class="telemetry-label">Prompt</span>
+        </div>
+        <div class="telemetry-card">
+            <span class="telemetry-val">${fmtNum(usage.totalOutputTokens)}</span>
+            <span class="telemetry-label">Output</span>
+        </div>`;
+        if (usage.totalCachedTokens > 0) {
+            html += `
+            <div class="telemetry-card">
+                <span class="telemetry-val">${fmtNum(usage.totalCachedTokens)}</span>
+                <span class="telemetry-label">Cached</span>
+            </div>`;
+        }
+    }
+
+    if (usage.totalImages > 0) {
+        html += `
+        <div class="telemetry-card">
+            <span class="telemetry-val">${usage.totalImages}</span>
+            <span class="telemetry-label">Images</span>
+        </div>`;
+    }
+    html += `</div>`;
+
+    // Breakdown by surface
+    if (usage.bySurface && usage.bySurface.length > 0) {
+        html += `<details class="telemetry-details" open>
+            <summary>By Surface / Tool</summary>
+            <table class="telemetry-table">
+                <thead><tr><th>Surface</th><th>Provider</th><th>Model / Tool</th><th>Events</th>${hasTokens ? "<th>Tokens</th>" : ""}<th>Images</th><th>Cost</th></tr></thead>
+                <tbody>`;
+        for (const row of usage.bySurface) {
+            const tokens = row.promptTokens + row.outputTokens;
+            html += `<tr>
+                <td>${esc(row.surface)}</td>
+                <td>${esc(row.provider || "—")}</td>
+                <td><code>${esc(row.model || "—")}</code></td>
+                <td>${row.events}</td>
+                ${hasTokens ? `<td>${tokens > 0 ? fmtNum(tokens) : "—"}</td>` : ""}
+                <td>${row.images > 0 ? row.images : "—"}</td>
+                <td>${row.cost > 0 ? "$" + row.cost.toFixed(2) : "—"}</td>
+            </tr>`;
+        }
+        html += `</tbody></table></details>`;
+    }
+
+    // Breakdown by stage
+    if (usage.byStage && usage.byStage.length > 0) {
+        html += `<details class="telemetry-details">
+            <summary>By Pipeline Stage</summary>
+            <table class="telemetry-table">
+                <thead><tr><th>Stage</th>${hasTokens ? "<th>Tokens</th>" : ""}<th>Events</th><th>Images</th><th>Cost</th></tr></thead>
+                <tbody>`;
+        for (const row of usage.byStage) {
+            const stageName = row.stage > 0 ? `S${row.stage} ${STAGE_NAMES[row.stage] || ""}` : "Unassigned";
+            const tokens = row.promptTokens + row.outputTokens;
+            html += `<tr>
+                <td><span class="badge ${stageBadgeClass(row.stage)}">${esc(stageName)}</span></td>
+                ${hasTokens ? `<td>${tokens > 0 ? fmtNum(tokens) : "—"}</td>` : ""}
+                <td>${row.events}</td>
+                <td>${row.images > 0 ? row.images : "—"}</td>
+                <td>${row.cost > 0 ? "$" + row.cost.toFixed(2) : "—"}</td>
+            </tr>`;
+        }
+        html += `</tbody></table></details>`;
+    }
+
+    html += `<p class="dim" style="margin-top:0.5rem"><a href="/telemetry">View all telemetry →</a></p>`;
+    return html;
+}
+
+function fmtNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+    if (n >= 1000) return (n / 1000).toFixed(1) + "K";
+    return String(n);
 }
 
 function panelTab(prompt, panels, slug, artifacts, panelDocs) {
@@ -1074,4 +1179,123 @@ function formatBytes(bytes) {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+// ── Telemetry page ───────────────────────────────────────────────────────────
+
+export function telemetryPage(data) {
+    const { totals, byArticle, bySurface, byDate } = data;
+    const hasTokens = totals.totalPromptTokens > 0 || totals.totalOutputTokens > 0;
+
+    // KPI strip
+    const kpiHtml = `
+    <div class="kpi-strip">
+        <div class="kpi"><span class="kpi-val">${totals.events}</span><span class="kpi-label">Total Events</span></div>
+        <div class="kpi"><span class="kpi-val">$${totals.totalCost.toFixed(2)}</span><span class="kpi-label">Total Cost</span></div>
+        <div class="kpi"><span class="kpi-val">${totals.articleCount}</span><span class="kpi-label">Articles</span></div>
+        ${hasTokens ? `
+        <div class="kpi"><span class="kpi-val">${fmtNum(totals.totalPromptTokens + totals.totalOutputTokens)}</span><span class="kpi-label">Total Tokens</span></div>
+        <div class="kpi"><span class="kpi-val">${fmtNum(totals.totalPromptTokens)}</span><span class="kpi-label">Prompt</span></div>
+        <div class="kpi"><span class="kpi-val">${fmtNum(totals.totalOutputTokens)}</span><span class="kpi-label">Output</span></div>` : ""}
+        <div class="kpi"><span class="kpi-val">${totals.totalImages}</span><span class="kpi-label">Images</span></div>
+    </div>`;
+
+    // Timeline chart (horizontal bar per day)
+    let timelineHtml = "";
+    if (byDate.length > 0) {
+        const maxEvents = Math.max(...byDate.map(d => d.events), 1);
+        timelineHtml = `
+        <h2>Activity Timeline</h2>
+        <div class="telemetry-timeline">`;
+        for (const day of byDate) {
+            const pct = Math.max((day.events / maxEvents) * 100, 4);
+            const dateLabel = day.date;
+            timelineHtml += `
+            <div class="timeline-bar-row">
+                <span class="timeline-bar-date">${esc(dateLabel)}</span>
+                <div class="timeline-bar-track">
+                    <div class="timeline-bar-fill" style="width:${pct.toFixed(1)}%"></div>
+                </div>
+                <span class="timeline-bar-val">${day.events} events · $${day.cost.toFixed(2)}${day.articles > 1 ? ` · ${day.articles} articles` : ""}</span>
+            </div>`;
+        }
+        timelineHtml += `</div>`;
+    }
+
+    // Per-article table
+    let articleTableHtml = "";
+    if (byArticle.length > 0) {
+        articleTableHtml = `
+        <h2>Per-Article Breakdown</h2>
+        <table class="telemetry-table telemetry-table-wide">
+            <thead><tr>
+                <th>Article</th>
+                <th>Events</th>
+                ${hasTokens ? "<th>Tokens</th>" : ""}
+                <th>Images</th>
+                <th>Cost</th>
+                <th>Surfaces</th>
+                <th>First</th>
+                <th>Last</th>
+            </tr></thead>
+            <tbody>`;
+        for (const row of byArticle) {
+            const tokens = row.promptTokens + row.outputTokens;
+            const surfaces = (row.surfaces || "").split(",").filter(Boolean);
+            const firstDate = row.firstEvent ? row.firstEvent.split("T")[0] : "—";
+            const lastDate = row.lastEvent ? row.lastEvent.split("T")[0] : "—";
+            articleTableHtml += `<tr>
+                <td><a href="/article/${encodeURIComponent(row.slug)}">${esc(row.title)}</a></td>
+                <td>${row.events}</td>
+                ${hasTokens ? `<td>${tokens > 0 ? fmtNum(tokens) : "—"}</td>` : ""}
+                <td>${row.images > 0 ? row.images : "—"}</td>
+                <td>${row.cost > 0 ? "$" + row.cost.toFixed(2) : "—"}</td>
+                <td>${surfaces.map(s => `<span class="badge badge-gray">${esc(s)}</span>`).join(" ")}</td>
+                <td class="dim">${esc(firstDate)}</td>
+                <td class="dim">${esc(lastDate)}</td>
+            </tr>`;
+        }
+        articleTableHtml += `</tbody></table>`;
+    }
+
+    // By surface/tool table
+    let surfaceTableHtml = "";
+    if (bySurface.length > 0) {
+        surfaceTableHtml = `
+        <h2>By Surface / Tool</h2>
+        <table class="telemetry-table">
+            <thead><tr>
+                <th>Surface</th>
+                <th>Provider</th>
+                <th>Model / Tool</th>
+                <th>Events</th>
+                ${hasTokens ? "<th>Tokens</th>" : ""}
+                <th>Images</th>
+                <th>Cost</th>
+            </tr></thead>
+            <tbody>`;
+        for (const row of bySurface) {
+            const tokens = row.promptTokens + row.outputTokens;
+            surfaceTableHtml += `<tr>
+                <td>${esc(row.surface)}</td>
+                <td>${esc(row.provider || "—")}</td>
+                <td><code>${esc(row.model || "—")}</code></td>
+                <td>${row.events}</td>
+                ${hasTokens ? `<td>${tokens > 0 ? fmtNum(tokens) : "—"}</td>` : ""}
+                <td>${row.images > 0 ? row.images : "—"}</td>
+                <td>${row.cost > 0 ? "$" + row.cost.toFixed(2) : "—"}</td>
+            </tr>`;
+        }
+        surfaceTableHtml += `</tbody></table>`;
+    }
+
+    const body = `
+    <h1>📊 Token & Cost Telemetry</h1>
+    <p class="dim">Usage events recorded by pipeline extensions and agent invocations.</p>
+    ${kpiHtml}
+    ${timelineHtml}
+    ${articleTableHtml}
+    ${surfaceTableHtml}`;
+
+    return layout("Telemetry", body, "telemetry");
 }

@@ -532,6 +532,139 @@ export function getBoardData() {
     return board;
 }
 
+// ── Token / cost telemetry ────────────────────────────────────────────────────
+
+export function getUsageEvents(slug) {
+    const db = openDb();
+    if (!db) return [];
+    try {
+        return db.prepare(
+            "SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at ASC"
+        ).all(slug);
+    } finally {
+        db.close();
+    }
+}
+
+export function getUsageEventsSummary(slug) {
+    const db = openDb();
+    if (!db) return { events: 0, totalCost: 0, totalPromptTokens: 0, totalOutputTokens: 0, totalCachedTokens: 0, totalImages: 0, bySurface: [], byStage: [] };
+    try {
+        const totals = db.prepare(`
+            SELECT
+                COUNT(*) AS events,
+                COALESCE(SUM(cost_usd_estimate), 0) AS totalCost,
+                COALESCE(SUM(prompt_tokens), 0) AS totalPromptTokens,
+                COALESCE(SUM(output_tokens), 0) AS totalOutputTokens,
+                COALESCE(SUM(cached_tokens), 0) AS totalCachedTokens,
+                COALESCE(SUM(image_count), 0) AS totalImages
+            FROM usage_events WHERE article_id = ?
+        `).get(slug);
+
+        const bySurface = db.prepare(`
+            SELECT
+                surface,
+                provider,
+                model_or_tool AS model,
+                COUNT(*) AS events,
+                COALESCE(SUM(cost_usd_estimate), 0) AS cost,
+                COALESCE(SUM(prompt_tokens), 0) AS promptTokens,
+                COALESCE(SUM(output_tokens), 0) AS outputTokens,
+                COALESCE(SUM(image_count), 0) AS images,
+                MIN(created_at) AS firstSeen,
+                MAX(created_at) AS lastSeen
+            FROM usage_events WHERE article_id = ?
+            GROUP BY surface, provider, model_or_tool
+            ORDER BY cost DESC, events DESC
+        `).all(slug);
+
+        const byStage = db.prepare(`
+            SELECT
+                COALESCE(stage, 0) AS stage,
+                COUNT(*) AS events,
+                COALESCE(SUM(cost_usd_estimate), 0) AS cost,
+                COALESCE(SUM(prompt_tokens), 0) AS promptTokens,
+                COALESCE(SUM(output_tokens), 0) AS outputTokens,
+                COALESCE(SUM(image_count), 0) AS images
+            FROM usage_events WHERE article_id = ?
+            GROUP BY stage
+            ORDER BY stage ASC
+        `).all(slug);
+
+        return { ...totals, bySurface, byStage };
+    } finally {
+        db.close();
+    }
+}
+
+export function getAllUsageSummary() {
+    const db = openDb();
+    if (!db) return { totals: { events: 0, totalCost: 0, totalPromptTokens: 0, totalOutputTokens: 0, totalImages: 0, articleCount: 0 }, byArticle: [], bySurface: [], byDate: [] };
+    try {
+        const totals = db.prepare(`
+            SELECT
+                COUNT(*) AS events,
+                COALESCE(SUM(cost_usd_estimate), 0) AS totalCost,
+                COALESCE(SUM(prompt_tokens), 0) AS totalPromptTokens,
+                COALESCE(SUM(output_tokens), 0) AS totalOutputTokens,
+                COALESCE(SUM(image_count), 0) AS totalImages,
+                COUNT(DISTINCT article_id) AS articleCount
+            FROM usage_events
+        `).get();
+
+        const byArticle = db.prepare(`
+            SELECT
+                u.article_id AS slug,
+                COALESCE(a.title, u.article_id) AS title,
+                COUNT(*) AS events,
+                COALESCE(SUM(u.cost_usd_estimate), 0) AS cost,
+                COALESCE(SUM(u.prompt_tokens), 0) AS promptTokens,
+                COALESCE(SUM(u.output_tokens), 0) AS outputTokens,
+                COALESCE(SUM(u.image_count), 0) AS images,
+                MIN(u.created_at) AS firstEvent,
+                MAX(u.created_at) AS lastEvent,
+                GROUP_CONCAT(DISTINCT u.surface) AS surfaces
+            FROM usage_events u
+            LEFT JOIN articles a ON a.id = u.article_id
+            GROUP BY u.article_id
+            ORDER BY lastEvent DESC
+        `).all();
+
+        const bySurface = db.prepare(`
+            SELECT
+                surface,
+                provider,
+                model_or_tool AS model,
+                COUNT(*) AS events,
+                COALESCE(SUM(cost_usd_estimate), 0) AS cost,
+                COALESCE(SUM(prompt_tokens), 0) AS promptTokens,
+                COALESCE(SUM(output_tokens), 0) AS outputTokens,
+                COALESCE(SUM(image_count), 0) AS images
+            FROM usage_events
+            GROUP BY surface, provider, model_or_tool
+            ORDER BY cost DESC, events DESC
+        `).all();
+
+        const byDate = db.prepare(`
+            SELECT
+                DATE(created_at) AS date,
+                COUNT(*) AS events,
+                COALESCE(SUM(cost_usd_estimate), 0) AS cost,
+                COALESCE(SUM(prompt_tokens), 0) AS promptTokens,
+                COALESCE(SUM(output_tokens), 0) AS outputTokens,
+                COALESCE(SUM(image_count), 0) AS images,
+                COUNT(DISTINCT article_id) AS articles
+            FROM usage_events
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        `).all();
+
+        return { totals, byArticle, bySurface, byDate };
+    } finally {
+        db.close();
+    }
+}
+
 // ── Article detail aggregate ─────────────────────────────────────────────────
 
 export async function getArticleDetail(slug) {
@@ -550,6 +683,7 @@ export async function getArticleDetail(slug) {
     const notes = getNotes(slug);
     const prompt = getDiscussionPrompt(slug);
     const publishState = await buildPublishState(article, publisherPass, notes, slug);
+    const usageSummary = getUsageEventsSummary(slug);
 
     return {
         slug,
@@ -565,6 +699,7 @@ export async function getArticleDetail(slug) {
         notes,
         prompt,
         publishState,
+        usageSummary,
         hasDrift: article ? (typeof article.current_stage === "number" && article.current_stage !== inferred.stage) : false,
     };
 }

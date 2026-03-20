@@ -10,8 +10,8 @@ import { spawn } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, join, extname } from "node:path";
 
-import { getBoardData, getArticleDetail, readArtifact } from "./data.mjs";
-import { boardPage, articlePage, previewPage, notFoundPage } from "./templates.mjs";
+import { getBoardData, getArticleDetail, readArtifact, getAllUsageSummary, getUsageEvents } from "./data.mjs";
+import { boardPage, articlePage, previewPage, notFoundPage, telemetryPage } from "./templates.mjs";
 import { renderPreview } from "./render.mjs";
 import { getValidationResults } from "./validation.mjs";
 import { getPublishResults } from "./publish.mjs";
@@ -66,6 +66,7 @@ function printStartupBanner(port) {
     console.log(`  ────────────────────────────`);
     console.log(`  Local:  http://localhost:${port}/`);
     console.log(`  Board:  http://localhost:${port}/`);
+    console.log(`  Telem:  http://localhost:${port}/telemetry`);
     console.log(`  API:    http://localhost:${port}/api/board\n`);
 }
 
@@ -388,6 +389,26 @@ async function handleRequest(req, res) {
             console.error(`[publish] Live publish error:`, err);
             sendJson(res, { status: "ERROR", error: err.message }, 500);
         }
+        return;
+    }
+
+    // API: telemetry (all articles)
+    if (path === "/api/telemetry" && req.method === "GET") {
+        sendJson(res, getAllUsageSummary());
+        return;
+    }
+
+    // API: telemetry for specific article
+    if (path.startsWith("/api/telemetry/") && req.method === "GET") {
+        const slug = decodeURIComponent(path.slice("/api/telemetry/".length));
+        sendJson(res, getUsageEvents(slug));
+        return;
+    }
+
+    // Telemetry page
+    if (path === "/telemetry") {
+        const data = getAllUsageSummary();
+        sendHtml(res, telemetryPage(data));
         return;
     }
 
