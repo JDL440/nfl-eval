@@ -1,0 +1,13 @@
+{
+  "nfl": {
+    "name": "NFL Lab",
+    "panelName": "The NFL Lab Expert Panel",
+    "dataSource": "nflverse",
+    "positions": ["QB", "RB", "WR", "TE", "EDGE", "CB", "S", "LB", "DL", "OL"],
+    "substackConfig": {
+      "labName": "NFL Lab",
+      "subscribeCaption": "Thanks for reading NFL Lab! Subscribe for free to receive new posts.",
+      "footerPatterns": ["The NFL Lab", "Expert Panel", "virtual front office"]
+    }
+  }
+}

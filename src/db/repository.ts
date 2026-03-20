@@ -1,0 +1,806 @@
+/**
+ * repository.ts — TypeScript port of content/pipeline_state.py
+ *
+ * Single source of truth for all pipeline.db reads and writes.
+ * Uses the built-in `node:sqlite` module (Node 22+).
+ */
+
+import { DatabaseSync, type StatementSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+
+import type {
+  Article,
+  ArticleRun,
+  ArticleStatus,
+  EditorReview,
+  EditorVerdict,
+  Note,
+  NoteTarget,
+  NoteType,
+  PublisherPass,
+  RunStatus,
+  Stage,
+  StageRun,
+  StageTransition,
+  UsageEvent,
+  UsageEventType,
+} from '../types.js';
+
+import {
+  VALID_STAGES,
+  VALID_STATUSES,
+  VALID_VERDICTS,
+  VALID_RUN_STATUSES,
+  VALID_USAGE_EVENT_TYPES,
+  VALID_NOTE_TYPES,
+  VALID_NOTE_TARGETS,
+} from '../types.js';
+
+import { ArtifactStore } from './artifact-store.js';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function nowISO(): string {
+  return new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+}
+
+function newRunId(): string {
+  return randomUUID();
+}
+
+function validateStage(stage: number, label = 'stage'): asserts stage is Stage {
+  if (!Number.isInteger(stage) || !(VALID_STAGES as readonly number[]).includes(stage)) {
+    throw new Error(`${label} must be an integer 1–8, got ${JSON.stringify(stage)}`);
+  }
+}
+
+function validateStatus<T extends string>(value: string, allowed: readonly T[], label: string): asserts value is T {
+  if (!(allowed as readonly string[]).includes(value)) {
+    throw new Error(`Invalid ${label} '${value}', expected one of ${JSON.stringify(allowed)}`);
+  }
+}
+
+function normalizeMetadataJson(metadata: unknown): string | null {
+  if (metadata == null) return null;
+  if (typeof metadata === 'string') return metadata;
+  return JSON.stringify(metadata, Object.keys(metadata as object).sort());
+}
+
+// ── Publisher pass checklist defaults ─────────────────────────────────────────
+
+interface PublisherChecklist {
+  title_final?: number;
+  subtitle_final?: number;
+  body_clean?: number;
+  section_assigned?: number;
+  tags_set?: number;
+  url_slug_set?: number;
+  cover_image_set?: number;
+  paywall_set?: number;
+  publish_datetime?: string | null;
+  email_send?: number;
+  names_verified?: number;
+  numbers_current?: number;
+  no_stale_refs?: number;
+}
+
+// ── Usage event params ───────────────────────────────────────────────────────
+
+interface UsageEventParams {
+  articleId: string;
+  stage?: number | null;
+  surface: string;
+  provider?: string | null;
+  actor?: string | null;
+  eventType?: UsageEventType;
+  modelOrTool?: string | null;
+  modelTier?: string | null;
+  precedenceRank?: number | null;
+  requestCount?: number | null;
+  quantity?: number | null;
+  unit?: string | null;
+  promptTokens?: number | null;
+  outputTokens?: number | null;
+  cachedTokens?: number | null;
+  premiumRequests?: number | null;
+  imageCount?: number | null;
+  costUsdEstimate?: number | null;
+  metadata?: unknown;
+  runId?: string | null;
+  stageRunId?: string | null;
+}
+
+// ── Repository ───────────────────────────────────────────────────────────────
+
+export class Repository {
+  private db: DatabaseSync;
+  public readonly artifacts: ArtifactStore;
+
+  constructor(dbPath: string) {
+    this.db = new DatabaseSync(dbPath);
+    this.db.exec('PRAGMA journal_mode = WAL');
+    this.db.exec('PRAGMA foreign_keys = ON');
+    this.initSchema();
+    this.artifacts = new ArtifactStore(this.db);
+  }
+
+  /** Run schema.sql to create all tables. */
+  private initSchema(): void {
+    const schemaPath = join(__dirname, 'schema.sql');
+    const sql = readFileSync(schemaPath, 'utf-8');
+    this.db.exec(sql);
+  }
+
+  close(): void {
+    this.db.close();
+  }
+
+  // ── Reads ──────────────────────────────────────────────────────────────────
+
+  getArticle(articleId: string): Article | null {
+    const stmt = this.db.prepare('SELECT * FROM articles WHERE id = ?');
+    const row = stmt.get(articleId) as unknown as Article | undefined;
+    return row ?? null;
+  }
+
+  getAllArticles(): Article[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM articles ORDER BY current_stage DESC, updated_at DESC',
+    );
+    return stmt.all() as unknown as Article[];
+  }
+
+  getEditorReviews(articleId: string): EditorReview[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM editor_reviews WHERE article_id = ? ORDER BY review_number DESC',
+    );
+    return stmt.all(articleId) as unknown as EditorReview[];
+  }
+
+  getUsageEvents(articleId: string, limit = 100): UsageEvent[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC LIMIT ?',
+    );
+    return stmt.all(articleId, limit) as unknown as UsageEvent[];
+  }
+
+  getStageRuns(articleId: string, limit = 100): StageRun[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM stage_runs WHERE article_id = ? ORDER BY started_at DESC LIMIT ?',
+    );
+    return stmt.all(articleId, limit) as unknown as StageRun[];
+  }
+
+  getStageTransitions(articleId: string): StageTransition[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM stage_transitions WHERE article_id = ? ORDER BY transitioned_at ASC',
+    );
+    return stmt.all(articleId) as unknown as StageTransition[];
+  }
+
+  listArticles(filters?: { stage?: number; status?: string; limit?: number }): Article[] {
+    let sql = 'SELECT * FROM articles';
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
+
+    if (filters?.stage != null) {
+      conditions.push('current_stage = ?');
+      params.push(filters.stage);
+    }
+    if (filters?.status) {
+      conditions.push('status = ?');
+      params.push(filters.status);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY updated_at DESC';
+
+    if (filters?.limit) {
+      sql += ' LIMIT ?';
+      params.push(filters.limit);
+    }
+
+    const stmt = this.db.prepare(sql);
+    return stmt.all(...params) as unknown as Article[];
+  }
+
+  // ── Draft URL management ───────────────────────────────────────────────────
+
+  getDraftUrl(articleId: string): string | null {
+    const stmt = this.db.prepare(
+      'SELECT substack_draft_url FROM articles WHERE id = ?',
+    );
+    const row = stmt.get(articleId) as { substack_draft_url: string | null } | undefined;
+    return row?.substack_draft_url ?? null;
+  }
+
+  setDraftUrl(articleId: string, draftUrl: string): void {
+    this.assertNotPublished(articleId);
+    const stmt = this.db.prepare(
+      'UPDATE articles SET substack_draft_url = ?, updated_at = ? WHERE id = ?',
+    );
+    stmt.run(draftUrl, nowISO(), articleId);
+  }
+
+  assertNotPublished(articleId: string): void {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+    if (article.current_stage === 8 || article.status === 'published') {
+      throw new Error(
+        `Article '${articleId}' is already published ` +
+        `(stage=${article.current_stage}, status=${article.status}). ` +
+        `Cannot update a published article through the draft-update path.`,
+      );
+    }
+  }
+
+  // ── Article runs ───────────────────────────────────────────────────────────
+
+  startArticleRun(
+    articleId: string,
+    trigger: string,
+    initiatedBy: string,
+    notes: string | null = null,
+    runId?: string,
+    status: RunStatus = 'started',
+  ): string {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+    validateStatus(status, VALID_RUN_STATUSES, 'article run status');
+
+    const id = runId ?? newRunId();
+    const stmt = this.db.prepare(
+      `INSERT INTO article_runs (id, article_id, trigger, initiated_by, status, notes, started_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(id, articleId, trigger, initiatedBy, status, notes, nowISO());
+    return id;
+  }
+
+  finishArticleRun(
+    runId: string,
+    status: RunStatus = 'completed',
+    notes: string | null = null,
+  ): void {
+    validateStatus(status, VALID_RUN_STATUSES, 'article run status');
+    const stmt = this.db.prepare(
+      'UPDATE article_runs SET status = ?, notes = ?, completed_at = ? WHERE id = ?',
+    );
+    stmt.run(status, notes, nowISO(), runId);
+  }
+
+  // ── Stage runs ─────────────────────────────────────────────────────────────
+
+  startStageRun(params: {
+    articleId: string;
+    stage: number;
+    surface: string;
+    actor: string;
+    runId?: string | null;
+    requestedModel?: string | null;
+    requestedModelTier?: string | null;
+    precedenceRank?: number | null;
+    outputBudgetTokens?: number | null;
+    notes?: string | null;
+    stageRunId?: string;
+    status?: RunStatus;
+  }): string {
+    const {
+      articleId, stage, surface, actor,
+      runId = null,
+      requestedModel = null,
+      requestedModelTier = null,
+      precedenceRank = null,
+      outputBudgetTokens = null,
+      notes = null,
+      stageRunId,
+      status = 'started',
+    } = params;
+
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+    validateStage(stage);
+    validateStatus(status, VALID_RUN_STATUSES, 'stage run status');
+
+    if (runId != null) {
+      const runStmt = this.db.prepare('SELECT article_id FROM article_runs WHERE id = ?');
+      const runRow = runStmt.get(runId) as { article_id: string } | undefined;
+      if (runRow == null) {
+        throw new Error(`Article run '${runId}' not found`);
+      }
+      if (runRow.article_id !== articleId) {
+        throw new Error(
+          `Article run '${runId}' belongs to '${runRow.article_id}', not '${articleId}'`,
+        );
+      }
+    }
+
+    const id = stageRunId ?? newRunId();
+    const stmt = this.db.prepare(
+      `INSERT INTO stage_runs
+       (id, run_id, article_id, stage, surface, actor, requested_model,
+        requested_model_tier, precedence_rank, output_budget_tokens, status,
+        notes, started_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(
+      id, runId, articleId, stage, surface, actor, requestedModel,
+      requestedModelTier, precedenceRank, outputBudgetTokens, status,
+      notes, nowISO(),
+    );
+    return id;
+  }
+
+  finishStageRun(
+    stageRunId: string,
+    status: RunStatus = 'completed',
+    notes: string | null = null,
+    artifactPath: string | null = null,
+  ): void {
+    validateStatus(status, VALID_RUN_STATUSES, 'stage run status');
+    const stmt = this.db.prepare(
+      `UPDATE stage_runs
+       SET status = ?, notes = ?, artifact_path = COALESCE(?, artifact_path), completed_at = ?
+       WHERE id = ?`,
+    );
+    stmt.run(status, notes, artifactPath, nowISO(), stageRunId);
+  }
+
+  // ── Usage events ───────────────────────────────────────────────────────────
+
+  private insertUsageEvent(p: UsageEventParams): void {
+    if (!p.surface) {
+      throw new Error('surface is required for usage events');
+    }
+    if (p.stage != null) {
+      validateStage(p.stage);
+    }
+    const eventType = p.eventType ?? 'completed';
+    validateStatus(eventType, VALID_USAGE_EVENT_TYPES, 'usage event type');
+
+    const metadataJson = normalizeMetadataJson(p.metadata);
+    const stmt = this.db.prepare(
+      `INSERT INTO usage_events
+       (run_id, stage_run_id, article_id, stage, surface, provider, actor, event_type,
+        model_or_tool, model_tier, precedence_rank, request_count, quantity, unit,
+        prompt_tokens, output_tokens, cached_tokens, premium_requests, image_count,
+        cost_usd_estimate, metadata_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(
+      p.runId ?? null,
+      p.stageRunId ?? null,
+      p.articleId,
+      p.stage ?? null,
+      p.surface,
+      p.provider ?? null,
+      p.actor ?? null,
+      eventType,
+      p.modelOrTool ?? null,
+      p.modelTier ?? null,
+      p.precedenceRank ?? null,
+      p.requestCount ?? null,
+      p.quantity ?? null,
+      p.unit ?? null,
+      p.promptTokens ?? null,
+      p.outputTokens ?? null,
+      p.cachedTokens ?? null,
+      p.premiumRequests ?? null,
+      p.imageCount ?? null,
+      p.costUsdEstimate ?? null,
+      metadataJson,
+      nowISO(),
+    );
+  }
+
+  recordUsageEvent(params: UsageEventParams): void {
+    const article = this.getArticle(params.articleId);
+    if (article == null) {
+      throw new Error(`Article '${params.articleId}' not found in pipeline.db`);
+    }
+    this.insertUsageEvent(params);
+  }
+
+  // ── Stage transitions ──────────────────────────────────────────────────────
+
+  advanceStage(
+    articleId: string,
+    fromStage: number | null,
+    toStage: number,
+    agent: string,
+    notes: string | null = null,
+    status?: ArticleStatus | null,
+    usageEvent?: Record<string, unknown> | null,
+  ): void {
+    if (fromStage != null) {
+      validateStage(fromStage, 'from_stage');
+    }
+    validateStage(toStage, 'to_stage');
+
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+
+    const dbStage = article.current_stage;
+    if (fromStage != null && dbStage !== fromStage) {
+      throw new Error(
+        `Stage mismatch for '${articleId}': caller expects stage ${fromStage}, ` +
+        `but DB has ${dbStage}. Refusing transition to avoid stale-stage corruption.`,
+      );
+    }
+
+    const now = nowISO();
+
+    const transStmt = this.db.prepare(
+      `INSERT INTO stage_transitions
+       (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    transStmt.run(articleId, fromStage, toStage, agent, notes, now);
+
+    let updateSql = 'UPDATE articles SET current_stage = ?, updated_at = ?';
+    const updateParams: (string | number | null)[] = [toStage, now];
+
+    if (status) {
+      validateStatus(status, VALID_STATUSES, 'status');
+      updateSql += ', status = ?';
+      updateParams.push(status);
+    }
+
+    updateSql += ' WHERE id = ?';
+    updateParams.push(articleId);
+    const updateStmt = this.db.prepare(updateSql);
+    updateStmt.run(...updateParams);
+
+    if (usageEvent != null) {
+      const payload: UsageEventParams = {
+        articleId: (usageEvent['articleId'] as string) ?? articleId,
+        stage: (usageEvent['stage'] as number) ?? toStage,
+        surface: (usageEvent['surface'] as string) ?? 'stage_transition',
+        provider: (usageEvent['provider'] as string) ?? 'local',
+        actor: (usageEvent['actor'] as string) ?? agent,
+        eventType: (usageEvent['eventType'] as UsageEventType) ?? 'stage_transition',
+        metadata: usageEvent['metadata'] ?? null,
+      };
+      this.insertUsageEvent(payload);
+    }
+  }
+
+  // ── Stage regression ───────────────────────────────────────────────────────
+
+  regressStage(
+    articleId: string,
+    fromStage: number,
+    toStage: number,
+    agent: string,
+    reason: string,
+  ): void {
+    if (toStage >= fromStage) {
+      throw new Error(`Cannot regress: target stage ${toStage} must be less than current stage ${fromStage}`);
+    }
+    validateStage(fromStage, 'from_stage');
+    validateStage(toStage, 'to_stage');
+
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found`);
+    }
+    if (article.current_stage !== fromStage) {
+      throw new Error(
+        `Stage mismatch for '${articleId}': caller expects stage ${fromStage}, but DB has ${article.current_stage}`,
+      );
+    }
+
+    const now = nowISO();
+
+    const transStmt = this.db.prepare(
+      `INSERT INTO stage_transitions
+       (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    transStmt.run(articleId, fromStage, toStage, agent, `Regression: ${reason}`, now);
+
+    const updateStmt = this.db.prepare(
+      'UPDATE articles SET current_stage = ?, status = ?, updated_at = ? WHERE id = ?',
+    );
+    updateStmt.run(toStage, 'revision', now, articleId);
+  }
+
+  // ── Artifact path updates ──────────────────────────────────────────────────
+
+  setDiscussionPath(articleId: string, path: string): void {
+    const stmt = this.db.prepare(
+      'UPDATE articles SET discussion_path = ?, updated_at = ? WHERE id = ?',
+    );
+    stmt.run(path, nowISO(), articleId);
+  }
+
+  setArticlePath(articleId: string, path: string): void {
+    const stmt = this.db.prepare(
+      'UPDATE articles SET article_path = ?, updated_at = ? WHERE id = ?',
+    );
+    stmt.run(path, nowISO(), articleId);
+  }
+
+  // ── Editor review ──────────────────────────────────────────────────────────
+
+  recordEditorReview(
+    articleId: string,
+    verdict: EditorVerdict,
+    errors = 0,
+    suggestions = 0,
+    notes = 0,
+    reviewNumber?: number,
+  ): void {
+    validateStatus(verdict, VALID_VERDICTS, 'verdict');
+
+    if (reviewNumber == null) {
+      const maxStmt = this.db.prepare(
+        'SELECT MAX(review_number) as max_rn FROM editor_reviews WHERE article_id = ?',
+      );
+      const row = maxStmt.get(articleId) as { max_rn: number | null } | undefined;
+      reviewNumber = ((row?.max_rn) ?? 0) + 1;
+    }
+
+    const stmt = this.db.prepare(
+      `INSERT INTO editor_reviews
+       (article_id, verdict, error_count, suggestion_count, note_count, review_number, reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(articleId, verdict, errors, suggestions, notes, reviewNumber, nowISO());
+  }
+
+  // ── Publisher pass ─────────────────────────────────────────────────────────
+
+  recordPublisherPass(articleId: string, checklist: PublisherChecklist = {}): void {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+
+    const defaults: Required<PublisherChecklist> = {
+      title_final: 0,
+      subtitle_final: 0,
+      body_clean: 0,
+      section_assigned: 0,
+      tags_set: 0,
+      url_slug_set: 0,
+      cover_image_set: 0,
+      paywall_set: 0,
+      publish_datetime: null,
+      email_send: 1,
+      names_verified: 0,
+      numbers_current: 0,
+      no_stale_refs: 0,
+    };
+    const merged = { ...defaults, ...checklist };
+
+    const stmt = this.db.prepare(
+      `INSERT OR REPLACE INTO publisher_pass
+       (article_id, title_final, subtitle_final, body_clean,
+        section_assigned, tags_set, url_slug_set, cover_image_set,
+        paywall_set, publish_datetime, email_send,
+        names_verified, numbers_current, no_stale_refs)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(
+      articleId,
+      merged.title_final,
+      merged.subtitle_final,
+      merged.body_clean,
+      merged.section_assigned,
+      merged.tags_set,
+      merged.url_slug_set,
+      merged.cover_image_set,
+      merged.paywall_set,
+      merged.publish_datetime,
+      merged.email_send,
+      merged.names_verified,
+      merged.numbers_current,
+      merged.no_stale_refs,
+    );
+
+    // Auto-advance from stage 6 to 7 when publisher pass is recorded
+    if (typeof article.current_stage === 'number' && article.current_stage >= 6 && article.current_stage < 7) {
+      const now = nowISO();
+      const transStmt = this.db.prepare(
+        `INSERT INTO stage_transitions
+         (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      );
+      transStmt.run(articleId, article.current_stage, 7, 'Publisher', 'Publisher pass recorded; ready for dashboard review', now);
+
+      const upStmt = this.db.prepare(
+        'UPDATE articles SET current_stage = ?, updated_at = ? WHERE id = ?',
+      );
+      upStmt.run(7, now, articleId);
+    }
+  }
+
+  getPublisherPass(articleId: string): PublisherPass | null {
+    const stmt = this.db.prepare('SELECT * FROM publisher_pass WHERE article_id = ?');
+    const row = stmt.get(articleId) as unknown as PublisherPass | undefined;
+    return row ?? null;
+  }
+
+  // ── Notes ──────────────────────────────────────────────────────────────────
+
+  recordNote(
+    articleId: string | null,
+    noteType: NoteType,
+    content: string,
+    noteUrl: string | null = null,
+    target: NoteTarget = 'prod',
+    agent: string | null = null,
+    imagePath: string | null = null,
+  ): void {
+    validateStatus(noteType, VALID_NOTE_TYPES, 'note_type');
+    validateStatus(target, VALID_NOTE_TARGETS, 'target');
+
+    if (articleId != null) {
+      const article = this.getArticle(articleId);
+      if (article == null) {
+        throw new Error(`Article '${articleId}' not found in pipeline.db`);
+      }
+    }
+
+    const stmt = this.db.prepare(
+      `INSERT INTO notes
+       (article_id, note_type, content, substack_note_url, target, created_by, image_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(articleId, noteType, content, noteUrl, target, agent, imagePath);
+  }
+
+  getNotesForArticle(articleId: string): Note[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM notes WHERE article_id = ? ORDER BY created_at DESC',
+    );
+    return stmt.all(articleId) as unknown as Note[];
+  }
+
+  getAllNotes(): Note[] {
+    const stmt = this.db.prepare('SELECT * FROM notes ORDER BY created_at DESC');
+    return stmt.all() as unknown as Note[];
+  }
+
+  // ── Publish confirmation ───────────────────────────────────────────────────
+
+  recordPublish(articleId: string, substackUrl: string, agent = 'Joe'): void {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found`);
+    }
+
+    const fromStage = typeof article.current_stage === 'number' ? article.current_stage : null;
+    const now = nowISO();
+
+    const transStmt = this.db.prepare(
+      `INSERT INTO stage_transitions
+       (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    transStmt.run(articleId, fromStage, 8, agent, `Published at ${substackUrl}`, now);
+
+    const upStmt = this.db.prepare(
+      `UPDATE articles SET current_stage = 8, status = 'published',
+       substack_url = ?, published_at = ?, updated_at = ? WHERE id = ?`,
+    );
+    upStmt.run(substackUrl, now, now, articleId);
+  }
+
+  // ── Repair: coerce string stage to numeric ─────────────────────────────────
+
+  repairStringStage(articleId: string, correctNumericStage: number, agent = 'pipeline_state'): void {
+    validateStage(correctNumericStage, 'correct_numeric_stage');
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found`);
+    }
+
+    const oldVal = article.current_stage;
+    const now = nowISO();
+
+    const transStmt = this.db.prepare(
+      `INSERT INTO stage_transitions
+       (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    transStmt.run(articleId, null, correctNumericStage, agent, `Repaired string stage '${oldVal}' → numeric ${correctNumericStage}`, now);
+
+    const upStmt = this.db.prepare(
+      'UPDATE articles SET current_stage = ?, updated_at = ? WHERE id = ?',
+    );
+    upStmt.run(correctNumericStage, now, articleId);
+  }
+
+  // ── Backfill: create missing article rows ──────────────────────────────────
+
+  backfillArticle(
+    articleId: string,
+    title: string,
+    stage: number = 1,
+    status: ArticleStatus = 'proposed',
+    agent = 'pipeline_state',
+    discussionPath: string | null = null,
+    articlePath: string | null = null,
+  ): void {
+    validateStage(stage, 'stage');
+    validateStatus(status, VALID_STATUSES, 'status');
+
+    const existing = this.getArticle(articleId);
+    if (existing != null) {
+      throw new Error(`Article '${articleId}' already exists in DB`);
+    }
+
+    const now = nowISO();
+
+    const insertStmt = this.db.prepare(
+      `INSERT INTO articles
+       (id, title, status, current_stage, discussion_path, article_path, created_at, updated_at, depth_level, time_sensitive)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    insertStmt.run(articleId, title, status, stage, discussionPath, articlePath, now, now, 2, 0);
+
+    const transStmt = this.db.prepare(
+      `INSERT INTO stage_transitions
+       (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    transStmt.run(articleId, null, stage, agent, `Backfilled missing DB row at stage ${stage}`, now);
+  }
+
+  // ── Create article (v2 — new idea from dashboard) ──────────────────────────
+
+  createArticle(params: {
+    id: string;
+    title: string;
+    primary_team?: string;
+    league?: string;
+    depth_level?: number;
+  }): Article {
+    const {
+      id,
+      title,
+      primary_team = null,
+      league = 'nfl',
+      depth_level = 2,
+    } = params;
+
+    const existing = this.getArticle(id);
+    if (existing != null) {
+      throw new Error(`Article '${id}' already exists`);
+    }
+
+    const now = nowISO();
+    const teams = primary_team ? JSON.stringify([primary_team]) : null;
+
+    const stmt = this.db.prepare(
+      `INSERT INTO articles
+       (id, title, primary_team, teams, league, status, current_stage,
+        created_at, updated_at, depth_level, time_sensitive)
+       VALUES (?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, 0)`,
+    );
+    stmt.run(id, title, primary_team, teams, league, now, now, depth_level);
+
+    const transStmt = this.db.prepare(
+      `INSERT INTO stage_transitions
+       (article_id, from_stage, to_stage, agent, notes, transitioned_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    transStmt.run(id, null, 1, 'dashboard', 'New idea created', now);
+
+    return this.getArticle(id)!;
+  }
+}

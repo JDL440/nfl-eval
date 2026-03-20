@@ -1,0 +1,403 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { Repository } from '../../src/db/repository.js';
+import { createApp } from '../../src/dashboard/server.js';
+import { proseMirrorToHtml } from '../../src/dashboard/views/publish.js';
+import { markdownToProseMirror } from '../../src/services/prosemirror.js';
+import type { AppConfig } from '../../src/config/index.js';
+import type { SubstackService, SubstackDraft, SubstackPost } from '../../src/services/substack.js';
+
+function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
+  return {
+    dataDir: '/tmp/test',
+    league: 'nfl',
+    leagueConfig: {
+      name: 'NFL Lab',
+      panelName: 'Test Panel',
+      dataSource: 'nflverse',
+      positions: [],
+      substackConfig: {
+        labName: 'NFL Lab',
+        subscribeCaption: 'Test',
+        footerPatterns: [],
+      },
+    },
+    dbPath: '/tmp/test/pipeline.db',
+    articlesDir: '/tmp/test/articles',
+    imagesDir: '/tmp/test/images',
+    chartersDir: '/tmp/test/charters',
+    skillsDir: '/tmp/test/skills',
+    memoryDbPath: '/tmp/test/memory.db',
+    logsDir: '/tmp/test/logs',
+    port: 3456,
+    env: 'development',
+    ...overrides,
+  };
+}
+
+function createMockSubstackService(overrides?: Partial<SubstackService>): SubstackService {
+  return {
+    createDraft: vi.fn().mockResolvedValue({
+      id: '12345',
+      editUrl: 'https://test.substack.com/publish/post/12345',
+      slug: 'test-article',
+    } satisfies SubstackDraft),
+    publishDraft: vi.fn().mockResolvedValue({
+      id: '12345',
+      slug: 'test-article',
+      canonicalUrl: 'https://test.substack.com/p/test-article',
+      isPublished: true,
+    } satisfies SubstackPost),
+    updateDraft: vi.fn().mockResolvedValue({
+      id: '12345',
+      editUrl: 'https://test.substack.com/publish/post/12345',
+      slug: 'test-article',
+    }),
+    uploadImage: vi.fn().mockResolvedValue('https://cdn.substack.com/image.png'),
+    createNote: vi.fn().mockResolvedValue({ id: '1', url: 'https://test.substack.com/note/1' }),
+    getDraft: vi.fn().mockResolvedValue(null),
+    resolveBaseUrl: vi.fn().mockReturnValue('https://test.substack.com'),
+    ...overrides,
+  } as unknown as SubstackService;
+}
+
+/** Advance an article from stage 1 to `targetStage` by walking each transition. */
+function advanceToStage(repo: Repository, id: string, targetStage: number): void {
+  for (let s = 2; s <= targetStage; s++) {
+    repo.advanceStage(id, s - 1, s, 'test');
+  }
+}
+
+/** Store a test article draft in the DB artifact store. */
+function writeArticleDraft(repo: Repository, id: string, markdown: string): void {
+  repo.artifacts.put(id, 'draft.md', markdown);
+}
+
+describe('Publish Workflow', () => {
+  let repo: Repository;
+  let tempDir: string;
+  let articlesDir: string;
+  let config: AppConfig;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'nfl-pub-test-'));
+    articlesDir = join(tempDir, 'articles');
+    mkdirSync(articlesDir, { recursive: true });
+    const dbPath = join(tempDir, 'test.db');
+    repo = new Repository(dbPath);
+    config = makeTestConfig({ dbPath, articlesDir });
+  });
+
+  afterEach(() => {
+    repo.close();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  // ── proseMirrorToHtml ──────────────────────────────────────────────────────
+
+  describe('proseMirrorToHtml', () => {
+    it('renders paragraphs and headings', () => {
+      const doc = markdownToProseMirror('# Hello\n\nA paragraph.');
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('<h1>');
+      expect(html).toContain('Hello');
+      expect(html).toContain('<p>');
+      expect(html).toContain('A paragraph.');
+    });
+
+    it('renders bold and italic marks', () => {
+      const doc = markdownToProseMirror('This is **bold** and *italic*.');
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('<strong>');
+      expect(html).toContain('bold');
+      expect(html).toContain('<em>');
+      expect(html).toContain('italic');
+    });
+
+    it('renders horizontal rules', () => {
+      const doc = markdownToProseMirror('Text\n\n---\n\nMore text');
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('<hr>');
+    });
+  });
+
+  // ── GET /articles/:id/publish (preview page) ──────────────────────────────
+
+  describe('GET /articles/:id/publish', () => {
+    it('renders publish preview page with article content', async () => {
+      repo.createArticle({ id: 'pub-preview', title: 'Publish Preview Test' });
+      advanceToStage(repo, 'pub-preview', 7);
+      writeArticleDraft(repo, 'pub-preview', '# Test Article\n\nSome content here.');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/articles/pub-preview/publish');
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Publish Preview Test');
+      expect(html).toContain('Test Article');
+      expect(html).toContain('Some content here');
+      expect(html).toContain('Article Preview');
+      expect(html).toContain('Create Draft');
+    });
+
+    it('returns 404 for missing article', async () => {
+      const app = createApp(repo, config);
+      const res = await app.request('/articles/nonexistent/publish');
+      expect(res.status).toBe(404);
+    });
+
+    it('shows empty state when no draft exists', async () => {
+      repo.createArticle({ id: 'no-md', title: 'No Markdown' });
+      advanceToStage(repo, 'no-md', 7);
+
+      const app = createApp(repo, config);
+      const res = await app.request('/articles/no-md/publish');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('No article draft found');
+    });
+
+    it('displays publisher checklist when pass exists', async () => {
+      repo.createArticle({ id: 'with-pass', title: 'With Pass' });
+      advanceToStage(repo, 'with-pass', 7);
+      repo.recordPublisherPass('with-pass', {
+        title_final: 1,
+        subtitle_final: 1,
+        body_clean: 1,
+      });
+      writeArticleDraft(repo, 'with-pass', '# Article\n\nContent');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/articles/with-pass/publish');
+      const html = await res.text();
+      expect(html).toContain('Publisher Checklist');
+      expect(html).toContain('Title finalized');
+      expect(html).toContain('✅');
+      expect(html).toContain('⬜');
+    });
+  });
+
+  // ── GET /htmx/articles/:id/preview (preview partial) ──────────────────────
+
+  describe('GET /htmx/articles/:id/preview', () => {
+    it('returns HTML preview fragment', async () => {
+      repo.createArticle({ id: 'htmx-prev', title: 'HTMX Preview' });
+      writeArticleDraft(repo, 'htmx-prev', '## Section\n\nBody text.');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/htmx/articles/htmx-prev/preview');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Section');
+      expect(html).toContain('Body text');
+      expect(html).not.toContain('<!DOCTYPE html>');
+    });
+
+    it('returns 404 for missing article', async () => {
+      const app = createApp(repo, config);
+      const res = await app.request('/htmx/articles/missing/preview');
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── POST /api/articles/:id/draft (create Substack draft) ──────────────────
+
+  describe('POST /api/articles/:id/draft', () => {
+    it('converts markdown via ProseMirror and creates draft', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'draft-test', title: 'Draft Test' });
+      advanceToStage(repo, 'draft-test', 7);
+      writeArticleDraft(repo, 'draft-test', '# Draft\n\nContent here.');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/draft-test/draft', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as { success: boolean; draftUrl: string; draftId: string };
+      expect(body.success).toBe(true);
+      expect(body.draftUrl).toContain('substack.com');
+      expect(body.draftId).toBe('12345');
+
+      expect(mockService.createDraft).toHaveBeenCalledOnce();
+      const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.title).toBe('Draft Test');
+
+      // Draft URL should be stored on the article
+      const updated = repo.getArticle('draft-test');
+      expect(updated?.substack_draft_url).toBe('https://test.substack.com/publish/post/12345');
+    });
+
+    it('returns error when no markdown found', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'no-draft-md', title: 'No MD' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/no-draft-md/draft', { method: 'POST' });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('No article draft found');
+    });
+
+    it('returns error when SubstackService not configured', async () => {
+      repo.createArticle({ id: 'no-svc', title: 'No Service' });
+      writeArticleDraft(repo, 'no-svc', '# Draft\n\nContent.');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/api/articles/no-svc/draft', { method: 'POST' });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('not configured');
+    });
+
+    it('returns error when SubstackService throws', async () => {
+      const mockService = createMockSubstackService({
+        createDraft: vi.fn().mockRejectedValue(new Error('API rate limit')),
+      } as unknown as Partial<SubstackService>);
+      repo.createArticle({ id: 'api-fail', title: 'API Fail' });
+      writeArticleDraft(repo, 'api-fail', '# Draft\n\nContent.');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/api-fail/draft', { method: 'POST' });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('API rate limit');
+    });
+
+    it('returns htmx HTML when hx-request header is present', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'htmx-draft', title: 'HTMX Draft' });
+      writeArticleDraft(repo, 'htmx-draft', '# Draft\n\nContent.');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/htmx-draft/draft', {
+        method: 'POST',
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Draft created');
+      expect(html).toContain('substack.com');
+    });
+  });
+
+  // ── POST /api/articles/:id/publish (publish draft) ─────────────────────────
+
+  describe('POST /api/articles/:id/publish', () => {
+    it('publishes existing draft and advances to Stage 8', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'pub-test', title: 'Publish Test' });
+      advanceToStage(repo, 'pub-test', 7);
+      repo.setDraftUrl('pub-test', 'https://test.substack.com/publish/post/12345');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/pub-test/publish', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as { success: boolean; publishedUrl: string };
+      expect(body.success).toBe(true);
+      expect(body.publishedUrl).toBe('https://test.substack.com/p/test-article');
+
+      expect(mockService.publishDraft).toHaveBeenCalledWith({ draftId: '12345' });
+
+      // Article should be at Stage 8 with substack_url set
+      const updated = repo.getArticle('pub-test');
+      expect(updated?.current_stage).toBe(8);
+      expect(updated?.substack_url).toBe('https://test.substack.com/p/test-article');
+      expect(updated?.status).toBe('published');
+      expect(updated?.published_at).toBeTruthy();
+    });
+
+    it('returns error when no draft exists', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'no-draft', title: 'No Draft' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/no-draft/publish', { method: 'POST' });
+      expect(res.status).toBe(400);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('No draft exists');
+    });
+
+    it('returns error when SubstackService not configured', async () => {
+      repo.createArticle({ id: 'no-svc-pub', title: 'No Service Pub' });
+      repo.setDraftUrl('no-svc-pub', 'https://test.substack.com/publish/post/999');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/api/articles/no-svc-pub/publish', { method: 'POST' });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('not configured');
+    });
+
+    it('returns error when publish API fails', async () => {
+      const mockService = createMockSubstackService({
+        publishDraft: vi.fn().mockRejectedValue(new Error('Substack 503')),
+      } as unknown as Partial<SubstackService>);
+      repo.createArticle({ id: 'pub-fail', title: 'Pub Fail' });
+      repo.setDraftUrl('pub-fail', 'https://test.substack.com/publish/post/999');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/pub-fail/publish', { method: 'POST' });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('Substack 503');
+    });
+
+    it('returns htmx HTML for published result', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'htmx-pub', title: 'HTMX Pub' });
+      advanceToStage(repo, 'htmx-pub', 7);
+      repo.setDraftUrl('htmx-pub', 'https://test.substack.com/publish/post/12345');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/htmx-pub/publish', {
+        method: 'POST',
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Published!');
+      expect(html).toContain('substack.com');
+    });
+
+    it('updates article with substack_url on publish', async () => {
+      const mockService = createMockSubstackService({
+        publishDraft: vi.fn().mockResolvedValue({
+          id: '99',
+          slug: 'my-article',
+          canonicalUrl: 'https://test.substack.com/p/my-article',
+          isPublished: true,
+        }),
+      } as unknown as Partial<SubstackService>);
+
+      repo.createArticle({ id: 'url-check', title: 'URL Check' });
+      advanceToStage(repo, 'url-check', 7);
+      repo.setDraftUrl('url-check', 'https://test.substack.com/publish/post/99');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      await app.request('/api/articles/url-check/publish', { method: 'POST' });
+
+      const article = repo.getArticle('url-check');
+      expect(article?.substack_url).toBe('https://test.substack.com/p/my-article');
+      expect(article?.current_stage).toBe(8);
+    });
+
+    it('returns 404 for missing article', async () => {
+      const mockService = createMockSubstackService();
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/ghost/publish', { method: 'POST' });
+      expect(res.status).toBe(404);
+    });
+  });
+});

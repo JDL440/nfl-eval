@@ -1,0 +1,271 @@
+/**
+ * publish.ts — Publish preview and result views for the editorial workstation.
+ *
+ * Renders:
+ *   - Publish preview: article content, publisher checklist, draft/publish buttons
+ *   - Publish result: success/failure after draft creation or publishing
+ */
+
+import { renderLayout, escapeHtml, formatDate } from './layout.js';
+import type { Article, PublisherPass } from '../../types.js';
+import type { ProseMirrorNode, ProseMirrorDoc } from '../../services/prosemirror.js';
+import type { AppConfig } from '../../config/index.js';
+
+// ── ProseMirror JSON → HTML renderer ─────────────────────────────────────────
+
+function renderMarks(node: ProseMirrorNode): string {
+  let text = escapeHtml(node.text ?? '');
+  if (!node.marks) return text;
+
+  for (const mark of node.marks) {
+    switch (mark.type) {
+      case 'strong':
+      case 'bold':
+        text = `<strong>${text}</strong>`;
+        break;
+      case 'em':
+      case 'italic':
+        text = `<em>${text}</em>`;
+        break;
+      case 'code':
+        text = `<code>${text}</code>`;
+        break;
+      case 'link':
+        text = `<a href="${escapeHtml(String(mark.attrs?.href ?? ''))}" target="_blank">${text}</a>`;
+        break;
+    }
+  }
+  return text;
+}
+
+function renderProseMirrorNode(node: ProseMirrorNode): string {
+  if (node.type === 'text') return renderMarks(node);
+
+  const children = (node.content ?? []).map(renderProseMirrorNode).join('');
+
+  switch (node.type) {
+    case 'paragraph':
+      return `<p>${children || '&nbsp;'}</p>`;
+    case 'heading': {
+      const level = Math.min(Math.max(Number(node.attrs?.level) || 2, 1), 6);
+      return `<h${level}>${children}</h${level}>`;
+    }
+    case 'blockquote':
+      return `<blockquote>${children}</blockquote>`;
+    case 'bullet_list':
+      return `<ul>${children}</ul>`;
+    case 'ordered_list':
+      return `<ol>${children}</ol>`;
+    case 'list_item':
+      return `<li>${children}</li>`;
+    case 'code_block':
+      return `<pre><code>${children}</code></pre>`;
+    case 'horizontal_rule':
+      return '<hr>';
+    case 'hard_break':
+      return '<br>';
+    case 'captionedImage': {
+      const img = node.content?.find(n => n.type === 'image2');
+      const caption = node.content?.find(n => n.type === 'caption');
+      const src = String(img?.attrs?.src ?? '');
+      const alt = String(img?.attrs?.alt ?? '');
+      const captionHtml = caption?.content?.map(renderProseMirrorNode).join('') ?? '';
+      return `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">${captionHtml ? `<figcaption>${captionHtml}</figcaption>` : ''}</figure>`;
+    }
+    case 'image2': {
+      const src = String(node.attrs?.src ?? '');
+      const alt = String(node.attrs?.alt ?? '');
+      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">`;
+    }
+    case 'caption':
+      return children;
+    default:
+      return children;
+  }
+}
+
+export function proseMirrorToHtml(doc: ProseMirrorDoc): string {
+  return (doc.content ?? []).map(renderProseMirrorNode).join('\n');
+}
+
+// ── Publisher checklist items ─────────────────────────────────────────────────
+
+const CHECKLIST_ITEMS: { key: keyof PublisherPass; label: string }[] = [
+  { key: 'title_final', label: 'Title finalized' },
+  { key: 'subtitle_final', label: 'Subtitle finalized' },
+  { key: 'body_clean', label: 'Body clean' },
+  { key: 'section_assigned', label: 'Section assigned' },
+  { key: 'tags_set', label: 'Tags set' },
+  { key: 'url_slug_set', label: 'URL slug set' },
+  { key: 'cover_image_set', label: 'Cover image set' },
+  { key: 'paywall_set', label: 'Paywall set' },
+  { key: 'email_send', label: 'Email send configured' },
+  { key: 'names_verified', label: 'Names verified' },
+  { key: 'numbers_current', label: 'Numbers current' },
+  { key: 'no_stale_refs', label: 'No stale references' },
+  { key: 'publish_datetime', label: 'Publish date/time set' },
+];
+
+// ── Publish preview page ─────────────────────────────────────────────────────
+
+export interface PublishPreviewData {
+  config: AppConfig;
+  article: Article;
+  htmlPreview: string;
+  publisherPass: PublisherPass | null;
+}
+
+export function renderPublishPreview(data: PublishPreviewData): string {
+  const { config, article, htmlPreview, publisherPass } = data;
+
+  const hasDraft = !!article.substack_draft_url;
+  const draftId = hasDraft ? extractDraftId(article.substack_draft_url!) : null;
+
+  const checklist = publisherPass ? renderChecklist(publisherPass) : '';
+  const allPassed = publisherPass ? checkAllPassed(publisherPass) : false;
+
+  const content = `
+    <div class="article-detail">
+      <div class="detail-header">
+        <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article Detail</a>
+        <h1>Publish: ${escapeHtml(article.title)}</h1>
+        ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
+        <div class="detail-meta">
+          ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
+          <span class="badge badge-stage badge-stage-${article.current_stage}">
+            Stage ${article.current_stage}
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-main">
+          <section class="detail-section">
+            <h2>Article Preview</h2>
+            <div class="article-preview" id="article-preview"
+                 hx-get="/htmx/articles/${escapeHtml(article.id)}/preview"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+              ${htmlPreview}
+            </div>
+          </section>
+        </div>
+
+        <div class="detail-sidebar">
+          ${checklist}
+
+          <section class="detail-section">
+            <h2>Publish Actions</h2>
+            <div id="publish-actions" class="action-bar" style="flex-direction:column;gap:0.5rem;">
+              ${hasDraft
+                ? `<p class="status-info">Draft created: <a href="${escapeHtml(article.substack_draft_url!)}" target="_blank">View on Substack ↗</a></p>
+                   <button class="btn btn-primary btn-publish"
+                     hx-post="/api/articles/${escapeHtml(article.id)}/publish"
+                     hx-target="#publish-result"
+                     hx-swap="innerHTML"
+                     ${allPassed ? '' : 'disabled title="Complete all publisher checks first"'}>
+                     Publish to Substack
+                   </button>`
+                : `<button class="btn btn-secondary"
+                     hx-post="/api/articles/${escapeHtml(article.id)}/draft"
+                     hx-target="#publish-actions"
+                     hx-swap="innerHTML">
+                     Create Draft
+                   </button>`}
+            </div>
+            <div id="publish-result"></div>
+          </section>
+        </div>
+      </div>
+    </div>`;
+
+  return renderLayout(`Publish — ${article.title}`, content, config.leagueConfig.name);
+}
+
+// ── Publish result (htmx partial) ────────────────────────────────────────────
+
+export interface PublishResultData {
+  article: Article;
+  success: boolean;
+  draftUrl?: string;
+  publishedUrl?: string;
+  error?: string;
+}
+
+export function renderPublishResult(data: PublishResultData): string {
+  const { article, success, draftUrl, publishedUrl, error } = data;
+
+  if (!success) {
+    return `
+      <div class="alert alert-error">
+        <strong>Error:</strong> ${escapeHtml(error ?? 'Unknown error')}
+      </div>`;
+  }
+
+  if (publishedUrl) {
+    return `
+      <div class="alert alert-success">
+        <strong>Published!</strong> Article is live on Substack.
+        <a href="${escapeHtml(publishedUrl)}" target="_blank">View article ↗</a>
+      </div>`;
+  }
+
+  if (draftUrl) {
+    return `
+      <p class="status-info">Draft created: <a href="${escapeHtml(draftUrl)}" target="_blank">View on Substack ↗</a></p>
+      <button class="btn btn-primary btn-publish"
+        hx-post="/api/articles/${escapeHtml(article.id)}/publish"
+        hx-target="#publish-result"
+        hx-swap="innerHTML">
+        Publish to Substack
+      </button>`;
+  }
+
+  return `<div class="alert alert-success"><strong>Success</strong></div>`;
+}
+
+// ── Checklist renderer ───────────────────────────────────────────────────────
+
+function renderChecklist(pass: PublisherPass): string {
+  const items = CHECKLIST_ITEMS.map(({ key, label }) => {
+    const val = (pass as unknown as Record<string, unknown>)[key];
+    const checked = key === 'publish_datetime' ? val != null : val === 1;
+    return { label, checked };
+  });
+
+  const done = items.filter(i => i.checked).length;
+
+  return `
+    <section class="detail-section">
+      <h2>Publisher Checklist (${done}/${items.length})</h2>
+      <div class="checklist">
+        ${items.map(i => `
+          <div class="checklist-item ${i.checked ? 'checked' : ''}">
+            <span class="check-icon">${i.checked ? '✅' : '⬜'}</span>
+            <span class="check-label">${escapeHtml(i.label)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </section>`;
+}
+
+function checkAllPassed(pass: PublisherPass): boolean {
+  for (const { key } of CHECKLIST_ITEMS) {
+    const val = (pass as unknown as Record<string, unknown>)[key];
+    if (key === 'publish_datetime') {
+      if (val == null) return false;
+    } else {
+      if (val !== 1) return false;
+    }
+  }
+  return true;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function extractDraftId(draftUrl: string): string | null {
+  const match = draftUrl.match(/\/post\/(\d+)/);
+  return match ? match[1] : null;
+}
+
+export { extractDraftId };
