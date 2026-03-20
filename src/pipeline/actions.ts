@@ -48,6 +48,21 @@ function writeArtifact(repo: Repository, articleId: string, filename: string, co
   repo.artifacts.put(articleId, filename, content);
 }
 
+/** Save agent result: main artifact + separate thinking trace if present. */
+function writeAgentResult(
+  repo: Repository,
+  articleId: string,
+  filename: string,
+  result: { content: string; thinking: string | null; model: string; agentName: string },
+): void {
+  writeArtifact(repo, articleId, filename, result.content);
+  if (result.thinking) {
+    const thinkingName = filename.replace(/\.md$/, '.thinking.md');
+    const header = `# Thinking Trace\n\n**Agent:** ${result.agentName}  \n**Model:** ${result.model}  \n**Artifact:** ${filename}\n\n---\n\n`;
+    writeArtifact(repo, articleId, thinkingName, header + result.thinking);
+  }
+}
+
 // ── Configurable upstream context ───────────────────────────────────────────
 
 /**
@@ -205,7 +220,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
       },
     });
 
-    writeArtifact(ctx.repo, articleId, 'discussion-prompt.md', result.content);
+    writeAgentResult(ctx.repo, articleId, 'discussion-prompt.md', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -256,7 +271,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       },
     });
 
-    writeArtifact(ctx.repo, articleId, 'panel-composition.md', result.content);
+    writeAgentResult(ctx.repo, articleId, 'panel-composition.md', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -289,7 +304,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       },
     });
 
-    writeArtifact(ctx.repo, articleId, 'discussion-summary.md', result.content);
+    writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -321,7 +336,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       },
     });
 
-    writeArtifact(ctx.repo, articleId, 'draft.md', result.content);
+    writeAgentResult(ctx.repo, articleId, 'draft.md', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -353,7 +368,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       },
     });
 
-    writeArtifact(ctx.repo, articleId, 'editor-review.md', result.content);
+    writeAgentResult(ctx.repo, articleId, 'editor-review.md', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -385,7 +400,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
       },
     });
 
-    writeArtifact(ctx.repo, articleId, 'publisher-pass.md', result.content);
+    writeAgentResult(ctx.repo, articleId, 'publisher-pass.md', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {

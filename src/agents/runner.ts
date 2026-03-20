@@ -55,20 +55,34 @@ const AGENT_STAGE_KEY: Record<string, string> = {
   'scribe': 'scribe',
 };
 
-/** Strip thinking/reasoning tokens from LLM output before storing artifacts. */
-function stripThinkingTokens(content: string): string {
+/** Separate thinking/reasoning tokens from LLM output. */
+function separateThinking(content: string): { thinking: string | null; output: string } {
+  const thinkParts: string[] = [];
+
   // Matched pairs: <think>...</think>, <thinking>...</thinking>, <reasoning>...</reasoning>
-  let result = content.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, '');
+  let result = content.replace(/<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => {
+    thinkParts.push(inner.trim());
+    return '';
+  });
+
   // Qwen-style: no opening tag, everything before </think>
-  const closeIdx = result.indexOf('</think>');
-  if (closeIdx >= 0) {
-    result = result.slice(closeIdx + '</think>'.length);
+  if (thinkParts.length === 0) {
+    const closeIdx = result.indexOf('</think>');
+    if (closeIdx >= 0) {
+      thinkParts.push(result.slice(0, closeIdx).trim());
+      result = result.slice(closeIdx + '</think>'.length);
+    }
   }
-  return result.trim();
+
+  return {
+    thinking: thinkParts.length > 0 ? thinkParts.join('\n\n') : null,
+    output: result.trim() || content.trim(),
+  };
 }
 
 export interface AgentRunResult {
   content: string;
+  thinking: string | null;
   model: string;
   provider: string;
   agentName: string;
@@ -366,8 +380,8 @@ export class AgentRunner {
       taskFamily: model || stageKey ? undefined : 'deep_reasoning',
     });
 
-    // 8. Strip thinking tokens from response (Qwen, DeepSeek, etc.)
-    const cleanContent = stripThinkingTokens(response.content);
+    // 8. Separate thinking tokens from output (Qwen, DeepSeek, etc.)
+    const { thinking, output: cleanContent } = separateThinking(response.content);
 
     // 9. Store learning memory
     const learningContent = articleContext
@@ -381,9 +395,10 @@ export class AgentRunner {
       relevanceScore: 0.8,
     });
 
-    // 10. Return result
+    // 10. Return result — thinking stored separately so callers can save it as a debug artifact
     return {
       content: cleanContent,
+      thinking,
       model: response.model,
       provider: response.provider,
       agentName,

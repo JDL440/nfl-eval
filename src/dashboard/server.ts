@@ -185,6 +185,7 @@ export function createApp(
         advanceCheck,
         usageEvents: repo.getUsageEvents(id),
         stageRuns: repo.getStageRuns(id),
+        artifactNames: repo.artifacts.list(id).map(a => a.name),
         flashMessage,
         errorMessage,
         autoAdvanceActive,
@@ -257,6 +258,9 @@ export function createApp(
 
       let ideaContent: string;
       let title: string;
+      let ideaThinking: string | null = null;
+      let ideaModel = '';
+      let ideaAgent = '';
 
       if (actionContext) {
         // Build team context for the task
@@ -292,6 +296,9 @@ export function createApp(
 
         ideaContent = result.content;
         title = extractTitleFromIdea(ideaContent);
+        ideaThinking = result.thinking;
+        ideaModel = result.model;
+        ideaAgent = result.agentName;
       } else {
         // Fallback: no LLM available — use raw prompt
         const generated = generateTitleAndSlug(prompt);
@@ -317,6 +324,10 @@ export function createApp(
       });
 
       repo.artifacts.put(slug, 'idea.md', ideaContent);
+      if (ideaThinking) {
+        const header = `# Thinking Trace\n\n**Agent:** ${ideaAgent}  \n**Model:** ${ideaModel}  \n**Artifact:** idea.md\n\n---\n\n`;
+        repo.artifacts.put(slug, 'idea.thinking.md', header + ideaThinking);
+      }
 
       bus.emit({ type: 'article_created', articleId: slug, data: { title }, timestamp: new Date().toISOString() });
 
@@ -543,8 +554,10 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.html(renderArtifactContent(name, null), 404);
 
-    // Validate artifact name
-    if (!(ARTIFACT_FILES as readonly string[]).includes(name)) {
+    // Allow pipeline artifacts and their thinking traces
+    const isThinking = name.endsWith('.thinking.md');
+    const baseName = isThinking ? name.replace('.thinking.md', '.md') : name;
+    if (!(ARTIFACT_FILES as readonly string[]).includes(baseName)) {
       return c.html(renderArtifactContent(name, null), 400);
     }
 

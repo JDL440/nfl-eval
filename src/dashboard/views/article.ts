@@ -39,13 +39,14 @@ export interface ArticleDetailData {
   advanceCheck?: AdvanceCheck;
   usageEvents?: UsageEvent[];
   stageRuns?: StageRun[];
+  artifactNames?: string[];
   flashMessage?: string;
   errorMessage?: string;
   autoAdvanceActive?: boolean;
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, flashMessage, errorMessage, autoAdvanceActive } = data;
+  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive } = data;
 
   let flashBanner = '';
   if (autoAdvanceActive && article.current_stage < 7) {
@@ -93,7 +94,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
       <div class="detail-grid">
         <div class="detail-main">
           ${renderActionPanel(article, advanceCheck, stageRuns)}
-          ${renderArtifactTabs(article)}
+          ${renderArtifactTabs(article, artifactNames)}
           ${reviews.length > 0 ? renderEditorReviews(reviews) : ''}
           ${publisherPass ? renderPublisherChecklist(publisherPass) : ''}
         </div>
@@ -141,22 +142,36 @@ function renderStageTimeline(currentStage: Stage, transitions: StageTransition[]
 
 // ── Artifact Tabs ────────────────────────────────────────────────────────────
 
-function renderArtifactTabs(article: Article): string {
+function renderArtifactTabs(article: Article, artifactNames?: string[]): string {
+  const thinkingFiles = new Set((artifactNames ?? []).filter(n => n.endsWith('.thinking.md')));
+
   return `
     <section class="detail-section">
       <h2>Artifacts</h2>
       <div class="artifact-tabs">
         <div class="tab-bar" role="tablist">
-          ${ARTIFACT_FILES.map((name, i) => `
-            <button class="tab-btn ${i === 0 ? 'active' : ''}" role="tab"
-              hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(name)}"
-              hx-target="#artifact-content-${escapeHtml(article.id)}"
-              hx-swap="innerHTML"
-              data-tab="${escapeHtml(name)}"
-              onclick="this.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">
-              ${escapeHtml(name.replace('.md', ''))}
-            </button>
-          `).join('')}
+          ${ARTIFACT_FILES.map((name, i) => {
+            const thinkName = name.replace('.md', '.thinking.md');
+            const hasThinking = thinkingFiles.has(thinkName);
+            return `
+              <button class="tab-btn ${i === 0 ? 'active' : ''}" role="tab"
+                hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(name)}"
+                hx-target="#artifact-content-${escapeHtml(article.id)}"
+                hx-swap="innerHTML"
+                data-tab="${escapeHtml(name)}"
+                onclick="this.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">
+                ${escapeHtml(name.replace('.md', ''))}
+              </button>
+              ${hasThinking ? `
+              <button class="tab-btn tab-btn-thinking" role="tab"
+                hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(thinkName)}"
+                hx-target="#artifact-content-${escapeHtml(article.id)}"
+                hx-swap="innerHTML"
+                data-tab="${escapeHtml(thinkName)}"
+                onclick="this.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')"
+                title="View thinking trace">💭</button>` : ''}
+            `;
+          }).join('')}
         </div>
         <div class="tab-content" id="artifact-content-${escapeHtml(article.id)}"
           hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(ARTIFACT_FILES[0])}"

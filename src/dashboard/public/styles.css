@@ -633,6 +633,14 @@ a:hover { text-decoration: underline; }
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
 }
+.tab-btn-thinking {
+  padding: 6px 6px;
+  font-size: 0.7rem;
+  opacity: 0.55;
+  margin-left: -8px;
+}
+.tab-btn-thinking:hover { opacity: 0.9; }
+.tab-btn-thinking.active { opacity: 1; }
 .tab-content {
   padding: 0.75rem 0;
   min-height: 80px;
@@ -946,7 +954,7 @@ a:hover { text-decoration: underline; }
   margin-bottom: 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: var(--color-bg-secondary, #f8f9fa);
+  background: var(--color-surface);
   overflow: hidden;
 }
 .thinking-block summary {
@@ -954,7 +962,7 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--color-text-muted);
   user-select: none;
 }
 .thinking-block summary:hover { color: var(--color-text); }
@@ -966,9 +974,10 @@ a:hover { text-decoration: underline; }
   line-height: 1.5;
   max-height: 400px;
   overflow-y: auto;
-  color: var(--color-muted);
+  color: var(--color-text-muted);
+  background: var(--color-bg);
 }
-.thinking-content pre { font-size: 0.8rem; white-space: pre-wrap; }
+.thinking-content pre { font-size: 0.8rem; white-space: pre-wrap; color: var(--color-text-muted); }
 
 .artifact-rendered {
   padding: 1rem;
