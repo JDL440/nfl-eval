@@ -658,6 +658,23 @@ describe('Configurable upstream context', () => {
     expect(result.success).toBe(true);
   });
 
+  it('uses per-article overrides stored in _config.json', async () => {
+    createArticleWithStage(fixtures, 'test-ctx-article-override', 4 as Stage, {
+      'idea.md': '# Idea\nUPSTREAM IDEA',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nPRIMARY SUMMARY',
+      '_config.json': JSON.stringify({ writeDraft: [] }, null, 2),
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-ctx-article-override', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const draft = fixtures.repo.artifacts.get('test-ctx-article-override', 'draft.md') ?? '';
+    expect(draft).toContain('PRIMARY SUMMARY');
+    expect(draft).not.toContain('Upstream Context: idea.md');
+  });
+
   it('works with empty include list (minimal context)', async () => {
     const configDir = join(fixtures.tempDir, 'config');
     mkdirSync(configDir, { recursive: true });

@@ -17,13 +17,15 @@ export type ArticleStatus = 'proposed' | 'approved' | 'in_production' | 'in_disc
 export type EditorVerdict = 'APPROVED' | 'REVISE' | 'REJECT';
 export type RunStatus = 'started' | 'completed' | 'failed' | 'cancelled';
 export type UsageEventType = 'planned' | 'started' | 'completed' | 'updated' | 'failed' | 'skipped' | 'stage_transition';
-export type DepthLevel = 1 | 2 | 3;
+export type DepthLevel = 1 | 2 | 3 | 4;
 export type DepthName = 'casual_fan' | 'the_beat' | 'deep_dive';
 
+// Depth level 4 is a "Feature" in the dashboard UI, but maps to deep_dive for pipeline sizing/policy.
 export const DEPTH_LEVEL_MAP: Record<DepthLevel, DepthName> = {
   1: 'casual_fan',
   2: 'the_beat',
   3: 'deep_dive',
+  4: 'deep_dive',
 };
 
 export interface Article {

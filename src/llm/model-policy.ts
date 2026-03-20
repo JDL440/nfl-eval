@@ -54,6 +54,7 @@ const PANEL_MODEL_KEYS: Record<number, string> = {
   1: 'panel_casual',
   2: 'panel_beat',
   3: 'panel_deep_dive',
+  4: 'panel_deep_dive',
 };
 
 const STAGE_MODEL_KEY_ALIASES: Record<string, string> = {
@@ -221,7 +222,7 @@ export class ModelPolicy {
       }
       const key = PANEL_MODEL_KEYS[depthLevel];
       if (!key) {
-        throw new Error(`Unsupported panel depth level: ${depthLevel}. Use 1, 2, or 3.`);
+        throw new Error(`Unsupported panel depth level: ${depthLevel}. Use 1, 2, 3, or 4.`);
       }
       return key;
     }

@@ -13,9 +13,10 @@ import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { markdownToHtml } from '../../services/markdown.js';
 
 const DEPTH_LABELS: Record<number, string> = {
-  1: 'Casual Fan',
+  1: 'Quick Take',
   2: 'The Beat',
   3: 'Deep Dive',
+  4: 'Feature',
 };
 
 /** Artifact file names produced at each pipeline stage. */
@@ -43,6 +44,111 @@ export interface ArticleDetailData {
   flashMessage?: string;
   errorMessage?: string;
   autoAdvanceActive?: boolean;
+}
+
+function parseTeams(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      return parsed.map(x => String(x).trim()).filter(Boolean);
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+export function renderArticleMetaDisplay(article: Article): string {
+  const teams = parseTeams(article.teams);
+  const teamsBadges = teams.length > 0
+    ? `<div class="meta-teams">${teams.map(t => `<span class="badge badge-team">${escapeHtml(t)}</span>`).join(' ')}</div>`
+    : '';
+
+  return `
+    <div id="article-meta">
+      <div class="meta-title-row">
+        <h1>${escapeHtml(article.title)}</h1>
+        <button
+          type="button"
+          class="icon-button"
+          title="Edit metadata"
+          hx-get="/htmx/articles/${escapeHtml(article.id)}/edit-meta"
+          hx-target="#article-meta"
+          hx-swap="outerHTML"
+        >✏️</button>
+      </div>
+      ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
+      ${teamsBadges}
+      <div class="detail-meta">
+        ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
+        <span class="badge badge-stage badge-stage-${article.current_stage}">
+          Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
+        </span>
+        <span class="badge badge-status badge-status-${article.status}">${escapeHtml(article.status)}</span>
+        <span class="badge badge-depth">${DEPTH_LABELS[article.depth_level] ?? `Depth ${article.depth_level}`}</span>
+      </div>
+    </div>`;
+}
+
+export function renderArticleMetaEditForm(article: Article): string {
+  const teams = parseTeams(article.teams).join(', ');
+
+  const depthOptions: { value: number; label: string }[] = [
+    { value: 1, label: '1: Quick Take (~800 words)' },
+    { value: 2, label: '2: The Beat (~1500 words)' },
+    { value: 3, label: '3: Deep Dive (~2500 words)' },
+    { value: 4, label: '4: Feature (~4000 words)' },
+  ];
+
+  const depthWarning = article.current_stage > 1
+    ? `<p class="form-warning">⚠️ Changing depth level after Stage 1 may desync prompts/panel sizing.</p>`
+    : '';
+
+  return `
+    <form
+      id="article-meta"
+      class="meta-edit-form"
+      hx-post="/htmx/articles/${escapeHtml(article.id)}/edit-meta"
+      hx-target="#article-meta"
+      hx-swap="outerHTML"
+    >
+      <div class="form-row">
+        <label for="meta-title">Title</label>
+        <input id="meta-title" name="title" type="text" value="${escapeHtml(article.title)}" required />
+        <div class="form-hint">Slug/ID is immutable: <code>${escapeHtml(article.id)}</code></div>
+      </div>
+
+      <div class="form-row">
+        <label for="meta-subtitle">Subtitle</label>
+        <textarea id="meta-subtitle" name="subtitle" rows="3">${escapeHtml(article.subtitle ?? '')}</textarea>
+      </div>
+
+      <div class="form-row">
+        <label for="meta-depth">Depth</label>
+        ${depthWarning}
+        <select id="meta-depth" name="depth_level">
+          ${depthOptions.map(o => `<option value="${o.value}"${o.value === article.depth_level ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="meta-teams">Teams</label>
+        <input id="meta-teams" name="teams" type="text" value="${escapeHtml(teams)}" placeholder="seahawks, chiefs" />
+        <div class="form-hint">Comma-separated team slugs/abbreviations.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button
+          type="button"
+          class="btn"
+          hx-get="/htmx/articles/${escapeHtml(article.id)}/meta"
+          hx-target="#article-meta"
+          hx-swap="outerHTML"
+        >Cancel</button>
+      </div>
+    </form>`;
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
@@ -77,16 +183,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
       ${errorBanner}
       <div class="detail-header">
         <a href="/" class="back-link">← Dashboard</a>
-        <h1>${escapeHtml(article.title)}</h1>
-        ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
-        <div class="detail-meta">
-          ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
-          <span class="badge badge-stage badge-stage-${article.current_stage}">
-            Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
-          </span>
-          <span class="badge badge-status badge-status-${article.status}">${escapeHtml(article.status)}</span>
-          <span class="badge badge-depth">${DEPTH_LABELS[article.depth_level] ?? `Depth ${article.depth_level}`}</span>
-        </div>
+        ${renderArticleMetaDisplay(article)}
       </div>
 
       ${renderStageTimeline(article.current_stage, transitions)}
@@ -104,6 +201,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           ${renderStageRunsPanel(stageRuns ?? [])}
           ${renderAuditLog(transitions)}
           ${renderArticleMetadata(article)}
+          ${renderContextConfigShell(article.id)}
         </div>
       </div>
     </div>`;
@@ -576,15 +674,91 @@ function renderAuditLog(transitions: StageTransition[]): string {
     </section>`;
 }
 
+// ── Agent context settings ───────────────────────────────────────────────────
+
+export function renderContextConfigShell(articleId: string): string {
+  return `
+    <section class="detail-section">
+      <details class="context-settings">
+        <summary>⚙️ Agent Context Settings</summary>
+        <div id="context-config-panel"
+          hx-get="/htmx/articles/${escapeHtml(articleId)}/context-config"
+          hx-trigger="load"
+          hx-swap="innerHTML">
+          <p class="empty-state">Loading…</p>
+        </div>
+      </details>
+    </section>`;
+}
+
+export interface ContextConfigPanelData {
+  articleId: string;
+  stageNames: string[];
+  artifactChoices: string[];
+  defaults: Record<string, string[]>;
+  overrides: Record<string, string[]> | null;
+}
+
+export function renderContextConfigPanel(data: ContextConfigPanelData): string {
+  const { articleId, stageNames, artifactChoices, defaults, overrides } = data;
+  const hasOverrides = overrides != null && Object.keys(overrides).length > 0;
+
+  const hint = hasOverrides
+    ? '<div class="context-config-hint">Overrides active for this article.</div>'
+    : '<div class="context-config-hint">Using defaults (no per-article overrides).</div>';
+
+  const stagesHtml = stageNames.map((stage) => {
+    const selected = overrides?.[stage] ?? defaults[stage] ?? [];
+    const checkboxes = artifactChoices.map((artifact) => {
+      const checked = selected.includes(artifact) ? 'checked' : '';
+      return `
+        <label class="context-checkbox">
+          <input type="checkbox" name="${escapeHtml(stage)}" value="${escapeHtml(artifact)}" ${checked} />
+          <span>${escapeHtml(artifact)}</span>
+        </label>`;
+    }).join('');
+
+    return `
+      <div class="context-stage" data-stage="${escapeHtml(stage)}">
+        <div class="context-stage-title"><code>${escapeHtml(stage)}</code></div>
+        <div class="context-checkboxes">${checkboxes}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="context-config">
+      ${hint}
+      <form class="context-config-form"
+        hx-post="/api/articles/${escapeHtml(articleId)}/context-config"
+        hx-target="#context-config-panel"
+        hx-swap="innerHTML">
+        ${stagesHtml}
+        <div class="action-bar" style="margin-top:0.75rem; gap:0.5rem;">
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          <button type="button" class="btn btn-secondary btn-sm"
+            hx-delete="/api/articles/${escapeHtml(articleId)}/context-config"
+            hx-target="#context-config-panel"
+            hx-swap="innerHTML"
+            hx-confirm="Reset context settings to defaults?"
+            ${hasOverrides ? '' : 'disabled'}>
+            Reset to Defaults
+          </button>
+        </div>
+      </form>
+    </div>`;
+}
+
 // ── Article Metadata ─────────────────────────────────────────────────────────
 
 function renderArticleMetadata(article: Article): string {
+  const teams = parseTeams(article.teams);
   return `
     <section class="detail-section">
       <h2>Article Metadata</h2>
       <dl class="info-list">
         <dt>ID</dt><dd><code>${escapeHtml(article.id)}</code></dd>
         ${article.primary_team ? `<dt>Team</dt><dd>${escapeHtml(article.primary_team)}</dd>` : ''}
+        ${teams.length > 0 ? `<dt>Teams</dt><dd>${teams.map(t => escapeHtml(t)).join(', ')}</dd>` : ''}
         <dt>League</dt><dd>${escapeHtml(article.league)}</dd>
         <dt>Depth</dt><dd>${DEPTH_LABELS[article.depth_level] ?? article.depth_level}</dd>
         <dt>Status</dt><dd>${escapeHtml(article.status)}</dd>

@@ -102,8 +102,13 @@ describe('ModelPolicy', () => {
       expect(limits).toEqual({ min: 4, max: 5 });
     });
 
+    it('returns limits for feature (depth 4)', () => {
+      const limits = policy.getPanelSizeLimits(4);
+      expect(limits).toEqual({ min: 4, max: 5 });
+    });
+
     it('throws for invalid depth level', () => {
-      expect(() => policy.getPanelSizeLimits(4)).toThrow();
+      expect(() => policy.getPanelSizeLimits(99)).toThrow();
     });
   });
 });

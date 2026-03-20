@@ -322,6 +322,59 @@ export class Repository {
     }
   }
 
+  updateArticle(
+    articleId: string,
+    updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[] },
+  ): Article {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+
+    const setParts: string[] = [];
+    const params: (string | number | null)[] = [];
+
+    if (updates.title != null) {
+      const title = String(updates.title).trim();
+      if (!title) throw new Error('title cannot be empty');
+      setParts.push('title = ?');
+      params.push(title);
+    }
+
+    if (updates.subtitle !== undefined) {
+      const subtitle = updates.subtitle == null ? null : String(updates.subtitle).trim();
+      setParts.push('subtitle = ?');
+      params.push(subtitle || null);
+    }
+
+    if (updates.depth_level != null) {
+      const depth = updates.depth_level;
+      if (!Number.isInteger(depth) || depth < 1 || depth > 4) {
+        throw new Error(`depth_level must be an integer 1–4, got ${JSON.stringify(depth)}`);
+      }
+      setParts.push('depth_level = ?');
+      params.push(depth);
+    }
+
+    if (updates.teams !== undefined) {
+      const teams = Array.isArray(updates.teams)
+        ? updates.teams.map(t => String(t).trim()).filter(Boolean)
+        : [];
+      const unique = [...new Set(teams)];
+      setParts.push('teams = ?');
+      params.push(unique.length > 0 ? JSON.stringify(unique) : null);
+    }
+
+    if (setParts.length === 0) return article;
+
+    const now = nowISO();
+    const sql = `UPDATE articles SET ${setParts.join(', ')}, updated_at = ? WHERE id = ?`;
+    const stmt = this.db.prepare(sql);
+    stmt.run(...params, now, articleId);
+
+    return this.getArticle(articleId)!;
+  }
+
   // ── Article runs ───────────────────────────────────────────────────────────
 
   startArticleRun(

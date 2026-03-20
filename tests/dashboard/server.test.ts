@@ -90,6 +90,8 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Detail Test Article');
       expect(html).toContain('Stage 1');
       expect(html).toContain('Audit Log');
+      expect(html).toContain('Agent Context Settings');
+      expect(html).toContain('/htmx/articles/detail-test/context-config');
     });
 
     it('article detail returns 404 for missing article', async () => {
@@ -257,6 +259,51 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('Idea Htmx');
       expect(html).toContain('card-idea');
+    });
+
+    it('GET /htmx/articles/:id/context-config returns defaults when no overrides', async () => {
+      repo.createArticle({ id: 'ctx-1', title: 'Ctx One' });
+
+      const res = await app.request('/htmx/articles/ctx-1/context-config');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('context-config-form');
+      // composePanel includes idea.md by default
+      expect(html).toMatch(/data-stage="composePanel"[\s\S]*name="composePanel" value="idea\.md" checked/);
+      expect(html).toContain('type="checkbox"');
+    });
+
+    it('POST /api/articles/:id/context-config saves overrides and DELETE resets', async () => {
+      repo.createArticle({ id: 'ctx-2', title: 'Ctx Two' });
+
+      const body = new URLSearchParams();
+      body.append('composePanel', 'idea.md');
+      body.append('composePanel', 'discussion-summary.md');
+      body.append('writeDraft', 'discussion-prompt.md');
+
+      const postRes = await app.request('/api/articles/ctx-2/context-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'hx-request': 'true',
+        },
+        body: body.toString(),
+      });
+      expect(postRes.status).toBe(200);
+      expect(repo.artifacts.get('ctx-2', '_config.json')).toBeTruthy();
+      const postHtml = await postRes.text();
+      expect(postHtml).toMatch(/data-stage="composePanel"[\s\S]*value="discussion-summary\.md" checked/);
+      expect(postHtml).toMatch(/data-stage="writeDraft"[\s\S]*value="discussion-prompt\.md" checked/);
+
+      const delRes = await app.request('/api/articles/ctx-2/context-config', {
+        method: 'DELETE',
+        headers: { 'hx-request': 'true' },
+      });
+      expect(delRes.status).toBe(200);
+      expect(repo.artifacts.get('ctx-2', '_config.json')).toBeNull();
+      const delHtml = await delRes.text();
+      // back to defaults: composePanel includes idea.md by default
+      expect(delHtml).toMatch(/data-stage="composePanel"[\s\S]*value="idea\.md" checked/);
     });
 
     it('GET /htmx/published returns HTML fragment', async () => {

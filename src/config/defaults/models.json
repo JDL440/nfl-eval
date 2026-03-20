@@ -28,7 +28,8 @@
   "depth_level_map": {
     "1": "casual_fan",
     "2": "the_beat",
-    "3": "deep_dive"
+    "3": "deep_dive",
+    "4": "deep_dive"
   },
   "supported_models": {
     "low": [

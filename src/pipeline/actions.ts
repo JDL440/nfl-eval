@@ -124,25 +124,11 @@ export function parsePanelComposition(content: string): PanelMember[] {
 
 // ── Configurable upstream context ───────────────────────────────────────────
 
-/**
- * Per-action context configuration. Each action has a primary artifact and an
- * optional list of upstream artifacts to include for richer agent context.
- * Set include to ['*'] to include ALL prior artifacts.
- */
-export interface StageContextEntry {
-  primary: string;
-  include: string[];
-}
-
-/** Default context config — smart defaults that balance quality vs token cost. */
-const DEFAULT_STAGE_CONTEXT: Record<string, StageContextEntry> = {
-  generatePrompt:  { primary: 'idea.md',               include: [] },
-  composePanel:    { primary: 'discussion-prompt.md',   include: ['idea.md'] },
-  runDiscussion:   { primary: 'discussion-prompt.md',   include: [] },  // panel-composition injected separately
-  writeDraft:      { primary: 'discussion-summary.md',  include: ['idea.md'] },
-  runEditor:       { primary: 'draft.md',               include: ['idea.md', 'discussion-summary.md'] },
-  runPublisherPass:{ primary: 'draft.md',               include: ['editor-review.md'] },
-};
+import {
+  CONTEXT_CONFIG as DEFAULT_STAGE_CONTEXT,
+  getArticleContextOverrides,
+  type StageContextEntry,
+} from './context-config.js';
 
 let _contextOverrides: Record<string, StageContextEntry> | undefined;
 
@@ -186,10 +172,11 @@ function gatherContext(
   config: AppConfig,
 ): string {
   const ctx = getContextConfig(actionName, config);
+  const articleOverrides = getArticleContextOverrides(repo, articleId);
   const parts: string[] = [];
 
-  // Resolve included artifacts
-  let includeList = ctx.include;
+  // Resolve included artifacts (per-article overrides take precedence)
+  let includeList = articleOverrides?.[actionName] ?? ctx.include;
   if (includeList.includes('*')) {
     // Include all existing artifacts except the primary
     const all = repo.artifacts.list(articleId);
@@ -213,6 +200,16 @@ function gatherContext(
   }
 
   return primary;
+}
+
+/** Exported for tests and dashboard UX. */
+export function gatherUpstreamContextForAction(
+  repo: Repository,
+  articleId: string,
+  actionName: string,
+  config: AppConfig,
+): string {
+  return gatherContext(repo, articleId, actionName, config);
 }
 
 // ── Roster helpers ──────────────────────────────────────────────────────────

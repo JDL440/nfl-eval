@@ -25,7 +25,18 @@ import {
   renderStageArticles,
   renderFilteredArticles,
 } from './views/home.js';
-import { renderArticleDetail, renderArtifactContent, renderAdvanceResult, renderUsagePanel, renderStageRunsPanel, renderImageGallery, ARTIFACT_FILES } from './views/article.js';
+import {
+  renderArticleDetail,
+  renderArtifactContent,
+  renderAdvanceResult,
+  renderUsagePanel,
+  renderStageRunsPanel,
+  renderImageGallery,
+  renderArticleMetaDisplay,
+  renderArticleMetaEditForm,
+  renderContextConfigPanel,
+  ARTIFACT_FILES,
+} from './views/article.js';
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
@@ -52,6 +63,12 @@ import { markdownToProseMirror } from '../services/prosemirror.js';
 import type { SubstackService } from '../services/substack.js';
 import type { TwitterService } from '../services/twitter.js';
 import { executeTransition, type ActionContext } from '../pipeline/actions.js';
+import {
+  CONTEXT_CONFIG,
+  getArticleContextOverrides,
+  saveArticleContextOverrides,
+  deleteArticleContextOverrides,
+} from '../pipeline/context-config.js';
 import { LLMGateway } from '../llm/gateway.js';
 import { ModelPolicy } from '../llm/model-policy.js';
 import { AgentRunner } from '../agents/runner.js';
@@ -207,6 +224,65 @@ export function createApp(
     );
   });
 
+  // ── htmx: inline article metadata editing ─────────────────────────────────
+
+  app.get('/htmx/articles/:id/meta', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+    return c.html(renderArticleMetaDisplay(article));
+  });
+
+  app.get('/htmx/articles/:id/edit-meta', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+    return c.html(renderArticleMetaEditForm(article));
+  });
+
+  app.post('/htmx/articles/:id/edit-meta', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+    const body = await c.req.parseBody();
+
+    const updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[] } = {};
+
+    if (body.title != null) {
+      const title = String(body.title).trim();
+      if (!title) return c.html('<p class="empty-state">Title cannot be empty</p>', 400);
+      updates.title = title;
+    }
+
+    if (body.subtitle !== undefined) {
+      const subtitle = String(body.subtitle ?? '').trim();
+      updates.subtitle = subtitle || null;
+    }
+
+    if (body.depth_level != null) {
+      const depth = parseInt(String(body.depth_level), 10);
+      if (!Number.isInteger(depth) || depth < 1 || depth > 4) {
+        return c.html('<p class="empty-state">Invalid depth level</p>', 400);
+      }
+      updates.depth_level = depth;
+    }
+
+    if (body.teams !== undefined) {
+      const raw = String(body.teams ?? '');
+      const teams = raw.split(',').map(t => t.trim()).filter(Boolean);
+      updates.teams = [...new Set(teams)];
+    }
+
+    try {
+      const updated = repo.updateArticle(id, updates);
+      return c.html(renderArticleMetaDisplay(updated));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.html(`<p class="empty-state">${escapeHtml(message)}</p>`, 400);
+    }
+  });
+
   app.get('/ideas/new', (c) => {
     return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name }));
   });
@@ -331,6 +407,72 @@ export function createApp(
     return c.json(article);
   });
 
+  app.patch('/api/articles/:id', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.json({ error: 'Article not found' }, 404);
+
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'Invalid JSON body' }, 400);
+    }
+
+    if (body == null || typeof body !== 'object' || Array.isArray(body)) {
+      return c.json({ error: 'Body must be an object' }, 400);
+    }
+
+    const allowed = new Set(['title', 'subtitle', 'depth_level', 'teams']);
+    for (const key of Object.keys(body as Record<string, unknown>)) {
+      if (!allowed.has(key)) {
+        return c.json({ error: `Invalid field: ${key}` }, 400);
+      }
+    }
+
+    const updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[] } = {};
+    const b = body as Record<string, unknown>;
+
+    if ('title' in b) {
+      if (typeof b.title !== 'string' || !b.title.trim()) {
+        return c.json({ error: 'title must be a non-empty string' }, 400);
+      }
+      updates.title = b.title.trim();
+    }
+
+    if ('subtitle' in b) {
+      if (b.subtitle !== null && typeof b.subtitle !== 'string') {
+        return c.json({ error: 'subtitle must be a string or null' }, 400);
+      }
+      updates.subtitle = b.subtitle === null ? null : (b.subtitle as string).trim() || null;
+    }
+
+    if ('depth_level' in b) {
+      if (typeof b.depth_level !== 'number' || !Number.isInteger(b.depth_level) || b.depth_level < 1 || b.depth_level > 4) {
+        return c.json({ error: 'depth_level must be an integer 1–4' }, 400);
+      }
+      updates.depth_level = b.depth_level;
+    }
+
+    if ('teams' in b) {
+      if (!Array.isArray(b.teams) || !b.teams.every(x => typeof x === 'string')) {
+        return c.json({ error: 'teams must be an array of strings' }, 400);
+      }
+      const normalized = (b.teams as string[])
+        .map(t => t.trim())
+        .filter(Boolean);
+      updates.teams = [...new Set(normalized)];
+    }
+
+    try {
+      const updated = repo.updateArticle(id, updates);
+      return c.json(updated);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.json({ error: message }, 400);
+    }
+  });
+
   app.post('/api/articles', async (c) => {
     const body = await c.req.json();
     const { id, title, primary_team, league, depth_level } = body;
@@ -364,7 +506,7 @@ export function createApp(
 
     try {
       const teams: string[] = Array.isArray(body.teams) ? body.teams : [];
-      const depthLevel = [1, 2, 3].includes(body.depthLevel) ? body.depthLevel : 2;
+      const depthLevel = [1, 2, 3, 4].includes(body.depthLevel) ? body.depthLevel : 2;
       const autoAdvance = body.autoAdvance === true;
       const actionContext = deps?.actionContext;
 
@@ -389,6 +531,7 @@ export function createApp(
           1: '1 — Casual Fan (~800 words, 2 agents)',
           2: '2 — The Beat (~1500 words, 3 agents)',
           3: '3 — Deep Dive (~2500 words, 4-5 agents)',
+          4: '4 — Feature (~4000 words)',
         };
 
         // Use AgentRunner with Lead charter + idea-generation skill
@@ -673,6 +816,133 @@ export function createApp(
         stage,
       ),
     );
+  });
+
+  // ── htmx: upstream context config panel ─────────────────────────────────
+
+  function listContextArtifactChoices(articleId: string): string[] {
+    const canonical = [
+      ...(ARTIFACT_FILES as unknown as string[]),
+      'publisher-pass.md',
+    ];
+
+    const existing = repo.artifacts
+      .list(articleId)
+      .map(a => a.name)
+      .filter(n => n !== '_config.json');
+
+    const combined = [...canonical, ...existing]
+      .filter(n => !n.endsWith('.thinking.md'));
+
+    return Array.from(new Set(combined)).sort();
+  }
+
+  app.get('/htmx/articles/:id/context-config', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+    const stageNames = Object.keys(CONTEXT_CONFIG);
+    const defaults: Record<string, string[]> = {};
+    for (const s of stageNames) defaults[s] = CONTEXT_CONFIG[s]?.include ?? [];
+
+    const overrides = getArticleContextOverrides(repo, id);
+    const artifactChoices = listContextArtifactChoices(id);
+
+    return c.html(renderContextConfigPanel({
+      articleId: id,
+      stageNames,
+      artifactChoices,
+      defaults,
+      overrides,
+    }));
+  });
+
+  app.post('/api/articles/:id/context-config', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) {
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html('<p class="empty-state">Article not found</p>', 404)
+        : c.json({ error: 'Article not found' }, 404);
+    }
+
+    try {
+      const body = await c.req.parseBody();
+      const stageNames = Object.keys(CONTEXT_CONFIG);
+      const artifactChoices = listContextArtifactChoices(id);
+      const allowed = new Set(artifactChoices);
+
+      const overridesToSave: Record<string, string[]> = {};
+      for (const stage of stageNames) {
+        const raw = body[stage];
+        let vals: string[] = [];
+        if (Array.isArray(raw)) vals = raw.map(v => String(v));
+        else if (typeof raw === 'string') vals = [raw];
+
+        const cleaned = vals
+          .map(v => v.trim())
+          .filter(Boolean)
+          .filter(v => allowed.has(v));
+
+        overridesToSave[stage] = Array.from(new Set(cleaned));
+      }
+
+      saveArticleContextOverrides(repo, id, overridesToSave);
+
+      const defaults: Record<string, string[]> = {};
+      for (const s of stageNames) defaults[s] = CONTEXT_CONFIG[s]?.include ?? [];
+
+      const isHtmx = c.req.header('hx-request') === 'true';
+      if (isHtmx) {
+        return c.html(renderContextConfigPanel({
+          articleId: id,
+          stageNames,
+          artifactChoices,
+          defaults,
+          overrides: overridesToSave,
+        }));
+      }
+
+      return c.json({ success: true });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html(`<p class="empty-state">❌ ${escapeHtml(message)}</p>`, 500)
+        : c.json({ error: message }, 500);
+    }
+  });
+
+  app.delete('/api/articles/:id/context-config', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) {
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html('<p class="empty-state">Article not found</p>', 404)
+        : c.json({ error: 'Article not found' }, 404);
+    }
+
+    deleteArticleContextOverrides(repo, id);
+
+    const stageNames = Object.keys(CONTEXT_CONFIG);
+    const defaults: Record<string, string[]> = {};
+    for (const s of stageNames) defaults[s] = CONTEXT_CONFIG[s]?.include ?? [];
+
+    const isHtmx = c.req.header('hx-request') === 'true';
+    if (isHtmx) {
+      return c.html(renderContextConfigPanel({
+        articleId: id,
+        stageNames,
+        artifactChoices: listContextArtifactChoices(id),
+        defaults,
+        overrides: null,
+      }));
+    }
+
+    return c.json({ success: true });
   });
 
   // ── htmx: artifact content tab ────────────────────────────────────────────

@@ -1,7 +1,7 @@
 # VISION.md — NFL Content Intelligence Platform
 
-> **Status:** Prototype proven. Scaling and automation are the next phase.
-> **Last updated:** 2026-03-14
+> **Status:** v2 application architecture is live. Scaling, automation, and audience validation are the next phase.
+> **Last updated:** 2026-03-20
 > **Owner:** Joe Robinson
 
 ---
@@ -10,7 +10,7 @@
 
 An AI-powered NFL content intelligence platform that uses a network of specialized agents to produce expert-grade football analysis at scale. Each agent has deep domain knowledge, persistent memory, and a defined role — and they argue with each other to produce better analysis than any single writer could.
 
-**Current state:** 47 agents, ~20K+ lines of NFL intelligence, proven on one team (Seattle Seahawks) with 2 published articles and a full editorial pipeline.
+**Current state:** v2 is now a TypeScript + Hono + SQLite platform with a live dashboard, multi-provider LLM routing, 47 agent charters loaded into the new runtime, and published proof-of-concept output.
 
 **End state:** A 32-team autonomous content network producing daily analysis for every NFL franchise, with minimal human oversight.
 
@@ -33,7 +33,7 @@ An AI-powered NFL content intelligence platform that uses a network of specializ
 |-----------|--------|---------------|
 | Automation (hands-off content pipeline) | ❌ Not built | Cron-triggered Media sweeps → auto-draft articles → Editor review → human approve → publish |
 | Multi-team article production | ❌ Not tested | We've only published Seahawks content. Need to prove the same pipeline works for any team. |
-| Reader engagement / audience validation | ❌ Not tested | Zero published to actual Substack. No subscriber data. No engagement metrics. |
+| Reader engagement / audience validation | ❌ Early | Initial publishing and section setup exist, but there is still no meaningful subscriber or engagement dataset. |
 | Scale economics (cost per article at 32x) | ❌ Unknown | Need to measure: API costs per article, per team, per day. Is this $5/article or $50? |
 | Content consistency across 32 voices | ❌ Not tested | Can Writer maintain quality and voice when producing for KC, DAL, PHI — not just SEA? |
 | Freshness / staleness management | ❌ Fragile | Agent knowledge drifts. Today's knowledge is current; next week it won't be without refreshes. |
@@ -157,3 +157,4 @@ An AI-powered NFL content intelligence platform that uses a network of specializ
 2. **Measure cost** — Track API calls for one full article pipeline (experts → Writer → Editor). Understand unit economics.
 3. **Automate Media sweeps** — Build a cron/Action that runs Media daily without human trigger.
 4. **Publish to actual Substack** — Even if it's just one article, get it live and see if real humans read it.
+
