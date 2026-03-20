@@ -46,6 +46,47 @@ function writeArtifact(repo: Repository, articleId: string, filename: string, co
   repo.artifacts.put(articleId, filename, content);
 }
 
+// ── Roster helpers ──────────────────────────────────────────────────────────
+
+const PRODUCTION_AGENTS = new Set([
+  'lead', 'writer', 'editor', 'scribe', 'coordinator', 'panel-moderator', 'publisher',
+]);
+
+const TEAM_ABBRS = new Set([
+  'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
+  'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
+  'nyj','phi','pit','sea','sf','tb','ten','wsh',
+]);
+
+/** Build a categorized roster string from available agent charters. */
+function buildAgentRoster(runner: AgentRunner): string {
+  const agents = runner.listAgents();
+  const specialists: string[] = [];
+  const teamAgents: string[] = [];
+
+  for (const name of agents) {
+    if (PRODUCTION_AGENTS.has(name)) continue;
+
+    const charter = runner.loadCharter(name);
+    const identity = charter?.identity ?? '';
+    const summary = identity.split('\n')[0]?.slice(0, 120) || name;
+
+    if (TEAM_ABBRS.has(name)) {
+      teamAgents.push(`- **${name.toUpperCase()}**: ${summary}`);
+    } else {
+      specialists.push(`- **${name}**: ${summary}`);
+    }
+  }
+
+  return [
+    '### Specialists',
+    ...specialists,
+    '',
+    '### Team Agents',
+    ...teamAgents,
+  ].join('\n');
+}
+
 // ── Action implementations ──────────────────────────────────────────────────
 
 /** Stage 1→2: Generate discussion prompt from idea. */
@@ -89,9 +130,28 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
 
     const prompt = readArtifact(ctx.repo, articleId, 'discussion-prompt.md');
 
+    const roster = buildAgentRoster(ctx.runner);
+    const depthLevel = article.depth_level ?? 2;
+
+    const task = [
+      'Select a panel of analysts for this discussion from the available roster.',
+      '',
+      `Depth Level: ${depthLevel} (${depthLevel === 1 ? '2 agents max' : depthLevel === 2 ? '3-4 agents' : '4-5 agents'})`,
+      '',
+      '## Available Agents',
+      roster,
+      '',
+      'Rules:',
+      '- Always include the relevant team agent for the primary team',
+      '- Always include at least one specialist',
+      '- Select agents whose expertise matches the article topic',
+      '- Panel size must respect the depth level limits',
+      '- Each panelist should have a distinct analytical lane',
+    ].join('\n');
+
     const result = await ctx.runner.run({
       agentName: 'lead',
-      task: 'Compose a panel of analysts for this discussion.',
+      task,
       skills: ['panel-composition'],
       articleContext: {
         slug: articleId,
