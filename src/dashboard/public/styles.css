@@ -942,6 +942,34 @@ a:hover { text-decoration: underline; }
 
 /* ── Wave 2: Rich artifact rendering ─────────────────────────────────────── */
 
+.thinking-block {
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-secondary, #f8f9fa);
+  overflow: hidden;
+}
+.thinking-block summary {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  user-select: none;
+}
+.thinking-block summary:hover { color: var(--color-text); }
+.thinking-hint { font-weight: 400; font-size: 0.8rem; opacity: 0.6; }
+.thinking-content {
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-height: 400px;
+  overflow-y: auto;
+  color: var(--color-muted);
+}
+.thinking-content pre { font-size: 0.8rem; white-space: pre-wrap; }
+
 .artifact-rendered {
   padding: 1rem;
   line-height: 1.65;

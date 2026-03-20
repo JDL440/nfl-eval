@@ -200,11 +200,38 @@ export function renderArtifactContent(name: string, content: string | null): str
     return `<p class="empty-state">Not yet created</p>`;
   }
 
+  // Separate thinking/reasoning blocks from output content
+  const { thinking, output } = extractThinking(content);
+
+  const thinkingHtml = thinking
+    ? `<details class="thinking-block">
+        <summary>💭 Model Thinking <span class="thinking-hint">(click to expand)</span></summary>
+        <div class="thinking-content">${name.endsWith('.md') ? markdownToHtml(thinking) : `<pre>${escapeHtml(thinking)}</pre>`}</div>
+      </details>`
+    : '';
+
   // Render markdown files as rich HTML; fallback to pre for unknown types
-  if (name.endsWith('.md')) {
-    return `<div class="artifact-rendered">${markdownToHtml(content)}</div>`;
-  }
-  return `<pre class="artifact-pre">${escapeHtml(content)}</pre>`;
+  const outputHtml = name.endsWith('.md')
+    ? `<div class="artifact-rendered">${markdownToHtml(output)}</div>`
+    : `<pre class="artifact-pre">${escapeHtml(output)}</pre>`;
+
+  return thinkingHtml + outputHtml;
+}
+
+/** Extract thinking/reasoning blocks from LLM output. */
+function extractThinking(content: string): { thinking: string | null; output: string } {
+  // Match <think>...</think> or <thinking>...</thinking> or <reasoning>...</reasoning>
+  const thinkRegex = /<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
+  const thinkParts: string[] = [];
+  const output = content.replace(thinkRegex, (_match, _tag, inner) => {
+    thinkParts.push(inner.trim());
+    return '';
+  }).trim();
+
+  return {
+    thinking: thinkParts.length > 0 ? thinkParts.join('\n\n') : null,
+    output: output || content,
+  };
 }
 
 // ── Action Panel ─────────────────────────────────────────────────────────────
