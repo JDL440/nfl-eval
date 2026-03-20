@@ -268,8 +268,12 @@ describe('Dashboard Server', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('context-config-form');
+
+      const idx = html.indexOf('data-stage="composePanel"');
+      expect(idx).toBeGreaterThanOrEqual(0);
+      const composeSection = html.slice(idx);
       // composePanel includes idea.md by default
-      expect(html).toMatch(/data-stage="composePanel"[\s\S]*name="composePanel" value="idea\.md" checked/);
+      expect(composeSection).toMatch(/name="composePanel" value="idea\.md" checked/);
       expect(html).toContain('type="checkbox"');
     });
 
@@ -280,6 +284,14 @@ describe('Dashboard Server', () => {
       body.append('composePanel', 'idea.md');
       body.append('composePanel', 'discussion-summary.md');
       body.append('writeDraft', 'discussion-prompt.md');
+
+      function extractStage(html: string, stage: string): string {
+        const idx = html.indexOf(`data-stage="${stage}"`);
+        if (idx < 0) return '';
+        const rest = html.slice(idx);
+        const nextIdx = rest.slice(1).search(/data-stage="/);
+        return nextIdx >= 0 ? rest.slice(0, nextIdx + 1) : rest;
+      }
 
       const postRes = await app.request('/api/articles/ctx-2/context-config', {
         method: 'POST',
@@ -292,8 +304,10 @@ describe('Dashboard Server', () => {
       expect(postRes.status).toBe(200);
       expect(repo.artifacts.get('ctx-2', '_config.json')).toBeTruthy();
       const postHtml = await postRes.text();
-      expect(postHtml).toMatch(/data-stage="composePanel"[\s\S]*value="discussion-summary\.md" checked/);
-      expect(postHtml).toMatch(/data-stage="writeDraft"[\s\S]*value="discussion-prompt\.md" checked/);
+      const postCompose = extractStage(postHtml, 'composePanel');
+      const postWrite = extractStage(postHtml, 'writeDraft');
+      expect(postCompose).toMatch(/name="composePanel" value="discussion-summary\.md" checked/);
+      expect(postWrite).toMatch(/name="writeDraft" value="discussion-prompt\.md" checked/);
 
       const delRes = await app.request('/api/articles/ctx-2/context-config', {
         method: 'DELETE',
@@ -302,8 +316,10 @@ describe('Dashboard Server', () => {
       expect(delRes.status).toBe(200);
       expect(repo.artifacts.get('ctx-2', '_config.json')).toBeNull();
       const delHtml = await delRes.text();
-      // back to defaults: composePanel includes idea.md by default
-      expect(delHtml).toMatch(/data-stage="composePanel"[\s\S]*value="idea\.md" checked/);
+      const delCompose = extractStage(delHtml, 'composePanel');
+      // back to defaults: composePanel includes idea.md but not discussion-summary.md
+      expect(delCompose).toMatch(/name="composePanel" value="idea\.md" checked/);
+      expect(delCompose).not.toMatch(/name="composePanel" value="discussion-summary\.md" checked/);
     });
 
     it('GET /htmx/published returns HTML fragment', async () => {
