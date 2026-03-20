@@ -239,17 +239,13 @@ export function renderNewIdeaPage(config: { labName: string }): string {
 
           const data = await res.json();
           if (res.ok) {
+            const articleUrl = '/articles/' + data.id + (data.autoAdvance ? '?from=auto-advance' : '');
+            status.className = 'form-status success';
+            status.innerHTML = '✅ Created: <a href="' + articleUrl + '"><strong>' + data.title + '</strong></a>.'
+              + (data.autoAdvance ? ' Running auto-advance pipeline…' : '')
+              + ' <a href="' + articleUrl + '" class="btn btn-primary btn-sm" style="margin-left:0.5rem">View Article →</a>';
             if (data.autoAdvance) {
-              status.className = 'form-status success';
-              status.innerHTML = '✅ Created: <strong>' + data.title + '</strong>. Redirecting to article…';
-              // Fire auto-advance in background — don't await
               fetch('/api/articles/' + data.id + '/auto-advance', { method: 'POST' }).catch(() => {});
-              // Redirect immediately
-              setTimeout(() => { window.location.href = '/articles/' + data.id + '?from=auto-advance'; }, 500);
-            } else {
-              status.className = 'form-status success';
-              status.innerHTML = '✅ Created: <strong>' + data.title + '</strong>. Redirecting…';
-              setTimeout(() => { window.location.href = '/articles/' + data.id; }, 1000);
             }
           } else {
             status.className = 'form-status error';
