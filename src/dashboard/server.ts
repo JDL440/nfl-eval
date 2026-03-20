@@ -1296,20 +1296,50 @@ export function createApp(
 
   // ── Agent charter & skill viewer ──────────────────────────────────────────
 
+  function resolveCharterPath(name: string): string | null {
+    const candidates = [
+      join(config.chartersDir, `${name}.md`),
+      join(config.chartersDir, name, 'charter.md'),
+    ];
+
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return candidate;
+    }
+
+    return null;
+  }
+
   function readCharterSummaries(): CharterSummary[] {
     if (!existsSync(config.chartersDir)) return [];
-    return readdirSync(config.chartersDir)
-      .filter(f => f.endsWith('.md'))
-      .sort()
-      .map(f => {
-        const content = readFileSync(join(config.chartersDir, f), 'utf-8');
-        return {
-          name: f.replace(/\.md$/i, ''),
-          filename: f,
-          type: classifyCharter(f),
-          identity: extractIdentity(content),
-        };
-      });
+
+    return readdirSync(config.chartersDir, { withFileTypes: true })
+      .flatMap((entry): CharterSummary[] => {
+        if (entry.isFile() && entry.name.endsWith('.md')) {
+          const content = readFileSync(join(config.chartersDir, entry.name), 'utf-8');
+          return [{
+            name: entry.name.replace(/\.md$/i, ''),
+            filename: entry.name,
+            type: classifyCharter(entry.name),
+            identity: extractIdentity(content),
+          }];
+        }
+
+        if (entry.isDirectory()) {
+          const filePath = join(config.chartersDir, entry.name, 'charter.md');
+          if (!existsSync(filePath)) return [];
+
+          const content = readFileSync(filePath, 'utf-8');
+          return [{
+            name: entry.name,
+            filename: `${entry.name}\\charter.md`,
+            type: classifyCharter(entry.name),
+            identity: extractIdentity(content),
+          }];
+        }
+
+        return [];
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   function readSkillSummaries(): SkillSummary[] {
@@ -1346,8 +1376,8 @@ export function createApp(
 
   app.get('/agents/:name', (c) => {
     const name = c.req.param('name');
-    const filePath = join(config.chartersDir, `${name}.md`);
-    if (!existsSync(filePath)) {
+    const filePath = resolveCharterPath(name);
+    if (!filePath) {
       return c.html('<p class="empty-state">Charter not found</p>', 404);
     }
     const content = readFileSync(filePath, 'utf-8');

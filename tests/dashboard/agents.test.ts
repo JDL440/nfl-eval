@@ -65,6 +65,11 @@ describe('Agent Charter & Skill Viewer', () => {
       join(chartersDir, 'analytics.md'),
       '# Analytics — NFL Advanced Analytics Expert\n\n> The numbers engine.\n\n## Responsibilities\n- Own advanced analytics\n- Build comparison models\n- Draft pick value\n\n## Boundaries\n- No fabricated stats\n- No personal opinions\n',
     );
+    mkdirSync(join(chartersDir, 'draft-board'), { recursive: true });
+    writeFileSync(
+      join(chartersDir, 'draft-board', 'charter.md'),
+      '# Draft Board Specialist\n\n> Builds the big board.\n\n## Responsibilities\n- Rank prospects\n- Track archetypes\n',
+    );
 
     // Seed skill files
     writeFileSync(
@@ -91,12 +96,13 @@ describe('Agent Charter & Skill Viewer', () => {
       expect(html).toContain('Agent Charters');
       expect(html).toContain('sea');
       expect(html).toContain('analytics');
+      expect(html).toContain('draft-board');
     });
 
     it('shows correct counts', async () => {
       const res = await app.request('/agents');
       const html = await res.text();
-      expect(html).toContain('Charters (2)');
+      expect(html).toContain('Charters (3)');
       expect(html).toContain('Skills (1)');
     });
 
@@ -104,7 +110,7 @@ describe('Agent Charter & Skill Viewer', () => {
       const res = await app.request('/agents');
       const html = await res.text();
       expect(html).toContain('Team Experts (1)');
-      expect(html).toContain('Specialists (1)');
+      expect(html).toContain('Specialists (2)');
     });
 
     it('shows skill files', async () => {
@@ -131,6 +137,14 @@ describe('Agent Charter & Skill Viewer', () => {
       const html = await res.text();
       expect(html).toContain('3 responsibilities');
       expect(html).toContain('2 boundaries');
+    });
+
+    it('loads charter content from charter subdirectories', async () => {
+      const res = await app.request('/agents/draft-board');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Draft Board Specialist');
+      expect(html).toContain('Rank prospects');
     });
 
     it('returns 404 for nonexistent charter', async () => {
