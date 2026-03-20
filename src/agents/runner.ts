@@ -55,6 +55,18 @@ const AGENT_STAGE_KEY: Record<string, string> = {
   'scribe': 'scribe',
 };
 
+/** Strip thinking/reasoning tokens from LLM output before storing artifacts. */
+function stripThinkingTokens(content: string): string {
+  // Matched pairs: <think>...</think>, <thinking>...</thinking>, <reasoning>...</reasoning>
+  let result = content.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, '');
+  // Qwen-style: no opening tag, everything before </think>
+  const closeIdx = result.indexOf('</think>');
+  if (closeIdx >= 0) {
+    result = result.slice(closeIdx + '</think>'.length);
+  }
+  return result.trim();
+}
+
 export interface AgentRunResult {
   content: string;
   model: string;
@@ -354,7 +366,10 @@ export class AgentRunner {
       taskFamily: model || stageKey ? undefined : 'deep_reasoning',
     });
 
-    // 8. Store learning memory
+    // 8. Strip thinking tokens from response (Qwen, DeepSeek, etc.)
+    const cleanContent = stripThinkingTokens(response.content);
+
+    // 9. Store learning memory
     const learningContent = articleContext
       ? `Completed ${task.slice(0, 80)} for "${articleContext.title}" (${articleContext.slug})`
       : `Completed ${task.slice(0, 120)}`;
@@ -366,9 +381,9 @@ export class AgentRunner {
       relevanceScore: 0.8,
     });
 
-    // 9. Return result
+    // 10. Return result
     return {
-      content: response.content,
+      content: cleanContent,
       model: response.model,
       provider: response.provider,
       agentName,

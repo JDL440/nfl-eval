@@ -220,17 +220,37 @@ export function renderArtifactContent(name: string, content: string | null): str
 
 /** Extract thinking/reasoning blocks from LLM output. */
 function extractThinking(content: string): { thinking: string | null; output: string } {
-  // Match <think>...</think> or <thinking>...</thinking> or <reasoning>...</reasoning>
-  const thinkRegex = /<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
+  // Pattern 1: Matched pairs — <think>...</think>, <thinking>...</thinking>, <reasoning>...</reasoning>
+  const pairedRegex = /<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
   const thinkParts: string[] = [];
-  const output = content.replace(thinkRegex, (_match, _tag, inner) => {
+  let stripped = content.replace(pairedRegex, (_match, _tag, inner) => {
     thinkParts.push(inner.trim());
     return '';
-  }).trim();
+  });
+
+  // Pattern 2: Qwen-style — no opening tag, everything before </think> is thinking
+  if (thinkParts.length === 0) {
+    const closeIdx = stripped.indexOf('</think>');
+    if (closeIdx >= 0) {
+      thinkParts.push(stripped.slice(0, closeIdx).trim());
+      stripped = stripped.slice(closeIdx + '</think>'.length);
+    }
+  }
+
+  // Pattern 3: Prose prefix — starts with "Thinking Process:" or similar header
+  if (thinkParts.length === 0) {
+    const thinkHeaderMatch = stripped.match(/^(Thinking Process:[\s\S]*?)(?=\n#\s)/i);
+    if (thinkHeaderMatch) {
+      thinkParts.push(thinkHeaderMatch[1].trim());
+      stripped = stripped.slice(thinkHeaderMatch[0].length);
+    }
+  }
+
+  stripped = stripped.trim();
 
   return {
     thinking: thinkParts.length > 0 ? thinkParts.join('\n\n') : null,
-    output: output || content,
+    output: stripped || content,
   };
 }
 
