@@ -48,7 +48,7 @@ Environment:
 
 export async function handleServe(overrides?: Partial<{ port: number }>): Promise<void> {
   const { startServer } = await import('./dashboard/server.js');
-  startServer(overrides);
+  await startServer(overrides);
 }
 
 export async function handleInit(): Promise<void> {

@@ -71,12 +71,19 @@ const STAGE_BUDGET_KEY_ALIASES: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function defaultConfigPath(): string {
+  // v2: NFL_DATA_DIR → ~/.nfl-lab/config/models.json
+  const nflDataDir = process.env['NFL_DATA_DIR'];
+  if (nflDataDir) {
+    return join(nflDataDir, 'config', 'models.json');
+  }
+  // Legacy: DATA_DIR
   const dataDir = process.env['DATA_DIR'];
   if (dataDir) {
     return join(dataDir, 'config', 'models.json');
   }
-  // Fallback: repo-relative .squad/config/models.json
-  return join(process.cwd(), '.squad', 'config', 'models.json');
+  // Default: ~/.nfl-lab/config/models.json
+  const homePath = process.env['USERPROFILE'] ?? process.env['HOME'] ?? '';
+  return join(homePath, '.nfl-lab', 'config', 'models.json');
 }
 
 // ---------------------------------------------------------------------------

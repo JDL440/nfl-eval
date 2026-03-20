@@ -106,7 +106,9 @@ export class LMStudioProvider implements LLMProvider {
   // -- Chat ----------------------------------------------------------------
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
-    const model = request.model ?? this.defaultModel;
+    // Always use the default local model — pipeline model names (gpt-4.1, etc.)
+    // are meaningless for LM Studio. Use whatever model the user has loaded.
+    const model = this.defaultModel;
 
     const messages = request.messages.map((m) => ({
       role: m.role,

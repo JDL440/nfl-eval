@@ -756,7 +756,7 @@ export function createApp(
 
 // ── Server startup ───────────────────────────────────────────────────────────
 
-export function startServer(overrides?: Partial<AppConfig>): void {
+export async function startServer(overrides?: Partial<AppConfig>): Promise<void> {
   const config = loadConfig(overrides);
   initDataDir(config.dataDir);
   const repo = new Repository(config.dbPath);
@@ -774,9 +774,18 @@ export function startServer(overrides?: Partial<AppConfig>): void {
       console.log('Mock LLM provider registered (testing mode)');
     } else if (process.env['LLM_PROVIDER'] === 'lmstudio' || process.env['LMSTUDIO_URL']) {
       const baseUrl = process.env['LMSTUDIO_URL'] ?? undefined;
-      const lmstudio = new LMStudioProvider({ baseUrl });
+      const defaultModel = process.env['LMSTUDIO_MODEL'] ?? undefined;
+      const lmstudio = new LMStudioProvider({ baseUrl, defaultModel });
+      // Auto-detect loaded models and pick the first non-embedding one
+      try {
+        const models = await lmstudio.fetchModels();
+        if (models.length > 0 && !defaultModel) {
+          const chatModel = models.find(m => !m.includes('embed')) ?? models[0];
+          (lmstudio as any).defaultModel = chatModel;
+        }
+      } catch { /* LM Studio may not be running yet */ }
       gateway.registerProvider(lmstudio);
-      console.log(`LM Studio provider registered (${lmstudio.baseUrl})`);
+      console.log(`LM Studio provider registered (${lmstudio.baseUrl}, model: ${lmstudio.defaultModel})`);
     } else {
       try {
         const copilot = new CopilotProvider();
