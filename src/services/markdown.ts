@@ -13,7 +13,7 @@ import { escapeHtml } from '../dashboard/views/layout.js';
  * Convert a markdown string into safe HTML for rendering in artifact tabs.
  */
 export function markdownToHtml(md: string): string {
-  const lines = md.split('\n');
+  const lines = md.split('\n').map(l => l.replace(/\r$/, ''));
   const out: string[] = [];
   let i = 0;
 
