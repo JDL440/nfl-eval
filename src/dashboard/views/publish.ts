@@ -90,7 +90,7 @@ export function proseMirrorToHtml(doc: ProseMirrorDoc): string {
 
 // ── Publisher checklist items ─────────────────────────────────────────────────
 
-const CHECKLIST_ITEMS: { key: keyof PublisherPass; label: string }[] = [
+export const CHECKLIST_ITEMS: { key: keyof PublisherPass; label: string }[] = [
   { key: 'title_final', label: 'Title finalized' },
   { key: 'subtitle_final', label: 'Subtitle finalized' },
   { key: 'body_clean', label: 'Body clean' },
@@ -121,7 +121,7 @@ export function renderPublishPreview(data: PublishPreviewData): string {
   const hasDraft = !!article.substack_draft_url;
   const draftId = hasDraft ? extractDraftId(article.substack_draft_url!) : null;
 
-  const checklist = publisherPass ? renderChecklist(publisherPass) : '';
+  const checklist = publisherPass ? renderChecklist(publisherPass, article.id) : '';
   const allPassed = publisherPass ? checkAllPassed(publisherPass) : false;
 
   const content = `
@@ -175,6 +175,9 @@ export function renderPublishPreview(data: PublishPreviewData): string {
             </div>
             <div id="publish-result"></div>
           </section>
+
+          ${renderNoteComposer(article)}
+          ${renderTweetComposer(article)}
         </div>
       </div>
     </div>`;
@@ -226,11 +229,11 @@ export function renderPublishResult(data: PublishResultData): string {
 
 // ── Checklist renderer ───────────────────────────────────────────────────────
 
-function renderChecklist(pass: PublisherPass): string {
+export function renderChecklist(pass: PublisherPass, articleId: string): string {
   const items = CHECKLIST_ITEMS.map(({ key, label }) => {
     const val = (pass as unknown as Record<string, unknown>)[key];
     const checked = key === 'publish_datetime' ? val != null : val === 1;
-    return { label, checked };
+    return { key, label, checked };
   });
 
   const done = items.filter(i => i.checked).length;
@@ -238,9 +241,12 @@ function renderChecklist(pass: PublisherPass): string {
   return `
     <section class="detail-section">
       <h2>Publisher Checklist (${done}/${items.length})</h2>
-      <div class="checklist">
+      <div id="publisher-checklist" class="checklist">
         ${items.map(i => `
-          <div class="checklist-item ${i.checked ? 'checked' : ''}">
+          <div class="checklist-item ${i.checked ? 'checked' : ''}"
+               hx-post="/htmx/articles/${escapeHtml(articleId)}/checklist/${escapeHtml(i.key)}"
+               hx-target="#publisher-checklist"
+               hx-swap="innerHTML">
             <span class="check-icon">${i.checked ? '✅' : '⬜'}</span>
             <span class="check-label">${escapeHtml(i.label)}</span>
           </div>
@@ -249,7 +255,7 @@ function renderChecklist(pass: PublisherPass): string {
     </section>`;
 }
 
-function checkAllPassed(pass: PublisherPass): boolean {
+export function checkAllPassed(pass: PublisherPass): boolean {
   for (const { key } of CHECKLIST_ITEMS) {
     const val = (pass as unknown as Record<string, unknown>)[key];
     if (key === 'publish_datetime') {
@@ -259,6 +265,82 @@ function checkAllPassed(pass: PublisherPass): boolean {
     }
   }
   return true;
+}
+
+// ── Note composer ─────────────────────────────────────────────────────────────
+
+export function renderNoteComposer(article: Article): string {
+  const defaultText = escapeHtml(article.subtitle ?? '');
+  const articleId = escapeHtml(article.id);
+
+  return `
+    <section class="detail-section">
+      <h2>📝 Substack Note</h2>
+      <div id="note-composer">
+        <textarea id="note-content" name="content" rows="4" class="form-textarea"
+          placeholder="Write a Note to promote this article...">${defaultText}</textarea>
+        <div class="composer-meta">
+          <label class="composer-check">
+            <input type="checkbox" id="note-attach" name="attachArticle" checked>
+            Attach article card
+          </label>
+        </div>
+        <div class="composer-actions">
+          <button class="btn btn-secondary"
+            hx-post="/api/articles/${articleId}/note"
+            hx-target="#note-result"
+            hx-swap="innerHTML"
+            hx-include="#note-content, #note-attach">
+            Post Note
+          </button>
+        </div>
+        <div id="note-result"></div>
+      </div>
+    </section>`;
+}
+
+// ── Tweet composer ────────────────────────────────────────────────────────────
+
+export function renderTweetComposer(article: Article): string {
+  const defaultText = escapeHtml(article.title + ' 🏈');
+  const articleId = escapeHtml(article.id);
+
+  return `
+    <section class="detail-section">
+      <h2>🐦 Tweet</h2>
+      <div id="tweet-composer">
+        <textarea id="tweet-content" name="content" rows="3" class="form-textarea"
+          placeholder="Compose a tweet...">${defaultText}</textarea>
+        <div class="composer-meta">
+          <span id="tweet-char-count" class="char-count">0/280</span>
+          <label class="composer-check">
+            <input type="checkbox" id="tweet-dry-run" name="dryRun">
+            Dry run (don&#39;t actually post)
+          </label>
+        </div>
+        <div class="composer-actions">
+          <button class="btn btn-secondary"
+            hx-post="/api/articles/${articleId}/tweet"
+            hx-target="#tweet-result"
+            hx-swap="innerHTML"
+            hx-include="#tweet-content, #tweet-dry-run">
+            Post Tweet
+          </button>
+        </div>
+        <div id="tweet-result"></div>
+      </div>
+    </section>
+    <script>
+      document.getElementById('tweet-content').addEventListener('input', function() {
+        var text = this.value;
+        var urlCount = (text.match(/https?:\\/\\/\\S+/g) || []).length;
+        var nonUrlLength = text.replace(/https?:\\/\\/\\S+/g, '').length;
+        var effective = nonUrlLength + (urlCount * 23);
+        var counter = document.getElementById('tweet-char-count');
+        counter.textContent = effective + '/280';
+        counter.className = 'char-count' + (effective > 280 ? ' over-limit' : effective > 250 ? ' near-limit' : '');
+      });
+    </script>`;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -234,7 +234,12 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
     }).join('');
 
     return `
-      <section class="detail-section action-panel">
+      <section class="detail-section action-panel"
+        hx-get="/articles/${escapeHtml(article.id)}"
+        hx-trigger="sse:stage_changed"
+        hx-select=".action-panel"
+        hx-target="this"
+        hx-swap="outerHTML">
         <h2>Actions</h2>
         <div class="action-bar">
           ${article.substack_draft_url
@@ -278,7 +283,12 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
     : '';
 
   return `
-    <section class="detail-section action-panel">
+    <section class="detail-section action-panel"
+      hx-get="/articles/${escapeHtml(article.id)}"
+      hx-trigger="sse:stage_changed"
+      hx-select=".action-panel"
+      hx-target="this"
+      hx-swap="outerHTML">
       <h2>Actions</h2>
       <div class="action-bar">
         ${article.substack_draft_url

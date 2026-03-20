@@ -34,13 +34,15 @@ export function renderLayout(title: string, content: string, labName: string): s
   <title>${escapeHtml(title)} — ${escapeHtml(labName)} Dashboard</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
 </head>
-<body>
+<body hx-ext="sse" sse-connect="/events">
   <header class="site-header">
     <div class="header-inner">
       <a href="/" class="logo">${escapeHtml(labName)}</a>
       <nav class="header-nav">
         <a href="/ideas/new" class="btn btn-header">+ New Idea</a>
+        <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
         <span class="env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
       </nav>
     </div>
@@ -51,6 +53,24 @@ export function renderLayout(title: string, content: string, labName: string): s
   <footer class="site-footer">
     <p>${escapeHtml(labName)} Editorial Workstation</p>
   </footer>
+  <script>
+    function toggleTheme() {
+      var html = document.documentElement;
+      var current = html.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? 'dark' : 'dark');
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌓';
+    }
+    (function() {
+      var saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+        var btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌓';
+      }
+    })();
+  </script>
 </body>
 </html>`;
 }

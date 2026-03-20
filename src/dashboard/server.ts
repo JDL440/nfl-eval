@@ -22,6 +22,7 @@ import {
   renderPublished,
   renderPipelineSummary,
   renderStageArticles,
+  renderFilteredArticles,
 } from './views/home.js';
 import { renderArticleDetail, renderArtifactContent, renderAdvanceResult, renderUsagePanel, renderStageRunsPanel, ARTIFACT_FILES } from './views/article.js';
 import type { ArtifactName } from './views/article.js';
@@ -39,9 +40,14 @@ import {
   renderPublishResult,
   proseMirrorToHtml,
   extractDraftId,
+  renderChecklist,
+  renderNoteComposer,
+  renderTweetComposer,
+  CHECKLIST_ITEMS,
 } from './views/publish.js';
 import { markdownToProseMirror } from '../services/prosemirror.js';
 import type { SubstackService } from '../services/substack.js';
+import type { TwitterService } from '../services/twitter.js';
 import { executeTransition, type ActionContext } from '../pipeline/actions.js';
 import { LLMGateway } from '../llm/gateway.js';
 import { ModelPolicy } from '../llm/model-policy.js';
@@ -51,6 +57,7 @@ import { PipelineAuditor } from '../pipeline/audit.js';
 import { CopilotProvider } from '../llm/providers/copilot.js';
 import { MockProvider } from '../llm/providers/mock.js';
 import { LMStudioProvider } from '../llm/providers/lmstudio.js';
+import { EventBus, registerSSE } from '../dashboard/sse.js';
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
@@ -104,10 +111,15 @@ function buildPipelineSummary(
 export function createApp(
   repo: Repository,
   config: AppConfig,
-  deps?: { substackService?: SubstackService; actionContext?: ActionContext },
+  deps?: { substackService?: SubstackService; twitterService?: TwitterService; actionContext?: ActionContext },
 ): Hono {
   const app = new Hono();
   const substackService = deps?.substackService;
+  const twitterService = deps?.twitterService;
+  const bus = new EventBus();
+
+  // Register SSE event stream
+  registerSSE(app, bus);
 
   // ── Static files ──────────────────────────────────────────────────────────
   const publicRoot = join(__dirname, 'public');
@@ -123,6 +135,7 @@ export function createApp(
 
   app.get('/', (c) => {
     const articles = repo.getAllArticles();
+    const teams = repo.getDistinctTeams();
     return c.html(
       renderHome({
         config,
@@ -130,6 +143,7 @@ export function createApp(
         recentIdeas: articles.filter(a => a.current_stage === 1),
         published: articles.filter(a => a.current_stage === 8),
         pipelineSummary: buildPipelineSummary(articles),
+        teams,
       }),
     );
   });
@@ -214,6 +228,8 @@ export function createApp(
       // Store idea artifact in DB
       repo.artifacts.put(id, 'idea.md', `# ${title}\n`);
 
+      bus.emit({ type: 'article_created', articleId: id, data: { title }, timestamp: new Date().toISOString() });
+
       return c.json(article, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -297,6 +313,8 @@ export function createApp(
       });
 
       repo.artifacts.put(slug, 'idea.md', ideaContent);
+
+      bus.emit({ type: 'article_created', articleId: slug, data: { title }, timestamp: new Date().toISOString() });
 
       return c.json({
         id: slug,
@@ -458,6 +476,24 @@ export function createApp(
 
   // ── htmx partial routes (HTML fragments) ──────────────────────────────────
 
+  app.get('/htmx/filtered-articles', (c) => {
+    const search = c.req.query('search') || undefined;
+    const stageStr = c.req.query('stage');
+    const team = c.req.query('team') || undefined;
+    const depthStr = c.req.query('depth');
+
+    const stage = stageStr ? parseInt(stageStr, 10) : undefined;
+    const depthLevel = depthStr ? parseInt(depthStr, 10) : undefined;
+
+    // Only query if at least one filter is active
+    if (!search && stage == null && !team && depthLevel == null) {
+      return c.html('');
+    }
+
+    const articles = repo.listArticles({ search, stage, team, depthLevel, limit: 50 });
+    return c.html(renderFilteredArticles(articles));
+  });
+
   app.get('/htmx/pipeline-summary', (c) => {
     const articles = repo.getAllArticles();
     return c.html(renderPipelineSummary(buildPipelineSummary(articles)));
@@ -551,6 +587,7 @@ export function createApp(
 
     try {
       const newStage = engine.advance(id, article.current_stage, 'dashboard');
+      bus.emit({ type: 'stage_changed', articleId: id, data: { from: article.current_stage, to: newStage, action: 'advance' }, timestamp: new Date().toISOString() });
       return c.html(
         renderAdvanceResult(true, `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}`),
         200,
@@ -797,6 +834,8 @@ export function createApp(
       // Record publish: advances to Stage 8, sets substack_url + published_at
       repo.recordPublish(id, post.canonicalUrl, 'dashboard');
 
+      bus.emit({ type: 'article_published', articleId: id, data: { url: post.canonicalUrl }, timestamp: new Date().toISOString() });
+
       const isHtmx = c.req.header('hx-request') === 'true';
       if (isHtmx) {
         return c.html(
@@ -821,8 +860,151 @@ export function createApp(
     }
   });
 
-  // ── SSE stub for future real-time updates ─────────────────────────────────
-  // app.get('/events', (c) => { ... Server-Sent Events stream ... });
+  // ── htmx: toggle publisher checklist item ──────────────────────────────────
+
+  app.post('/htmx/articles/:id/checklist/:key', (c) => {
+    const id = c.req.param('id');
+    const key = c.req.param('key');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+    const pass = repo.getPublisherPass(id);
+
+    if (key === 'publish_datetime') {
+      const current = pass ? (pass as unknown as Record<string, unknown>)[key] : null;
+      const newValue = current != null ? null : new Date().toISOString();
+      repo.updateChecklistItem(id, key, newValue);
+    } else {
+      const current = pass ? (pass as unknown as Record<string, unknown>)[key] : 0;
+      const newValue = current === 1 ? 0 : 1;
+      repo.updateChecklistItem(id, key, newValue);
+    }
+
+    const updatedPass = repo.getPublisherPass(id)!;
+    const items = CHECKLIST_ITEMS.map(({ key: k, label }) => {
+      const val = (updatedPass as unknown as Record<string, unknown>)[k];
+      const checked = k === 'publish_datetime' ? val != null : val === 1;
+      return { key: k, label, checked };
+    });
+
+    return c.html(
+      items.map(i => `
+        <div class="checklist-item ${i.checked ? 'checked' : ''}"
+             hx-post="/htmx/articles/${escapeHtml(id)}/checklist/${escapeHtml(i.key)}"
+             hx-target="#publisher-checklist"
+             hx-swap="innerHTML">
+          <span class="check-icon">${i.checked ? '✅' : '⬜'}</span>
+          <span class="check-label">${escapeHtml(i.label)}</span>
+        </div>
+      `).join(''),
+    );
+  });
+
+  // ── POST Note to Substack ───────────────────────────────────────────────────
+
+  app.post('/api/articles/:id/note', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) {
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html('<div class="note-error">Article not found</div>', 404)
+        : c.json({ error: 'Article not found' }, 404);
+    }
+
+    if (!substackService) {
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html('<div class="note-error">Substack service not configured</div>', 500)
+        : c.json({ error: 'Substack service not configured' }, 500);
+    }
+
+    try {
+      const body = await c.req.parseBody();
+      const content = String(body['content'] ?? '').trim();
+      if (!content) {
+        const isHtmx = c.req.header('hx-request') === 'true';
+        return isHtmx
+          ? c.html('<div class="note-error">Note content is required</div>', 400)
+          : c.json({ error: 'Note content is required' }, 400);
+      }
+      const attachArticle = body['attachArticle'] === 'on' || body['attachArticle'] === 'true';
+
+      const result = await substackService.createNote({
+        content,
+        articleSlug: attachArticle ? article.id : undefined,
+      });
+
+      repo.recordNote(article.id, 'promotion', content, result.url, 'prod', 'dashboard');
+
+      const isHtmx = c.req.header('hx-request') === 'true';
+      if (isHtmx) {
+        return c.html(
+          `<div class="note-success">✅ Note posted! <a href="${escapeHtml(result.url)}" target="_blank">View on Substack ↗</a></div>`,
+        );
+      }
+      return c.json({ success: true, noteUrl: result.url, noteId: result.id });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html(`<div class="note-error">❌ ${escapeHtml(message)}</div>`, 500)
+        : c.json({ error: message }, 500);
+    }
+  });
+
+  // ── POST Tweet to X ─────────────────────────────────────────────────────────
+
+  app.post('/api/articles/:id/tweet', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) {
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html('<div class="tweet-error">Article not found</div>', 404)
+        : c.json({ error: 'Article not found' }, 404);
+    }
+
+    if (!twitterService) {
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html('<div class="tweet-error">Twitter service not configured</div>', 500)
+        : c.json({ error: 'Twitter service not configured' }, 500);
+    }
+
+    try {
+      const body = await c.req.parseBody();
+      let content = String(body['content'] ?? '').trim();
+      if (!content) {
+        const isHtmx = c.req.header('hx-request') === 'true';
+        return isHtmx
+          ? c.html('<div class="tweet-error">Tweet content is required</div>', 400)
+          : c.json({ error: 'Tweet content is required' }, 400);
+      }
+      const dryRun = body['dryRun'] === 'on' || body['dryRun'] === 'true';
+
+      // Append article URL if it exists and isn't already in the tweet
+      if (article.substack_url && !content.includes(article.substack_url)) {
+        content = content + '\n' + article.substack_url;
+      }
+
+      const result = await twitterService.postTweet({ content, dryRun });
+
+      const isHtmx = c.req.header('hx-request') === 'true';
+      if (isHtmx) {
+        const label = dryRun ? '🧪 Dry run — tweet not posted' : '✅ Tweet posted!';
+        const link = result.url ? ` <a href="${escapeHtml(result.url)}" target="_blank">View on X ↗</a>` : '';
+        return c.html(`<div class="tweet-success">${label}${link}</div>`);
+      }
+      return c.json({ success: true, tweetUrl: result.url, tweetId: result.id, dryRun });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const isHtmx = c.req.header('hx-request') === 'true';
+      return isHtmx
+        ? c.html(`<div class="tweet-error">❌ ${escapeHtml(message)}</div>`, 500)
+        : c.json({ error: message }, 500);
+    }
+  });
 
   return app;
 }

@@ -179,6 +179,55 @@ describe('Repository', () => {
     });
   });
 
+  // ── Update checklist item ─────────────────────────────────────────────────
+
+  describe('updateChecklistItem', () => {
+    it('toggles a boolean checklist field', () => {
+      repo.createArticle({ id: 'toggle-test', title: 'Toggle Test' });
+      repo.recordPublisherPass('toggle-test', { title_final: 0 });
+
+      repo.updateChecklistItem('toggle-test', 'title_final', 1);
+      const pass = repo.getPublisherPass('toggle-test');
+      expect(pass!.title_final).toBe(1);
+
+      repo.updateChecklistItem('toggle-test', 'title_final', 0);
+      const pass2 = repo.getPublisherPass('toggle-test');
+      expect(pass2!.title_final).toBe(0);
+    });
+
+    it('sets and clears publish_datetime', () => {
+      repo.createArticle({ id: 'dt-test', title: 'DateTime Test' });
+      repo.recordPublisherPass('dt-test');
+
+      const now = new Date().toISOString();
+      repo.updateChecklistItem('dt-test', 'publish_datetime', now);
+      const pass = repo.getPublisherPass('dt-test');
+      expect(pass!.publish_datetime).toBe(now);
+
+      repo.updateChecklistItem('dt-test', 'publish_datetime', null);
+      const pass2 = repo.getPublisherPass('dt-test');
+      expect(pass2!.publish_datetime).toBeNull();
+    });
+
+    it('creates publisher_pass row if missing', () => {
+      repo.createArticle({ id: 'auto-create', title: 'Auto Create' });
+
+      repo.updateChecklistItem('auto-create', 'body_clean', 1);
+      const pass = repo.getPublisherPass('auto-create');
+      expect(pass).not.toBeNull();
+      expect(pass!.body_clean).toBe(1);
+    });
+
+    it('rejects invalid checklist key', () => {
+      repo.createArticle({ id: 'bad-key', title: 'Bad Key' });
+      expect(() => repo.updateChecklistItem('bad-key', 'fake_field', 1)).toThrow('Invalid checklist key');
+    });
+
+    it('rejects nonexistent article', () => {
+      expect(() => repo.updateChecklistItem('ghost', 'title_final', 1)).toThrow('not found');
+    });
+  });
+
   // ── Publish confirmation ───────────────────────────────────────────────────
 
   describe('publish confirmation', () => {

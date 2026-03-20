@@ -19,6 +19,7 @@ export interface HomeData {
   recentIdeas: Article[];
   published: Article[];
   pipelineSummary: Record<number, { name: string; count: number }>;
+  teams?: string[];
 }
 
 export type PipelineSummary = Record<number, { name: string; count: number }>;
@@ -26,20 +27,54 @@ export type PipelineSummary = Record<number, { name: string; count: number }>;
 // ── Full page ────────────────────────────────────────────────────────────────
 
 export function renderHome(data: HomeData): string {
-  const { config, readyArticles, recentIdeas, published, pipelineSummary } = data;
+  const { config, readyArticles, recentIdeas, published, pipelineSummary, teams = [] } = data;
 
   const content = `
     <div class="dashboard-grid">
+      <section class="section section-filters" id="pipeline-filters">
+        <h2>🔍 Search &amp; Filter</h2>
+        <div class="filter-bar">
+          <input type="search" name="search" placeholder="Search articles…" class="filter-input"
+            hx-get="/htmx/filtered-articles" hx-trigger="input changed delay:300ms, search"
+            hx-target="#filtered-results" hx-swap="innerHTML"
+            hx-include=".filter-bar" />
+          <select name="stage" class="filter-select"
+            hx-get="/htmx/filtered-articles" hx-trigger="change"
+            hx-target="#filtered-results" hx-swap="innerHTML"
+            hx-include=".filter-bar">
+            <option value="">All Stages</option>
+            ${VALID_STAGES.map(s => `<option value="${s}">Stage ${s} · ${STAGE_NAMES[s]}</option>`).join('')}
+          </select>
+          <select name="team" class="filter-select"
+            hx-get="/htmx/filtered-articles" hx-trigger="change"
+            hx-target="#filtered-results" hx-swap="innerHTML"
+            hx-include=".filter-bar">
+            <option value="">All Teams</option>
+            ${teams.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
+          </select>
+          <select name="depth" class="filter-select"
+            hx-get="/htmx/filtered-articles" hx-trigger="change"
+            hx-target="#filtered-results" hx-swap="innerHTML"
+            hx-include=".filter-bar">
+            <option value="">All Depths</option>
+            <option value="1">1 — Casual Fan</option>
+            <option value="2">2 — The Beat</option>
+            <option value="3">3 — Deep Dive</option>
+          </select>
+        </div>
+        <div id="filtered-results"></div>
+      </section>
+
       <section class="section section-ready" id="ready-to-publish">
         <h2>🚀 Ready to Publish</h2>
-        <div hx-get="/htmx/ready-to-publish" hx-trigger="refreshPublish from:body" hx-swap="innerHTML">
+        <div hx-get="/htmx/ready-to-publish" hx-trigger="refreshPublish from:body, sse:article_published" hx-swap="innerHTML">
           ${renderReadyToPublish(readyArticles)}
         </div>
       </section>
 
       <section class="section section-pipeline" id="pipeline">
         <h2>📊 Pipeline</h2>
-        <div hx-get="/htmx/pipeline-summary" hx-trigger="refreshPipeline from:body" hx-swap="innerHTML">
+        <div hx-get="/htmx/pipeline-summary" hx-trigger="refreshPipeline from:body, sse:stage_changed" hx-swap="innerHTML">
           ${renderPipelineSummary(pipelineSummary)}
         </div>
       </section>
@@ -47,14 +82,14 @@ export function renderHome(data: HomeData): string {
       <section class="section section-ideas" id="recent-ideas">
         <h2>💡 Recent Ideas</h2>
         ${renderIdeaForm()}
-        <div id="ideas-list" hx-get="/htmx/recent-ideas" hx-trigger="refreshIdeas from:body" hx-swap="innerHTML">
+        <div id="ideas-list" hx-get="/htmx/recent-ideas" hx-trigger="refreshIdeas from:body, sse:article_created" hx-swap="innerHTML">
           ${renderRecentIdeas(recentIdeas)}
         </div>
       </section>
 
       <section class="section section-published" id="published">
         <h2>✅ Recently Published</h2>
-        <div hx-get="/htmx/published" hx-trigger="refreshPublished from:body" hx-swap="innerHTML">
+        <div hx-get="/htmx/published" hx-trigger="refreshPublished from:body, sse:article_published" hx-swap="innerHTML">
           ${renderPublished(published)}
         </div>
       </section>
@@ -194,4 +229,25 @@ function renderIdeaForm(): string {
       <a href="/ideas/new" class="btn btn-primary btn-lg">✨ New Article Idea</a>
       <span class="idea-hint">Submit a prompt and let the pipeline do the rest</span>
     </div>`;
+}
+
+// ── Filtered articles partial ──────────────────────────────────────────────
+
+export function renderFilteredArticles(articles: Article[]): string {
+  if (articles.length === 0) {
+    return '<p class="empty-state">No articles match your filters</p>';
+  }
+  return `<div class="filtered-list">
+    ${articles.map(a => {
+      const stage = a.current_stage as Stage;
+      const stageName = STAGE_NAMES[stage] ?? `Stage ${stage}`;
+      return `
+      <a href="/articles/${escapeHtml(a.id)}" class="filtered-item">
+        <span class="badge badge-stage badge-stage-${stage}">S${stage}</span>
+        <span class="article-title">${escapeHtml(a.title)}</span>
+        ${a.primary_team ? `<span class="badge badge-team">${escapeHtml(a.primary_team)}</span>` : ''}
+        <span class="meta-date">${formatDate(a.updated_at)}</span>
+      </a>`;
+    }).join('')}
+  </div>`;
 }

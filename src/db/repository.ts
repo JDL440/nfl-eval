@@ -180,7 +180,7 @@ export class Repository {
     return stmt.all(articleId) as unknown as StageTransition[];
   }
 
-  listArticles(filters?: { stage?: number; status?: string; limit?: number }): Article[] {
+  listArticles(filters?: { stage?: number; status?: string; team?: string; depthLevel?: number; search?: string; limit?: number }): Article[] {
     let sql = 'SELECT * FROM articles';
     const params: (string | number)[] = [];
     const conditions: string[] = [];
@@ -192,6 +192,18 @@ export class Repository {
     if (filters?.status) {
       conditions.push('status = ?');
       params.push(filters.status);
+    }
+    if (filters?.team) {
+      conditions.push('primary_team = ?');
+      params.push(filters.team);
+    }
+    if (filters?.depthLevel != null) {
+      conditions.push('depth_level = ?');
+      params.push(filters.depthLevel);
+    }
+    if (filters?.search) {
+      conditions.push('title LIKE ?');
+      params.push(`%${filters.search}%`);
     }
 
     if (conditions.length > 0) {
@@ -206,6 +218,11 @@ export class Repository {
 
     const stmt = this.db.prepare(sql);
     return stmt.all(...params) as unknown as Article[];
+  }
+
+  getDistinctTeams(): string[] {
+    const stmt = this.db.prepare('SELECT DISTINCT primary_team FROM articles WHERE primary_team IS NOT NULL ORDER BY primary_team');
+    return (stmt.all() as { primary_team: string }[]).map(r => r.primary_team);
   }
 
   // ── Draft URL management ───────────────────────────────────────────────────
@@ -632,6 +649,22 @@ export class Repository {
     const stmt = this.db.prepare('SELECT * FROM publisher_pass WHERE article_id = ?');
     const row = stmt.get(articleId) as unknown as PublisherPass | undefined;
     return row ?? null;
+  }
+
+  updateChecklistItem(articleId: string, key: string, value: number | string | null): void {
+    const validKeys = [
+      'title_final', 'subtitle_final', 'body_clean', 'section_assigned',
+      'tags_set', 'url_slug_set', 'cover_image_set', 'paywall_set', 'email_send',
+      'names_verified', 'numbers_current', 'no_stale_refs', 'publish_datetime',
+    ];
+    if (!validKeys.includes(key)) throw new Error(`Invalid checklist key: ${key}`);
+
+    // Ensure publisher_pass row exists (create with defaults if needed)
+    const existing = this.getPublisherPass(articleId);
+    if (!existing) this.recordPublisherPass(articleId);
+
+    const stmt = this.db.prepare(`UPDATE publisher_pass SET ${key} = ? WHERE article_id = ?`);
+    stmt.run(value, articleId);
   }
 
   // ── Notes ──────────────────────────────────────────────────────────────────
