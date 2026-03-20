@@ -400,4 +400,140 @@ describe('Publish Workflow', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ── POST /api/articles/:id/note (post Substack note) ────────────────────────
+
+  describe('POST /api/articles/:id/note', () => {
+    it('posts a note and returns success', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'note-test', title: 'Note Test' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const form = new FormData();
+      form.append('content', 'Check out this article!');
+      form.append('attachArticle', 'on');
+
+      const res = await app.request('/api/articles/note-test/note', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as { success: boolean; noteUrl: string; noteId: string };
+      expect(body.success).toBe(true);
+      expect(body.noteUrl).toContain('substack.com');
+      expect(body.noteId).toBe('1');
+
+      expect(mockService.createNote).toHaveBeenCalledOnce();
+      const callArgs = (mockService.createNote as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.content).toBe('Check out this article!');
+      expect(callArgs.articleSlug).toBe('note-test');
+    });
+
+    it('returns error when SubstackService not configured', async () => {
+      repo.createArticle({ id: 'note-no-svc', title: 'No Service Note' });
+
+      const app = createApp(repo, config);
+      const form = new FormData();
+      form.append('content', 'Hello');
+
+      const res = await app.request('/api/articles/note-no-svc/note', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('not configured');
+    });
+
+    it('returns error when content is empty', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'note-empty', title: 'Empty Note' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const form = new FormData();
+      form.append('content', '');
+
+      const res = await app.request('/api/articles/note-empty/note', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(400);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('required');
+    });
+
+    it('returns error when createNote throws', async () => {
+      const mockService = createMockSubstackService({
+        createNote: vi.fn().mockRejectedValue(new Error('Notes rate limit')),
+      } as unknown as Partial<SubstackService>);
+      repo.createArticle({ id: 'note-fail', title: 'Note Fail' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const form = new FormData();
+      form.append('content', 'Hello world');
+
+      const res = await app.request('/api/articles/note-fail/note', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('Notes rate limit');
+    });
+
+    it('returns htmx HTML on success', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'note-htmx', title: 'HTMX Note' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const form = new FormData();
+      form.append('content', 'Great article!');
+
+      const res = await app.request('/api/articles/note-htmx/note', {
+        method: 'POST',
+        body: form,
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Note posted');
+      expect(html).toContain('substack.com');
+    });
+
+    it('returns 404 for missing article', async () => {
+      const mockService = createMockSubstackService();
+      const app = createApp(repo, config, { substackService: mockService });
+      const form = new FormData();
+      form.append('content', 'Hello');
+
+      const res = await app.request('/api/articles/ghost/note', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('does not attach article slug when checkbox is off', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'note-noattach', title: 'No Attach' });
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const form = new FormData();
+      form.append('content', 'Standalone note');
+
+      const res = await app.request('/api/articles/note-noattach/note', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockService.createNote as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.articleSlug).toBeUndefined();
+    });
+  });
 });
