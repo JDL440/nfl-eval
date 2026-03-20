@@ -65,7 +65,8 @@ describe('CopilotProvider', () => {
       const models = provider.listModels();
       expect(models).toContain('gpt-4o');
       expect(models).toContain('gpt-4o-mini');
-      expect(models).toContain('claude-sonnet-4-20250514');
+      expect(models).toContain('gpt-4.1');
+      expect(models).toContain('o4-mini');
       expect(models).toContain('o1');
       expect(models.length).toBeGreaterThan(0);
     });
@@ -77,8 +78,8 @@ describe('CopilotProvider', () => {
     it('returns true for listed models', () => {
       const provider = new CopilotProvider();
       expect(provider.supportsModel('gpt-4o')).toBe(true);
-      expect(provider.supportsModel('claude-sonnet-4-20250514')).toBe(true);
-      expect(provider.supportsModel('o1')).toBe(true);
+      expect(provider.supportsModel('gpt-4.1')).toBe(true);
+      expect(provider.supportsModel('o4-mini')).toBe(true);
     });
 
     it('returns false for unknown models', () => {
@@ -149,26 +150,26 @@ describe('CopilotProvider', () => {
         }),
       );
 
-      // Model mapped to qualified name
+      // Model mapped to qualified name (identity mapping — no prefix)
       const body = JSON.parse(options.body as string);
-      expect(body.model).toBe('openai/gpt-4o');
+      expect(body.model).toBe('gpt-4o');
     });
 
-    it('maps claude model to anthropic namespace', async () => {
+    it('maps gpt-4.1 model correctly', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () =>
-          fakeApiResponse({ model: 'anthropic/claude-sonnet-4-20250514' }),
+          fakeApiResponse({ model: 'gpt-4.1' }),
       });
       vi.stubGlobal('fetch', mockFetch);
 
       const provider = new CopilotProvider();
-      await provider.chat(req({ model: 'claude-sonnet-4-20250514' }));
+      await provider.chat(req({ model: 'gpt-4.1' }));
 
       const body = JSON.parse(
         (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string,
       );
-      expect(body.model).toBe('anthropic/claude-sonnet-4-20250514');
+      expect(body.model).toBe('gpt-4.1');
     });
 
     it('passes temperature and maxTokens', async () => {
@@ -219,7 +220,26 @@ describe('CopilotProvider', () => {
       const body = JSON.parse(
         (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string,
       );
-      expect(body.model).toBe('openai/gpt-4o');
+      expect(body.model).toBe('gpt-4o');
+    });
+
+    it('uses max_completion_tokens and omits temperature for reasoning models', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => fakeApiResponse({ model: 'o4-mini' }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const provider = new CopilotProvider();
+      await provider.chat(req({ model: 'o4-mini', maxTokens: 2048, temperature: 0.5 }));
+
+      const body = JSON.parse(
+        (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string,
+      );
+      expect(body.model).toBe('o4-mini');
+      expect(body.max_completion_tokens).toBe(2048);
+      expect(body.max_tokens).toBeUndefined();
+      expect(body.temperature).toBeUndefined();
     });
   });
 

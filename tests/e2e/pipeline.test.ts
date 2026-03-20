@@ -440,20 +440,19 @@ describe('E2E: Full Pipeline', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: 'New Idea From E2E Test',
-        description: 'Testing idea submission through the dashboard API.',
-        depth_level: 2,
+        prompt: 'New Idea From E2E Test: Testing idea submission through the dashboard API.',
+        depthLevel: 2,
       }),
     });
     expect(ideaRes.status).toBe(201);
     const ideaJson = await ideaRes.json() as { id: string; title: string };
-    expect(ideaJson.title).toBe('New Idea From E2E Test');
+    expect(ideaJson.title).toBeTruthy();
     expect(ideaJson.id).toBeTruthy();
 
     // Verify the idea.md was written to DB
     const ideaContent = f.repo.artifacts.get(ideaJson.id, 'idea.md');
     expect(ideaContent).toBeTruthy();
-    expect(ideaContent).toContain('New Idea From E2E Test');
+    expect(ideaContent).toContain('New Idea');
 
     // ── GET /api/articles returns all articles (should now be 3) ──
     const listRes = await app.request('/api/articles');

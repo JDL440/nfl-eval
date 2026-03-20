@@ -84,14 +84,14 @@ describe('Full lifecycle: Stage 1 → 8', () => {
   const slug = 'lifecycle-happy-path';
 
   it('creates an idea at Stage 1', async () => {
-    const res = await postJson('/api/ideas', {
+    // Use /api/articles with known slug (POST /api/ideas now generates slugs server-side)
+    const res = await postJson('/api/articles', {
+      id: slug,
       title: 'Lifecycle Happy Path',
-      description: 'Complete end-to-end test from idea through publication.',
     });
     expect(res.status).toBe(201);
-    const body = await res.json() as Article;
+    const body = await res.json() as { id: string };
     expect(body.id).toBe(slug);
-    expect(body.current_stage).toBe(1);
 
     // Verify artifact in DB
     expect(repo.artifacts.exists(slug, 'idea.md')).toBe(true);
@@ -385,13 +385,13 @@ describe('JSON API advance: full lifecycle', () => {
   const slug = 'api-lifecycle-test';
 
   it('advances through all stages via /api/articles/:id/advance', async () => {
-    // Create idea
-    const createRes = await postJson('/api/ideas', {
+    // Create idea via /api/articles with known slug
+    const createRes = await postJson('/api/articles', {
+      id: slug,
       title: 'API Lifecycle Test',
-      description: 'Testing full lifecycle through the JSON advance endpoint.',
     });
     expect(createRes.status).toBe(201);
-    expect((await createRes.json() as Article).id).toBe(slug);
+    expect((await createRes.json() as { id: string }).id).toBe(slug);
 
     // 1→2
     let res = await postJson(`/api/articles/${slug}/advance`, { to_stage: 2 });
@@ -521,20 +521,20 @@ describe('Publisher pass check granularity', () => {
 
 describe('Multiple articles at different stages', () => {
   it('manages independent articles without cross-contamination', async () => {
-    // Create two ideas
-    const res1 = await postJson('/api/ideas', {
+    // Create two ideas via /api/articles with known slugs
+    const res1 = await postJson('/api/articles', {
+      id: 'article-alpha-independent',
       title: 'Article Alpha Independent',
-      description: 'First independent article for cross-contamination test.',
     });
-    const res2 = await postJson('/api/ideas', {
+    const res2 = await postJson('/api/articles', {
+      id: 'article-beta-independent',
       title: 'Article Beta Independent',
-      description: 'Second independent article for cross-contamination test.',
     });
     expect(res1.status).toBe(201);
     expect(res2.status).toBe(201);
 
-    const alpha = (await res1.json() as Article).id;
-    const beta = (await res2.json() as Article).id;
+    const alpha = (await res1.json() as { id: string }).id;
+    const beta = (await res2.json() as { id: string }).id;
 
     // Advance alpha to stage 2
     let res = await htmxAdvance(alpha);

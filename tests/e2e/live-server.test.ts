@@ -74,23 +74,21 @@ describe('Live Server E2E', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: 'Can Jalen Hurts Sustain His MVP Pace',
-        description: 'An in-depth look at Hurts passing and rushing efficiency in 2025.',
-        primary_team: 'Philadelphia Eagles',
-        depth_level: 2,
+        prompt: 'Can Jalen Hurts sustain his MVP pace? An in-depth look at Hurts passing and rushing efficiency in 2025.',
+        teams: ['PHI'],
+        depthLevel: 2,
       }),
     });
 
     expect(res.status).toBe(201);
-    const body = await res.json() as { id: string; title: string; current_stage: number };
-    expect(body.id).toBe('can-jalen-hurts-sustain-his-mvp-pace');
-    expect(body.current_stage).toBe(1);
+    const body = await res.json() as { id: string; title: string; stage: number };
+    expect(body.id).toBeTruthy();
+    expect(body.stage).toBe(1);
 
     // Verify idea.md was stored in DB artifact store
     const content = repo.artifacts.get(body.id, 'idea.md');
     expect(content).not.toBeNull();
-    expect(content).toContain('Jalen Hurts');
-    expect(content).toContain('efficiency');
+    expect(content).toContain('Hurts');
   });
 
   // ── Idea creation: raw article API ──────────────────────────────────────
@@ -112,57 +110,8 @@ describe('Live Server E2E', () => {
     expect(repo.artifacts.exists('test-raw-article', 'idea.md')).toBe(true);
   });
 
-  // ── Idea creation: htmx form (legacy inline) ───────────────────────────
-
-  it('POST /htmx/ideas (legacy form) creates article + idea.md', async () => {
-    const formBody = new URLSearchParams({
-      id: 'htmx-legacy-test',
-      title: 'HTMX Legacy Form Test Article',
-      primary_team: 'Seattle Seahawks',
-    });
-
-    const res = await appFetch('/htmx/ideas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody.toString(),
-    });
-
-    expect(res.status).toBe(200);
-    const html = await res.text();
-    expect(html).toContain('HTMX Legacy Form Test');
-
-    // Verify idea.md was stored in DB
-    expect(repo.artifacts.exists('htmx-legacy-test', 'idea.md')).toBe(true);
-    const content = repo.artifacts.get('htmx-legacy-test', 'idea.md');
-    expect(content).toContain('HTMX Legacy Form Test');
-  });
-
-  // ── Idea creation: htmx full form ──────────────────────────────────────
-
-  it('POST /htmx/ideas (full form) creates article + idea.md', async () => {
-    const formBody = new URLSearchParams({
-      title: 'Full Form End To End Test',
-      description: 'Detailed description of the article thesis and central question for analysis.',
-      primary_team: 'Denver Broncos',
-      depth_level: '3',
-    });
-
-    const res = await appFetch('/htmx/ideas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody.toString(),
-    });
-
-    expect(res.status).toBe(200);
-    const html = await res.text();
-    expect(html).toContain('Idea Submitted');
-
-    const slug = 'full-form-end-to-end-test';
-    expect(repo.artifacts.exists(slug, 'idea.md')).toBe(true);
-    const content = repo.artifacts.get(slug, 'idea.md');
-    expect(content).toContain('Full Form End To End Test');
-    expect(content).toContain('central question');
-  });
+  // ── Idea creation: htmx form (legacy — removed) ─────────────────────────
+  // POST /htmx/ideas was removed; tests below use the API flow instead.
 
   // ── Advance: verify 1→2 works after idea creation ──────────────────────
 
@@ -172,9 +121,8 @@ describe('Live Server E2E', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: 'Advance Test Article For Pipeline',
-        description: 'Testing that the advance endpoint works correctly with proper idea.md creation.',
-        primary_team: 'Kansas City Chiefs',
+        prompt: 'Advance Test Article For Pipeline: Testing that the advance endpoint works correctly with proper idea.md creation.',
+        teams: ['KC'],
       }),
     });
     expect(createRes.status).toBe(201);
@@ -194,30 +142,6 @@ describe('Live Server E2E', () => {
     expect(article?.current_stage).toBe(2);
   });
 
-  it('POST /htmx/articles/:id/advance (legacy form) succeeds', async () => {
-    // Create via legacy htmx form
-    const formBody = new URLSearchParams({
-      id: 'legacy-advance-test',
-      title: 'Legacy Advance Test Article',
-    });
-
-    const createRes = await appFetch('/htmx/ideas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody.toString(),
-    });
-    expect(createRes.status).toBe(200);
-
-    // Advance
-    const advanceRes = await appFetch('/htmx/articles/legacy-advance-test/advance', {
-      method: 'POST',
-    });
-
-    expect(advanceRes.status).toBe(200);
-    const html = await advanceRes.text();
-    expect(html).toContain('Advanced to Stage 2');
-  });
-
   // ── Advance: verify failure for non-existent article ────────────────────
 
   it('POST /htmx/articles/:id/advance returns 404 for unknown article', async () => {
@@ -234,12 +158,11 @@ describe('Live Server E2E', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: 'API Advance Test Article Pipeline',
-        description: 'Testing the JSON API advance endpoint with proper stage transition.',
+        prompt: 'API Advance Test Article Pipeline: Testing the JSON API advance endpoint with proper stage transition.',
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json() as { id: string; current_stage: number };
+    const created = await createRes.json() as { id: string; stage: number };
 
     const advanceRes = await appFetch(`/api/articles/${created.id}/advance`, {
       method: 'POST',
@@ -255,11 +178,11 @@ describe('Live Server E2E', () => {
   // ── Article detail page ────────────────────────────────────────────────
 
   it('GET /articles/:id renders article detail page', async () => {
-    // Use one of the articles created above
-    const res = await appFetch('/articles/htmx-legacy-test');
+    // Use the test-raw-article created above via /api/articles
+    const res = await appFetch('/articles/test-raw-article');
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('HTMX Legacy Form Test');
+    expect(html).toContain('Test Raw Article');
     expect(html).toContain('Stage');
   });
 
@@ -274,7 +197,7 @@ describe('Live Server E2E', () => {
     const res = await appFetch('/api/articles');
     expect(res.status).toBe(200);
     const body = await res.json() as { articles: unknown[]; total: number };
-    expect(body.total).toBeGreaterThanOrEqual(5); // at least 5 from tests above
+    expect(body.total).toBeGreaterThanOrEqual(3); // at least 3 from tests above
   });
 
   // ── Idea form page ────────────────────────────────────────────────────
@@ -290,26 +213,22 @@ describe('Live Server E2E', () => {
 
   // ── Validation errors ──────────────────────────────────────────────────
 
-  it('POST /api/ideas rejects missing title', async () => {
+  it('POST /api/ideas rejects missing prompt', async () => {
     const res = await appFetch('/api/ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: '',
-        description: 'Valid description that is long enough for validation.',
+        prompt: '',
       }),
     });
     expect(res.status).toBe(400);
   });
 
-  it('POST /api/ideas rejects short description', async () => {
+  it('POST /api/ideas rejects empty body', async () => {
     const res = await appFetch('/api/ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Valid Title Here',
-        description: 'Too short',
-      }),
+      body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
   });
