@@ -8,6 +8,7 @@ import { proseMirrorToHtml } from '../../src/dashboard/views/publish.js';
 import { markdownToProseMirror } from '../../src/services/prosemirror.js';
 import type { AppConfig } from '../../src/config/index.js';
 import type { SubstackService, SubstackDraft, SubstackPost } from '../../src/services/substack.js';
+import type { TwitterService, TweetResult } from '../../src/services/twitter.js';
 
 function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
   return {
@@ -63,7 +64,19 @@ function createMockSubstackService(overrides?: Partial<SubstackService>): Substa
   } as unknown as SubstackService;
 }
 
-/** Advance an article from stage 1 to `targetStage` by walking each transition. */
+function createMockTwitterService(overrides?: Partial<TwitterService>): TwitterService {
+  return {
+    postTweet: vi.fn().mockResolvedValue({
+      id: '1234567890',
+      url: 'https://x.com/user/status/1234567890',
+      text: 'Test tweet',
+    } satisfies TweetResult),
+    uploadMedia: vi.fn().mockResolvedValue('media_001'),
+    ...overrides,
+  } as unknown as TwitterService;
+}
+
+/** Advance an articlefrom stage 1 to `targetStage` by walking each transition. */
 function advanceToStage(repo: Repository, id: string, targetStage: number): void {
   for (let s = 2; s <= targetStage; s++) {
     repo.advanceStage(id, s - 1, s, 'test');
@@ -534,6 +547,167 @@ describe('Publish Workflow', () => {
 
       const callArgs = (mockService.createNote as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(callArgs.articleSlug).toBeUndefined();
+    });
+  });
+
+  // ── POST /api/articles/:id/tweet (post tweet to X) ──────────────────────────
+
+  describe('POST /api/articles/:id/tweet', () => {
+    it('posts a tweet and returns success', async () => {
+      const mockTwitter = createMockTwitterService();
+      repo.createArticle({ id: 'tweet-ok', title: 'Tweet Test' });
+
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', 'Check out this analysis!');
+
+      const res = await app.request('/api/articles/tweet-ok/tweet', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as { success: boolean; tweetUrl: string; tweetId: string };
+      expect(body.success).toBe(true);
+      expect(body.tweetUrl).toContain('x.com');
+      expect(body.tweetId).toBe('1234567890');
+
+      expect(mockTwitter.postTweet).toHaveBeenCalledOnce();
+    });
+
+    it('returns error when TwitterService not configured', async () => {
+      repo.createArticle({ id: 'tweet-no-svc', title: 'No Twitter' });
+
+      const app = createApp(repo, config); // no deps
+      const form = new FormData();
+      form.append('content', 'Hello');
+
+      const res = await app.request('/api/articles/tweet-no-svc/tweet', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('not configured');
+    });
+
+    it('returns error when content is empty', async () => {
+      const mockTwitter = createMockTwitterService();
+      repo.createArticle({ id: 'tweet-empty', title: 'Empty Tweet' });
+
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', '');
+
+      const res = await app.request('/api/articles/tweet-empty/tweet', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(400);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('required');
+    });
+
+    it('returns 404 for missing article', async () => {
+      const mockTwitter = createMockTwitterService();
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', 'Hello');
+
+      const res = await app.request('/api/articles/ghost/tweet', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns htmx HTML on success', async () => {
+      const mockTwitter = createMockTwitterService();
+      repo.createArticle({ id: 'tweet-htmx', title: 'HTMX Tweet' });
+
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', 'Great analysis!');
+
+      const res = await app.request('/api/articles/tweet-htmx/tweet', {
+        method: 'POST',
+        body: form,
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('tweet-success');
+      expect(html).toContain('Tweet posted');
+    });
+
+    it('returns htmx HTML for dry run', async () => {
+      const mockTwitter = createMockTwitterService({
+        postTweet: vi.fn().mockResolvedValue({
+          id: 'dry_1234',
+          url: '',
+          text: 'Dry run tweet',
+        } satisfies TweetResult),
+      } as unknown as Partial<TwitterService>);
+      repo.createArticle({ id: 'tweet-dry', title: 'Dry Run Tweet' });
+
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', 'Test tweet');
+      form.append('dryRun', 'on');
+
+      const res = await app.request('/api/articles/tweet-dry/tweet', {
+        method: 'POST',
+        body: form,
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Dry run');
+    });
+
+    it('returns error when postTweet throws', async () => {
+      const mockTwitter = createMockTwitterService({
+        postTweet: vi.fn().mockRejectedValue(new Error('Rate limit exceeded')),
+      } as unknown as Partial<TwitterService>);
+      repo.createArticle({ id: 'tweet-fail', title: 'Tweet Fail' });
+
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', 'Hello world');
+
+      const res = await app.request('/api/articles/tweet-fail/tweet', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('Rate limit exceeded');
+    });
+
+    it('appends article substack_url to tweet content', async () => {
+      const mockTwitter = createMockTwitterService();
+      repo.createArticle({ id: 'tweet-url', title: 'URL Append' });
+      // Set substack_url on the article
+      repo.db.prepare('UPDATE articles SET substack_url = ? WHERE id = ?')
+        .run('https://test.substack.com/p/tweet-url', 'tweet-url');
+
+      const app = createApp(repo, config, { twitterService: mockTwitter });
+      const form = new FormData();
+      form.append('content', 'Check this out');
+
+      const res = await app.request('/api/articles/tweet-url/tweet', {
+        method: 'POST',
+        body: form,
+      });
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockTwitter.postTweet as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.content).toContain('https://test.substack.com/p/tweet-url');
     });
   });
 });
