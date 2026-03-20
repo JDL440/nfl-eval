@@ -51,6 +51,7 @@ import { AgentMemory } from '../agents/memory.js';
 import { PipelineAuditor } from '../pipeline/audit.js';
 import { CopilotProvider } from '../llm/providers/copilot.js';
 import { MockProvider } from '../llm/providers/mock.js';
+import { LMStudioProvider } from '../llm/providers/lmstudio.js';
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
@@ -833,6 +834,11 @@ export function startServer(overrides?: Partial<AppConfig>): void {
       const mock = new MockProvider();
       gateway.registerProvider(mock);
       console.log('Mock LLM provider registered (testing mode)');
+    } else if (process.env['LLM_PROVIDER'] === 'lmstudio' || process.env['LMSTUDIO_URL']) {
+      const baseUrl = process.env['LMSTUDIO_URL'] ?? undefined;
+      const lmstudio = new LMStudioProvider({ baseUrl });
+      gateway.registerProvider(lmstudio);
+      console.log(`LM Studio provider registered (${lmstudio.baseUrl})`);
     } else {
       try {
         const copilot = new CopilotProvider();
