@@ -606,10 +606,19 @@ export function renderImageGallery(manifest: { type: string; path: string; promp
     <div class="image-gallery">
       ${manifest.map((img, i) => {
         const label = img.type === 'cover' ? '🖼 Cover' : `📷 Inline ${i}`;
+        // Convert absolute filesystem path to web-servable URL
+        // Path format: .../images/{slug}/{slug}-cover.png → /images/{slug}/{filename}
+        const parts = img.path.replace(/\\/g, '/').split('/');
+        const filename = parts[parts.length - 1] ?? '';
+        const slug = parts[parts.length - 2] ?? '';
+        const imgUrl = slug && filename ? `/images/${encodeURIComponent(slug)}/${encodeURIComponent(filename)}` : '';
         return `
           <div class="image-gallery-item">
             <div class="image-gallery-label">${label}</div>
-            <div class="image-gallery-path"><code>${escapeHtml(img.path)}</code></div>
+            ${imgUrl
+              ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(label)}" class="image-gallery-thumb" loading="lazy" />`
+              : `<div class="image-gallery-path"><code>${escapeHtml(img.path)}</code></div>`
+            }
             <details class="image-gallery-prompt">
               <summary>View prompt</summary>
               <p>${escapeHtml(img.prompt)}</p>

@@ -115,13 +115,12 @@ export class GeminiImageProvider implements ImageProvider {
     const body = {
       contents: [{ parts: [{ text: `Generate an image: ${promptText}` }] }],
       generationConfig: {
-        responseModalities: ['IMAGE'],
-        imageDimensions: dims,
+        responseModalities: ['TEXT', 'IMAGE'],
       },
     };
 
     const url =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent' +
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent' +
       `?key=${this.apiKey}`;
 
     const res = await fetch(url, {
@@ -136,10 +135,12 @@ export class GeminiImageProvider implements ImageProvider {
     }
 
     const json = (await res.json()) as {
-      candidates?: { content?: { parts?: { inlineData?: { data: string } }[] } }[];
+      candidates?: { content?: { parts?: { inlineData?: { data: string; mimeType?: string }; text?: string }[] } }[];
     };
 
-    const b64 = json.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find(p => p.inlineData?.data);
+    const b64 = imagePart?.inlineData?.data;
     if (!b64) {
       throw new Error('Gemini API returned no image data');
     }

@@ -152,6 +152,32 @@ export function createApp(
   const imageService = deps?.imageService;
   const bus = new EventBus();
 
+  /** Generate article images and save manifest. Non-fatal — returns silently on failure. */
+  async function autoGenerateImages(articleId: string): Promise<void> {
+    if (!imageService) return;
+    const art = repo.getArticle(articleId);
+    if (!art || art.current_stage < 5) return;
+    try {
+      const draft = repo.artifacts.get(articleId, 'draft.md');
+      const summary = draft?.slice(0, 500) ?? '';
+      const team = art.primary_team ?? undefined;
+      const results = await imageService.generateArticleImages(articleId, {
+        cover: { description: `Cover image for: ${art.title}. ${summary}`, style: 'editorial sports photography, dramatic lighting, 16:9 hero image', team, aspectRatio: '16:9' },
+        inline: [
+          { description: `Inline image 1 for: ${art.title}. ${summary}`, style: 'editorial sports analysis, clean wide banner', team, aspectRatio: '16:9' },
+          { description: `Inline image 2 for: ${art.title}. ${summary}`, style: 'editorial sports context, wide banner', team, aspectRatio: '16:9' },
+        ],
+      });
+      const manifest: { type: string; path: string; prompt: string }[] = [];
+      if (results.cover) manifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
+      for (const img of results.inline) manifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
+      repo.artifacts.put(articleId, 'images.json', JSON.stringify(manifest, null, 2));
+      console.log(`[images] Generated ${manifest.length} images for ${articleId}`);
+    } catch (err) {
+      console.warn(`[images] Generation failed (non-fatal): ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
   // Register SSE event stream
   registerSSE(app, bus);
 
@@ -164,6 +190,26 @@ export function createApp(
       rewriteRequestPath: (path: string) => path.replace(/^\/static/, ''),
     }),
   );
+
+  // Serve generated images from the images directory
+  app.get('/images/:slug/:file', async (c) => {
+    const slug = c.req.param('slug');
+    const file = c.req.param('file');
+    // Sanitize to prevent path traversal
+    if (slug.includes('..') || file.includes('..') || file.includes('/') || file.includes('\\')) {
+      return c.text('Not found', 404);
+    }
+    const filePath = join(config.imagesDir, slug, file);
+    try {
+      const { readFileSync } = await import('node:fs');
+      const data = readFileSync(filePath);
+      const ext = file.split('.').pop()?.toLowerCase();
+      const mime = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'application/octet-stream';
+      return new Response(data, { headers: { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600' } });
+    } catch {
+      return c.text('Not found', 404);
+    }
+  });
 
   // ── HTML pages ────────────────────────────────────────────────────────────
 
@@ -727,6 +773,9 @@ export function createApp(
           duration: result.duration,
         });
         current = updated;
+
+        // Auto-generate images after draft is written (before editor review)
+        if (current.current_stage === 5) await autoGenerateImages(id);
       } else {
         // Lightweight mode (no agents): just check guards and advance
         const check = engine.canAdvance(id, current.current_stage as Stage);
@@ -1080,6 +1129,9 @@ export function createApp(
         steps.push({ from: current.current_stage, to: updated.current_stage, action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage]}`, duration: result.duration });
         bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: updated.current_stage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
         current = updated;
+
+        // Auto-generate images after draft is written (before editor review)
+        if (current.current_stage === 5) await autoGenerateImages(id);
       } else {
         const check = engine.canAdvance(id, current.current_stage as Stage);
         if (!check.allowed) { lastError = check.reason; break; }
@@ -1525,52 +1577,17 @@ export function createApp(
     if (article.current_stage < 5) {
       return c.html(renderAdvanceResult(false, 'Draft must exist first (Stage 5+)'), 422);
     }
-
     if (!imageService) {
       return c.html(renderAdvanceResult(false, 'Image service not configured — set GEMINI_API_KEY'), 500);
     }
 
     try {
-      const draft = repo.artifacts.get(id, 'draft.md');
-      const summary = draft?.slice(0, 500) ?? '';
-      const team = article.primary_team ?? undefined;
-
-      const results = await imageService.generateArticleImages(id, {
-        cover: {
-          description: `Cover image for: ${article.title}. ${summary}`,
-          style: 'editorial sports photography, dramatic lighting, 16:9 hero image',
-          team,
-          aspectRatio: '16:9',
-        },
-        inline: [
-          {
-            description: `Inline image 1 for: ${article.title}. ${summary}`,
-            style: 'editorial sports analysis, clean wide banner',
-            team,
-            aspectRatio: '16:9',
-          },
-          {
-            description: `Inline image 2 for: ${article.title}. ${summary}`,
-            style: 'editorial sports context, wide banner',
-            team,
-            aspectRatio: '16:9',
-          },
-        ],
-      });
-
-      const imageManifest: { type: string; path: string; prompt: string }[] = [];
-      if (results.cover) {
-        imageManifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
-      }
-      for (const img of results.inline) {
-        imageManifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
-      }
-
-      repo.artifacts.put(id, 'images.json', JSON.stringify(imageManifest, null, 2));
-
+      await autoGenerateImages(id);
+      const manifestJson = repo.artifacts.get(id, 'images.json');
+      const count = manifestJson ? (JSON.parse(manifestJson) as unknown[]).length : 0;
       return c.html(
-        `<div class="advance-result advance-success">✅ Generated ${imageManifest.length} image(s)</div>
-         <script>setTimeout(() => window.location.reload(), 1500);</script>`,
+        `<div class="advance-result advance-success">✅ Generated ${count} image(s)</div>
+         ${renderImageGallery(manifestJson ? JSON.parse(manifestJson) : [])}`,
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
