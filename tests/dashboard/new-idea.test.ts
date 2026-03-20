@@ -149,6 +149,26 @@ describe('renderNewIdeaPage', () => {
   });
 });
 
+describe('Quick-action buttons', () => {
+  it('contains Surprise Me button', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
+    expect(html).toContain('Surprise Me');
+    expect(html).toContain('id="surprise-btn"');
+  });
+
+  it('contains Breaking News button', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
+    expect(html).toContain('Breaking News');
+    expect(html).toContain('id="breaking-btn"');
+    expect(html).toContain('quick-action-btn--disabled');
+  });
+
+  it('Surprise Me preset prompt is embedded in page script', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
+    expect(html).toContain('Generate a surprising, timely NFL article idea');
+  });
+});
+
 describe('renderIdeaSuccess', () => {
   it('renders success message with article link', () => {
     const html = renderIdeaSuccess({ id: 'test-slug', title: 'Test Article' });

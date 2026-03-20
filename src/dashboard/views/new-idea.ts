@@ -133,6 +133,17 @@ export function renderNewIdeaPage(config: { labName: string }): string {
   return renderLayout('New Idea', `
     <div class="idea-form-container">
       <h1>New Article Idea</h1>
+
+      <div class="quick-actions">
+        <button type="button" class="quick-action-btn" id="surprise-btn"
+          onclick="surpriseMe()">🎲 Surprise Me</button>
+        <button type="button" class="quick-action-btn quick-action-btn--disabled" id="breaking-btn"
+          onclick="breakingNews()">📰 Breaking News</button>
+      </div>
+      <div id="breaking-msg" class="quick-action-msg" style="display:none">
+        Coming soon — automated news detection is not yet available
+      </div>
+
       <form id="idea-form" class="idea-form">
         <div class="form-group">
           <label for="prompt">What's the idea?</label>
@@ -183,6 +194,17 @@ export function renderNewIdeaPage(config: { labName: string }): string {
     </div>
 
     <script>
+      function surpriseMe() {
+        const prompt = document.getElementById('prompt');
+        prompt.value = 'Generate a surprising, timely NFL article idea. Pick a team and angle that would genuinely interest fans right now. Focus on an underreported storyline, a bold prediction, or a contrarian take that challenges conventional wisdom.';
+        document.getElementById('idea-form').dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+
+      function breakingNews() {
+        const msg = document.getElementById('breaking-msg');
+        msg.style.display = msg.style.display === 'none' ? 'block' : 'none';
+      }
+
       const selectedTeams = new Set();
 
       function toggleTeam(btn, abbr) {
