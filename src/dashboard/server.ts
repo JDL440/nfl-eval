@@ -164,11 +164,14 @@ export function createApp(
     const errorParam = c.req.query('error');
     let flashMessage: string | undefined;
     let errorMessage: string | undefined;
+    let autoAdvanceActive = false;
     if (from === 'auto-advance') {
       if (errorParam) {
         errorMessage = `Auto-advance failed: ${errorParam}`;
+      } else if (article.current_stage < 7) {
+        autoAdvanceActive = true;
       } else {
-        flashMessage = `🚀 Auto-advance ran — article is now at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
+        flashMessage = `🚀 Auto-advance complete — article is at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
       }
     }
 
@@ -184,6 +187,7 @@ export function createApp(
         stageRuns: repo.getStageRuns(id),
         flashMessage,
         errorMessage,
+        autoAdvanceActive,
       }),
     );
   });
@@ -413,9 +417,8 @@ export function createApp(
         // Full execution: run agent → write artifact → advance
         const result = await executeTransition(id, current.current_stage as Stage, ctx);
         if (!result.success) {
+          console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
           lastError = result.error;
-
-          // Check for editor REVISE verdict — regress to draft stage
           if (current.current_stage === 5 && result.error?.includes('REVISE')) {
             try {
               engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');
@@ -618,6 +621,7 @@ export function createApp(
       if (ctx) {
         const result = await executeTransition(id, current.current_stage as Stage, ctx);
         if (!result.success) {
+          console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
           lastError = result.error;
           if (current.current_stage === 5 && result.error?.includes('REVISE')) {
             try {

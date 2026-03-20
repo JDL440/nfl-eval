@@ -519,6 +519,16 @@ export class Repository {
       );
     }
 
+    // Clear stale artifacts and related records before recording the transition
+    this.clearArtifactsAfterStage(articleId, toStage);
+
+    if (toStage < 6) {
+      this.db.prepare('DELETE FROM publisher_pass WHERE article_id = ?').run(articleId);
+    }
+    if (toStage < 5) {
+      this.db.prepare('DELETE FROM editor_reviews WHERE article_id = ?').run(articleId);
+    }
+
     const now = nowISO();
 
     const transStmt = this.db.prepare(
@@ -532,6 +542,30 @@ export class Repository {
       'UPDATE articles SET current_stage = ?, status = ?, updated_at = ? WHERE id = ?',
     );
     updateStmt.run(toStage, 'revision', now, articleId);
+  }
+
+  /** Delete artifacts that belong to stages after toStage. */
+  clearArtifactsAfterStage(articleId: string, toStage: number): string[] {
+    const ARTIFACT_STAGE: Record<string, number> = {
+      'idea.md': 1,
+      'discussion-prompt.md': 2,
+      'panel-composition.md': 3,
+      'discussion-summary.md': 4,
+      'draft.md': 5,
+      'editor-review.md': 6,
+    };
+
+    const cleared: string[] = [];
+    for (const [artifact, minStage] of Object.entries(ARTIFACT_STAGE)) {
+      if (minStage > toStage) {
+        const existed = this.artifacts.get(articleId, artifact);
+        if (existed != null) {
+          this.artifacts.delete(articleId, artifact);
+          cleared.push(artifact);
+        }
+      }
+    }
+    return cleared;
   }
 
   // ── Artifact path updates ──────────────────────────────────────────────────

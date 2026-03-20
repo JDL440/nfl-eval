@@ -127,7 +127,10 @@ function inlineMarkdown(text: string): string {
   result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
 
   // Images: ![alt](url)
-  result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
+  result = result.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    '<img src="$2" alt="$1" class="article-img" loading="lazy" onerror="this.style.opacity=\'0.3\';this.alt=\'[Image not available]\'">'
+  );
 
   // Links: [text](url)
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');

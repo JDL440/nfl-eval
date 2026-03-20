@@ -602,4 +602,100 @@ describe('Repository', () => {
       expect(() => repo.regressStage('reg-inv', 9 as any, 1, 'editor', 'reason')).toThrow('must be an integer 1–8');
     });
   });
+
+  // ── Artifact cleanup on regression ──────────────────────────────────────
+
+  describe('clearArtifactsAfterStage', () => {
+    it('clears artifacts for stages above toStage', () => {
+      repo.createArticle({ id: 'clear-art', title: 'Clear Artifacts' });
+      repo.artifacts.put('clear-art', 'idea.md', 'idea content');
+      repo.artifacts.put('clear-art', 'discussion-prompt.md', 'prompt content');
+      repo.artifacts.put('clear-art', 'panel-composition.md', 'panel content');
+      repo.artifacts.put('clear-art', 'discussion-summary.md', 'summary content');
+      repo.artifacts.put('clear-art', 'draft.md', 'draft content');
+      repo.artifacts.put('clear-art', 'editor-review.md', 'review content');
+
+      const cleared = repo.clearArtifactsAfterStage('clear-art', 2);
+
+      expect(cleared).toContain('panel-composition.md');
+      expect(cleared).toContain('discussion-summary.md');
+      expect(cleared).toContain('draft.md');
+      expect(cleared).toContain('editor-review.md');
+      expect(cleared).not.toContain('idea.md');
+      expect(cleared).not.toContain('discussion-prompt.md');
+
+      // Verify artifacts are actually deleted
+      expect(repo.artifacts.get('clear-art', 'idea.md')).not.toBeNull();
+      expect(repo.artifacts.get('clear-art', 'discussion-prompt.md')).not.toBeNull();
+      expect(repo.artifacts.get('clear-art', 'panel-composition.md')).toBeNull();
+      expect(repo.artifacts.get('clear-art', 'draft.md')).toBeNull();
+    });
+
+    it('returns empty array when no artifacts exist', () => {
+      repo.createArticle({ id: 'clear-empty', title: 'No Artifacts' });
+      const cleared = repo.clearArtifactsAfterStage('clear-empty', 1);
+      expect(cleared).toEqual([]);
+    });
+  });
+
+  describe('regressStage clears artifacts', () => {
+    it('regression to Stage 2 clears Stage 3+ artifacts', () => {
+      repo.createArticle({ id: 'reg-art', title: 'Regress Artifacts' });
+      repo.advanceStage('reg-art', 1, 2, 'agent');
+      repo.advanceStage('reg-art', 2, 3, 'agent');
+      repo.advanceStage('reg-art', 3, 4, 'agent');
+      repo.advanceStage('reg-art', 4, 5, 'agent');
+
+      repo.artifacts.put('reg-art', 'idea.md', 'idea');
+      repo.artifacts.put('reg-art', 'discussion-prompt.md', 'prompt');
+      repo.artifacts.put('reg-art', 'panel-composition.md', 'panel');
+      repo.artifacts.put('reg-art', 'discussion-summary.md', 'summary');
+      repo.artifacts.put('reg-art', 'draft.md', 'draft');
+
+      repo.regressStage('reg-art', 5, 2, 'editor', 'Back to prompt');
+
+      // Stage 1-2 artifacts preserved
+      expect(repo.artifacts.get('reg-art', 'idea.md')).toBe('idea');
+      expect(repo.artifacts.get('reg-art', 'discussion-prompt.md')).toBe('prompt');
+
+      // Stage 3+ artifacts cleared
+      expect(repo.artifacts.get('reg-art', 'panel-composition.md')).toBeNull();
+      expect(repo.artifacts.get('reg-art', 'discussion-summary.md')).toBeNull();
+      expect(repo.artifacts.get('reg-art', 'draft.md')).toBeNull();
+    });
+
+    it('regression past Stage 6 clears publisher pass', () => {
+      repo.createArticle({ id: 'reg-pub', title: 'Regress Publisher' });
+      repo.advanceStage('reg-pub', 1, 2, 'agent');
+      repo.advanceStage('reg-pub', 2, 3, 'agent');
+      repo.advanceStage('reg-pub', 3, 4, 'agent');
+      repo.advanceStage('reg-pub', 4, 5, 'agent');
+      repo.advanceStage('reg-pub', 5, 6, 'agent');
+      repo.recordPublisherPass('reg-pub');
+
+      // recordPublisherPass auto-advances 6→7
+      const afterPass = repo.getArticle('reg-pub');
+      expect(afterPass!.current_stage).toBe(7);
+      expect(repo.getPublisherPass('reg-pub')).not.toBeNull();
+
+      repo.regressStage('reg-pub', 7, 4, 'editor', 'Redo draft');
+      expect(repo.getPublisherPass('reg-pub')).toBeNull();
+    });
+
+    it('regression past Stage 5 clears editor reviews', () => {
+      repo.createArticle({ id: 'reg-rev', title: 'Regress Reviews' });
+      repo.advanceStage('reg-rev', 1, 2, 'agent');
+      repo.advanceStage('reg-rev', 2, 3, 'agent');
+      repo.advanceStage('reg-rev', 3, 4, 'agent');
+      repo.advanceStage('reg-rev', 4, 5, 'agent');
+      repo.recordEditorReview('reg-rev', 'APPROVED');
+
+      const reviews = repo.getEditorReviews('reg-rev');
+      expect(reviews.length).toBeGreaterThan(0);
+
+      repo.regressStage('reg-rev', 5, 3, 'editor', 'Redo discussion');
+      const afterReviews = repo.getEditorReviews('reg-rev');
+      expect(afterReviews.length).toBe(0);
+    });
+  });
 });

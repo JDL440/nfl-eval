@@ -70,12 +70,14 @@ function renderProseMirrorNode(node: ProseMirrorNode): string {
       const src = String(img?.attrs?.src ?? '');
       const alt = String(img?.attrs?.alt ?? '');
       const captionHtml = caption?.content?.map(renderProseMirrorNode).join('') ?? '';
-      return `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">${captionHtml ? `<figcaption>${captionHtml}</figcaption>` : ''}</figure>`;
+      if (!src) return `<figure><span class="img-placeholder">[No image source]</span>${captionHtml ? `<figcaption>${captionHtml}</figcaption>` : ''}</figure>`;
+      return `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="article-img" loading="lazy" onerror="this.style.opacity='0.3';this.alt='[Image not available]'">${captionHtml ? `<figcaption>${captionHtml}</figcaption>` : ''}</figure>`;
     }
     case 'image2': {
       const src = String(node.attrs?.src ?? '');
       const alt = String(node.attrs?.alt ?? '');
-      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">`;
+      if (!src) return `<span class="img-placeholder">[No image source]</span>`;
+      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="article-img" loading="lazy" onerror="this.style.opacity='0.3';this.alt='[Image not available]'">`;
     }
     case 'caption':
       return children;

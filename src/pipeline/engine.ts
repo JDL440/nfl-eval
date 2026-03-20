@@ -99,7 +99,7 @@ export function requireDiscussionSummary(store: ArtifactStore, articleId: string
   return { passed: true, reason: 'Discussion summary ready' };
 }
 
-const MIN_DRAFT_WORDS = 800;
+const MIN_DRAFT_WORDS = 200;
 
 export function requireDraft(store: ArtifactStore, articleId: string): GuardResult {
   if (!store.exists(articleId, 'draft.md')) {

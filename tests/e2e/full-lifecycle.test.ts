@@ -165,14 +165,14 @@ describe('Full lifecycle: Stage 1 → 8', () => {
     expect(await res.text()).toContain('Article draft has not been written yet');
   });
 
-  it('cannot advance 5→6 with draft.md under 800 words', async () => {
-    writeArtifact(slug, 'draft.md', wordsOf(400));
+  it('cannot advance 5→6 with draft.md under 200 words', async () => {
+    writeArtifact(slug, 'draft.md', wordsOf(100));
 
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(422);
     const html = await res.text();
-    expect(html).toContain('400 words');
-    expect(html).toContain('minimum 800');
+    expect(html).toContain('100 words');
+    expect(html).toContain('minimum 200');
   });
 
   it('advances 5→6 after writing draft.md with 800+ words', async () => {
@@ -455,15 +455,15 @@ describe('Draft word count boundary', () => {
     repo.advanceStage(slug, 4, 5, 'test');
   });
 
-  it('rejects 799 words', async () => {
-    writeArtifact(slug, 'draft.md', wordsOf(799));
+  it('rejects 199 words', async () => {
+    writeArtifact(slug, 'draft.md', wordsOf(199));
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(422);
-    expect(await res.text()).toContain('799 words');
+    expect(await res.text()).toContain('199 words');
   });
 
-  it('accepts exactly 800 words', async () => {
-    writeArtifact(slug, 'draft.md', wordsOf(800));
+  it('accepts exactly 200 words', async () => {
+    writeArtifact(slug, 'draft.md', wordsOf(200));
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('Stage 6');

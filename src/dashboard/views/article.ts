@@ -35,14 +35,31 @@ export interface ArticleDetailData {
   stageRuns?: StageRun[];
   flashMessage?: string;
   errorMessage?: string;
+  autoAdvanceActive?: boolean;
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, flashMessage, errorMessage } = data;
+  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, flashMessage, errorMessage, autoAdvanceActive } = data;
 
-  const flashBanner = flashMessage
-    ? `<div class="flash-banner">${escapeHtml(flashMessage)}</div>`
-    : '';
+  let flashBanner = '';
+  if (autoAdvanceActive && article.current_stage < 7) {
+    const stageName = STAGE_NAMES[article.current_stage] ?? 'Unknown';
+    flashBanner = `<div class="flash-banner flash-auto-advance" id="auto-advance-banner">
+      <span class="spinner"></span> Auto-advance running… Stage ${article.current_stage} — ${escapeHtml(stageName)}
+    </div>
+    <script>
+      (function() {
+        var src = new EventSource('/events');
+        src.addEventListener('stage_changed', function() {
+          src.close();
+          window.location.reload();
+        });
+        setTimeout(function() { src.close(); }, 300000);
+      })();
+    </script>`;
+  } else if (flashMessage) {
+    flashBanner = `<div class="flash-banner">${escapeHtml(flashMessage)}</div>`;
+  }
   const errorBanner = errorMessage
     ? `<div class="flash-banner flash-error">❌ ${escapeHtml(errorMessage)}</div>`
     : '';
@@ -258,7 +275,9 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             <form class="send-back-form"
               hx-post="/htmx/articles/${escapeHtml(article.id)}/regress"
               hx-target="#advance-result-${escapeHtml(article.id)}"
-              hx-swap="innerHTML">
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
+              hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
               <label>Send back to:</label>
               <select name="to_stage">${regressOptions}</select>
               <label>Reason:</label>
@@ -309,7 +328,9 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             <form class="send-back-form"
               hx-post="/htmx/articles/${escapeHtml(article.id)}/regress"
               hx-target="#advance-result-${escapeHtml(article.id)}"
-              hx-swap="innerHTML">
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
+              hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
               <label>Send back to:</label>
               <select name="to_stage">${regressOptions}</select>
               <label>Reason:</label>

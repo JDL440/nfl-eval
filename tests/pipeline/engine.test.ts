@@ -130,15 +130,15 @@ describe('Guard functions', () => {
       expect(result.reason).toContain('not been written');
     });
 
-    it('fails when draft.md has fewer than 800 words', () => {
+    it('fails when draft.md has fewer than 200 words', () => {
       repo.createArticle({ id: 'short-draft', title: 'Test' });
-      repo.artifacts.put('short-draft', 'draft.md', longText(500));
+      repo.artifacts.put('short-draft', 'draft.md', longText(100));
       const result = requireDraft(repo.artifacts, 'short-draft');
       expect(result.passed).toBe(false);
-      expect(result.reason).toContain('500 words');
+      expect(result.reason).toContain('100 words');
     });
 
-    it('passes when draft.md has 800+ words', () => {
+    it('passes when draft.md has 200+ words', () => {
       repo.createArticle({ id: 'good-draft', title: 'Test' });
       repo.artifacts.put('good-draft', 'draft.md', longText(1000));
       const result = requireDraft(repo.artifacts, 'good-draft');
@@ -375,9 +375,9 @@ describe('PipelineEngine', () => {
       expect(check.nextStage).toBe(6);
     });
 
-    it('blocks 5→6 when draft.md has < 800 words', () => {
+    it('blocks 5→6 when draft.md has < 200 words', () => {
       repo.createArticle({ id: 'test-article', title: 'Test' });
-      repo.artifacts.put('test-article', 'draft.md', longText(200));
+      repo.artifacts.put('test-article', 'draft.md', longText(100));
       const check = engine.canAdvance('test-article', 5 as Stage);
       expect(check.allowed).toBe(false);
     });
