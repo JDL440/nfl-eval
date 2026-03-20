@@ -275,27 +275,6 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Stage Htmx');
       expect(html).toContain('Idea Generation');
     });
-
-    it('POST /htmx/ideas creates idea and returns fragment', async () => {
-      const formBody = new URLSearchParams();
-      formBody.set('id', 'htmx-idea');
-      formBody.set('title', 'HTMX Idea');
-      formBody.set('primary_team', 'seahawks');
-
-      const res = await app.request('/htmx/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formBody.toString(),
-      });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('HTMX Idea');
-
-      // Verify persisted
-      const article = repo.getArticle('htmx-idea');
-      expect(article).not.toBeNull();
-      expect(article!.primary_team).toBe('seahawks');
-    });
   });
 
   // ── Repository additions ───────────────────────────────────────────────────

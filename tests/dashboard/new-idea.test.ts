@@ -6,10 +6,10 @@ import { Repository } from '../../src/db/repository.js';
 import { createApp } from '../../src/dashboard/server.js';
 import type { AppConfig } from '../../src/config/index.js';
 import {
-  renderNewIdeaForm,
   renderIdeaSuccess,
   generateSlug,
-  validateIdeaForm,
+  extractTitleFromIdea,
+  renderNewIdeaPage,
 } from '../../src/dashboard/views/new-idea.js';
 
 function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
@@ -67,86 +67,85 @@ describe('generateSlug', () => {
   });
 });
 
-describe('validateIdeaForm', () => {
-  it('rejects missing title', () => {
-    const errors = validateIdeaForm({ title: '', description: 'A long enough description here' });
-    expect(errors.some(e => e.field === 'title')).toBe(true);
+describe('extractTitleFromIdea', () => {
+  it('extracts title from ## Working Title section', () => {
+    const md = `# Article Idea: Some Title
+
+## Working Title
+Seahawks Secondary Depth Chart Is a Mess
+
+## Angle / Tension
+Some content here.`;
+    expect(extractTitleFromIdea(md)).toBe('Seahawks Secondary Depth Chart Is a Mess');
   });
 
-  it('rejects short title', () => {
-    const errors = validateIdeaForm({ title: 'Hi', description: 'A long enough description here' });
-    expect(errors.some(e => e.field === 'title')).toBe(true);
+  it('falls back to # Article Idea: heading', () => {
+    const md = `# Article Idea: Why the Bills Need a WR Upgrade
+
+## Angle / Tension
+Buffalo's receiver room has been inconsistent.`;
+    expect(extractTitleFromIdea(md)).toBe('Why the Bills Need a WR Upgrade');
   });
 
-  it('rejects title over 200 chars', () => {
-    const errors = validateIdeaForm({ title: 'x'.repeat(201), description: 'A long enough description here' });
-    expect(errors.some(e => e.field === 'title')).toBe(true);
+  it('falls back to first non-empty line', () => {
+    const md = `Just a plain text idea without structure`;
+    expect(extractTitleFromIdea(md)).toBe('Just a plain text idea without structure');
   });
 
-  it('rejects short description', () => {
-    const errors = validateIdeaForm({ title: 'Valid Title', description: 'Too short' });
-    expect(errors.some(e => e.field === 'description')).toBe(true);
+  it('strips markdown heading markers from first line fallback', () => {
+    const md = `# My Cool Idea
+Some description`;
+    expect(extractTitleFromIdea(md)).toBe('My Cool Idea');
   });
 
-  it('rejects missing description', () => {
-    const errors = validateIdeaForm({ title: 'Valid Title', description: '' });
-    expect(errors.some(e => e.field === 'description')).toBe(true);
+  it('handles empty input', () => {
+    expect(extractTitleFromIdea('')).toBe('Untitled Idea');
   });
 
-  it('accepts valid form data', () => {
-    const errors = validateIdeaForm({
-      title: 'Valid Title Here',
-      description: 'This is a long enough description for validation purposes.',
-    });
-    expect(errors).toHaveLength(0);
+  it('handles whitespace-only input', () => {
+    expect(extractTitleFromIdea('  \n  \n  ')).toBe('Untitled Idea');
   });
 
-  it('rejects invalid depth level', () => {
-    const errors = validateIdeaForm({
-      title: 'Valid Title',
-      description: 'A long enough description here',
-      depth_level: 5,
-    });
-    expect(errors.some(e => e.field === 'depth_level')).toBe(true);
+  it('prefers Working Title over Article Idea heading', () => {
+    const md = `# Article Idea: Broad Title
+
+## Working Title
+More Specific Clickable Title
+
+## Angle / Tension
+Content.`;
+    expect(extractTitleFromIdea(md)).toBe('More Specific Clickable Title');
+  });
+
+  it('handles Working Title with blank lines', () => {
+    const md = `## Working Title
+
+The Actual Title Here
+
+## Next Section`;
+    expect(extractTitleFromIdea(md)).toBe('The Actual Title Here');
   });
 });
 
 // ── View rendering tests ────────────────────────────────────────────────────
 
-describe('renderNewIdeaForm', () => {
-  const config = makeTestConfig();
-
-  it('renders a full page with correct fields', () => {
-    const html = renderNewIdeaForm(config);
-
+describe('renderNewIdeaPage', () => {
+  it('renders the smart form with prompt, team grid, depth level, and auto-advance', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('<!DOCTYPE html>');
-    expect(html).toContain('Submit New Idea');
-    expect(html).toContain('name="title"');
-    expect(html).toContain('name="description"');
-    expect(html).toContain('name="primary_team"');
-    expect(html).toContain('name="depth_level"');
-    expect(html).toContain('name="time_sensitive"');
-    expect(html).toContain('name="target_publish_date"');
-    expect(html).toContain('Submit Idea');
-  });
-
-  it('includes team options in dropdown', () => {
-    const html = renderNewIdeaForm(config);
-    expect(html).toContain('Seattle Seahawks');
-    expect(html).toContain('Kansas City Chiefs');
+    expect(html).toContain('New Article Idea');
+    expect(html).toContain('name="prompt"');
+    expect(html).toContain('team-grid');
+    expect(html).toContain('auto-advance');
+    expect(html).toContain('name="depthLevel"');
+    expect(html).toContain('1 — Casual Fan');
+    expect(html).toContain('2 — The Beat');
+    expect(html).toContain('3 — Deep Dive');
   });
 
   it('defaults depth level to 2', () => {
-    const html = renderNewIdeaForm(config);
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('value="2" selected');
-  });
-
-  it('renders validation errors when provided', () => {
-    const html = renderNewIdeaForm(config, [
-      { field: 'title', message: 'Title is required' },
-    ]);
-    expect(html).toContain('Title is required');
-    expect(html).toContain('has-error');
   });
 });
 
@@ -189,7 +188,7 @@ describe('New Idea Routes', () => {
   });
 
   describe('GET /ideas/new', () => {
-    it('renders the full idea form page', async () => {
+    it('renders the smart idea form page', async () => {
       const res = await app.request('/ideas/new');
       expect(res.status).toBe(200);
       const html = await res.text();
@@ -198,147 +197,9 @@ describe('New Idea Routes', () => {
       expect(html).toContain('name="prompt"');
       expect(html).toContain('team-grid');
       expect(html).toContain('auto-advance');
+      expect(html).toContain('name="depthLevel"');
     });
   });
-
-  describe('POST /api/ideas', () => {
-    it('creates article in DB and idea.md file', async () => {
-      const res = await app.request('/api/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Can Geno Smith Lead a Playoff Run',
-          description: 'An analysis of whether Geno Smith has what it takes to lead Seattle to the playoffs this season.',
-          primary_team: 'Seattle Seahawks',
-          depth_level: 2,
-        }),
-      });
-      expect(res.status).toBe(201);
-      const body = await res.json() as { id: string; title: string; primary_team: string; depth_level: number };
-      expect(body.id).toBe('can-geno-smith-lead-a-playoff-run');
-      expect(body.title).toBe('Can Geno Smith Lead a Playoff Run');
-      expect(body.primary_team).toBe('Seattle Seahawks');
-      expect(body.depth_level).toBe(2);
-
-      // Verify DB
-      const article = repo.getArticle('can-geno-smith-lead-a-playoff-run');
-      expect(article).not.toBeNull();
-      expect(article!.current_stage).toBe(1);
-
-      // Verify idea.md in artifact store
-      const content = repo.artifacts.get('can-geno-smith-lead-a-playoff-run', 'idea.md');
-      expect(content).not.toBeNull();
-      expect(content).toContain('# Can Geno Smith Lead a Playoff Run');
-      expect(content).toContain('An analysis of whether Geno Smith');
-    });
-
-    it('returns 400 for missing title', async () => {
-      const res = await app.request('/api/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: '',
-          description: 'A long enough description for validation purposes.',
-        }),
-      });
-      expect(res.status).toBe(400);
-      const body = await res.json() as { errors: { field: string }[] };
-      expect(body.errors.some((e: { field: string }) => e.field === 'title')).toBe(true);
-    });
-
-    it('returns 400 for short description', async () => {
-      const res = await app.request('/api/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Valid Title',
-          description: 'Too short',
-        }),
-      });
-      expect(res.status).toBe(400);
-      const body = await res.json() as { errors: { field: string }[] };
-      expect(body.errors.some((e: { field: string }) => e.field === 'description')).toBe(true);
-    });
-
-    it('defaults depth_level to 2', async () => {
-      const res = await app.request('/api/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Default Depth Test',
-          description: 'A long enough description for the depth level test purposes.',
-        }),
-      });
-      expect(res.status).toBe(201);
-      const body = await res.json() as { depth_level: number };
-      expect(body.depth_level).toBe(2);
-    });
-  });
-
-  describe('POST /htmx/ideas (full form)', () => {
-    it('creates article and returns success partial', async () => {
-      const formBody = new URLSearchParams();
-      formBody.set('title', 'HTMX Full Idea Test');
-      formBody.set('description', 'This is a detailed description for the HTMX full idea form submission test.');
-      formBody.set('primary_team', 'Buffalo Bills');
-      formBody.set('depth_level', '3');
-
-      const res = await app.request('/htmx/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formBody.toString(),
-      });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('Idea Submitted');
-      expect(html).toContain('HTMX Full Idea Test');
-
-      // Verify DB
-      const article = repo.getArticle('htmx-full-idea-test');
-      expect(article).not.toBeNull();
-      expect(article!.primary_team).toBe('Buffalo Bills');
-      expect(article!.depth_level).toBe(3);
-
-      // Verify idea.md in artifact store
-      expect(repo.artifacts.exists('htmx-full-idea-test', 'idea.md')).toBe(true);
-    });
-
-    it('returns validation errors for missing fields', async () => {
-      const formBody = new URLSearchParams();
-      formBody.set('title', 'Hi');
-      formBody.set('description', 'Short');
-
-      const res = await app.request('/htmx/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formBody.toString(),
-      });
-      expect(res.status).toBe(422);
-      const html = await res.text();
-      expect(html).toContain('fix the following errors');
-    });
-
-    it('legacy form still works (id field, no description)', async () => {
-      const formBody = new URLSearchParams();
-      formBody.set('id', 'legacy-idea');
-      formBody.set('title', 'Legacy Idea');
-      formBody.set('primary_team', 'seahawks');
-
-      const res = await app.request('/htmx/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formBody.toString(),
-      });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('Legacy Idea');
-
-      const article = repo.getArticle('legacy-idea');
-      expect(article).not.toBeNull();
-    });
-  });
-
-  // ── Prompt-based idea creation ────────────────────────────────────────────
 
   describe('POST /api/ideas (prompt-based)', () => {
     it('creates article from a freeform prompt', async () => {
@@ -413,6 +274,145 @@ describe('New Idea Routes', () => {
       expect(res.status).toBe(201);
       const body = await res.json() as { autoAdvance: boolean };
       expect(body.autoAdvance).toBe(true);
+    });
+
+    it('stores depth level from request', async () => {
+      const res = await app.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Test depth level storage',
+          depthLevel: 3,
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string };
+      const article = repo.getArticle(body.id);
+      expect(article).not.toBeNull();
+      expect(article!.depth_level).toBe(3);
+    });
+
+    it('defaults depth level to 2', async () => {
+      const res = await app.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Test default depth level',
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string };
+      const article = repo.getArticle(body.id);
+      expect(article!.depth_level).toBe(2);
+    });
+
+    it('returns 400 for missing prompt field', async () => {
+      const res = await app.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams: ['SEA'] }),
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── LLM-powered idea generation ─────────────────────────────────────────
+
+  describe('POST /api/ideas (with actionContext / LLM)', () => {
+    let llmApp: ReturnType<typeof createApp>;
+
+    beforeEach(() => {
+      // Build a mock actionContext with a fake gateway
+      const mockGateway = {
+        chat: async () => ({
+          content: `# Article Idea: Seahawks Secondary Crisis
+
+## Working Title
+Devon Witherspoon Can't Do It Alone: Seattle's DB Problem
+
+## Angle / Tension
+The Seahawks secondary is thin heading into 2025.
+
+## Primary Team
+SEA — Seattle Seahawks
+
+## Depth Level
+2 — The Beat (~1500 words, 3 agents)
+
+## Suggested Panel
+Writer + Analyst + Editor
+
+## Key Context
+- Witherspoon allowed 52.3% completion rate
+- Safety depth is a concern
+- Draft capital may be needed
+
+## Score
+- Relevance: 3
+- Timeliness: 2
+- Reader Value: 3
+- Uniqueness: 2
+- **Total: 10/12**`,
+          model: 'mock-model',
+          provider: 'mock',
+          usage: { promptTokens: 100, completionTokens: 200, totalTokens: 300 },
+        }),
+      };
+
+      const mockRunner = { gateway: mockGateway };
+      const mockActionContext = {
+        repo,
+        engine: {} as any,
+        runner: mockRunner as any,
+        auditor: {} as any,
+        config: makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+      };
+
+      llmApp = createApp(
+        repo,
+        makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+        { actionContext: mockActionContext },
+      );
+    });
+
+    it('generates idea via LLM and extracts title', async () => {
+      const res = await llmApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Analyze the Seahawks secondary depth',
+          teams: ['SEA'],
+          depthLevel: 2,
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string; title: string; stage: number };
+      expect(body.title).toBe("Devon Witherspoon Can't Do It Alone: Seattle's DB Problem");
+      expect(body.stage).toBe(1);
+      expect(body.id).toMatch(/^[a-z0-9-]+$/);
+
+      // Verify full idea.md artifact
+      const content = repo.artifacts.get(body.id, 'idea.md');
+      expect(content).toContain('## Working Title');
+      expect(content).toContain('Witherspoon');
+      expect(content).toContain('## Score');
+    });
+
+    it('stores team and depth level from LLM flow', async () => {
+      const res = await llmApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Seahawks DB analysis',
+          teams: ['SEA'],
+          depthLevel: 3,
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string };
+      const article = repo.getArticle(body.id);
+      expect(article!.primary_team).toBe('SEA');
+      expect(article!.depth_level).toBe(3);
     });
   });
 

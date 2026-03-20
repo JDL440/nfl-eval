@@ -1,22 +1,8 @@
 /**
- * new-idea.ts — Standalone idea submission form and success partial.
+ * new-idea.ts — Smart idea submission form (prompt → Lead agent → idea.md).
  */
 
 import { renderLayout, escapeHtml } from './layout.js';
-import type { AppConfig } from '../../config/index.js';
-
-// ── NFL teams (legacy string list for existing callers) ──────────────────────
-
-const NFL_TEAMS_LEGACY = [
-  'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills',
-  'Carolina Panthers', 'Chicago Bears', 'Cincinnati Bengals', 'Cleveland Browns',
-  'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
-  'Houston Texans', 'Indianapolis Colts', 'Jacksonville Jaguars', 'Kansas City Chiefs',
-  'Las Vegas Raiders', 'Los Angeles Chargers', 'Los Angeles Rams', 'Miami Dolphins',
-  'Minnesota Vikings', 'New England Patriots', 'New Orleans Saints', 'New York Giants',
-  'New York Jets', 'Philadelphia Eagles', 'Pittsburgh Steelers', 'San Francisco 49ers',
-  'Seattle Seahawks', 'Tampa Bay Buccaneers', 'Tennessee Titans', 'Washington Commanders',
-];
 
 // ── NFL teams with abbreviations ─────────────────────────────────────────────
 
@@ -67,153 +53,65 @@ export function generateSlug(title: string): string {
     .slice(0, 60);
 }
 
-// ── Validation ───────────────────────────────────────────────────────────────
+// ── Title extraction from idea markdown ──────────────────────────────────────
 
-export interface IdeaFormData {
-  title: string;
-  description: string;
-  primary_team?: string;
-  depth_level?: number;
-  time_sensitive?: boolean;
-  target_publish_date?: string;
-}
-
-export interface ValidationError {
-  field: string;
-  message: string;
-}
-
-export function validateIdeaForm(data: IdeaFormData): ValidationError[] {
-  const errors: ValidationError[] = [];
-
-  if (!data.title || data.title.length < 3) {
-    errors.push({ field: 'title', message: 'Title must be at least 3 characters' });
-  } else if (data.title.length > 200) {
-    errors.push({ field: 'title', message: 'Title must be 200 characters or less' });
+export function extractTitleFromIdea(ideaMarkdown: string): string {
+  // 1. Look for ## Working Title\n{title}
+  const workingTitleMatch = ideaMarkdown.match(/^## Working Title\s*\n+(.+)/m);
+  if (workingTitleMatch) {
+    return workingTitleMatch[1].trim();
   }
 
-  if (!data.description || data.description.length < 20) {
-    errors.push({ field: 'description', message: 'Description must be at least 20 characters' });
+  // 2. Fall back to # Article Idea: {title}
+  const h1Match = ideaMarkdown.match(/^# Article Idea:\s*(.+)/m);
+  if (h1Match) {
+    return h1Match[1].trim();
   }
 
-  if (data.depth_level != null && ![1, 2, 3].includes(data.depth_level)) {
-    errors.push({ field: 'depth_level', message: 'Depth level must be 1, 2, or 3' });
+  // 3. Fall back to first non-empty line
+  const lines = ideaMarkdown.split('\n');
+  for (const line of lines) {
+    const trimmed = line.replace(/^#+\s*/, '').trim();
+    if (trimmed) return trimmed;
   }
 
-  return errors;
+  return 'Untitled Idea';
 }
 
-// ── Form rendering ───────────────────────────────────────────────────────────
+// ── Idea template (used in Lead agent system prompt) ─────────────────────────
 
-function renderFormFields(errors: ValidationError[] = []): string {
-  const errorMap = new Map(errors.map(e => [e.field, e.message]));
+export const IDEA_TEMPLATE = `# Article Idea: {Generated Title}
 
-  const errorHtml = (field: string) => {
-    const msg = errorMap.get(field);
-    return msg ? `<p class="field-error">${escapeHtml(msg)}</p>` : '';
-  };
+## Working Title
+{Clickbait-adjacent but honest title, 60-80 characters}
 
-  const teamOptions = NFL_TEAMS_LEGACY.map(
-    t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`,
-  ).join('');
+## Angle / Tension
+{The core question or conflict — 1-3 paragraphs}
+{Why it matters NOW}
+{What makes this interesting to fans}
 
-  return `
-    <div class="form-group${errorMap.has('title') ? ' has-error' : ''}">
-      <label for="idea-title" class="form-label">Title <span class="required">*</span></label>
-      <input type="text" id="idea-title" name="title" placeholder="e.g. Can Jalen Hurts Sustain His MVP Pace?"
-        required minlength="3" maxlength="200" class="input input-full" />
-      ${errorHtml('title')}
-    </div>
+## Primary Team
+{TEAM_ABBR} — {Full Team Name}
 
-    <div class="form-group${errorMap.has('description') ? ' has-error' : ''}">
-      <label for="idea-description" class="form-label">Central Question / Idea <span class="required">*</span></label>
-      <textarea id="idea-description" name="description" rows="4"
-        placeholder="Describe the central question or thesis for this article…"
-        required minlength="20" class="input input-full textarea"></textarea>
-      ${errorHtml('description')}
-    </div>
+## Depth Level
+{1|2|3} — {Level Name} ({word range}, {agent count} agents)
 
-    <div class="form-row-2col">
-      <div class="form-group">
-        <label for="idea-team" class="form-label">Primary Team</label>
-        <select id="idea-team" name="primary_team" class="input input-full select">
-          <option value="">— None —</option>
-          ${teamOptions}
-        </select>
-      </div>
+## Suggested Panel
+{Agent1} + {Agent2} + ... (role breakdown)
 
-      <div class="form-group">
-        <label for="idea-depth" class="form-label">Depth Level</label>
-        <select id="idea-depth" name="depth_level" class="input input-full select">
-          <option value="1">1 — Casual Fan</option>
-          <option value="2" selected>2 — The Beat</option>
-          <option value="3">3 — Deep Dive</option>
-        </select>
-      </div>
-    </div>
+## Key Context
+- {Relevant data point 1}
+- {Relevant data point 2}
+- {Relevant data point 3}
 
-    <div class="form-row-2col">
-      <div class="form-group">
-        <label class="form-label toggle-label">
-          <input type="checkbox" name="time_sensitive" value="1" class="toggle-input" />
-          <span class="toggle-text">Time Sensitive</span>
-        </label>
-      </div>
+## Score
+- Relevance: {1-3}
+- Timeliness: {1-3}
+- Reader Value: {1-3}
+- Uniqueness: {1-3}
+- **Total: {N}/12**`;
 
-      <div class="form-group">
-        <label for="idea-date" class="form-label">Target Publish Date</label>
-        <input type="date" id="idea-date" name="target_publish_date" class="input input-full" />
-      </div>
-    </div>`;
-}
-
-export function renderNewIdeaForm(config: AppConfig, errors: ValidationError[] = []): string {
-  const content = `
-    <div class="idea-page">
-      <a href="/" class="back-link">← Back to Dashboard</a>
-      <h1>💡 Submit New Idea</h1>
-      <p class="page-subtitle">Describe your article idea. It will enter the pipeline at Stage 1.</p>
-
-      <form class="idea-form-full" id="idea-form"
-        hx-post="/htmx/ideas"
-        hx-swap="outerHTML"
-        hx-indicator="#idea-spinner">
-
-        ${renderFormFields(errors)}
-
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary btn-lg">Submit Idea</button>
-          <span id="idea-spinner" class="htmx-indicator">Submitting…</span>
-        </div>
-      </form>
-    </div>`;
-
-  return renderLayout('New Idea', content, config.leagueConfig.name);
-}
-
-export function renderIdeaFormPartial(errors: ValidationError[] = []): string {
-  const errorBanner = errors.length > 0
-    ? `<div class="form-error-banner">
-        <strong>Please fix the following errors:</strong>
-        <ul>${errors.map(e => `<li>${escapeHtml(e.message)}</li>`).join('')}</ul>
-      </div>`
-    : '';
-
-  return `
-    <form class="idea-form-full" id="idea-form"
-      hx-post="/htmx/ideas"
-      hx-swap="outerHTML"
-      hx-indicator="#idea-spinner">
-
-      ${errorBanner}
-      ${renderFormFields(errors)}
-
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary btn-lg">Submit Idea</button>
-        <span id="idea-spinner" class="htmx-indicator">Submitting…</span>
-      </div>
-    </form>`;
-}
+// ── Success partial (still used for htmx-swapped confirmations) ──────────────
 
 export function renderIdeaSuccess(article: { id: string; title: string }): string {
   return `
@@ -229,7 +127,7 @@ export function renderIdeaSuccess(article: { id: string; title: string }): strin
     </div>`;
 }
 
-// ── New smart idea form ──────────────────────────────────────────────────────
+// ── Smart idea form ──────────────────────────────────────────────────────────
 
 export function renderNewIdeaPage(config: { labName: string }): string {
   return renderLayout('New Idea', `
@@ -254,6 +152,15 @@ export function renderNewIdeaPage(config: { labName: string }): string {
             `).join('')}
           </div>
           <input type="hidden" id="teams" name="teams" value="">
+        </div>
+
+        <div class="form-group">
+          <label for="depth-level">Depth Level</label>
+          <select id="depth-level" name="depthLevel" class="input input-full select">
+            <option value="1">1 — Casual Fan</option>
+            <option value="2" selected>2 — The Beat</option>
+            <option value="3">3 — Deep Dive</option>
+          </select>
         </div>
 
         <div class="form-group form-checkbox">
@@ -316,7 +223,7 @@ export function renderNewIdeaPage(config: { labName: string }): string {
         btn.textContent = 'Creating...';
         status.style.display = 'block';
         status.className = 'form-status info';
-        status.textContent = 'Generating title and creating article...';
+        status.textContent = '🧠 Generating idea from your prompt…';
 
         try {
           const res = await fetch('/api/ideas', {
@@ -325,6 +232,7 @@ export function renderNewIdeaPage(config: { labName: string }): string {
             body: JSON.stringify({
               prompt,
               teams: Array.from(selectedTeams),
+              depthLevel: parseInt(document.getElementById('depth-level').value, 10),
               autoAdvance: document.getElementById('auto-advance').checked,
             }),
           });
@@ -333,7 +241,7 @@ export function renderNewIdeaPage(config: { labName: string }): string {
           if (res.ok) {
             if (data.autoAdvance) {
               status.className = 'form-status info';
-              status.innerHTML = '✅ Article created! <strong>Running auto-advance pipeline…</strong> This may take a moment.';
+              status.innerHTML = '✅ Created: <strong>' + data.title + '</strong>. Running auto-advance pipeline…';
               btn.textContent = 'Auto-advancing…';
               try {
                 const advRes = await fetch('/api/articles/' + data.id + '/auto-advance', {
@@ -356,10 +264,10 @@ export function renderNewIdeaPage(config: { labName: string }): string {
               setTimeout(() => { window.location.href = '/articles/' + data.id + '?from=auto-advance'; }, 2500);
             } else {
               status.className = 'form-status success';
-              status.textContent = 'Article created! Redirecting...';
-              window.location.href = '/articles/' + data.id;
+              status.innerHTML = '✅ Created: <strong>' + data.title + '</strong>. Redirecting…';
+              setTimeout(() => { window.location.href = '/articles/' + data.id; }, 1000);
             }
-          }else {
+          } else {
             status.className = 'form-status error';
             status.textContent = data.error || 'Failed to create article';
             btn.disabled = false;

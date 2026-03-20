@@ -27,14 +27,13 @@ import { renderArticleDetail, renderArtifactContent, renderAdvanceResult, render
 import type { ArtifactName } from './views/article.js';
 import { escapeHtml } from './views/layout.js';
 import {
-  renderNewIdeaForm,
   renderNewIdeaPage,
-  renderIdeaFormPartial,
   renderIdeaSuccess,
   generateSlug,
-  validateIdeaForm,
+  extractTitleFromIdea,
+  IDEA_TEMPLATE,
+  NFL_TEAMS,
 } from './views/new-idea.js';
-import type { IdeaFormData } from './views/new-idea.js';
 import {
   renderPublishPreview,
   renderPublishResult,
@@ -217,87 +216,90 @@ export function createApp(
 
   app.post('/api/ideas', async (c) => {
     const body = await c.req.json();
+    const prompt = (typeof body.prompt === 'string' ? body.prompt : '').trim();
 
-    // ── Prompt-based flow (smart idea form) ─────────────────────────────────
-    if (typeof body.prompt === 'string') {
-      try {
-        const prompt = (body.prompt as string).trim();
-        if (!prompt) {
-          return c.json({ error: 'prompt is required' }, 400);
-        }
-
-        // Generate title and slug from prompt
-        const generated = generateTitleAndSlug(prompt);
-        let slug = generated.slug;
-        const title = generated.title;
-
-        // Check if article already exists — append suffix to make unique
-        if (repo.getArticle(slug)) {
-          slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
-        }
-
-        const article = repo.createArticle({
-          id: slug,
-          title,
-          primary_team: body.teams?.[0] ?? undefined,
-          league: config.league,
-        });
-
-        const ideaContent = `# ${title}\n\n${prompt}`;
-
-        // Write to DB artifact store
-        repo.artifacts.put(slug, 'idea.md', ideaContent);
-
-        return c.json({
-          id: slug,
-          title,
-          stage: 1,
-          autoAdvance: body.autoAdvance ?? false,
-        }, 201);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        return c.json({ error: message }, 500);
-      }
-    }
-
-    // ── Legacy flow (title + description form) ──────────────────────────────
-    const formData: IdeaFormData = {
-      title: (body.title as string || '').trim(),
-      description: (body.description as string || '').trim(),
-      primary_team: (body.primary_team as string || '').trim() || undefined,
-      depth_level: body.depth_level != null ? parseInt(String(body.depth_level), 10) : 2,
-      time_sensitive: body.time_sensitive === true || body.time_sensitive === '1',
-      target_publish_date: (body.target_publish_date as string || '').trim() || undefined,
-    };
-
-    const errors = validateIdeaForm(formData);
-    if (errors.length > 0) {
-      return c.json({ errors }, 400);
-    }
-
-    const slug = generateSlug(formData.title);
-    if (!slug) {
-      return c.json({ errors: [{ field: 'title', message: 'Title must produce a valid slug' }] }, 400);
+    if (!prompt) {
+      return c.json({ error: 'prompt is required' }, 400);
     }
 
     try {
-      const article = repo.createArticle({
+      const teams: string[] = Array.isArray(body.teams) ? body.teams : [];
+      const depthLevel = [1, 2, 3].includes(body.depthLevel) ? body.depthLevel : 2;
+      const autoAdvance = body.autoAdvance === true;
+      const actionContext = deps?.actionContext;
+
+      let ideaContent: string;
+      let title: string;
+
+      if (actionContext) {
+        // Build team context for the LLM
+        const teamContext = teams.length > 0
+          ? teams.map(abbr => {
+              const t = NFL_TEAMS.find(x => x.abbr === abbr);
+              return t ? `${t.abbr} — ${t.city} ${t.name}` : abbr;
+            }).join(', ')
+          : 'No specific team';
+
+        const depthLabels: Record<number, string> = {
+          1: '1 — Casual Fan (~800 words, 2 agents)',
+          2: '2 — The Beat (~1500 words, 3 agents)',
+          3: '3 — Deep Dive (~2500 words, 4-5 agents)',
+        };
+
+        const systemPrompt = [
+          'You are the Lead agent for an NFL editorial lab. Your job is to generate a structured article idea from the user\'s prompt.',
+          'Generate a complete idea document following this exact template:\n',
+          IDEA_TEMPLATE,
+          '\nFill in every section with specific, actionable content. The Working Title should be clickbait-adjacent but honest, 60-80 characters.',
+          `\nTeam context: ${teamContext}`,
+          `Depth level: ${depthLabels[depthLevel] ?? depthLabels[2]}`,
+        ].join('\n');
+
+        const response = await actionContext.runner.gateway.chat({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          taskFamily: 'balanced',
+        });
+
+        ideaContent = response.content;
+        title = extractTitleFromIdea(ideaContent);
+      } else {
+        // Fallback: no LLM available — use raw prompt
+        const generated = generateTitleAndSlug(prompt);
+        title = generated.title;
+        ideaContent = `# Article Idea: ${title}\n\n## Working Title\n${title}\n\n## Angle / Tension\n${prompt}`;
+      }
+
+      let slug = generateSlug(title);
+      if (!slug) slug = generateSlug(prompt);
+      if (!slug) slug = `idea-${Date.now().toString(36)}`;
+
+      // Ensure uniqueness
+      if (repo.getArticle(slug)) {
+        slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+      }
+
+      repo.createArticle({
         id: slug,
-        title: formData.title,
-        primary_team: formData.primary_team,
+        title,
+        primary_team: teams[0] ?? undefined,
         league: config.league,
-        depth_level: formData.depth_level ?? 2,
+        depth_level: depthLevel,
       });
 
-      const ideaContent = `# ${formData.title}\n\n${formData.description}`;
-
-      // Write to DB artifact store
       repo.artifacts.put(slug, 'idea.md', ideaContent);
 
-      return c.json(article, 201);
+      return c.json({
+        id: slug,
+        title,
+        stage: 1,
+        autoAdvance,
+      }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      return c.json({ error: message }, 400);
+      return c.json({ error: message }, 500);
     }
   });
 
@@ -575,70 +577,6 @@ export function createApp(
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       return c.html(renderAdvanceResult(false, message), 422);
-    }
-  });
-
-  // ── htmx action: create idea (form-encoded) ──────────────────────────────
-
-  app.post('/htmx/ideas', async (c) => {
-    const body = await c.req.parseBody();
-    const formData: IdeaFormData = {
-      title: (body.title as string || '').trim(),
-      description: (body.description as string || '').trim(),
-      primary_team: (body.primary_team as string || '').trim() || undefined,
-      depth_level: body.depth_level != null ? parseInt(String(body.depth_level), 10) : 2,
-      time_sensitive: body.time_sensitive === '1',
-      target_publish_date: (body.target_publish_date as string || '').trim() || undefined,
-    };
-
-    // Support legacy inline form (no description field)
-    const isLegacyForm = !body.description && body.id;
-    if (isLegacyForm) {
-      const id = (body.id as string || '').trim();
-      const title = formData.title;
-      if (!id || !title) {
-        return c.html(`<p class="empty-state" style="color:var(--color-danger)">ID and title are required</p>`, 400);
-      }
-      try {
-        repo.createArticle({ id, title, primary_team: formData.primary_team, league: config.league });
-
-        // Store idea artifact in DB
-        repo.artifacts.put(id, 'idea.md', `# ${title}\n`);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-        return c.html(`<p class="empty-state" style="color:var(--color-danger)">${escapeHtml(msg)}</p>`, 400);
-      }
-      const ideas = repo.getAllArticles().filter(a => a.current_stage === 1);
-      return c.html(renderRecentIdeas(ideas));
-    }
-
-    // Full idea form validation
-    const errors = validateIdeaForm(formData);
-    if (errors.length > 0) {
-      return c.html(renderIdeaFormPartial(errors), 422);
-    }
-
-    const slug = generateSlug(formData.title);
-    if (!slug) {
-      return c.html(renderIdeaFormPartial([{ field: 'title', message: 'Title must produce a valid slug' }]), 422);
-    }
-
-    try {
-      const article = repo.createArticle({
-        id: slug,
-        title: formData.title,
-        primary_team: formData.primary_team,
-        league: config.league,
-        depth_level: formData.depth_level ?? 2,
-      });
-
-      // Store idea artifact in DB
-      repo.artifacts.put(slug, 'idea.md', `# ${formData.title}\n\n${formData.description}`);
-
-      return c.html(renderIdeaSuccess({ id: article.id, title: article.title }));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      return c.html(renderIdeaFormPartial([{ field: 'title', message: msg }]), 422);
     }
   });
 

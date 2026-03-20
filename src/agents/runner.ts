@@ -153,7 +153,7 @@ function parseSkillFile(raw: string): AgentSkill | null {
 // ── AgentRunner ──────────────────────────────────────────────────────────────
 
 export class AgentRunner {
-  private readonly gateway: LLMGateway;
+  private readonly _gateway: LLMGateway;
   private readonly memory: AgentMemory;
   private readonly chartersDir: string;
   private readonly skillsDir: string;
@@ -164,10 +164,14 @@ export class AgentRunner {
     chartersDir: string;
     skillsDir: string;
   }) {
-    this.gateway = options.gateway;
+    this._gateway = options.gateway;
     this.memory = options.memory;
     this.chartersDir = options.chartersDir;
     this.skillsDir = options.skillsDir;
+  }
+
+  get gateway(): LLMGateway {
+    return this._gateway;
   }
 
   /** Load charter from filesystem. Tries {name}.md then {name}/charter.md. */
@@ -329,7 +333,7 @@ export class AgentRunner {
 
     // 7. Call LLM Gateway
     const model = charter.model && charter.model !== 'auto' ? charter.model : undefined;
-    const response = await this.gateway.chat({
+    const response = await this._gateway.chat({
       messages,
       model,
       temperature,
