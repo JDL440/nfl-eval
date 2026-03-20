@@ -70,6 +70,7 @@ import {
 } from './views/agents.js';
 import { renderConfigPage } from './views/config.js';
 import type { CharterSummary, SkillSummary } from './views/agents.js';
+import { renderRunsPage, renderRunsTable } from './views/runs.js';
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
@@ -1351,6 +1352,36 @@ export function createApp(
     }
     const content = readFileSync(filePath, 'utf-8');
     return c.html(renderCharterDetail(name, content, config.leagueConfig.name));
+  });
+
+  // ── Pipeline Runs page ────────────────────────────────────────────────────
+
+  app.get('/runs', (c) => {
+    const statusFilter = c.req.query('status') || undefined;
+    const search = c.req.query('search') || undefined;
+    const limitStr = c.req.query('limit');
+    const limit = limitStr ? parseInt(limitStr, 10) : 50;
+    const filters = { status: statusFilter, search };
+    const runs = repo.getAllStageRuns({ ...filters, limit, offset: 0 });
+    const totalCount = repo.countAllStageRuns(filters);
+    return c.html(
+      renderRunsPage({ config, runs, filters, totalCount, offset: 0, limit }),
+    );
+  });
+
+  // ── htmx: filtered runs partial ───────────────────────────────────────────
+
+  app.get('/htmx/runs', (c) => {
+    const statusFilter = c.req.query('status') || undefined;
+    const search = c.req.query('search') || undefined;
+    const offsetStr = c.req.query('offset');
+    const limitStr = c.req.query('limit');
+    const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+    const limit = limitStr ? parseInt(limitStr, 10) : 50;
+    const filters = { status: statusFilter, search };
+    const runs = repo.getAllStageRuns({ ...filters, limit, offset });
+    const totalCount = repo.countAllStageRuns(filters);
+    return c.html(renderRunsTable(runs, filters, totalCount, offset, limit));
   });
 
   return app;

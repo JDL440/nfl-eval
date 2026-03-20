@@ -173,6 +173,61 @@ export class Repository {
     return stmt.all(articleId, limit) as unknown as StageRun[];
   }
 
+  getAllStageRuns(filters?: { status?: string; search?: string; limit?: number; offset?: number }): (StageRun & { article_title: string | null; total_tokens: number | null })[] {
+    let sql = `SELECT sr.*, a.title AS article_title,
+        (SELECT SUM(COALESCE(ue.prompt_tokens, 0) + COALESCE(ue.output_tokens, 0))
+         FROM usage_events ue WHERE ue.stage_run_id = sr.id) AS total_tokens
+      FROM stage_runs sr
+      LEFT JOIN articles a ON sr.article_id = a.id`;
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
+
+    if (filters?.status) {
+      conditions.push('sr.status = ?');
+      params.push(filters.status);
+    }
+    if (filters?.search) {
+      conditions.push('(a.title LIKE ? OR sr.article_id LIKE ?)');
+      params.push(`%${filters.search}%`, `%${filters.search}%`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY sr.started_at DESC';
+    sql += ' LIMIT ?';
+    params.push(filters?.limit ?? 50);
+    if (filters?.offset) {
+      sql += ' OFFSET ?';
+      params.push(filters.offset);
+    }
+
+    const stmt = this.db.prepare(sql);
+    return stmt.all(...params) as unknown as (StageRun & { article_title: string | null; total_tokens: number | null })[];
+  }
+
+  countAllStageRuns(filters?: { status?: string; search?: string }): number {
+    let sql = `SELECT COUNT(*) AS cnt
+      FROM stage_runs sr
+      LEFT JOIN articles a ON sr.article_id = a.id`;
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
+    if (filters?.status) {
+      conditions.push('sr.status = ?');
+      params.push(filters.status);
+    }
+    if (filters?.search) {
+      conditions.push('(a.title LIKE ? OR sr.article_id LIKE ?)');
+      params.push(`%${filters.search}%`, `%${filters.search}%`);
+    }
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    const stmt = this.db.prepare(sql);
+    const row = stmt.get(...params) as { cnt: number } | undefined;
+    return row?.cnt ?? 0;
+  }
+
   getStageTransitions(articleId: string): StageTransition[] {
     const stmt = this.db.prepare(
       'SELECT * FROM stage_transitions WHERE article_id = ? ORDER BY transitioned_at ASC',

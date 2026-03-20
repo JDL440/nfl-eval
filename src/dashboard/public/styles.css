@@ -1598,3 +1598,30 @@ a:hover { text-decoration: underline; }
 .flash-auto-advance .spinner { width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse-banner { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+
+/* ── Agent charter & skill viewer ────────────────────────────────────────── */
+.agents-page h1 { margin-bottom: 1.5rem; }
+.agents-page h3 { margin: 1.25rem 0 0.75rem; color: var(--color-text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; }
+.agent-card {
+  display: block; padding: 0.875rem 1rem; background: var(--color-card);
+  border: 1px solid var(--color-border); border-radius: var(--radius, 8px);
+  text-decoration: none; color: var(--color-text); transition: box-shadow 0.15s, border-color 0.15s;
+}
+.agent-card:hover { border-color: var(--color-accent); box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-decoration: none; }
+.agent-card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem; }
+.agent-card-name { font-weight: 600; text-transform: uppercase; font-size: 0.95rem; }
+.agent-card-identity { font-size: 0.85rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agent-card-file { font-size: 0.8rem; color: var(--color-text-muted); }
+.agent-card-skill { border-left: 3px solid #6d28d9; }
+.badge-specialist { background: #fef3c7; color: #92400e; }
+.badge-skill { background: #ede9fe; color: #6d28d9; }
+.agents-detail { max-width: 50rem; margin: 0 auto; }
+.agents-detail .back-link { display: inline-block; margin-bottom: 1rem; color: var(--color-accent); text-decoration: none; }
+.agents-detail .back-link:hover { text-decoration: underline; }
+.detail-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.charter-content, .skill-content { line-height: 1.65; }
+.charter-content h1, .skill-content h1 { font-size: 1.5rem; margin-bottom: 0.75rem; }
+.charter-content h2, .skill-content h2 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.25rem; }
+.charter-content ul, .skill-content ul { padding-left: 1.25rem; }
+.charter-content li, .skill-content li { margin-bottom: 0.35rem; }
