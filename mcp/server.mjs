@@ -19,6 +19,10 @@ import {
     handlePublishTweet,
 } from "../.github/extensions/substack-publisher/tool.mjs";
 import {
+    queryPredictionMarketsTool,
+    handleQueryPredictionMarkets,
+} from "../.github/extensions/prediction-market-query/tool.mjs";
+import {
     queryPlayerStatsTool, handleQueryPlayerStats,
     queryTeamEfficiencyTool, handleQueryTeamEfficiency,
     queryPositionalRankingsTool, handleQueryPositionalRankings,
@@ -228,6 +232,17 @@ server.registerTool(refreshNflverseCacheTool.name, {
         refresh: z.boolean().optional().describe(refreshNflverseCacheTool.parameters.properties.refresh.description),
     },
 }, async (args) => runWithNormalization(handleRefreshNflverseCache, args));
+
+// ─── prediction-market-query tool ─────────────────────────────────────────────
+
+server.registerTool(queryPredictionMarketsTool.name, {
+    description: queryPredictionMarketsTool.description,
+    inputSchema: {
+        team: z.string().optional().describe(queryPredictionMarketsTool.parameters.properties.team.description),
+        market_type: z.string().optional().describe(queryPredictionMarketsTool.parameters.properties.market_type.description),
+        search: z.string().optional().describe(queryPredictionMarketsTool.parameters.properties.search.description),
+    },
+}, async (args) => runWithNormalization(handleQueryPredictionMarkets, args));
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

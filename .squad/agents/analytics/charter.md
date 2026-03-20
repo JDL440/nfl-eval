@@ -89,6 +89,7 @@
 | Source | What It Provides | Access |
 |--------|-----------------|--------|
 | **nflverse** (primary) | Play-by-play (372 cols: EPA, WPA, CPOE), player/team stats, Next Gen Stats, snap counts, PFR advanced stats, FTN charting, combine, contracts, draft picks | ✅ **Local parquet cache + MCP tools** — see `.squad/skills/nflverse-data/SKILL.md` |
+| **Polymarket** | Prediction market odds — Super Bowl futures, division winners, win totals, playoff odds, game outcomes, MVP | ✅ **Free API + MCP tool** — see `.squad/skills/prediction-market-data/SKILL.md` |
 | PFF | Grades (0–100), snap counts, pressures, coverage stats | ⚠️ Paywalled — cite grades from public articles/references |
 | ESPN | QBR, team stats, player stats, win probability | ✅ Fetchable via web_fetch |
 | Football Outsiders | DVOA, DYAR, opponent-adjusted metrics | ⚠️ Partial — some data public, deep stats paywalled |
@@ -113,6 +114,7 @@
 | `query_pfr_defense` | PFR defensive stats: tackles, coverage, pass rush, turnovers |
 | `query_historical_comps` | Statistical player comparisons across 5+ seasons |
 | `refresh_nflverse_cache` | Download or refresh local parquet cache |
+| `query_prediction_markets` | Polymarket odds: futures, win totals, game outcomes, team/search filters |
 
 ### CLI Scripts (for shell-out or manual use)
 
@@ -145,6 +147,11 @@ python content/data/query_pfr_defense.py --position CB --season 2025 --top 20
 
 # Historical player comps
 python content/data/query_historical_comps.py --player "Jaxon Smith-Njigba" --season 2025 --seasons-back 5
+
+# Prediction markets (Polymarket)
+python content/data/query_prediction_markets.py --team SEA
+python content/data/query_prediction_markets.py --futures
+python content/data/query_prediction_markets.py --search "Super Bowl"
 
 # Cache management
 python content/data/fetch_nflverse.py --dataset player_stats --seasons 2025
