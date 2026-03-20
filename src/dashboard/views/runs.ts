@@ -15,7 +15,7 @@ export type RunRow = StageRun & {
 };
 
 export interface RunsFilters {
-  status?: string;
+  status?: 'success' | 'error' | '';
   search?: string;
 }
 
@@ -53,8 +53,8 @@ function formatTokens(total: number | null | undefined): string {
 
 function statusBadge(status: string): string {
   switch (status) {
-    case 'completed': return '<span class="badge badge-success run-status" title="completed">✅ completed</span>';
-    case 'failed':    return '<span class="badge badge-error run-status" title="failed">❌ failed</span>';
+    case 'completed': return '<span class="badge badge-success run-status" title="success">✅ success</span>';
+    case 'failed':    return '<span class="badge badge-error run-status" title="error">❌ error</span>';
     case 'started':   return '<span class="badge badge-info run-status" title="started">🔄 started</span>';
     case 'cancelled': return '<span class="badge badge-muted run-status" title="cancelled">⏹ cancelled</span>';
     default:          return `<span class="badge run-status">${escapeHtml(status)}</span>`;
@@ -82,11 +82,9 @@ function errorCell(notes: string | null, status: string): string {
 
 function renderFilterBar(filters: RunsFilters): string {
   const statusOptions = [
-    { value: '', label: 'All Statuses' },
-    { value: 'completed', label: '✅ Completed' },
-    { value: 'failed', label: '❌ Failed' },
-    { value: 'started', label: '🔄 Started' },
-    { value: 'cancelled', label: '⏹ Cancelled' },
+    { value: '', label: 'All statuses' },
+    { value: 'success', label: '✅ Success' },
+    { value: 'error', label: '❌ Error' },
   ];
 
   return `
@@ -113,7 +111,7 @@ function renderFilterBar(filters: RunsFilters): string {
         hx-include=".runs-filter-bar"
       >
         ${statusOptions.map(o => `
-          <option value="${escapeHtml(o.value)}"${filters.status === o.value ? ' selected' : ''}>
+          <option value="${escapeHtml(o.value)}"${(filters.status ?? '') === o.value ? ' selected' : ''}>
             ${escapeHtml(o.label)}
           </option>
         `).join('')}
@@ -157,14 +155,16 @@ export function renderRunsTable(
   const shown = offset + runs.length;
   const hasMore = shown < totalCount;
   const nextOffset = shown;
+  const statusQuery = filters.status ? `&status=${encodeURIComponent(filters.status)}` : '';
+  const searchQuery = filters.search ? `&search=${encodeURIComponent(filters.search)}` : '';
 
   const loadMore = hasMore ? `
     <div class="load-more">
       <button
         class="btn btn-secondary"
-        hx-get="/htmx/runs?offset=${nextOffset}&limit=${limit}${filters.status ? `&status=${encodeURIComponent(filters.status)}` : ''}${filters.search ? `&search=${encodeURIComponent(filters.search)}` : ''}"
-        hx-target="#runs-tbody"
-        hx-swap="beforeend"
+        hx-get="/htmx/runs?limit=${nextOffset + limit}${statusQuery}${searchQuery}"
+        hx-target="#runs-results"
+        hx-swap="innerHTML"
         hx-indicator=".load-more-spinner"
       >
         Load more <span class="muted">(showing ${shown} of ${totalCount})</span>

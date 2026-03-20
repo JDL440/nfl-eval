@@ -1,0 +1,15 @@
+{
+  "allowlist": [
+    {
+      "notes": "Grounded sci-fi ensemble; adaptable, resourceful cast ideal for cross-discipline engineering squads.",
+      "capacity": 12,
+      "id": "the-expanse"
+    }
+  ],
+  "version": 1,
+  "assignment": {
+    "assigned_at": "2026-03-20T19:07:35.9751970Z",
+    "current_universe": "the-expanse",
+    "rationale": "TS/Hono backend + deterministic pipeline work benefits from a pragmatic space-ops crew."
+  }
+}

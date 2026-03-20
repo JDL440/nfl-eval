@@ -1,0 +1,31 @@
+{
+  "assignments": [
+    {
+      "universe": "the-expanse",
+      "assignment_id": "001",
+      "members": [
+        {
+          "name": "Holden",
+          "role": "Lead Engineer"
+        },
+        {
+          "name": "Naomi",
+          "role": "Backend & Pipeline Dev"
+        },
+        {
+          "name": "Drummer",
+          "role": "Frontend & UX Integration"
+        },
+        {
+          "name": "Bobbie",
+          "role": "Test & Quality Engineer"
+        },
+        {
+          "name": "Alex",
+          "role": "Data & Content Ops"
+        }
+      ],
+      "created_at": "2026-03-20T19:07:50.2233536Z"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "role": "Lead Engineer",
+    "universe": "the-expanse",
+    "created_at": "2026-03-20T19:07:42.3124404Z",
+    "legacy_named": false,
+    "status": "active",
+    "persistent_name": "Holden"
+  },
+  {
+    "role": "Backend & Pipeline Dev",
+    "universe": "the-expanse",
+    "created_at": "2026-03-20T19:07:42.3124404Z",
+    "legacy_named": false,
+    "status": "active",
+    "persistent_name": "Naomi"
+  },
+  {
+    "role": "Frontend & UX Integration",
+    "universe": "the-expanse",
+    "created_at": "2026-03-20T19:07:42.3124404Z",
+    "legacy_named": false,
+    "status": "active",
+    "persistent_name": "Drummer"
+  },
+  {
+    "role": "Test & Quality Engineer",
+    "universe": "the-expanse",
+    "created_at": "2026-03-20T19:07:42.3124404Z",
+    "legacy_named": false,
+    "status": "active",
+    "persistent_name": "Bobbie"
+  },
+  {
+    "role": "Data & Content Ops",
+    "universe": "the-expanse",
+    "created_at": "2026-03-20T19:07:42.3124404Z",
+    "legacy_named": false,
+    "status": "active",
+    "persistent_name": "Alex"
+  }
+]

@@ -181,10 +181,15 @@ export class Repository {
       LEFT JOIN articles a ON sr.article_id = a.id`;
     const params: (string | number)[] = [];
     const conditions: string[] = [];
+    const normalizedStatus = filters?.status === 'success'
+      ? 'completed'
+      : filters?.status === 'error'
+        ? 'failed'
+        : filters?.status;
 
-    if (filters?.status) {
+    if (normalizedStatus) {
       conditions.push('sr.status = ?');
-      params.push(filters.status);
+      params.push(normalizedStatus);
     }
     if (filters?.search) {
       conditions.push('(a.title LIKE ? OR sr.article_id LIKE ?)');
@@ -212,9 +217,14 @@ export class Repository {
       LEFT JOIN articles a ON sr.article_id = a.id`;
     const params: (string | number)[] = [];
     const conditions: string[] = [];
-    if (filters?.status) {
+    const normalizedStatus = filters?.status === 'success'
+      ? 'completed'
+      : filters?.status === 'error'
+        ? 'failed'
+        : filters?.status;
+    if (normalizedStatus) {
       conditions.push('sr.status = ?');
-      params.push(filters.status);
+      params.push(normalizedStatus);
     }
     if (filters?.search) {
       conditions.push('(a.title LIKE ? OR sr.article_id LIKE ?)');

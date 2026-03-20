@@ -234,6 +234,10 @@ a:hover { text-decoration: underline; }
 .badge-status-in_discussion { background: #fae8ff; color: #a21caf; }
 .badge-status-published { background: #f1f5f9; color: var(--color-text-muted); }
 .badge-status-archived { background: #f1f5f9; color: var(--color-text-light); }
+.badge-success { background: var(--color-success-bg); color: #047857; }
+.badge-error { background: var(--color-danger-bg); color: #b91c1c; }
+.badge-info { background: #dbeafe; color: #1d4ed8; }
+.badge-muted { background: #e2e8f0; color: var(--color-text-muted); }
 .badge-verdict-approved { background: var(--color-success-bg); color: #047857; }
 .badge-verdict-revise { background: var(--color-warning-bg); color: #92400e; }
 .badge-verdict-reject { background: var(--color-danger-bg); color: #b91c1c; }
@@ -1570,6 +1574,75 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .filtered-item .article-title { flex: 1; font-weight: 500; }
+
+/* ── Pipeline runs ─────────────────────────────────────────────────────────── */
+.runs-table-wrap { overflow-x: auto; }
+.runs-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.runs-table th,
+.runs-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+  text-align: left;
+}
+.runs-table th {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-bg-subtle, var(--color-bg));
+}
+.runs-table tbody tr:nth-child(even) {
+  background: var(--color-table-stripe);
+}
+.run-article {
+  min-width: 16rem;
+}
+.run-article .article-link {
+  display: inline-block;
+  font-weight: 600;
+}
+.run-surface {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
+.run-model,
+.run-error {
+  max-width: 18rem;
+}
+.run-model .model-label,
+.error-text {
+  word-break: break-word;
+}
+.error-text,
+.error-full code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.8rem;
+}
+.error-details summary {
+  cursor: pointer;
+}
+.error-full {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+}
+.load-more {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.runs-count {
+  margin-top: 1rem;
+}
 
 /* ── Publish All ─────────────────────────────────────────────────────────── */
 .publish-all-options { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.5rem 0; }

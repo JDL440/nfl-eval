@@ -3,7 +3,7 @@
  *
  * Tests for the Pipeline Runs page:
  *   GET /runs          — 200 with runs table
- *   GET /runs?status=error — filters to errors only (using status=failed)
+ *   GET /runs?status=error — filters to errors only
  *   Empty state when no runs exist
  */
 
@@ -132,7 +132,7 @@ describe('Pipeline Runs page', () => {
       const res = await app.request('/runs');
       const html = await res.text();
       expect(html).toContain('✅');
-      expect(html).toContain('completed');
+      expect(html).toContain('success');
     });
 
     it('shows error badge for failed runs', async () => {
@@ -141,7 +141,7 @@ describe('Pipeline Runs page', () => {
       const res = await app.request('/runs');
       const html = await res.text();
       expect(html).toContain('❌');
-      expect(html).toContain('failed');
+      expect(html).toContain('error');
     });
 
     it('shows error notes in error column for failed runs', async () => {
@@ -176,14 +176,14 @@ describe('Pipeline Runs page', () => {
     });
   });
 
-  // ── GET /runs?status=failed (error filter) ─────────────────────────────────
+  // ── GET /runs?status=error (error filter) ──────────────────────────────────
 
-  describe('GET /runs?status=failed', () => {
+  describe('GET /runs?status=error', () => {
     it('filters to error runs only', async () => {
       createArticleAndRun('ok-article', 'OK Article', 'completed');
       createArticleAndRun('err-article', 'Error Article', 'failed', 'Timeout error');
 
-      const res = await app.request('/runs?status=failed');
+      const res = await app.request('/runs?status=error');
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Error Article');
@@ -193,20 +193,20 @@ describe('Pipeline Runs page', () => {
     it('shows error notes when filtering to failed', async () => {
       createArticleAndRun('fail-article', 'Fail Article', 'failed', 'Rate limit exceeded');
 
-      const res = await app.request('/runs?status=failed');
+      const res = await app.request('/runs?status=error');
       const html = await res.text();
       expect(html).toContain('Rate limit exceeded');
     });
   });
 
-  // ── GET /runs?status=completed ─────────────────────────────────────────────
+  // ── GET /runs?status=success ───────────────────────────────────────────────
 
-  describe('GET /runs?status=completed', () => {
+  describe('GET /runs?status=success', () => {
     it('filters to completed runs only', async () => {
       createArticleAndRun('done-article', 'Done Article', 'completed');
       createArticleAndRun('bad-article', 'Bad Article', 'failed', 'Error');
 
-      const res = await app.request('/runs?status=completed');
+      const res = await app.request('/runs?status=success');
       const html = await res.text();
       expect(html).toContain('Done Article');
       expect(html).not.toContain('Bad Article');
@@ -226,7 +226,7 @@ describe('Pipeline Runs page', () => {
     it('shows filter empty state when no runs match', async () => {
       createArticleAndRun('only-completed', 'Only Completed Article', 'completed');
 
-      const res = await app.request('/runs?status=failed');
+      const res = await app.request('/runs?status=error');
       const html = await res.text();
       expect(html).toContain('No runs match your filters');
     });
@@ -249,7 +249,7 @@ describe('Pipeline Runs page', () => {
       createArticleAndRun('htmx-ok', 'HTMX OK', 'completed');
       createArticleAndRun('htmx-fail', 'HTMX Fail', 'failed', 'Error msg');
 
-      const res = await app.request('/htmx/runs?status=failed');
+      const res = await app.request('/htmx/runs?status=error');
       const html = await res.text();
       expect(html).toContain('HTMX Fail');
       expect(html).not.toContain('HTMX OK');

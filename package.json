@@ -9,8 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "dashboard": "node dashboard/server.mjs",
-    "dashboard:dev": "node --watch dashboard/server.mjs",
+    "dashboard": "echo 'v1 dashboard archived — use v2:serve instead'",
+    "dashboard:dev": "echo 'v1 dashboard archived — use v2:dev instead'",
     "mcp:server": "node mcp/server.mjs",
     "mcp:smoke": "node mcp/smoke-test.mjs",
     "v2:build": "tsc",

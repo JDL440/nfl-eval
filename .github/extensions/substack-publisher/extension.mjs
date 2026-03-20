@@ -570,7 +570,7 @@ import {
     ensureHeroFirstImage,
     validateProseMirrorBody,
     extractMetaFromMarkdown,
-} from "../../../shared/substack-prosemirror.mjs";
+} from "../../../archive/v1/shared/substack-prosemirror.mjs";
 
 // ─── Extension entry ─────────────────────────────────────────────────────────
 
@@ -1208,7 +1208,7 @@ const session = await joinSession({
             handler: async (args) => {
                 try {
                     const { loadTwitterCredentials, postTweet, uploadMediaForTweet, buildPromotionTweetText }
-                        = await import("../../../shared/twitter-client.mjs");
+                        = await import("../../../archive/v1/shared/twitter-client.mjs");
 
                     const creds = loadTwitterCredentials(process.cwd());
                     if (!creds.valid) {
