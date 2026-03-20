@@ -23,7 +23,10 @@ import {
   STAGE_ACTIONS,
   executeTransition,
   resetContextConfigCache,
+  recordAgentUsage,
+  parsePanelComposition,
   type ActionContext,
+  type PanelMember,
 } from '../../src/pipeline/actions.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -206,7 +209,7 @@ describe('STAGE_ACTIONS', () => {
   // ── runDiscussion (3→4) ──────────────────────────────────────────────────
 
   describe('runDiscussion', () => {
-    it('calls panel-moderator and writes discussion-summary.md', async () => {
+    it('falls back to single-moderator when composition cannot be parsed', async () => {
       createArticleWithStage(fixtures, 'test-rd', 3 as Stage, {
         'idea.md': '# Idea',
         'discussion-prompt.md': '# Prompt',
@@ -217,6 +220,130 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-rd', 'discussion-summary.md')).toBeTruthy();
+      // No panel-*.md artifacts saved in fallback mode
+      expect(fixtures.repo.artifacts.get('test-rd', 'panel-sea.md')).toBeNull();
+    });
+
+    it('runs parallel panelists and synthesizes via moderator', async () => {
+      // Write charters for panelist agents
+      writeFileSync(join(fixtures.chartersDir, 'sea.md'),
+        '# SEA\n\n## Identity\nSeahawks team agent.\n\n## Responsibilities\n- Analyze roster\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+      writeFileSync(join(fixtures.chartersDir, 'cap.md'),
+        '# Cap\n\n## Identity\nCap specialist agent.\n\n## Responsibilities\n- Analyze cap\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+
+      createArticleWithStage(fixtures, 'test-rd-parallel', 3 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt\nDiscuss Seahawks cap space.',
+        'panel-composition.md': '## Panel\n- **SEA** — Seahawks team context: roster gaps, competitive window\n- **Cap** — Salary cap analysis: market comps, contract structure',
+      });
+
+      const result = await STAGE_ACTIONS.runDiscussion('test-rd-parallel', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      // Individual panel artifacts saved
+      expect(fixtures.repo.artifacts.get('test-rd-parallel', 'panel-sea.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-parallel', 'panel-cap.md')).toBeTruthy();
+      // Synthesis saved as discussion-summary.md
+      expect(fixtures.repo.artifacts.get('test-rd-parallel', 'discussion-summary.md')).toBeTruthy();
+    });
+
+    it('succeeds when one panelist fails but others succeed', async () => {
+      // Only write charter for 'sea', not 'badagent' — badagent will fail
+      writeFileSync(join(fixtures.chartersDir, 'sea.md'),
+        '# SEA\n\n## Identity\nSeahawks team agent.\n\n## Responsibilities\n- Analyze roster\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+
+      createArticleWithStage(fixtures, 'test-rd-partial', 3 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt\nDiscuss something.',
+        'panel-composition.md': '## Panel\n- **SEA** — Seahawks context\n- **badagent** — This agent does not exist',
+      });
+
+      const result = await STAGE_ACTIONS.runDiscussion('test-rd-partial', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      // sea succeeded
+      expect(fixtures.repo.artifacts.get('test-rd-partial', 'panel-sea.md')).toBeTruthy();
+      // badagent did not produce an artifact
+      expect(fixtures.repo.artifacts.get('test-rd-partial', 'panel-badagent.md')).toBeNull();
+      // Synthesis still produced
+      expect(fixtures.repo.artifacts.get('test-rd-partial', 'discussion-summary.md')).toBeTruthy();
+    });
+
+    it('fails when all panelists fail', async () => {
+      // No charters for nonexistent agents
+      createArticleWithStage(fixtures, 'test-rd-allfail', 3 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '## Panel\n- **noagent1** — Does not exist\n- **noagent2** — Also does not exist',
+      });
+
+      const result = await STAGE_ACTIONS.runDiscussion('test-rd-allfail', fixtures.ctx);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('All panelists failed');
+    });
+
+    it('saves thinking traces for panelist artifacts', async () => {
+      writeFileSync(join(fixtures.chartersDir, 'sea.md'),
+        '# SEA\n\n## Identity\nSeahawks team agent.\n\n## Responsibilities\n- Analyze roster\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+
+      createArticleWithStage(fixtures, 'test-rd-think', 3 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '## Panel\n- **SEA** — Seahawks team context',
+      });
+
+      const result = await STAGE_ACTIONS.runDiscussion('test-rd-think', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(fixtures.repo.artifacts.get('test-rd-think', 'panel-sea.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-think', 'discussion-summary.md')).toBeTruthy();
+    });
+  });
+
+  // ── parsePanelComposition ────────────────────────────────────────────────
+
+  describe('parsePanelComposition', () => {
+    it('parses standard panel-composition format', () => {
+      const content = `## Panel
+- **SEA** — Seahawks team context: roster gaps, competitive window, cap position
+- **Cap** — Salary cap analysis: market comps, contract structure, cap impact
+- **PlayerRep** — Player valuation: production metrics, market leverage`;
+
+      const result = parsePanelComposition(content);
+
+      expect(result).toEqual([
+        { agentName: 'sea', role: 'Seahawks team context: roster gaps, competitive window, cap position' },
+        { agentName: 'cap', role: 'Salary cap analysis: market comps, contract structure, cap impact' },
+        { agentName: 'playerrep', role: 'Player valuation: production metrics, market leverage' },
+      ]);
+    });
+
+    it('parses colon-separated format', () => {
+      const content = `## Panel
+- **SEA**: Seahawks context
+- **Cap**: Cap analysis`;
+
+      const result = parsePanelComposition(content);
+      expect(result).toHaveLength(2);
+      expect(result[0].agentName).toBe('sea');
+      expect(result[1].agentName).toBe('cap');
+    });
+
+    it('returns empty array for unparseable content', () => {
+      const content = '# Panel\n- Analyst A\n- Analyst B';
+      expect(parsePanelComposition(content)).toEqual([]);
+    });
+
+    it('returns empty array for empty content', () => {
+      expect(parsePanelComposition('')).toEqual([]);
+    });
+
+    it('handles dash-separated format', () => {
+      const content = '- **defense** - Defensive scheme analysis';
+      const result = parsePanelComposition(content);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ agentName: 'defense', role: 'Defensive scheme analysis' });
     });
   });
 
@@ -547,5 +674,105 @@ describe('Configurable upstream context', () => {
 
     const result = await STAGE_ACTIONS.writeDraft('test-ctx-minimal', fixtures.ctx);
     expect(result.success).toBe(true);
+  });
+});
+
+// ── Token usage recording ───────────────────────────────────────────────────
+
+describe('Token usage recording', () => {
+  let fixtures: TestFixtures;
+
+  beforeEach(() => {
+    fixtures = createFixtures();
+  });
+
+  afterEach(() => {
+    fixtures.memory.close();
+    fixtures.repo.close();
+    rmSync(fixtures.tempDir, { recursive: true, force: true });
+  });
+
+  it('records token usage after a successful agent run', async () => {
+    createArticleWithStage(fixtures, 'test-usage', 1 as Stage, {
+      'idea.md': '# Great Idea\nAnalyze the Seahawks draft.',
+    });
+
+    const result = await STAGE_ACTIONS.generatePrompt('test-usage', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const events = fixtures.repo.getUsageEvents('test-usage');
+    expect(events.length).toBeGreaterThanOrEqual(1);
+
+    const event = events[0];
+    expect(event.article_id).toBe('test-usage');
+    expect(event.stage).toBe(1);
+    expect(event.surface).toBe('generatePrompt');
+    expect(event.event_type).toBe('completed');
+    expect(event.provider).toBe('stub');
+    expect(event.model_or_tool).toBeTruthy();
+  });
+
+  it('records usage for each stage action', async () => {
+    createArticleWithStage(fixtures, 'test-usage-multi', 1 as Stage, {
+      'idea.md': '# Idea\nDetailed analysis of Seahawks.',
+    });
+
+    const result = await STAGE_ACTIONS.generatePrompt('test-usage-multi', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const events = fixtures.repo.getUsageEvents('test-usage-multi');
+    const promptEvent = events.find(e => e.surface === 'generatePrompt');
+    expect(promptEvent).toBeDefined();
+    expect(promptEvent!.stage).toBe(1);
+  });
+
+  it('does not record usage when tokensUsed is undefined', () => {
+    fixtures.repo.createArticle({ id: 'test-no-tokens', title: 'No Tokens' });
+
+    const fakeResult = {
+      content: 'test',
+      thinking: null,
+      model: 'test-model',
+      provider: 'test-provider',
+      agentName: 'test-agent',
+      memoriesUsed: 0,
+      tokensUsed: undefined,
+    };
+
+    recordAgentUsage(fixtures.ctx, 'test-no-tokens', 1, 'generatePrompt', fakeResult);
+
+    const events = fixtures.repo.getUsageEvents('test-no-tokens');
+    expect(events.length).toBe(0);
+  });
+
+  it('records correct provider, model, stage, and surface values', () => {
+    fixtures.repo.createArticle({ id: 'test-values', title: 'Values Test' });
+    // Advance to stage 3 so current_stage matches
+    fixtures.repo.advanceStage('test-values', 1, 2 as Stage, 'test');
+    fixtures.repo.advanceStage('test-values', 2, 3 as Stage, 'test');
+
+    const fakeResult = {
+      content: 'test',
+      thinking: null,
+      model: 'gpt-4o',
+      provider: 'openai',
+      agentName: 'writer',
+      memoriesUsed: 2,
+      tokensUsed: { prompt: 500, completion: 200 },
+    };
+
+    recordAgentUsage(fixtures.ctx, 'test-values', 3, 'runDiscussion', fakeResult);
+
+    const events = fixtures.repo.getUsageEvents('test-values');
+    expect(events.length).toBe(1);
+
+    const event = events[0];
+    expect(event.provider).toBe('openai');
+    expect(event.model_or_tool).toBe('gpt-4o');
+    expect(event.stage).toBe(3);
+    expect(event.surface).toBe('runDiscussion');
+    expect(event.event_type).toBe('completed');
+    expect(event.prompt_tokens).toBe(500);
+    expect(event.output_tokens).toBe(200);
   });
 });

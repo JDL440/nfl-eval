@@ -261,6 +261,8 @@ export function createApp(
       let ideaThinking: string | null = null;
       let ideaModel = '';
       let ideaAgent = '';
+      let ideaProvider = '';
+      let ideaTokensUsed: { prompt: number; completion: number } | undefined;
 
       if (actionContext) {
         // Build team context for the task
@@ -299,6 +301,8 @@ export function createApp(
         ideaThinking = result.thinking;
         ideaModel = result.model;
         ideaAgent = result.agentName;
+        ideaProvider = result.provider;
+        ideaTokensUsed = result.tokensUsed;
       } else {
         // Fallback: no LLM available — use raw prompt
         const generated = generateTitleAndSlug(prompt);
@@ -327,6 +331,19 @@ export function createApp(
       if (ideaThinking) {
         const header = `# Thinking Trace\n\n**Agent:** ${ideaAgent}  \n**Model:** ${ideaModel}  \n**Artifact:** idea.md\n\n---\n\n`;
         repo.artifacts.put(slug, 'idea.thinking.md', header + ideaThinking);
+      }
+
+      if (ideaTokensUsed) {
+        repo.recordUsageEvent({
+          articleId: slug,
+          stage: 1,
+          surface: 'ideaGeneration',
+          provider: ideaProvider,
+          modelOrTool: ideaModel,
+          eventType: 'completed',
+          promptTokens: ideaTokensUsed.prompt,
+          outputTokens: ideaTokensUsed.completion,
+        });
       }
 
       bus.emit({ type: 'article_created', articleId: slug, data: { title }, timestamp: new Date().toISOString() });
@@ -557,7 +574,8 @@ export function createApp(
     // Allow pipeline artifacts and their thinking traces
     const isThinking = name.endsWith('.thinking.md');
     const baseName = isThinking ? name.replace('.thinking.md', '.md') : name;
-    if (!(ARTIFACT_FILES as readonly string[]).includes(baseName)) {
+    const isPanelArtifact = /^panel-[a-z0-9-]+\.md$/.test(baseName);
+    if (!isPanelArtifact && !(ARTIFACT_FILES as readonly string[]).includes(baseName)) {
       return c.html(renderArtifactContent(name, null), 400);
     }
 

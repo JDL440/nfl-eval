@@ -9,7 +9,7 @@ import type { Stage } from '../types.js';
 import { STAGE_NAMES } from '../types.js';
 import type { Repository } from '../db/repository.js';
 import type { PipelineEngine } from './engine.js';
-import type { AgentRunner } from '../agents/runner.js';
+import type { AgentRunner, AgentRunResult } from '../agents/runner.js';
 import type { PipelineAuditor } from './audit.js';
 import type { AppConfig } from '../config/index.js';
 import { existsSync, readFileSync } from 'node:fs';
@@ -34,6 +34,13 @@ export interface ActionResult {
 
 export type StageAction = (articleId: string, ctx: ActionContext) => Promise<ActionResult>;
 
+// ── Types (panel) ───────────────────────────────────────────────────────────
+
+export interface PanelMember {
+  agentName: string;
+  role: string;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function readArtifact(repo: Repository, articleId: string, filename: string): string {
@@ -49,7 +56,7 @@ function writeArtifact(repo: Repository, articleId: string, filename: string, co
 }
 
 /** Save agent result: main artifact + separate thinking trace if present. */
-function writeAgentResult(
+export function writeAgentResult(
   repo: Repository,
   articleId: string,
   filename: string,
@@ -61,6 +68,58 @@ function writeAgentResult(
     const header = `# Thinking Trace\n\n**Agent:** ${result.agentName}  \n**Model:** ${result.model}  \n**Artifact:** ${filename}\n\n---\n\n`;
     writeArtifact(repo, articleId, thinkingName, header + result.thinking);
   }
+}
+
+/** Record token usage from an agent run if usage data is present. */
+export function recordAgentUsage(
+  ctx: ActionContext,
+  articleId: string,
+  stage: number,
+  surface: string,
+  result: AgentRunResult,
+): void {
+  if (result.tokensUsed) {
+    ctx.repo.recordUsageEvent({
+      articleId,
+      stage,
+      surface,
+      provider: result.provider,
+      modelOrTool: result.model,
+      eventType: 'completed',
+      promptTokens: result.tokensUsed.prompt,
+      outputTokens: result.tokensUsed.completion,
+    });
+  }
+}
+
+/**
+ * Parse panel-composition.md into structured PanelMember array.
+ * Expected format from the panel-composition skill:
+ *   ## Panel
+ *   - **SEA** — Seahawks team context: roster gaps, competitive window, cap position
+ *   - **Cap** — Salary cap analysis: market comps, contract structure, cap impact
+ *
+ * Also handles simpler formats:
+ *   - **sea** — role description
+ *   - **Cap**: role description
+ */
+export function parsePanelComposition(content: string): PanelMember[] {
+  const members: PanelMember[] = [];
+  const lines = content.split('\n');
+
+  for (const line of lines) {
+    // Match: - **AgentName** — role   or   - **AgentName** - role   or   - **AgentName**: role
+    const match = line.match(/^[-*]\s+\*\*([^*]+)\*\*\s*(?:—|--|:|-)\s*(.+)$/);
+    if (match) {
+      const agentName = match[1].trim().toLowerCase();
+      const role = match[2].trim();
+      if (agentName && role) {
+        members.push({ agentName, role });
+      }
+    }
+  }
+
+  return members;
 }
 
 // ── Configurable upstream context ───────────────────────────────────────────
@@ -221,6 +280,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
     });
 
     writeAgentResult(ctx.repo, articleId, 'discussion-prompt.md', result);
+    recordAgentUsage(ctx, articleId, article.current_stage, 'generatePrompt', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -272,6 +332,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
     });
 
     writeAgentResult(ctx.repo, articleId, 'panel-composition.md', result);
+    recordAgentUsage(ctx, articleId, article.current_stage, 'composePanel', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -282,7 +343,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
   }
 }
 
-/** Stage 3→4: Run panel discussion. */
+/** Stage 3→4: Run panel discussion with parallel panelist execution. */
 async function runDiscussion(articleId: string, ctx: ActionContext): Promise<ActionResult> {
   const start = Date.now();
   try {
@@ -292,19 +353,87 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const prompt = readArtifact(ctx.repo, articleId, 'discussion-prompt.md');
     const panel = readArtifact(ctx.repo, articleId, 'panel-composition.md');
 
-    const result = await ctx.runner.run({
+    // Try to parse individual panelists for parallel execution
+    const panelists = parsePanelComposition(panel);
+
+    if (panelists.length === 0) {
+      // Fallback: single-moderator approach when composition can't be parsed
+      console.warn(`[runDiscussion] Could not parse panel-composition.md for '${articleId}', falling back to single-moderator`);
+
+      const result = await ctx.runner.run({
+        agentName: 'panel-moderator',
+        task: 'Moderate the panel discussion and produce a summary.',
+        skills: ['article-discussion'],
+        articleContext: {
+          slug: articleId,
+          title: article.title,
+          stage: article.current_stage,
+          content: `## Discussion Prompt\n${prompt}\n\n## Panel\n${panel}`,
+        },
+      });
+
+      writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', result);
+      recordAgentUsage(ctx, articleId, article.current_stage, 'runDiscussion', result);
+      return { success: true, duration: Date.now() - start };
+    }
+
+    // Run each panelist in parallel
+    const panelResults = await Promise.all(
+      panelists.map(async (panelist) => {
+        try {
+          const result = await ctx.runner.run({
+            agentName: panelist.agentName,
+            task: `You are participating in a panel discussion.\n\nYour assigned lane: ${panelist.role}\n\nDiscussion prompt:\n${prompt}\n\nProvide your expert analysis from your specific perspective. Be direct, cite specific data points, and don't hedge. If you disagree with conventional wisdom, say so.`,
+            articleContext: {
+              title: article.title,
+              slug: articleId,
+              stage: article.current_stage,
+            },
+          });
+          return { panelist, result, error: null };
+        } catch (err) {
+          console.warn(`[runDiscussion] Panelist '${panelist.agentName}' failed: ${err instanceof Error ? err.message : String(err)}`);
+          return { panelist, result: null, error: err };
+        }
+      })
+    );
+
+    // Collect successful results
+    const successfulResults = panelResults.filter(r => r.result !== null);
+
+    if (successfulResults.length === 0) {
+      throw new Error('All panelists failed — cannot synthesize discussion');
+    }
+
+    // Save individual panelist artifacts and record usage
+    for (const { panelist, result } of successfulResults) {
+      const artifactName = `panel-${panelist.agentName}.md`;
+      writeAgentResult(ctx.repo, articleId, artifactName, result!);
+      recordAgentUsage(ctx, articleId, article.current_stage, `panel-${panelist.agentName}`, result!);
+    }
+
+    // Build synthesis input from individual contributions
+    const individualContributions = successfulResults
+      .map(({ panelist, result }) =>
+        `## ${panelist.agentName.toUpperCase()} — ${panelist.role}\n\n${result!.content}`)
+      .join('\n\n---\n\n');
+
+    // Synthesize via moderator
+    const synthesisResult = await ctx.runner.run({
       agentName: 'panel-moderator',
-      task: 'Moderate the panel discussion and produce a summary.',
+      task: `Synthesize these panel contributions into a coherent discussion summary. Preserve disagreements and tension — don't smooth over conflicts.\n\n${individualContributions}`,
       skills: ['article-discussion'],
       articleContext: {
-        slug: articleId,
         title: article.title,
+        slug: articleId,
         stage: article.current_stage,
-        content: `## Discussion Prompt\n${prompt}\n\n## Panel\n${panel}`,
+        content: prompt,
       },
     });
 
-    writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', result);
+    writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', synthesisResult);
+    recordAgentUsage(ctx, articleId, article.current_stage, 'runDiscussion-synthesis', synthesisResult);
+
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -337,6 +466,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     });
 
     writeAgentResult(ctx.repo, articleId, 'draft.md', result);
+    recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -369,6 +499,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     });
 
     writeAgentResult(ctx.repo, articleId, 'editor-review.md', result);
+    recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -401,6 +532,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
     });
 
     writeAgentResult(ctx.repo, articleId, 'publisher-pass.md', result);
+    recordAgentUsage(ctx, articleId, article.current_stage, 'runPublisherPass', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
