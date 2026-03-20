@@ -11,6 +11,12 @@ import type { Article, Stage, StageTransition, StageRun, EditorReview, Publisher
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { markdownToHtml } from '../../services/markdown.js';
+
+const DEPTH_LABELS: Record<number, string> = {
+  1: 'Casual Fan',
+  2: 'The Beat',
+  3: 'Deep Dive',
+};
 
 /** Artifact file names produced at each pipeline stage. */
 export const ARTIFACT_FILES = [
@@ -78,7 +84,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
             Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
           </span>
           <span class="badge badge-status badge-status-${article.status}">${escapeHtml(article.status)}</span>
-          <span class="badge badge-depth">Depth ${article.depth_level}</span>
+          <span class="badge badge-depth">${DEPTH_LABELS[article.depth_level] ?? `Depth ${article.depth_level}`}</span>
         </div>
       </div>
 
@@ -465,7 +471,7 @@ function renderArticleMetadata(article: Article): string {
         <dt>ID</dt><dd><code>${escapeHtml(article.id)}</code></dd>
         ${article.primary_team ? `<dt>Team</dt><dd>${escapeHtml(article.primary_team)}</dd>` : ''}
         <dt>League</dt><dd>${escapeHtml(article.league)}</dd>
-        <dt>Depth</dt><dd>${article.depth_level}</dd>
+        <dt>Depth</dt><dd>${DEPTH_LABELS[article.depth_level] ?? article.depth_level}</dd>
         <dt>Status</dt><dd>${escapeHtml(article.status)}</dd>
         <dt>Created</dt><dd>${formatDate(article.created_at)}</dd>
         ${article.target_publish_date ? `<dt>Target Publish</dt><dd>${escapeHtml(article.target_publish_date)}</dd>` : ''}
