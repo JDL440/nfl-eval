@@ -322,10 +322,8 @@ describe('New Idea Routes', () => {
     let llmApp: ReturnType<typeof createApp>;
 
     beforeEach(() => {
-      // Build a mock actionContext with a fake gateway
-      const mockGateway = {
-        chat: async () => ({
-          content: `# Article Idea: Seahawks Secondary Crisis
+      // Build a mock actionContext with a fake runner.run()
+      const mockIdeaContent = `# Article Idea: Seahawks Secondary Crisis
 
 ## Working Title
 Devon Witherspoon Can't Do It Alone: Seattle's DB Problem
@@ -352,14 +350,18 @@ Writer + Analyst + Editor
 - Timeliness: 2
 - Reader Value: 3
 - Uniqueness: 2
-- **Total: 10/12**`,
+- **Total: 10/12**`;
+
+      const mockRunner = {
+        gateway: {},
+        run: async () => ({
+          content: mockIdeaContent,
           model: 'mock-model',
           provider: 'mock',
-          usage: { promptTokens: 100, completionTokens: 200, totalTokens: 300 },
+          agentName: 'lead',
+          memoriesUsed: 0,
         }),
       };
-
-      const mockRunner = { gateway: mockGateway };
       const mockActionContext = {
         repo,
         engine: {} as any,

@@ -185,6 +185,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const result = await ctx.runner.run({
       agentName: 'panel-moderator',
       task: 'Moderate the panel discussion and produce a summary.',
+      skills: ['article-discussion'],
       articleContext: {
         slug: articleId,
         title: article.title,

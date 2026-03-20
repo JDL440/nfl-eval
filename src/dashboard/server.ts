@@ -232,7 +232,7 @@ export function createApp(
       let title: string;
 
       if (actionContext) {
-        // Build team context for the LLM
+        // Build team context for the task
         const teamContext = teams.length > 0
           ? teams.map(abbr => {
               const t = NFL_TEAMS.find(x => x.abbr === abbr);
@@ -246,24 +246,24 @@ export function createApp(
           3: '3 — Deep Dive (~2500 words, 4-5 agents)',
         };
 
-        const systemPrompt = [
-          'You are the Lead agent for an NFL editorial lab. Your job is to generate a structured article idea from the user\'s prompt.',
-          'Generate a complete idea document following this exact template:\n',
-          IDEA_TEMPLATE,
-          '\nFill in every section with specific, actionable content. The Working Title should be clickbait-adjacent but honest, 60-80 characters.',
+        // Use AgentRunner with Lead charter + idea-generation skill
+        const task = [
+          'Generate a structured article idea from the following prompt.',
           `\nTeam context: ${teamContext}`,
           `Depth level: ${depthLabels[depthLevel] ?? depthLabels[2]}`,
+          '\nUse this output template:\n',
+          IDEA_TEMPLATE,
+          '\nFill in every section with specific, actionable content. The Working Title should be clickbait-adjacent but honest, 60-80 characters.',
+          `\nUser prompt: ${prompt}`,
         ].join('\n');
 
-        const response = await actionContext.runner.gateway.chat({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
-          taskFamily: 'balanced',
+        const result = await actionContext.runner.run({
+          agentName: 'lead',
+          task,
+          skills: ['idea-generation'],
         });
 
-        ideaContent = response.content;
+        ideaContent = result.content;
         title = extractTitleFromIdea(ideaContent);
       } else {
         // Fallback: no LLM available — use raw prompt
