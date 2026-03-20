@@ -155,48 +155,51 @@ export function renderArticleDetail(data: ArticleDetailData): string {
   const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive } = data;
 
   let flashBanner = '';
-  if (autoAdvanceActive && article.current_stage < 7) {
-    const stageName = STAGE_NAMES[article.current_stage] ?? 'Unknown';
-    flashBanner = `<div class="flash-banner flash-auto-advance" id="auto-advance-banner">
-      <span class="spinner"></span> Auto-advance running… Stage ${article.current_stage} — ${escapeHtml(stageName)}
-    </div>
-    <script>
-      (function() {
-        var src = new EventSource('/events');
-        src.addEventListener('stage_changed', function() {
-          src.close();
-          window.location.reload();
-        });
-        setTimeout(function() { src.close(); }, 300000);
-      })();
-    </script>`;
-  } else if (flashMessage) {
+  if (flashMessage) {
     flashBanner = `<div class="flash-banner">${escapeHtml(flashMessage)}</div>`;
   }
   const errorBanner = errorMessage
     ? `<div class="flash-banner flash-error">❌ ${escapeHtml(errorMessage)}</div>`
     : '';
 
+  const eid = escapeHtml(article.id);
+
   const content = `
     <div class="article-detail">
       ${flashBanner}
       ${errorBanner}
+      ${renderPipelineActivityBar(article, autoAdvanceActive)}
       <div class="detail-header">
         <a href="/" class="back-link">← Dashboard</a>
-        ${renderArticleMetaDisplay(article)}
+        <div id="live-meta"
+          hx-get="/htmx/articles/${eid}/live-header"
+          hx-trigger="sse:stage_changed"
+          hx-swap="innerHTML"
+          hx-indicator="#pipeline-activity">
+          ${renderArticleMetaDisplay(article)}
+          ${renderStageTimeline(article.current_stage, transitions)}
+        </div>
       </div>
-
-      ${renderStageTimeline(article.current_stage, transitions)}
 
       <div class="detail-grid">
         <div class="detail-main">
           ${renderActionPanel(article, advanceCheck, stageRuns)}
           ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
-          ${renderArtifactTabs(article, artifactNames)}
+          <div id="live-artifacts"
+            hx-get="/htmx/articles/${eid}/live-artifacts"
+            hx-trigger="sse:stage_changed"
+            hx-swap="innerHTML"
+            hx-indicator="#pipeline-activity">
+            ${renderArtifactTabs(article, artifactNames)}
+          </div>
           ${reviews.length > 0 ? renderEditorReviews(reviews) : ''}
           ${publisherPass ? renderPublisherChecklist(publisherPass) : ''}
         </div>
-        <div class="detail-sidebar">
+        <div class="detail-sidebar"
+          hx-get="/htmx/articles/${eid}/live-sidebar"
+          hx-trigger="sse:stage_changed"
+          hx-swap="innerHTML"
+          hx-indicator="#pipeline-activity">
           ${renderUsagePanel(usageEvents ?? [])}
           ${renderStageRunsPanel(stageRuns ?? [])}
           ${renderAuditLog(transitions)}
@@ -207,6 +210,50 @@ export function renderArticleDetail(data: ArticleDetailData): string {
     </div>`;
 
   return renderLayout(article.title, content, config.leagueConfig.name);
+}
+
+// ── Pipeline activity indicator ──────────────────────────────────────────────
+
+function renderPipelineActivityBar(article: Article, autoAdvanceActive?: boolean): string {
+  const stageName = STAGE_NAMES[article.current_stage] ?? 'Unknown';
+  const active = autoAdvanceActive && article.current_stage < 7;
+  // Bar is shown via hx-indicator from SSE-triggered sections,
+  // or via .active class on initial auto-advance load
+  return `
+    <div id="pipeline-activity" class="pipeline-activity${active ? ' active' : ''}">
+      <span class="spinner"></span>
+      <span class="pipeline-activity-text">
+        Pipeline working… Stage ${article.current_stage} — ${escapeHtml(stageName)}
+      </span>
+    </div>
+    ${active ? `<script>
+      (function(){
+        // Remove .active after the first SSE-driven refresh settles
+        document.body.addEventListener('htmx:afterSettle', function handler() {
+          var bar = document.getElementById('pipeline-activity');
+          if (bar) bar.classList.remove('active');
+          document.body.removeEventListener('htmx:afterSettle', handler);
+        });
+      })();
+    </script>` : ''}`;
+}
+
+// ── Partial renders for SSE-driven live updates ─────────────────────────────
+
+export function renderLiveHeader(article: Article, transitions: StageTransition[]): string {
+  return renderArticleMetaDisplay(article) + renderStageTimeline(article.current_stage, transitions);
+}
+
+export function renderLiveArtifacts(article: Article, artifactNames?: string[]): string {
+  return renderArtifactTabs(article, artifactNames);
+}
+
+export function renderLiveSidebar(article: Article, usageEvents: UsageEvent[], stageRuns: StageRun[], transitions: StageTransition[]): string {
+  return renderUsagePanel(usageEvents)
+    + renderStageRunsPanel(stageRuns)
+    + renderAuditLog(transitions)
+    + renderArticleMetadata(article)
+    + renderContextConfigShell(article.id);
 }
 
 // ── Stage timeline ───────────────────────────────────────────────────────────

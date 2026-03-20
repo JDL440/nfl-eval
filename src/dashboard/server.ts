@@ -35,6 +35,9 @@ import {
   renderArticleMetaDisplay,
   renderArticleMetaEditForm,
   renderContextConfigPanel,
+  renderLiveHeader,
+  renderLiveArtifacts,
+  renderLiveSidebar,
   ARTIFACT_FILES,
 } from './views/article.js';
 import type { ArtifactName } from './views/article.js';
@@ -987,6 +990,34 @@ export function createApp(
     return c.html(renderStageRunsPanel(repo.getStageRuns(id)));
   });
 
+  // ── htmx: live partials (SSE-driven auto-refresh) ─────────────────────────
+
+  app.get('/htmx/articles/:id/live-header', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('', 404);
+    return c.html(renderLiveHeader(article, repo.getStageTransitions(id)));
+  });
+
+  app.get('/htmx/articles/:id/live-artifacts', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('', 404);
+    return c.html(renderLiveArtifacts(article, repo.artifacts.list(id).map(a => a.name)));
+  });
+
+  app.get('/htmx/articles/:id/live-sidebar', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('', 404);
+    return c.html(renderLiveSidebar(
+      article,
+      repo.getUsageEvents(id),
+      repo.getStageRuns(id),
+      repo.getStageTransitions(id),
+    ));
+  });
+
   // ── htmx: advance article ─────────────────────────────────────────────────
 
   app.post('/htmx/articles/:id/advance', (c) => {
@@ -1040,12 +1071,14 @@ export function createApp(
             try {
               engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');
               steps.push({ from: current.current_stage, to: 4, action: 'Sent back to Stage 4 — Editor requested revisions', duration: result.duration });
+              bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: 4, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
             } catch { /* ignore regression failure */ }
           }
           break;
         }
         const updated = repo.getArticle(id)!;
         steps.push({ from: current.current_stage, to: updated.current_stage, action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage]}`, duration: result.duration });
+        bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: updated.current_stage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
         current = updated;
       } else {
         const check = engine.canAdvance(id, current.current_stage as Stage);
@@ -1053,6 +1086,7 @@ export function createApp(
         try {
           const newStage = engine.advance(id, current.current_stage as Stage, 'auto-advance');
           steps.push({ from: current.current_stage, to: newStage, action: `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}` });
+          bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: newStage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
           current = repo.getArticle(id)!;
         } catch (err) {
           lastError = err instanceof Error ? err.message : String(err);
@@ -1067,6 +1101,7 @@ export function createApp(
       const stepsHtml = steps.length > 0
         ? `<div style="margin-bottom:0.5rem">Traversed ${steps.length} stage(s) before failing.</div>`
         : '';
+      bus.emit({ type: 'stage_changed', articleId: id, data: { stage: current.current_stage, action: 'auto-advance-error' }, timestamp: new Date().toISOString() });
       return c.html(
         `<div class="advance-result advance-error">${stepsHtml}❌ ${escapeHtml(lastError)}</div>`,
         200,
@@ -1075,8 +1110,7 @@ export function createApp(
 
     const stageList = steps.map(s => `Stage ${s.to}`).join(' → ');
     return c.html(
-      `<div class="advance-result advance-success">✅ Auto-advanced: ${escapeHtml(stageList)}. Now at Stage ${current.current_stage} — ${escapeHtml(STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown')}.</div>
-       <script>setTimeout(() => window.location.reload(), 1500);</script>`,
+      `<div class="advance-result advance-success">✅ Auto-advanced: ${escapeHtml(stageList)}. Now at Stage ${current.current_stage} — ${escapeHtml(STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown')}.</div>`,
       200,
     );
   });
