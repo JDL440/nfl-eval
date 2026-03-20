@@ -847,6 +847,16 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--color-border);
 }
 
+@keyframes highlight-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+.highlight-flash {
+  animation: highlight-pulse 0.6s ease-out 2;
+  border-color: var(--color-accent) !important;
+}
+
 /* ── Smart Idea Form ─────────────────────────────────────────── */
 
 .idea-form-container {

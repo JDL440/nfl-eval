@@ -157,35 +157,60 @@ export class CopilotProvider implements LLMProvider {
       body['response_format'] = { type: 'json_object' };
     }
 
-    const res = await fetch(`${API_BASE}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
+    // Retry with exponential backoff for transient errors (EOF, 500, 502, 503, 429)
+    const maxRetries = 3;
+    let lastError: Error | undefined;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        });
 
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new Error(`GitHub Models API error (${res.status}): ${errorBody}`);
-    }
-
-    const data = (await res.json()) as GHModelsResponse;
-    const choice = data.choices[0];
-
-    return {
-      content: choice?.message?.content ?? '',
-      model: data.model,
-      provider: this.id,
-      usage: data.usage
-        ? {
-            promptTokens: data.usage.prompt_tokens,
-            completionTokens: data.usage.completion_tokens,
-            totalTokens: data.usage.total_tokens,
+        if (!res.ok) {
+          const errorBody = await res.text();
+          const retryable = [429, 500, 502, 503].includes(res.status) || errorBody.includes('unexpected EOF');
+          if (retryable && attempt < maxRetries) {
+            const delay = Math.min(1000 * 2 ** attempt, 8000);
+            console.warn(`[copilot] Retrying (${attempt + 1}/${maxRetries}) after ${res.status}: ${errorBody.slice(0, 120)}`);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
           }
-        : undefined,
-      finishReason: choice?.finish_reason ?? undefined,
-    };
+          throw new Error(`GitHub Models API error (${res.status}): ${errorBody}`);
+        }
+
+        const data = (await res.json()) as GHModelsResponse;
+        const choice = data.choices[0];
+
+        return {
+          content: choice?.message?.content ?? '',
+          model: data.model,
+          provider: this.id,
+          usage: data.usage
+            ? {
+                promptTokens: data.usage.prompt_tokens,
+                completionTokens: data.usage.completion_tokens,
+                totalTokens: data.usage.total_tokens,
+              }
+            : undefined,
+          finishReason: choice?.finish_reason ?? undefined,
+        };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        const isNetworkError = lastError.message.includes('EOF') || lastError.message.includes('ECONNRESET') || lastError.message.includes('fetch failed');
+        if (isNetworkError && attempt < maxRetries) {
+          const delay = Math.min(1000 * 2 ** attempt, 8000);
+          console.warn(`[copilot] Retrying (${attempt + 1}/${maxRetries}) after network error: ${lastError.message.slice(0, 120)}`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        throw lastError;
+      }
+    }
+    throw lastError ?? new Error('GitHub Models API: max retries exceeded');
   }
 }

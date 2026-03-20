@@ -337,7 +337,9 @@ describe('CopilotProvider', () => {
       await expect(provider.chat(req({ model: 'gpt-4o' }))).rejects.toThrow(
         /GitHub Models API error \(429\)/,
       );
-    });
+      // Retries 3 times before throwing (1 initial + 3 retries = 4 total calls)
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    }, 30_000);
 
     it('throws on network error', async () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'));

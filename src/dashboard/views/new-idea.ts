@@ -174,6 +174,8 @@ export function renderNewIdeaPage(config: { labName: string }): string {
           </select>
         </div>
 
+        <div id="form-status" class="form-status" style="display:none"></div>
+
         <div class="form-group form-checkbox">
           <label>
             <input type="checkbox" id="auto-advance" name="autoAdvance">
@@ -188,16 +190,25 @@ export function renderNewIdeaPage(config: { labName: string }): string {
             Create Article
           </button>
         </div>
-
-        <div id="form-status" class="form-status" style="display:none"></div>
       </form>
     </div>
 
     <script>
       function surpriseMe() {
         const prompt = document.getElementById('prompt');
-        prompt.value = 'Generate a surprising, timely NFL article idea. Pick a team and angle that would genuinely interest fans right now. Focus on an underreported storyline, a bold prediction, or a contrarian take that challenges conventional wisdom.';
-        document.getElementById('idea-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        const teams = Array.from(selectedTeams);
+        let text = 'Generate a surprising, timely NFL article idea.';
+        if (teams.length > 0) {
+          text += ' Focus on the ' + teams.join(', ') + '.';
+        } else {
+          text += ' Pick a team and angle that would genuinely interest fans right now.';
+        }
+        text += ' Focus on an underreported storyline, a bold prediction, or a contrarian take that challenges conventional wisdom.';
+        prompt.value = text;
+        prompt.focus();
+        // Flash the prompt to show it was filled
+        prompt.classList.add('highlight-flash');
+        setTimeout(() => prompt.classList.remove('highlight-flash'), 1200);
       }
 
       function breakingNews() {
@@ -233,6 +244,16 @@ export function renderNewIdeaPage(config: { labName: string }): string {
         document.getElementById('teams').value = Array.from(selectedTeams).join(',');
         renderChips();
       }
+
+      // Persist auto-advance preference via localStorage
+      (function initAutoAdvance() {
+        const cb = document.getElementById('auto-advance');
+        const saved = localStorage.getItem('nfl-lab-auto-advance');
+        if (saved === 'true') cb.checked = true;
+        cb.addEventListener('change', () => {
+          localStorage.setItem('nfl-lab-auto-advance', cb.checked ? 'true' : 'false');
+        });
+      })();
 
       document.getElementById('idea-form').addEventListener('submit', async (e) => {
         e.preventDefault();
