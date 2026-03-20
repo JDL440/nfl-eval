@@ -56,7 +56,7 @@ const AGENT_STAGE_KEY: Record<string, string> = {
 };
 
 /** Separate thinking/reasoning tokens from LLM output. */
-function separateThinking(content: string): { thinking: string | null; output: string } {
+export function separateThinking(content: string): { thinking: string | null; output: string } {
   const thinkParts: string[] = [];
 
   // Matched pairs: <think>...</think>, <thinking>...</thinking>, <reasoning>...</reasoning>

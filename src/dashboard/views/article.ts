@@ -234,7 +234,7 @@ export function renderArtifactContent(name: string, content: string | null): str
 }
 
 /** Extract thinking/reasoning blocks from LLM output. */
-function extractThinking(content: string): { thinking: string | null; output: string } {
+export function extractThinking(content: string): { thinking: string | null; output: string } {
   // Pattern 1: Matched pairs — <think>...</think>, <thinking>...</thinking>, <reasoning>...</reasoning>
   const pairedRegex = /<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
   const thinkParts: string[] = [];
