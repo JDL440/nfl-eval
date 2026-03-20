@@ -63,4 +63,8 @@ export { migrate } from './migration/migrate.js';
 export type { MigrationOptions, MigrationReport } from './migration/migrate.js';
 
 // CLI
-export { run, printUsage } from './cli.js';
+export { run, printUsage, handleExport } from './cli.js';
+
+// CLI Export
+export { exportArticle } from './cli/export.js';
+export type { ExportOptions } from './cli/export.js';

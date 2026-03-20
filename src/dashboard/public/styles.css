@@ -1484,3 +1484,13 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .filtered-item .article-title { flex: 1; font-weight: 500; }
+
+/* ── Publish All ─────────────────────────────────────────────────────────── */
+.publish-all-options { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.5rem 0; }
+.btn-lg { padding: 0.75rem 1.5rem; font-size: 1rem; width: 100%; }
+.publish-step { padding: 0.35rem 0; font-size: 0.875rem; }
+.step-success { color: #059669; }
+.step-warn { color: #d97706; }
+.step-error { color: #dc2626; }
+.step-done { color: #059669; font-weight: 600; }
+.hint { font-size: 0.8rem; color: var(--color-text-muted, #64748b); margin-bottom: 0.5rem; }

@@ -178,6 +178,8 @@ export function renderPublishPreview(data: PublishPreviewData): string {
 
           ${renderNoteComposer(article)}
           ${renderTweetComposer(article)}
+
+          ${renderPublishAll(article.id, hasDraft && allPassed)}
         </div>
       </div>
     </div>`;
@@ -340,6 +342,92 @@ export function renderTweetComposer(article: Article): string {
         counter.textContent = effective + '/280';
         counter.className = 'char-count' + (effective > 280 ? ' over-limit' : effective > 250 ? ' near-limit' : '');
       });
+    </script>`;
+}
+
+// ── Publish All section ──────────────────────────────────────────────────────
+
+export function renderPublishAll(articleId: string, publishEnabled: boolean): string {
+  const id = escapeHtml(articleId);
+  return `
+    <section class="detail-section">
+      <h2>🚀 Publish All</h2>
+      <p class="hint">Publish to Substack, then optionally post a Note and Tweet in sequence.</p>
+      <div class="publish-all-options">
+        <label class="composer-check">
+          <input type="checkbox" id="pa-note" checked> Post Substack Note
+        </label>
+        <label class="composer-check">
+          <input type="checkbox" id="pa-tweet" checked> Post Tweet
+        </label>
+      </div>
+      <button class="btn btn-publish btn-lg" id="publish-all-btn"
+        onclick="publishAll('${id}')"
+        ${publishEnabled ? '' : 'disabled title="Complete all publisher checks and create a draft first"'}>
+        🚀 Publish All
+      </button>
+      <div id="publish-all-progress"></div>
+    </section>
+    <script>
+      async function publishAll(articleId) {
+        var btn = document.getElementById('publish-all-btn');
+        var progress = document.getElementById('publish-all-progress');
+        var includeNote = document.getElementById('pa-note') ? document.getElementById('pa-note').checked : false;
+        var includeTweet = document.getElementById('pa-tweet') ? document.getElementById('pa-tweet').checked : false;
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Publishing…';
+        progress.innerHTML = '';
+
+        function addStep(emoji, text, cls) {
+          progress.innerHTML += '<div class="publish-step ' + (cls || '') + '">' + emoji + ' ' + text + '</div>';
+        }
+
+        try {
+          addStep('⏳', 'Publishing to Substack…');
+          var pubRes = await fetch('/api/articles/' + articleId + '/publish', { method: 'POST' });
+          var pubData = await pubRes.json();
+          if (!pubRes.ok) throw new Error(pubData.error || 'Publish failed');
+          addStep('✅', 'Published to Substack', 'step-success');
+
+          if (includeNote) {
+            var noteContent = document.getElementById('note-content') ? document.getElementById('note-content').value : '';
+            if (noteContent && noteContent.trim()) {
+              addStep('⏳', 'Posting Note…');
+              var noteAttach = document.getElementById('note-attach') ? document.getElementById('note-attach').checked : false;
+              var noteRes = await fetch('/api/articles/' + articleId + '/note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: noteContent, attachArticle: noteAttach })
+              });
+              if (noteRes.ok) addStep('✅', 'Note posted', 'step-success');
+              else addStep('⚠️', 'Note failed (non-critical)', 'step-warn');
+            }
+          }
+
+          if (includeTweet) {
+            var tweetContent = document.getElementById('tweet-content') ? document.getElementById('tweet-content').value : '';
+            if (tweetContent && tweetContent.trim()) {
+              addStep('⏳', 'Posting Tweet…');
+              var dryRun = document.getElementById('tweet-dry-run') ? document.getElementById('tweet-dry-run').checked : false;
+              var tweetRes = await fetch('/api/articles/' + articleId + '/tweet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: tweetContent, dryRun: dryRun })
+              });
+              if (tweetRes.ok) addStep('✅', 'Tweet posted', 'step-success');
+              else addStep('⚠️', 'Tweet failed (non-critical)', 'step-warn');
+            }
+          }
+
+          addStep('🎉', 'All done! Redirecting…', 'step-done');
+          setTimeout(function() { window.location.href = '/articles/' + articleId; }, 2000);
+        } catch (err) {
+          addStep('❌', err.message, 'step-error');
+          btn.disabled = false;
+          btn.textContent = '🚀 Publish All';
+        }
+      }
     </script>`;
 }
 

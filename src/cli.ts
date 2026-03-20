@@ -13,6 +13,7 @@
  *   "help"               → Print usage
  */
 
+import { join } from 'node:path';
 import { loadConfig, initDataDir } from './config/index.js';
 import type { AppConfig } from './config/index.js';
 import type { Stage } from './types.js';
@@ -33,6 +34,7 @@ Commands:
   status              Print pipeline summary table
   advance <id>        Advance a single article to its next stage
   batch [stage]       Batch-advance eligible articles (optionally at a stage)
+  export <id> [dir]   Export article artifacts to a local directory
   mcp                 Start the MCP server over stdio
   help                Show this help message
 
@@ -194,6 +196,32 @@ export async function handleBatch(stageArg: string | undefined): Promise<void> {
   }
 }
 
+export function handleExport(articleId: string | undefined, outputDir: string | undefined): void {
+  if (!articleId) {
+    console.error('Usage: tsx src/cli.ts export <article-id> [output-dir]');
+    process.exitCode = 1;
+    return;
+  }
+
+  const config = loadConfig();
+  initDataDir(config.dataDir);
+  const { exportArticle } = require('./cli/export.js') as typeof import('./cli/export.js');
+
+  const dir = outputDir ?? `./${articleId}`;
+  const result = exportArticle({ articleId, outputDir: dir, dbPath: config.dbPath });
+
+  console.log(`Exported ${result.exported.length} files to ${dir}`);
+  for (const f of result.exported) {
+    console.log(`  ✅ ${f}`);
+  }
+  if (result.skipped.length > 0) {
+    console.log(`Skipped ${result.skipped.length} (not yet created):`);
+    for (const f of result.skipped) {
+      console.log(`  ⏭️  ${f}`);
+    }
+  }
+}
+
 export async function handleMcp(): Promise<void> {
   const config = loadConfig();
   initDataDir(config.dataDir);
@@ -238,6 +266,10 @@ export async function run(argv: string[] = process.argv): Promise<void> {
 
     case 'batch':
       await handleBatch(argv[3]);
+      break;
+
+    case 'export':
+      handleExport(argv[3], argv[4]);
       break;
 
     case 'mcp':
