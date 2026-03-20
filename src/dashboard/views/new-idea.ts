@@ -249,6 +249,7 @@ export function renderNewIdeaPage(config: { labName: string }): string {
                   headers: { 'Content-Type': 'application/json' },
                 });
                 const advData = await advRes.json();
+                var redirectError = '';
                 if (advData.steps && advData.steps.length > 0) {
                   const stageNames = advData.steps.map(s => 'Stage ' + s.to).join(' → ');
                   status.className = 'form-status success';
@@ -256,12 +257,16 @@ export function renderNewIdeaPage(config: { labName: string }): string {
                 } else {
                   status.className = 'form-status success';
                   status.innerHTML = 'Article created at <strong>Stage ' + advData.currentStage + '</strong>.' + (advData.reason ? ' <em>' + advData.reason + '</em>' : '') + '<br>Redirecting…';
+                  if (advData.reason) { redirectError = advData.reason; }
                 }
               } catch (advErr) {
+                redirectError = advErr.message || 'Unknown auto-advance error';
                 status.className = 'form-status success';
                 status.innerHTML = 'Article created but auto-advance encountered an issue. Redirecting…';
               }
-              setTimeout(() => { window.location.href = '/articles/' + data.id + '?from=auto-advance'; }, 2500);
+              var redirectUrl = '/articles/' + data.id + '?from=auto-advance';
+              if (redirectError) { redirectUrl += '&error=' + encodeURIComponent(redirectError); }
+              setTimeout(() => { window.location.href = redirectUrl; }, 2500);
             } else {
               status.className = 'form-status success';
               status.innerHTML = '✅ Created: <strong>' + data.title + '</strong>. Redirecting…';

@@ -34,18 +34,23 @@ export interface ArticleDetailData {
   usageEvents?: UsageEvent[];
   stageRuns?: StageRun[];
   flashMessage?: string;
+  errorMessage?: string;
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, flashMessage } = data;
+  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, flashMessage, errorMessage } = data;
 
   const flashBanner = flashMessage
     ? `<div class="flash-banner">${escapeHtml(flashMessage)}</div>`
+    : '';
+  const errorBanner = errorMessage
+    ? `<div class="flash-banner flash-error">❌ ${escapeHtml(errorMessage)}</div>`
     : '';
 
   const content = `
     <div class="article-detail">
       ${flashBanner}
+      ${errorBanner}
       <div class="detail-header">
         <a href="/" class="back-link">← Dashboard</a>
         <h1>${escapeHtml(article.title)}</h1>
@@ -64,7 +69,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
 
       <div class="detail-grid">
         <div class="detail-main">
-          ${renderActionPanel(article, advanceCheck)}
+          ${renderActionPanel(article, advanceCheck, stageRuns)}
           ${renderArtifactTabs(article)}
           ${reviews.length > 0 ? renderEditorReviews(reviews) : ''}
           ${publisherPass ? renderPublisherChecklist(publisherPass) : ''}
@@ -181,7 +186,13 @@ export function renderArtifactContent(name: string, content: string | null): str
 
 // ── Action Panel ─────────────────────────────────────────────────────────────
 
-function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): string {
+function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageRuns?: StageRun[]): string {
+  // Find the most recent stage_run failure for inline display
+  const lastRun = stageRuns && stageRuns.length > 0 ? stageRuns[0] : undefined;
+  const lastRunError = lastRun && lastRun.status !== 'completed' && lastRun.notes
+    ? lastRun.notes
+    : undefined;
+
   // Stage 8 — published
   if (article.current_stage === 8) {
     return `
@@ -200,7 +211,21 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
   const canAdvance = advanceCheck?.allowed ?? false;
   const guardReason = advanceCheck?.reason ?? '';
 
-  // Stage 7 — publish flow
+  const retryButton = `
+    <button class="btn btn-retry"
+      hx-post="/htmx/articles/${escapeHtml(article.id)}/auto-advance"
+      hx-target="#retry-result-${escapeHtml(article.id)}"
+      hx-swap="innerHTML"
+      hx-indicator="#retry-spinner-${escapeHtml(article.id)}">
+      🔄 Retry Auto-Advance
+    </button>
+    <span id="retry-spinner-${escapeHtml(article.id)}" class="htmx-indicator" style="margin-left:0.5rem">⏳ Running…</span>`;
+
+  const stageRunErrorHtml = lastRunError
+    ? `<div class="stage-run-error">⚠️ Last run (Stage ${lastRun!.stage}, ${escapeHtml(lastRun!.status)}): ${escapeHtml(lastRunError)}</div>`
+    : '';
+
+  // Stage 7 — publish flow (no retry button, uses publish button instead)
   if (article.current_stage === 7) {
     const canRegress = true; // Stage 7 can always go back
     const regressOptions = Array.from({ length: article.current_stage - 1 }, (_, i) => {
@@ -238,11 +263,12 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
           </details>
         </div>
         ${renderGuardStatus(canAdvance, guardReason)}
+        ${stageRunErrorHtml}
         <div id="advance-result-${escapeHtml(article.id)}"></div>
       </section>`;
   }
 
-  // Other stages — advance flow
+  // Other stages — advance flow + retry button
   const canRegress = article.current_stage > 1;
   const regressOptions = canRegress
     ? Array.from({ length: article.current_stage - 1 }, (_, i) => {
@@ -266,6 +292,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
           ${canAdvance ? '' : 'disabled'}>
           Advance ▶ Stage ${nextStage}
         </button>
+        ${retryButton}
         ${canRegress ? `
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
@@ -282,7 +309,9 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
           </details>` : ''}
       </div>
       ${renderGuardStatus(canAdvance, guardReason)}
+      ${stageRunErrorHtml}
       <div id="advance-result-${escapeHtml(article.id)}"></div>
+      <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
     </section>`;
 }
 

@@ -147,9 +147,15 @@ export function createApp(
 
     // Flash message from auto-advance redirect
     const from = c.req.query('from');
+    const errorParam = c.req.query('error');
     let flashMessage: string | undefined;
+    let errorMessage: string | undefined;
     if (from === 'auto-advance') {
-      flashMessage = `🚀 Auto-advance ran — article is now at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
+      if (errorParam) {
+        errorMessage = `Auto-advance failed: ${errorParam}`;
+      } else {
+        flashMessage = `🚀 Auto-advance ran — article is now at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
+      }
     }
 
     return c.html(
@@ -163,6 +169,7 @@ export function createApp(
         usageEvents: repo.getUsageEvents(id),
         stageRuns: repo.getStageRuns(id),
         flashMessage,
+        errorMessage,
       }),
     );
   });
@@ -552,6 +559,72 @@ export function createApp(
       const message = err instanceof Error ? err.message : 'Unknown error';
       return c.html(renderAdvanceResult(false, message), 422);
     }
+  });
+
+  // ── htmx: auto-advance article ──────────────────────────────────────────
+
+  app.post('/htmx/articles/:id/auto-advance', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html(renderAdvanceResult(false, 'Article not found'), 404);
+
+    // Reuse the same auto-advance logic as POST /api/articles/:id/auto-advance
+    const maxStage = 7;
+    const engine = new PipelineEngine(repo);
+    const steps: { from: number; to: number; action: string; duration?: number }[] = [];
+    let lastError: string | undefined;
+
+    let current = repo.getArticle(id)!;
+    const ctx = deps?.actionContext;
+
+    while (current.current_stage < maxStage) {
+      if (ctx) {
+        const result = await executeTransition(id, current.current_stage as Stage, ctx);
+        if (!result.success) {
+          lastError = result.error;
+          if (current.current_stage === 5 && result.error?.includes('REVISE')) {
+            try {
+              engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');
+              steps.push({ from: current.current_stage, to: 4, action: 'Sent back to Stage 4 — Editor requested revisions', duration: result.duration });
+            } catch { /* ignore regression failure */ }
+          }
+          break;
+        }
+        const updated = repo.getArticle(id)!;
+        steps.push({ from: current.current_stage, to: updated.current_stage, action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage]}`, duration: result.duration });
+        current = updated;
+      } else {
+        const check = engine.canAdvance(id, current.current_stage as Stage);
+        if (!check.allowed) { lastError = check.reason; break; }
+        try {
+          const newStage = engine.advance(id, current.current_stage as Stage, 'auto-advance');
+          steps.push({ from: current.current_stage, to: newStage, action: `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}` });
+          current = repo.getArticle(id)!;
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : String(err);
+          break;
+        }
+      }
+    }
+
+    current = repo.getArticle(id)!;
+
+    if (lastError) {
+      const stepsHtml = steps.length > 0
+        ? `<div style="margin-bottom:0.5rem">Traversed ${steps.length} stage(s) before failing.</div>`
+        : '';
+      return c.html(
+        `<div class="advance-result advance-error">${stepsHtml}❌ ${escapeHtml(lastError)}</div>`,
+        200,
+      );
+    }
+
+    const stageList = steps.map(s => `Stage ${s.to}`).join(' → ');
+    return c.html(
+      `<div class="advance-result advance-success">✅ Auto-advanced: ${escapeHtml(stageList)}. Now at Stage ${current.current_stage} — ${escapeHtml(STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown')}.</div>
+       <script>setTimeout(() => window.location.reload(), 1500);</script>`,
+      200,
+    );
   });
 
   // ── htmx: regress article ───────────────────────────────────────────────
