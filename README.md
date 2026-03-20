@@ -35,6 +35,8 @@ npm run v2:serve
 
 Open `http://localhost:3456`.
 
+Use `npm run v2:serve` for source-mode development and `npm run v2:start` only after `npm run v2:build` has produced `dist/`.
+
 ### Production-style run
 
 ```bash
@@ -183,6 +185,7 @@ Key areas:
 - **MCP tooling** via `npm run v2:mcp` and legacy tooling under `mcp/`
 
 For the legacy extension-oriented MCP tooling, see [`.github/extensions/README.md`](.github/extensions/README.md).
+For the main dashboard runtime, prefer the v2 CLI commands over the archived v1 `dashboard` scripts in `package.json`.
 
 ## Development
 

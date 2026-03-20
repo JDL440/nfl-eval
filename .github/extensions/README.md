@@ -272,6 +272,8 @@ EXTENSION_ENV_DISABLED=1  # Set to disable .env loading (for safe tests)
 - **[Archived Copilot CLI Setup](../../archive/v1/docs/copilot-cli-mcp-setup.md)** - Legacy GitHub Copilot CLI setup notes
 - **[Main README](../../README.md#services-and-mcp-tools)** - Current v2 overview and MCP/service context
 
+The root `README.md` is now the source of truth for the active v2 application architecture; use the archived links above only for legacy MCP workflow history.
+
 ## Questions?
 
 - Check existing tool implementations for patterns
