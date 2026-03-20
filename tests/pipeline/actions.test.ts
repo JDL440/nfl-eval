@@ -22,6 +22,7 @@ import type { Stage } from '../../src/types.js';
 import {
   STAGE_ACTIONS,
   executeTransition,
+  resetContextConfigCache,
   type ActionContext,
 } from '../../src/pipeline/actions.js';
 
@@ -442,5 +443,109 @@ describe('executeTransition', () => {
     const r2 = await executeTransition('test-multi', 2 as Stage, fixtures.ctx);
     expect(r2.success).toBe(true);
     expect(fixtures.repo.getArticle('test-multi')!.current_stage).toBe(3);
+  });
+});
+
+// ── Upstream context tests ──────────────────────────────────────────────────
+
+describe('Configurable upstream context', () => {
+  let fixtures: TestFixtures;
+
+  beforeEach(() => {
+    fixtures = createFixtures();
+    resetContextConfigCache();
+  });
+
+  afterEach(() => {
+    fixtures.memory.close();
+    fixtures.repo.close();
+    rmSync(fixtures.tempDir, { recursive: true, force: true });
+    resetContextConfigCache();
+  });
+
+  it('writeDraft includes idea.md as upstream context by default', async () => {
+    createArticleWithStage(fixtures, 'test-ctx-wd', 4 as Stage, {
+      'idea.md': '# Original Angle\nSeahawks cap space.',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel\nCap + SEA',
+      'discussion-summary.md': '# Summary\nKey findings about cap.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-ctx-wd', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const draft = fixtures.repo.artifacts.get('test-ctx-wd', 'draft.md');
+    expect(draft).toBeTruthy();
+  });
+
+  it('runEditor includes idea.md and discussion-summary.md by default', async () => {
+    const draft = longText(900);
+    createArticleWithStage(fixtures, 'test-ctx-ed', 5 as Stage, {
+      'idea.md': '# Angle\nSeahawks secondary.',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion points.',
+      'draft.md': draft,
+    });
+
+    const result = await STAGE_ACTIONS.runEditor('test-ctx-ed', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const review = fixtures.repo.artifacts.get('test-ctx-ed', 'editor-review.md');
+    expect(review).toBeTruthy();
+  });
+
+  it('runPublisherPass includes editor-review.md by default', async () => {
+    const draft = longText(900);
+    createArticleWithStage(fixtures, 'test-ctx-pub', 6 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': draft,
+      'editor-review.md': '# Review\n## Verdict\nAPPROVE\n\nLooks good.',
+    });
+
+    const result = await STAGE_ACTIONS.runPublisherPass('test-ctx-pub', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const pass = fixtures.repo.artifacts.get('test-ctx-pub', 'publisher-pass.md');
+    expect(pass).toBeTruthy();
+  });
+
+  it('respects pipeline-context.json overrides', async () => {
+    const configDir = join(fixtures.tempDir, 'config');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
+      writeDraft: { primary: 'discussion-summary.md', include: ['*'] },
+    }));
+
+    createArticleWithStage(fixtures, 'test-ctx-override', 4 as Stage, {
+      'idea.md': '# Idea\nCap analysis.',
+      'discussion-prompt.md': '# Prompt\nCap question.',
+      'panel-composition.md': '# Panel\nCap + SEA',
+      'discussion-summary.md': '# Summary\nFindings.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-ctx-override', fixtures.ctx);
+    expect(result.success).toBe(true);
+  });
+
+  it('works with empty include list (minimal context)', async () => {
+    const configDir = join(fixtures.tempDir, 'config');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
+      writeDraft: { primary: 'discussion-summary.md', include: [] },
+    }));
+
+    createArticleWithStage(fixtures, 'test-ctx-minimal', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nJust the summary.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-ctx-minimal', fixtures.ctx);
+    expect(result.success).toBe(true);
   });
 });

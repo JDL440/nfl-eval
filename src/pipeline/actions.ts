@@ -12,6 +12,8 @@ import type { PipelineEngine } from './engine.js';
 import type { AgentRunner } from '../agents/runner.js';
 import type { PipelineAuditor } from './audit.js';
 import type { AppConfig } from '../config/index.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -44,6 +46,99 @@ function readArtifact(repo: Repository, articleId: string, filename: string): st
 
 function writeArtifact(repo: Repository, articleId: string, filename: string, content: string): void {
   repo.artifacts.put(articleId, filename, content);
+}
+
+// ── Configurable upstream context ───────────────────────────────────────────
+
+/**
+ * Per-action context configuration. Each action has a primary artifact and an
+ * optional list of upstream artifacts to include for richer agent context.
+ * Set include to ['*'] to include ALL prior artifacts.
+ */
+export interface StageContextEntry {
+  primary: string;
+  include: string[];
+}
+
+/** Default context config — smart defaults that balance quality vs token cost. */
+const DEFAULT_STAGE_CONTEXT: Record<string, StageContextEntry> = {
+  generatePrompt:  { primary: 'idea.md',               include: [] },
+  composePanel:    { primary: 'discussion-prompt.md',   include: ['idea.md'] },
+  runDiscussion:   { primary: 'discussion-prompt.md',   include: [] },  // panel-composition injected separately
+  writeDraft:      { primary: 'discussion-summary.md',  include: ['idea.md'] },
+  runEditor:       { primary: 'draft.md',               include: ['idea.md', 'discussion-summary.md'] },
+  runPublisherPass:{ primary: 'draft.md',               include: ['editor-review.md'] },
+};
+
+let _contextOverrides: Record<string, StageContextEntry> | undefined;
+
+/** Load context config overrides from dataDir/config/pipeline-context.json if present. */
+function loadContextConfig(config: AppConfig): Record<string, StageContextEntry> {
+  if (_contextOverrides !== undefined) return _contextOverrides;
+
+  const configPath = join(config.dataDir, 'config', 'pipeline-context.json');
+  if (existsSync(configPath)) {
+    try {
+      const raw = readFileSync(configPath, 'utf-8');
+      _contextOverrides = JSON.parse(raw) as Record<string, StageContextEntry>;
+    } catch {
+      _contextOverrides = {};
+    }
+  } else {
+    _contextOverrides = {};
+  }
+  return _contextOverrides;
+}
+
+/** Reset cached overrides (for testing). */
+export function resetContextConfigCache(): void {
+  _contextOverrides = undefined;
+}
+
+/** Resolve the context config for an action, merging defaults with overrides. */
+function getContextConfig(actionName: string, config: AppConfig): StageContextEntry {
+  const overrides = loadContextConfig(config);
+  return overrides[actionName] ?? DEFAULT_STAGE_CONTEXT[actionName] ?? { primary: '', include: [] };
+}
+
+/**
+ * Gather upstream context for an agent. Returns the primary artifact content
+ * with any configured upstream artifacts prepended as labeled sections.
+ */
+function gatherContext(
+  repo: Repository,
+  articleId: string,
+  actionName: string,
+  config: AppConfig,
+): string {
+  const ctx = getContextConfig(actionName, config);
+  const parts: string[] = [];
+
+  // Resolve included artifacts
+  let includeList = ctx.include;
+  if (includeList.includes('*')) {
+    // Include all existing artifacts except the primary
+    const all = repo.artifacts.list(articleId);
+    includeList = all
+      .map(a => a.name)
+      .filter(name => name !== ctx.primary);
+  }
+
+  for (const name of includeList) {
+    const content = repo.artifacts.get(articleId, name);
+    if (content) {
+      parts.push(`## Upstream Context: ${name}\n${content}`);
+    }
+  }
+
+  // Primary artifact last (most important, freshest context)
+  const primary = readArtifact(repo, articleId, ctx.primary);
+  if (parts.length > 0) {
+    parts.push(`## Primary Input: ${ctx.primary}\n${primary}`);
+    return parts.join('\n\n---\n\n');
+  }
+
+  return primary;
 }
 
 // ── Roster helpers ──────────────────────────────────────────────────────────
@@ -128,7 +223,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const prompt = readArtifact(ctx.repo, articleId, 'discussion-prompt.md');
+    const promptContent = gatherContext(ctx.repo, articleId, 'composePanel', ctx.config);
 
     const roster = buildAgentRoster(ctx.runner);
     const depthLevel = article.depth_level ?? 2;
@@ -157,7 +252,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
         slug: articleId,
         title: article.title,
         stage: article.current_stage,
-        content: prompt,
+        content: promptContent,
       },
     });
 
@@ -212,7 +307,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const summary = readArtifact(ctx.repo, articleId, 'discussion-summary.md');
+    const content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
 
     const result = await ctx.runner.run({
       agentName: 'writer',
@@ -222,7 +317,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         slug: articleId,
         title: article.title,
         stage: article.current_stage,
-        content: summary,
+        content,
       },
     });
 
@@ -244,7 +339,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const draft = readArtifact(ctx.repo, articleId, 'draft.md');
+    const content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
 
     const result = await ctx.runner.run({
       agentName: 'editor',
@@ -254,7 +349,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
         slug: articleId,
         title: article.title,
         stage: article.current_stage,
-        content: draft,
+        content,
       },
     });
 
@@ -276,7 +371,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const draft = readArtifact(ctx.repo, articleId, 'draft.md');
+    const content = gatherContext(ctx.repo, articleId, 'runPublisherPass', ctx.config);
 
     const result = await ctx.runner.run({
       agentName: 'publisher',
@@ -286,7 +381,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
         slug: articleId,
         title: article.title,
         stage: article.current_stage,
-        content: draft,
+        content,
       },
     });
 
