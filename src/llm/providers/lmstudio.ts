@@ -64,7 +64,12 @@ export class LMStudioProvider implements LLMProvider {
   private cachedModels: string[];
 
   constructor(options?: LMStudioProviderOptions) {
-    this.baseUrl = (options?.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+    let base = (options?.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+    // Ensure /v1 path is present — LM Studio expects /v1/chat/completions
+    if (!base.endsWith('/v1')) {
+      base += '/v1';
+    }
+    this.baseUrl = base;
     this.defaultModel = options?.defaultModel ?? DEFAULT_MODEL;
     this.cachedModels = [this.defaultModel];
   }
@@ -147,6 +152,9 @@ export class LMStudioProvider implements LLMProvider {
     }
 
     const data = (await res.json()) as LMStudioResponse;
+    if (!data.choices || data.choices.length === 0) {
+      throw new Error(`LM Studio returned no choices: ${JSON.stringify(data).slice(0, 300)}`);
+    }
     const choice = data.choices[0];
 
     return {
