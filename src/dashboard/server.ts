@@ -760,6 +760,7 @@ export function createApp(
                 action: 'Sent back to Stage 4 — Editor requested revisions',
                 duration: result.duration,
               });
+              bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: 4, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
             } catch { /* ignore regression failure */ }
           }
           break;
@@ -772,6 +773,7 @@ export function createApp(
           action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage]}`,
           duration: result.duration,
         });
+        bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: updated.current_stage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
         current = updated;
 
         // Auto-generate images after draft is written (before editor review)
@@ -791,6 +793,7 @@ export function createApp(
             to: newStage,
             action: `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}`,
           });
+          bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: newStage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
           current = repo.getArticle(id)!;
         } catch (err) {
           lastError = err instanceof Error ? err.message : String(err);
@@ -1578,16 +1581,28 @@ export function createApp(
       return c.html(renderAdvanceResult(false, 'Draft must exist first (Stage 5+)'), 422);
     }
     if (!imageService) {
-      return c.html(renderAdvanceResult(false, 'Image service not configured — set GEMINI_API_KEY'), 500);
+      return c.html(renderAdvanceResult(false, 'Image service not configured \u2014 set GEMINI_API_KEY'), 500);
     }
 
     try {
-      await autoGenerateImages(id);
-      const manifestJson = repo.artifacts.get(id, 'images.json');
-      const count = manifestJson ? (JSON.parse(manifestJson) as unknown[]).length : 0;
+      // Call imageService directly (NOT autoGenerateImages) so errors propagate to the user
+      const draft = repo.artifacts.get(id, 'draft.md');
+      const summary = draft?.slice(0, 500) ?? '';
+      const team = article.primary_team ?? undefined;
+      const results = await imageService.generateArticleImages(id, {
+        cover: { description: `Cover image for: ${article.title}. ${summary}`, style: 'editorial sports photography, dramatic lighting, 16:9 hero image', team, aspectRatio: '16:9' },
+        inline: [
+          { description: `Inline image 1 for: ${article.title}. ${summary}`, style: 'editorial sports analysis, clean wide banner', team, aspectRatio: '16:9' },
+          { description: `Inline image 2 for: ${article.title}. ${summary}`, style: 'editorial sports context, wide banner', team, aspectRatio: '16:9' },
+        ],
+      });
+      const manifest: { type: string; path: string; prompt: string }[] = [];
+      if (results.cover) manifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
+      for (const img of results.inline) manifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
+      repo.artifacts.put(id, 'images.json', JSON.stringify(manifest, null, 2));
       return c.html(
-        `<div class="advance-result advance-success">✅ Generated ${count} image(s)</div>
-         ${renderImageGallery(manifestJson ? JSON.parse(manifestJson) : [])}`,
+        `<div class="advance-result advance-success">\u2705 Generated ${manifest.length} image(s)</div>
+         ${renderImageGallery(manifest)}`,
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
