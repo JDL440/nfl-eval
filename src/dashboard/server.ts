@@ -1212,9 +1212,10 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
 
-    const markdown = repo.artifacts.get(id, 'draft.md');
+    const rawMarkdown = repo.artifacts.get(id, 'draft.md');
     let htmlBody = '<p class="empty-state">No article draft found</p>';
-    if (markdown) {
+    if (rawMarkdown) {
+      const markdown = separateThinking(rawMarkdown).output;
       const doc = markdownToProseMirror(markdown);
       htmlBody = proseMirrorToHtml(doc);
     }
@@ -1250,9 +1251,10 @@ export function createApp(
     let htmlPreview = '';
 
     // Load article markdown from DB artifact store
-    const markdown = repo.artifacts.get(id, 'draft.md');
-    if (markdown) {
-      const doc = markdownToProseMirror(markdown);
+    const rawMd = repo.artifacts.get(id, 'draft.md');
+    if (rawMd) {
+      const cleanMd = separateThinking(rawMd).output;
+      const doc = markdownToProseMirror(cleanMd);
       htmlPreview = proseMirrorToHtml(doc);
     } else {
       htmlPreview = '<p class="empty-state">No article draft found</p>';
@@ -1272,12 +1274,13 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
 
-    const markdown = repo.artifacts.get(id, 'draft.md');
-    if (!markdown) {
+    const rawDraft = repo.artifacts.get(id, 'draft.md');
+    if (!rawDraft) {
       return c.html('<p class="empty-state">No article draft found</p>');
     }
 
-    const doc = markdownToProseMirror(markdown);
+    const cleanDraft = separateThinking(rawDraft).output;
+    const doc = markdownToProseMirror(cleanDraft);
     return c.html(proseMirrorToHtml(doc));
   });
 

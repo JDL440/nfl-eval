@@ -1776,6 +1776,29 @@ a:hover { text-decoration: underline; }
   cursor: default;
   font-family: var(--font-sans);
 }
+
+/* Inline images interspersed in article body */
+.preview-inline-figure {
+  margin: 2rem 0;
+  text-align: center;
+}
+.preview-inline-figure img,
+.preview-inline-img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* Publication blurb below subscribe CTA */
+.preview-blurb {
+  padding: 1.5rem 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+.preview-blurb p {
+  margin: 0.75rem 0;
+}
 .runs-table th {
   font-size: 0.75rem;
   letter-spacing: 0.04em;
