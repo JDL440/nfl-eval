@@ -175,7 +175,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
         <a href="/" class="back-link">← Dashboard</a>
         <div id="live-meta"
           hx-get="/htmx/articles/${eid}/live-header"
-          hx-trigger="sse:stage_changed"
+          hx-trigger="sse:stage_changed, sse:pipeline_complete"
           hx-swap="innerHTML"
           hx-indicator="#pipeline-activity">
           ${renderArticleMetaDisplay(article)}
@@ -189,7 +189,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
           <div id="live-artifacts"
             hx-get="/htmx/articles/${eid}/live-artifacts"
-            hx-trigger="sse:stage_changed"
+            hx-trigger="sse:stage_changed, sse:pipeline_complete"
             hx-swap="innerHTML"
             hx-indicator="#pipeline-activity">
             ${renderArtifactTabs(article, artifactNames)}
@@ -198,7 +198,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
         </div>
         <div class="detail-sidebar"
           hx-get="/htmx/articles/${eid}/live-sidebar"
-          hx-trigger="sse:stage_changed"
+          hx-trigger="sse:stage_changed, sse:pipeline_complete"
           hx-swap="innerHTML"
           hx-indicator="#pipeline-activity">
           ${renderUsagePanel(usageEvents ?? [])}
@@ -218,8 +218,10 @@ export function renderArticleDetail(data: ArticleDetailData): string {
 function renderPipelineActivityBar(article: Article, autoAdvanceActive?: boolean): string {
   const stageName = STAGE_NAMES[article.current_stage] ?? 'Unknown';
   const active = autoAdvanceActive && article.current_stage < 7;
+  const eid = escapeHtml(article.id);
   return `
     <div id="pipeline-activity" class="pipeline-activity${active ? ' active' : ''}"
+      data-article-id="${eid}"
       hx-swap-oob="true">
       <span class="spinner"></span>
       <span class="pipeline-activity-text">
@@ -231,32 +233,51 @@ function renderPipelineActivityBar(article: Article, autoAdvanceActive?: boolean
         var bar = document.getElementById('pipeline-activity');
         if (!bar) return;
         var textEl = bar.querySelector('.pipeline-activity-text');
+        var myArticle = bar.getAttribute('data-article-id');
 
         function parseSSE(e) {
           try { var full = JSON.parse(e.detail?.data ?? '{}'); return full.data || full; }
           catch(ex) { return {}; }
         }
 
+        function getArticleId(e) {
+          try { var full = JSON.parse(e.detail?.data ?? '{}'); return full.articleId || ''; }
+          catch(ex) { return ''; }
+        }
+
         document.body.addEventListener('stage_working', function(e) {
+          if (getArticleId(e) !== myArticle) return;
           var d = parseSSE(e);
           bar.className = 'pipeline-activity active';
           if (textEl) textEl.textContent = 'Pipeline working… Stage ' + (d.stage || '?') + ' — ' + (d.stageName || 'Processing');
         });
 
         document.body.addEventListener('stage_error', function(e) {
+          if (getArticleId(e) !== myArticle) return;
           var d = parseSSE(e);
           bar.className = 'pipeline-activity error';
           if (textEl) textEl.textContent = '❌ Stage ' + (d.stage || '?') + ' failed: ' + (d.error || 'Unknown error').substring(0, 150);
         });
 
         document.body.addEventListener('stage_changed', function(e) {
+          if (getArticleId(e) !== myArticle) return;
           var d = parseSSE(e);
           bar.className = 'pipeline-activity active';
           if (textEl) textEl.textContent = '✅ Advanced to Stage ' + (d.to || '?');
-          setTimeout(function() {
-            if (bar.classList.contains('active') && textEl && textEl.textContent.startsWith('✅'))
-              bar.classList.remove('active');
-          }, 3000);
+        });
+
+        document.body.addEventListener('pipeline_complete', function(e) {
+          if (getArticleId(e) !== myArticle) return;
+          var d = parseSSE(e);
+          if (d.success) {
+            bar.className = 'pipeline-activity active';
+            if (textEl) textEl.textContent = '✅ Pipeline complete — Stage ' + (d.finalStage || '?') + ' — ' + (d.stageName || 'Done');
+          } else {
+            bar.className = 'pipeline-activity error';
+            if (textEl) textEl.textContent = '❌ Pipeline stopped: ' + (d.error || 'Unknown error').substring(0, 150);
+          }
+          // Reload the page after a brief delay so all sections update
+          setTimeout(function() { window.location.href = '/articles/' + myArticle; }, 2000);
         });
       })();
     </script>`;
@@ -497,7 +518,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
     return `
       <section class="detail-section action-panel"
         hx-get="/articles/${escapeHtml(article.id)}"
-        hx-trigger="sse:stage_changed"
+        hx-trigger="sse:stage_changed, sse:pipeline_complete"
         hx-select=".action-panel"
         hx-target="this"
         hx-swap="outerHTML">
@@ -549,7 +570,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
   return `
     <section class="detail-section action-panel"
       hx-get="/articles/${escapeHtml(article.id)}"
-      hx-trigger="sse:stage_changed"
+      hx-trigger="sse:stage_changed, sse:pipeline_complete"
       hx-select=".action-panel"
       hx-target="this"
       hx-swap="outerHTML">

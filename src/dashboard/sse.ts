@@ -16,6 +16,7 @@ export interface PipelineEvent {
     | 'stage_changed'
     | 'stage_working'
     | 'stage_error'
+    | 'pipeline_complete'
     | 'article_created'
     | 'article_published'
     | 'batch_started'
@@ -76,8 +77,19 @@ export function sseHandler(bus: EventBus): (c: Context) => Response {
           }
         });
 
+        // Heartbeat every 30s to keep connection alive through proxies/NAT
+        const heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(': heartbeat\n\n'));
+          } catch {
+            clearInterval(heartbeat);
+            unsubscribe();
+          }
+        }, 30_000);
+
         // If the client disconnects, the request signal fires abort.
         c.req.raw.signal.addEventListener('abort', () => {
+          clearInterval(heartbeat);
           unsubscribe();
           try {
             controller.close();

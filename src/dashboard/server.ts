@@ -160,6 +160,64 @@ export function createApp(
   const imageService = deps?.imageService;
   const bus = new EventBus();
 
+  // Track active auto-advance runs so article pages know whether to show the progress bar
+  const activeAdvances = new Map<string, { startedAt: number }>();
+
+  /** Helper: emit SSE events for auto-advance steps. */
+  function emitStepEvents(id: string, step: AutoAdvanceStep): void {
+    if (step.type === 'working') {
+      bus.emit({ type: 'stage_working', articleId: id, data: { stage: step.from, stageName: STAGE_NAMES[step.from as Stage] ?? `Stage ${step.from}` }, timestamp: new Date().toISOString() });
+    } else if (step.type === 'error') {
+      console.warn(`[auto-advance] Stage ${step.from} failed: ${step.error}`);
+      bus.emit({ type: 'stage_error', articleId: id, data: { stage: step.from, error: step.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
+    } else if (step.type === 'regress') {
+      bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
+    } else if (step.type === 'advance') {
+      bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance' }, timestamp: new Date().toISOString() });
+    }
+  }
+
+  /** Run auto-advance in the background. Emits SSE events and cleans up when done. */
+  function startBackgroundAutoAdvance(id: string): void {
+    activeAdvances.set(id, { startedAt: Date.now() });
+    const ctx = deps?.actionContext ?? null;
+    const engine = ctx?.engine ?? new PipelineEngine(repo);
+
+    autoAdvanceArticle(id, ctx, {
+      maxStage: 7,
+      maxRevisions: 2,
+      repo,
+      engine,
+      onStep: (step: AutoAdvanceStep) => emitStepEvents(id, step),
+      generateImages: autoGenerateImages,
+    }).then((result) => {
+      activeAdvances.delete(id);
+      const current = repo.getArticle(id);
+      bus.emit({
+        type: 'pipeline_complete',
+        articleId: id,
+        data: {
+          finalStage: result.finalStage,
+          stageName: STAGE_NAMES[result.finalStage as Stage] ?? 'Unknown',
+          steps: result.steps.length,
+          revisionCount: result.revisionCount,
+          error: result.error ?? null,
+          success: !result.error,
+          currentStage: current?.current_stage ?? result.finalStage,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }).catch((err) => {
+      activeAdvances.delete(id);
+      bus.emit({
+        type: 'pipeline_complete',
+        articleId: id,
+        data: { error: err instanceof Error ? err.message : String(err), success: false },
+        timestamp: new Date().toISOString(),
+      });
+    });
+  }
+
   /** Generate article images and save manifest. Non-fatal — returns silently on failure. */
   async function autoGenerateImages(articleId: string): Promise<void> {
     if (!imageService) return;
@@ -252,10 +310,12 @@ export function createApp(
     const errorParam = c.req.query('error');
     let flashMessage: string | undefined;
     let errorMessage: string | undefined;
-    let autoAdvanceActive = false;
+    // Show progress bar if auto-advance is actively running OR page was just redirected
+    let autoAdvanceActive = activeAdvances.has(id);
     if (from === 'auto-advance') {
       if (errorParam) {
         errorMessage = `Auto-advance failed: ${errorParam}`;
+        autoAdvanceActive = false;
       } else if (article.current_stage < 7) {
         autoAdvanceActive = true;
       } else {
@@ -748,41 +808,12 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.json({ error: 'Article not found' }, 404);
+    if (activeAdvances.has(id)) return c.json({ error: 'Auto-advance already running' }, 409);
 
-    const ctx = deps?.actionContext ?? null;
-    const engine = ctx?.engine ?? new PipelineEngine(repo);
+    // Fire-and-forget: start in background, return immediately so SSE can deliver events
+    startBackgroundAutoAdvance(id);
 
-    const result = await autoAdvanceArticle(id, ctx, {
-      maxStage: 7,
-      maxRevisions: 2,
-      repo,
-      engine,
-      onStep: (step: AutoAdvanceStep) => {
-        if (step.type === 'working') {
-          bus.emit({ type: 'stage_working', articleId: id, data: { stage: step.from, stageName: STAGE_NAMES[step.from as Stage] ?? `Stage ${step.from}` }, timestamp: new Date().toISOString() });
-        } else if (step.type === 'error') {
-          console.warn(`[auto-advance] Stage ${step.from} failed: ${step.error}`);
-          bus.emit({ type: 'stage_error', articleId: id, data: { stage: step.from, error: step.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
-        } else if (step.type === 'regress') {
-          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
-        } else if (step.type === 'advance') {
-          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance' }, timestamp: new Date().toISOString() });
-        }
-      },
-      generateImages: autoGenerateImages,
-    });
-
-    const current = repo.getArticle(id)!;
-    return c.json({
-      id,
-      currentStage: current.current_stage,
-      steps: result.steps,
-      stoppedAt: result.finalStage,
-      reason: result.error
-        ?? (result.finalStage >= 7
-          ? 'Reached Stage 7 — ready for publish review'
-          : engine.canAdvance(id, current.current_stage as Stage).reason),
-    });
+    return c.json({ id, status: 'started', currentStage: article.current_stage });
   });
 
   // ── htmx partial routes (HTML fragments) ──────────────────────────────────
@@ -1073,45 +1104,13 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html(renderAdvanceResult(false, 'Article not found'), 404);
+    if (activeAdvances.has(id)) return c.html(renderAdvanceResult(false, 'Auto-advance already running'), 409);
 
-    const ctx = deps?.actionContext ?? null;
+    // Fire-and-forget: start in background, return immediately
+    startBackgroundAutoAdvance(id);
 
-    const result = await autoAdvanceArticle(id, ctx, {
-      maxStage: 7,
-      maxRevisions: 2,
-      repo,
-      engine: new PipelineEngine(repo),
-      onStep: (step: AutoAdvanceStep) => {
-        if (step.type === 'working') {
-          bus.emit({ type: 'stage_working', articleId: id, data: { stage: step.from, stageName: STAGE_NAMES[step.from as Stage] ?? `Stage ${step.from}` }, timestamp: new Date().toISOString() });
-        } else if (step.type === 'error') {
-          console.warn(`[auto-advance] Stage ${step.from} failed: ${step.error}`);
-          bus.emit({ type: 'stage_error', articleId: id, data: { stage: step.from, error: step.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
-        } else if (step.type === 'regress') {
-          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
-        } else if (step.type === 'advance') {
-          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance' }, timestamp: new Date().toISOString() });
-        }
-      },
-      generateImages: autoGenerateImages,
-    });
-
-    const current = repo.getArticle(id)!;
-
-    if (result.error) {
-      const stepsHtml = result.steps.length > 0
-        ? `<div style="margin-bottom:0.5rem">Traversed ${result.steps.length} stage(s) before failing.</div>`
-        : '';
-      bus.emit({ type: 'stage_changed', articleId: id, data: { stage: current.current_stage, action: 'auto-advance-error' }, timestamp: new Date().toISOString() });
-      return c.html(
-        `<div class="advance-result advance-error">${stepsHtml}❌ ${escapeHtml(result.error)}</div>`,
-        200,
-      );
-    }
-
-    const stageList = result.steps.map(s => `Stage ${s.to}`).join(' → ');
     return c.html(
-      `<div class="advance-result advance-success">✅ Auto-advanced: ${escapeHtml(stageList)}. Now at Stage ${current.current_stage} — ${escapeHtml(STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown')}.</div>`,
+      `<div class="advance-result advance-success">🚀 Auto-advance started — watch the progress bar above.</div>`,
       200,
     );
   });

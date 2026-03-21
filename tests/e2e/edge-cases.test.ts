@@ -184,9 +184,13 @@ describe('Auto-advance failure + retry', () => {
 
     const res = await appFetch(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
     expect(res.status).toBe(200);
-    const body = await res.json() as { currentStage: number; reason?: string };
-    expect(body.currentStage).toBe(1);
-    expect(body.reason ?? '').toContain('Idea has not been written yet');
+    const body = await res.json() as { id: string; status: string };
+    expect(body.status).toBe('started');
+
+    // Wait for background auto-advance to complete
+    await new Promise(r => setTimeout(r, 500));
+    // Should still be at stage 1 — guard failed
+    expect(repo.getArticle(slug)!.current_stage).toBe(1);
   });
 
   it('audit log records the guard failure', () => {
@@ -220,10 +224,12 @@ describe('Auto-advance failure + retry', () => {
 
     const res = await appFetch(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
     expect(res.status).toBe(200);
-    const body = await res.json() as { currentStage: number; steps: unknown[] };
+    const body = await res.json() as { id: string; status: string };
+    expect(body.status).toBe('started');
 
-    expect(body.currentStage).toBeGreaterThan(1);
-    expect(body.steps.length).toBeGreaterThanOrEqual(1);
+    // Wait for background auto-advance to complete
+    await new Promise(r => setTimeout(r, 1000));
+    expect(repo.getArticle(slug)!.current_stage).toBeGreaterThan(1);
   });
 
   it('stage_runs records a completed entry after retry', () => {

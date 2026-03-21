@@ -441,6 +441,20 @@ Writer + Analyst + Editor
   // ── Auto-advance ─────────────────────────────────────────────────────────
 
   describe('POST /api/articles/:id/auto-advance', () => {
+    // Helper: wait for background auto-advance to finish (lightweight mode completes in <50ms)
+    async function waitForAdvance(slug: string, maxMs = 2000): Promise<void> {
+      const start = Date.now();
+      while (Date.now() - start < maxMs) {
+        await new Promise(r => setTimeout(r, 50));
+        // Check if the article has advanced (not stuck at initial stage)
+        const a = repo.getArticle(slug);
+        if (!a) return;
+        // If stage transitions have been recorded, the advance ran
+        const transitions = repo.getStageTransitions(slug);
+        if (transitions.length > 0) return;
+      }
+    }
+
     it('advances article through all satisfied guards', async () => {
       const slug = 'auto-adv-test';
       repo.createArticle({ id: slug, title: 'Auto Advance Test' });
@@ -453,9 +467,12 @@ Writer + Analyst + Editor
 
       const res = await app.request(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
       expect(res.status).toBe(200);
-      const body = await res.json() as { currentStage: number; steps: unknown[] };
-      expect(body.currentStage).toBe(7);
-      expect(body.steps.length).toBe(6); // 1→2, 2→3, 3→4, 4→5, 5→6, 6→7
+      const body = await res.json() as { id: string; status: string };
+      expect(body.status).toBe('started');
+
+      await waitForAdvance(slug);
+      const article = repo.getArticle(slug)!;
+      expect(article.current_stage).toBe(7);
     });
 
     it('stops when a guard fails', async () => {
@@ -467,10 +484,10 @@ Writer + Analyst + Editor
 
       const res = await app.request(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
       expect(res.status).toBe(200);
-      const body = await res.json() as { currentStage: number; steps: unknown[]; reason: string };
-      expect(body.currentStage).toBe(3);
-      expect(body.steps.length).toBe(2); // 1→2, 2→3
-      expect(body.reason).toContain('Panel composition');
+
+      await waitForAdvance(slug);
+      const article = repo.getArticle(slug)!;
+      expect(article.current_stage).toBe(3);
     });
 
     it('does not advance past stage 7', async () => {
@@ -492,9 +509,10 @@ Writer + Analyst + Editor
 
       const res = await app.request(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
       expect(res.status).toBe(200);
-      const body = await res.json() as { currentStage: number; reason: string };
-      expect(body.currentStage).toBe(7);
-      expect(body.reason).toContain('Stage 7');
+
+      await waitForAdvance(slug);
+      const article = repo.getArticle(slug)!;
+      expect(article.current_stage).toBe(7);
     });
 
     it('returns 404 for unknown article', async () => {

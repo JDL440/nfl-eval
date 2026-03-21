@@ -344,9 +344,10 @@ describe('UX Happy Path — full user journey', () => {
     const res = await htmxPost(`/htmx/articles/${articleId}/auto-advance`);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('Auto-advanced');
-    expect(html).toContain('Stage 7');
+    expect(html).toContain('Auto-advance started');
 
+    // Wait for background auto-advance to finish (lightweight mode, <50ms)
+    await new Promise(r => setTimeout(r, 200));
     expect(repo.getArticle(articleId)!.current_stage).toBe(7);
   });
 
