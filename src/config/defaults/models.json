@@ -2,14 +2,14 @@
   "version": "1.0",
   "_note": "Authoritative model assignments for the NFL Lab pipeline. Edit here — do not hardcode models in individual charters or skill docs.",
   "models": {
-    "writer": "claude-opus-4.6",
-    "editor": "claude-opus-4.6",
-    "lead": "claude-opus-4.6",
-    "panel_deep_dive": "claude-opus-4.6",
-    "panel_beat": "claude-opus-4.6",
-    "panel_casual": "claude-sonnet-4.5",
-    "lightweight": "gpt-5-mini",
-    "scribe": "gpt-5.1-codex-mini"
+    "writer": "gpt-5-mini",
+    "editor": "gpt-5-mini",
+    "lead": "gpt-5-mini",
+    "panel_deep_dive": "gpt-5-mini",
+    "panel_beat": "gpt-5-mini",
+    "panel_casual": "gpt-5-nano",
+    "lightweight": "gpt-5-nano",
+    "scribe": "gpt-5-nano"
   },
   "max_output_tokens": {
     "panel_agent": 1500,
@@ -33,75 +33,54 @@
   },
   "supported_models": {
     "low": [
+      "gpt-5-nano",
       "gpt-5-mini",
-      "gpt-5.4-mini",
-      "claude-haiku-4.5",
-      "gpt-4.1"
+      "gpt-4.1-nano",
+      "gpt-4.1-mini"
     ],
     "medium": [
-      "claude-sonnet-4.6",
-      "claude-sonnet-4.5",
-      "gpt-5.2",
-      "gpt-5.1",
-      "claude-sonnet-4"
+      "gpt-5-mini",
+      "gpt-5",
+      "gpt-4.1"
     ],
     "high": [
-      "claude-opus-4.6",
-      "gpt-5.4",
-      "claude-opus-4.6-fast",
-      "gpt-5.3-codex",
-      "gemini-3-pro-preview",
-      "claude-opus-4.5"
+      "gpt-5",
+      "gpt-5-mini",
+      "o4-mini"
     ],
     "agentic_code": [
-      "gpt-5.3-codex",
-      "gpt-5.2-codex",
-      "gpt-5.1-codex-max",
-      "gpt-5.1-codex",
-      "gpt-5.1-codex-mini"
+      "gpt-5-mini",
+      "gpt-5-nano"
     ]
   },
   "task_families": {
     "lightweight": {
       "tier": "low",
       "precedence": [
-        "gpt-5-mini",
-        "gpt-5.4-mini",
-        "claude-haiku-4.5",
-        "gpt-4.1"
+        "gpt-5-nano",
+        "gpt-5-mini"
       ]
     },
     "balanced": {
       "tier": "medium",
       "precedence": [
-        "claude-sonnet-4.6",
-        "claude-sonnet-4.5",
-        "gpt-5.2",
-        "gpt-5.1",
-        "claude-sonnet-4"
+        "gpt-5-mini",
+        "gpt-5"
       ]
     },
     "deep_reasoning": {
       "tier": "high",
       "precedence": [
-        "claude-opus-4.6",
-        "gpt-5.4",
-        "claude-opus-4.6-fast",
-        "gpt-5.3-codex",
-        "gemini-3-pro-preview",
-        "claude-opus-4.5"
+        "gpt-5",
+        "gpt-5-mini",
+        "o4-mini"
       ]
     },
     "agentic_code": {
       "tier": "agentic_code",
       "precedence": [
-        "gpt-5.3-codex",
-        "gpt-5.2-codex",
-        "gpt-5.1-codex-max",
-        "gpt-5.1-codex",
-        "gpt-5.1-codex-mini",
-        "claude-sonnet-4.6",
-        "claude-sonnet-4.5"
+        "gpt-5-mini",
+        "gpt-5-nano"
       ]
     }
   },

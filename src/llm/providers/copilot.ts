@@ -16,11 +16,16 @@ import type { LLMProvider, ChatRequest, ChatResponse } from '../gateway.js';
 // (models.github.ai). This is NOT the same as the Copilot IDE model catalog.
 // When adding models, test with a real API call first.
 //
-// Last verified: 2025-03-20
+// Last verified: 2026-03-21
 // ---------------------------------------------------------------------------
 
 const MODEL_MAP: Record<string, string> = {
-  // GPT-4 family (verified working)
+  // GPT-5 family (verified working — all require max_completion_tokens)
+  'gpt-5':                    'gpt-5',
+  'gpt-5-chat':               'gpt-5-chat',
+  'gpt-5-mini':               'gpt-5-mini',
+  'gpt-5-nano':               'gpt-5-nano',
+  // GPT-4 family (verified working — kept for backward compatibility)
   'gpt-4o':                   'gpt-4o',
   'gpt-4o-mini':              'gpt-4o-mini',
   'gpt-4.1':                  'gpt-4.1',
@@ -28,17 +33,37 @@ const MODEL_MAP: Record<string, string> = {
   'gpt-4.1-nano':             'gpt-4.1-nano',
   // Reasoning models (verified — need max_completion_tokens, not max_tokens)
   'o4-mini':                  'o4-mini',
-  'o3':                       'o3',
+  'o3':                       'o3',        // NOTE: 4K input token limit — not suitable for content pipelines
   'o3-mini':                  'o3-mini',
   'o1':                       'o1',
-  // Open-source models (verified working)
-  'DeepSeek-R1':              'DeepSeek-R1',
-  'cohere-command-a':         'cohere-command-a',
-  'Phi-4':                    'Phi-4',
+  'o1-mini':                  'o1-mini',
+  // DeepSeek (verified working)
+  'deepseek-r1':              'deepseek/deepseek-r1',
+  'deepseek-r1-0528':         'deepseek/deepseek-r1-0528',
+  'deepseek-v3-0324':         'deepseek/deepseek-v3-0324',
+  'DeepSeek-R1':              'deepseek/deepseek-r1',        // legacy alias
+  // Meta Llama 4 (verified working)
+  'llama-4-maverick':         'meta/llama-4-maverick-17b-128e-instruct-fp8',
+  'llama-4-scout':            'meta/llama-4-scout-17b-16e-instruct',
+  // xAI Grok (verified working)
+  'grok-3':                   'xai/grok-3',
+  'grok-3-mini':              'xai/grok-3-mini',
+  // Microsoft Phi (verified working)
+  'phi-4':                    'microsoft/phi-4',
+  'phi-4-mini':               'microsoft/phi-4-mini-instruct',
+  'phi-4-reasoning':          'microsoft/phi-4-reasoning',
+  'Phi-4':                    'microsoft/phi-4',              // legacy alias
+  // Mistral (verified working)
+  'codestral-2501':           'mistral-ai/codestral-2501',
+  'mistral-medium-2505':      'mistral-ai/mistral-medium-2505',
 } as const;
 
-// Reasoning models require max_completion_tokens instead of max_tokens
-const REASONING_MODELS = new Set(['o4-mini', 'o3', 'o3-mini', 'o1', 'DeepSeek-R1']);
+// Models that require max_completion_tokens instead of max_tokens and no temperature
+const REASONING_MODELS = new Set([
+  'gpt-5', 'gpt-5-chat', 'gpt-5-mini', 'gpt-5-nano',
+  'o4-mini', 'o3', 'o3-mini', 'o1', 'o1-mini',
+  'deepseek-r1', 'deepseek-r1-0528', 'DeepSeek-R1',
+]);
 
 const COPILOT_MODELS = Object.keys(MODEL_MAP);
 

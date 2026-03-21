@@ -13,22 +13,22 @@ describe('ModelPolicy', () => {
   describe('resolve', () => {
     it('resolves writer model', () => {
       const result = policy.resolve({ stageKey: 'writer' });
-      expect(result.selectedModel).toBe('claude-opus-4.6');
+      expect(result.selectedModel).toBe('gpt-5-mini');
       expect(result.taskFamily).toBe('deep_reasoning');
     });
 
     it('resolves lightweight model', () => {
       const result = policy.resolve({ stageKey: 'lightweight' });
-      expect(result.selectedModel).toBe('gpt-5-mini');
+      expect(result.selectedModel).toBe('gpt-5-nano');
       expect(result.taskFamily).toBe('lightweight');
     });
 
     it('resolves panel model by depth level', () => {
       const casual = policy.resolve({ stageKey: 'panel', depthLevel: 1 });
-      expect(casual.selectedModel).toBe('claude-sonnet-4.5');
+      expect(casual.selectedModel).toBe('gpt-5-nano');
 
       const deep = policy.resolve({ stageKey: 'panel', depthLevel: 3 });
-      expect(deep.selectedModel).toBe('claude-opus-4.6');
+      expect(deep.selectedModel).toBe('gpt-5-mini');
     });
 
     it('requires depth level for panel stage', () => {
@@ -37,13 +37,13 @@ describe('ModelPolicy', () => {
 
     it('resolves by task family directly', () => {
       const result = policy.resolve({ taskFamily: 'balanced' });
-      expect(result.selectedModel).toBe('claude-sonnet-4.6');
-      expect(result.tier).toBe('medium');
+      expect(result.selectedModel).toBe('gpt-5-mini');
+      expect(result.tier).toBe('low');
     });
 
     it('applies model override', () => {
-      const result = policy.resolve({ stageKey: 'writer', overrideModel: 'gpt-5.4' });
-      expect(result.selectedModel).toBe('gpt-5.4');
+      const result = policy.resolve({ stageKey: 'writer', overrideModel: 'gpt-5' });
+      expect(result.selectedModel).toBe('gpt-5');
       expect(result.overrideApplied).toBe(true);
     });
 
@@ -58,7 +58,7 @@ describe('ModelPolicy', () => {
 
     it('resolves editor model', () => {
       const result = policy.resolve({ stageKey: 'editor' });
-      expect(result.selectedModel).toBe('claude-opus-4.6');
+      expect(result.selectedModel).toBe('gpt-5-mini');
       expect(result.outputBudgetTokens).toBe(2500);
     });
   });
@@ -66,8 +66,8 @@ describe('ModelPolicy', () => {
   describe('allSupportedModels', () => {
     it('returns all models across tiers', () => {
       const all = policy.allSupportedModels();
-      expect(all.length).toBeGreaterThan(10);
-      expect(all).toContain('claude-opus-4.6');
+      expect(all.length).toBeGreaterThan(5);
+      expect(all).toContain('gpt-5');
       expect(all).toContain('gpt-5-mini');
     });
 
@@ -79,9 +79,9 @@ describe('ModelPolicy', () => {
 
   describe('tierForModel', () => {
     it('finds tier for known model', () => {
-      const [tier, rank] = policy.tierForModel('claude-opus-4.6');
-      expect(tier).toBe('high');
-      expect(rank).toBe(1);
+      const [tier, rank] = policy.tierForModel('gpt-5');
+      expect(tier).toBe('medium');
+      expect(rank).toBe(2);
     });
 
     it('returns nulls for unknown model', () => {

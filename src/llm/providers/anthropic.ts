@@ -8,8 +8,10 @@ import type { LLMProvider, ChatRequest, ChatResponse, ChatMessage } from '../gat
 
 const ANTHROPIC_MODELS = [
   'claude-opus-4-20250514',
+  'claude-opus-4.5',
   'claude-opus-4.6',
   'claude-sonnet-4-20250514',
+  'claude-sonnet-4',
   'claude-sonnet-4.5',
   'claude-sonnet-4.6',
   'claude-haiku-4-20250514',

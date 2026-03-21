@@ -124,34 +124,34 @@ describe('LLMGateway', () => {
     });
 
     it('routes via model policy with stageKey', async () => {
-      // writer stage resolves to claude-opus-4.6
-      const claudeProvider = new FakeProvider('anthropic', 'claude');
+      // writer stage resolves to gpt-5-mini
+      const gptProvider = new FakeProvider('openai', 'gpt');
       const gw = new LLMGateway({
         modelPolicy: policy,
-        providers: [claudeProvider],
+        providers: [gptProvider],
       });
 
       const res = await gw.chat({
         messages: [{ role: 'user', content: 'Write article' }],
         stageKey: 'writer',
       });
-      expect(res.provider).toBe('anthropic');
-      expect(res.model).toContain('claude');
+      expect(res.provider).toBe('openai');
+      expect(res.model).toContain('gpt');
     });
 
     it('routes via model policy with taskFamily', async () => {
-      const claudeProvider = new FakeProvider('anthropic', 'claude');
+      const gptProvider = new FakeProvider('openai', 'gpt');
       const gw = new LLMGateway({
         modelPolicy: policy,
-        providers: [claudeProvider],
+        providers: [gptProvider],
       });
 
       const res = await gw.chat({
         messages: [{ role: 'user', content: 'Do something' }],
         taskFamily: 'balanced',
       });
-      // balanced family should resolve to a claude model
-      expect(res.provider).toBe('anthropic');
+      // balanced family should resolve to a gpt model
+      expect(res.provider).toBe('openai');
     });
   });
 
@@ -370,7 +370,7 @@ describe('LLMGateway', () => {
     it('passes resolved model to provider', async () => {
       const chatSpy = vi.fn().mockResolvedValue({
         content: 'ok',
-        model: 'claude-opus-4.6',
+        model: 'gpt-5-mini',
         provider: 'spy',
       } satisfies ChatResponse);
 
@@ -388,9 +388,9 @@ describe('LLMGateway', () => {
         stageKey: 'writer',
       });
 
-      // writer resolves to claude-opus-4.6
+      // writer resolves to gpt-5-mini
       expect(chatSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'claude-opus-4.6' }),
+        expect.objectContaining({ model: 'gpt-5-mini' }),
       );
     });
 
@@ -403,8 +403,8 @@ describe('LLMGateway', () => {
         stageKey: 'panel',
         depthLevel: 1,
       });
-      // Panel depth 1 → claude-sonnet-4.5
-      expect(res.model).toBe('claude-sonnet-4.5');
+      // Panel depth 1 → gpt-5-nano
+      expect(res.model).toBe('gpt-5-nano');
     });
   });
 });
