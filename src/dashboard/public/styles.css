@@ -617,6 +617,7 @@ a:hover { text-decoration: underline; }
   gap: 0;
   border-bottom: 2px solid var(--color-border);
   overflow-x: auto;
+  overflow-y: hidden;
 }
 .tab-btn {
   padding: 6px 14px;
