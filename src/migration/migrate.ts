@@ -438,7 +438,7 @@ export async function migrate(options: MigrationOptions): Promise<MigrationRepor
 
   // Step 1: Initialize data dir structure
   if (!dryRun) {
-    initDataDir(options.dataDir);
+    initDataDir(options.dataDir, options.league ?? 'nfl');
   }
 
   // Step 2: Copy pipeline.db and add league column

@@ -1,0 +1,170 @@
+[
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "NFL salary cap is a hard cap — teams cannot exceed it at any point during the league year. Key mechanics: signing bonuses are prorated over the contract length (max 5 years), dead money is the remaining prorated bonus owed to a player after release or trade, and the franchise tag comes in two forms (exclusive and non-exclusive) with the exclusive tag preventing other teams from negotiating.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "EPA (Expected Points Added) measures the value of each play by comparing expected points before and after. Positive EPA means the play improved scoring expectation; negative EPA means it worsened. Interpretation thresholds: 0.0 is league-average, >0.05 EPA/play is above-average, >0.10 is elite, <-0.05 is poor. EPA is the foundation metric in nflverse and most modern NFL analytics.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "NFL Draft pick value follows a steep curve — the 1st overall pick is worth roughly 4x a late first-rounder and 10x a mid-second. Day 1 (Round 1) picks carry 5th-year option eligibility. Day 2 (Rounds 2-3) players are expected to become quality starters. Day 3 (Rounds 4-7) are rotational players or developmental projects. Roughly 50% of first-round picks become above-average starters.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "NFL free agency key dates: Legal tampering window opens 2 days before the new league year (typically mid-March), allowing agents to negotiate but not sign. Unrestricted Free Agents (UFAs) have completed 4+ accrued seasons. Restricted Free Agents (RFAs) have 3 accrued seasons and can receive original-round, first-round, or second-round tenders from their current team. Exclusive Rights Free Agents (ERFAs) have fewer than 3 seasons and must be offered minimum salary.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "Positional value hierarchy in the NFL: QB is the most valuable position by a wide margin. EDGE rushers and cornerbacks are the next tier due to pass-game impact. Wide receivers and offensive tackles form the third tier. Safeties and linebackers are mid-value. Running backs and tight ends provide the least surplus value relative to replacement — this is why RBs rarely get large second contracts. This hierarchy should inform trade and contract analysis.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "Success rate measures the percentage of plays that gain at least 50% of yards-to-go on 1st down, 70% on 2nd down, or 100% on 3rd/4th down. It is less volatile than EPA because it is binary per play. A 45%+ offensive success rate is above-average; 50%+ is elite. Defensive success rate is inverted — lower is better. Use success rate alongside EPA to distinguish between consistent and boom-or-bust units.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "shared",
+    "category": "domain_knowledge",
+    "content": "Win probability models in nflverse incorporate score differential, time remaining, field position, timeouts, and down/distance. Win Probability Added (WPA) is useful for narrative (clutch plays) but not for evaluating player skill because it is heavily situation-dependent. Use EPA for player evaluation and WPA sparingly for storytelling.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "analytics",
+    "category": "domain_knowledge",
+    "content": "Key offensive efficiency metrics: EPA/play (overall efficiency), CPOE (Completion Probability Over Expected — measures QB accuracy above model expectation), ADOT (Average Depth of Target — air yards per attempt), success rate (consistency), and yards after catch (YAC). Key defensive metrics: pressure rate, coverage EPA, missed tackle rate, and pass rush win rate. Always pair counting stats with per-play efficiency.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "analytics",
+    "category": "domain_knowledge",
+    "content": "Sample size thresholds for statistical reliability: QBs need 200+ dropbacks for stable EPA/play, WRs/TEs need 50+ targets for reliable efficiency metrics, RBs need 100+ carries, and defenders need 250+ coverage snaps. For CPOE, 150+ attempts is the minimum. Below these thresholds, flag results as preliminary. Season-level stats are more reliable than game-level; multi-year samples are best for talent evaluation.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "analytics",
+    "category": "domain_knowledge",
+    "content": "Data sources hierarchy: nflverse provides free play-by-play, player stats, Next Gen Stats subsets, snap counts, and PFR scraped data — it is the primary source for this system. Over The Cap (OTC) and Spotrac are authoritative for contract and cap data. PFF (premium) provides grades and advanced charting. NextGen Stats (public subset via nflverse) covers tracking-based metrics like separation, time to throw, and rush speed.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "analytics",
+    "category": "domain_knowledge",
+    "content": "Common analytical pitfalls to avoid: (1) Conflating volume with efficiency — a 1,000-yard receiver on poor EPA/target is not elite. (2) Small-sample overreaction — a 3-game hot streak is noise. (3) Ignoring scheme context — a zone-run RB's stats may not transfer to a gap scheme. (4) Survivorship bias — only evaluating starters ignores replacement-level talent. (5) Year-over-year EPA regression — extreme EPA seasons typically regress toward the mean.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "analytics",
+    "category": "domain_knowledge",
+    "content": "Separation metrics from Next Gen Stats measure the distance between a receiver and the nearest defender at the time of catch or incompletion. Average separation of 3.0+ yards is considered good. Combine separation data with target share and RACR (Receiver Air Conversion Ratio = receiving yards / air yards) to evaluate WR efficiency. A RACR above 1.0 means the receiver adds YAC; below 0.8 suggests drops or contested-catch issues.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "editor",
+    "category": "domain_knowledge",
+    "content": "Fact-check priority order: (1) Contract numbers — verify against Over The Cap or Spotrac, not memory. (2) Statistical claims — cross-reference against nflverse data; never trust round numbers without verification. (3) Roster moves — confirm via official team announcements or reliable beat reporters. (4) Draft history — verify pick numbers and years via PFR draft database. (5) Injury designations — use official NFL injury reports only.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "editor",
+    "category": "domain_knowledge",
+    "content": "Common AI hallucination patterns in NFL content: (1) Outdated rosters — players listed on teams they no longer play for. (2) Wrong contract details — fabricated AAV, guarantee structures, or years. (3) Invented statistics — plausible-sounding numbers that are simply wrong. (4) Incorrect draft positions — wrong round or pick number. (5) Misattributed quotes. (6) Conflated players — merging facts about two players with similar names. Always verify every factual claim.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "editor",
+    "category": "domain_knowledge",
+    "content": "Editor output format uses severity tiers: 🔴 ERRORS are factual inaccuracies or logical flaws that must be fixed before publication. 🟡 SUGGESTIONS are improvements to clarity, structure, or argument strength. 🟢 NOTES are minor observations or optional enhancements. Every review ends with ## Verdict: APPROVED (publish-ready), REVISE (needs changes, re-review after), or REJECT (fundamental issues, needs rewrite).",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "editor",
+    "category": "domain_knowledge",
+    "content": "When reviewing analytics claims, verify that (1) metrics are used correctly — EPA/play not confused with total EPA, (2) comparisons use the same time period and sample, (3) rankings cite the correct season, (4) percentage calculations are mathematically sound, and (5) causal language is warranted — correlation in football data rarely implies causation without scheme/film evidence.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "writer",
+    "category": "domain_knowledge",
+    "content": "NFL Lab voice is analytical but accessible: lead with data-driven arguments, not opinions or hot takes. Every major claim should cite a specific metric or source. Use plain language to explain advanced stats — assume the reader is a smart football fan, not a data scientist. Avoid hedging excessively but acknowledge uncertainty when sample sizes are small. The tone is confident, fair, and informed — more FiveThirtyEight than ESPN debate show.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "writer",
+    "category": "domain_knowledge",
+    "content": "Standard article structure: (1) Hook — open with a surprising stat, timely event, or provocative question. (2) Thesis — state the central argument clearly within the first 2-3 paragraphs. (3) Evidence — build the case with 2-3 supporting data points or comparisons. (4) Counterpoint — acknowledge the strongest opposing argument and address it. (5) Conclusion — synthesize the argument and offer a forward-looking takeaway. Target 1,200-2,000 words for standard articles.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "writer",
+    "category": "domain_knowledge",
+    "content": "Image policy for articles: include exactly 2 inline images in the article body using markdown image syntax. Do not include a cover image in the markdown body — the cover image is handled separately during Substack publishing. Images should be referenced as ![alt text](image-path) and placed at natural section breaks to enhance readability. Alt text should be descriptive for accessibility.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "writer",
+    "category": "domain_knowledge",
+    "content": "When presenting statistics in articles, use inline formatting for impact: bold key numbers, use em dashes for asides, and break up dense statistical paragraphs with comparison tables rendered as markdown. Always contextualize numbers — '0.15 EPA/play' means nothing to most readers without 'which ranked 3rd in the NFL.' Prefer per-play and rate stats over counting stats for evaluative arguments.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "cap",
+    "category": "domain_knowledge",
+    "content": "The 2025 NFL salary cap is $272.5M per team. Cap accounting fundamentals: base salary counts fully in the current year, signing bonuses are prorated over the contract length (max 5 years), roster bonuses count when earned, and dead money is accelerated prorated bonus remaining when a player is released or traded. The cap is expected to rise 8-10% annually through 2027 due to new media deals.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "cap",
+    "category": "domain_knowledge",
+    "content": "Key cap management concepts: (1) Void years — fake contract years added solely to spread signing bonus proration, creating future dead money. (2) Post-June 1 designation — splits dead money across two league years instead of one, used to soften the cap hit of releasing expensive players. (3) Top-51 rule — during the offseason only the 51 highest cap charges count, allowing teams to carry extra players. (4) Minimum salary benefit — veteran minimum contracts only count against the cap at the league minimum rate regardless of the player's experience level.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "cap",
+    "category": "domain_knowledge",
+    "content": "When analyzing contract value, always compute: (1) Average Annual Value (AAV) for position-market comparison, (2) total guarantees and practical guarantees (money the team is unlikely to void), (3) new-money AAV for extensions versus total AAV, (4) cap hits by year to assess team flexibility, and (5) dead money by year if cut. Use Over The Cap as the primary source; Spotrac as a cross-reference.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "draft",
+    "category": "domain_knowledge",
+    "content": "Draft prospect evaluation framework: (1) Production — college stats adjusted for competition level and usage. (2) Athleticism — Combine/Pro Day measurables relative to positional benchmarks. (3) Scheme fit — how the prospect's skills align with the drafting team's offensive/defensive system. (4) Character/leadership — interviews, team reports, off-field concerns. (5) Medical history — injury patterns, durability risk. (6) Age-adjusted projection — younger prospects (20-21 at draft) have more development runway than older ones (23+).",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "draft",
+    "category": "domain_knowledge",
+    "content": "Combine athletic benchmarks by position: WR elite = sub-4.40 forty, good = sub-4.50. EDGE elite = 4.55 forty with 34+ inch vertical and 6.90 or better 3-cone. OT elite = sub-5.00 forty with 30+ bench reps and 7.50 or better 3-cone. CB elite = sub-4.40 forty with 38+ inch vertical. RB elite = sub-4.45 forty with 36+ inch vertical. These thresholds are approximate and should be combined with game tape evaluation, not used in isolation.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "draft",
+    "category": "domain_knowledge",
+    "content": "Draft pick hit rates decline sharply by round: Round 1 produces Pro Bowl-caliber players roughly 30-35% of the time, Round 2 drops to 15-20%, Round 3 to 10-12%, and Day 3 (Rounds 4-7) is below 5%. Positional hit rates also vary — QBs and OTs taken in Round 1 hit at lower rates than EDGE and WRs. Teams gain the most draft value by trading down from premium picks when no elite prospect is available at their selection.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "lead",
+    "category": "domain_knowledge",
+    "content": "Panel composition guidelines: Depth articles (contract analysis, trade evaluation, draft previews) require a minimum of 2 specialists plus a team expert — e.g., cap + analytics + writer for a contract piece. Standard articles (game recaps, stat features) need 1-2 specialists plus the writer. The lead agent selects which specialists to convene based on the article topic and ensures the research phase completes before the writing phase begins.",
+    "relevanceScore": 1.0
+  },
+  {
+    "agentName": "lead",
+    "category": "domain_knowledge",
+    "content": "Article workflow stages: (1) Pitch — topic proposed with thesis and target team. (2) Research — specialists gather data, stats, and context. (3) Draft — writer produces the article using specialist inputs. (4) Review — editor fact-checks, applies style guide, assigns verdict. (5) Revision — writer addresses editor feedback. (6) Publish — final article pushed to Substack. The lead agent manages transitions between stages and ensures no stage is skipped.",
+    "relevanceScore": 1.0
+  }
+]

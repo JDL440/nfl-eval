@@ -170,6 +170,22 @@ export function renderMemoryPage(data: MemoryPageData): string {
     <div class="memory-page">
       <h1>🧠 Agent Memory</h1>
 
+      <!-- Help text -->
+      <details class="detail-section memory-help">
+        <summary class="btn btn-secondary btn-sm">ℹ️ How Memory Works</summary>
+        <div class="memory-help-content">
+          <p>Agents accumulate knowledge across runs. Before each run, the <strong>top 10 entries</strong> by relevance are injected into the agent's system prompt.</p>
+          <p><strong>Categories:</strong>
+            ${categoryBadge('learning')} knowledge from completed work &nbsp;
+            ${categoryBadge('decision')} strategic choices &nbsp;
+            ${categoryBadge('domain_knowledge')} reusable facts &nbsp;
+            ${categoryBadge('preference')} agent tendencies &nbsp;
+            ${categoryBadge('error_pattern')} mistakes to avoid
+          </p>
+          <p><strong>Maintenance:</strong> <em>Decay</em> reduces all relevance scores by 5% (stale entries drift toward pruning). <em>Prune</em> deletes entries older than 90 days or below 0.1 relevance.</p>
+        </div>
+      </details>
+
       <!-- Stats summary -->
       <div class="memory-stats">
         <div class="memory-stat-card">

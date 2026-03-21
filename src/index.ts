@@ -6,7 +6,7 @@
  */
 
 // Config
-export { loadConfig, initDataDir } from './config/index.js';
+export { loadConfig, initDataDir, seedKnowledge } from './config/index.js';
 export type { AppConfig, LeagueConfig } from './config/index.js';
 
 // Types

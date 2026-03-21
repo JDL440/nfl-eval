@@ -14,7 +14,7 @@
  */
 
 import { join } from 'node:path';
-import { loadConfig, initDataDir } from './config/index.js';
+import { loadConfig, initDataDir, seedKnowledge } from './config/index.js';
 import type { AppConfig } from './config/index.js';
 import type { Stage } from './types.js';
 import { VALID_STAGES } from './types.js';
@@ -55,8 +55,12 @@ export async function handleServe(overrides?: Partial<{ port: number }>): Promis
 
 export async function handleInit(): Promise<void> {
   const config = loadConfig();
-  initDataDir(config.dataDir);
-  console.log(`Data directory initialized: ${config.dataDir}`);
+  initDataDir(config.dataDir, config.league);
+  const seeded = seedKnowledge(config.dataDir, config.league);
+  console.log(`Data directory initialized: ${config.dataDir} (league: ${config.league})`);
+  if (seeded.charters || seeded.skills || seeded.memory) {
+    console.log(`  Seeded: ${seeded.charters} charters, ${seeded.skills} skills, ${seeded.memory} memory entries`);
+  }
 }
 
 export async function handleMigrate(): Promise<void> {
@@ -89,7 +93,7 @@ export async function handleMigrate(): Promise<void> {
 
 export async function handleStatus(): Promise<void> {
   const config = loadConfig();
-  initDataDir(config.dataDir);
+  initDataDir(config.dataDir, config.league);
   const { Repository } = await import('./db/repository.js');
   const { PipelineEngine } = await import('./pipeline/engine.js');
   const { PipelineScheduler } = await import('./pipeline/scheduler.js');
@@ -145,7 +149,7 @@ export async function handleAdvance(articleId: string | undefined): Promise<void
   }
 
   const config = loadConfig();
-  initDataDir(config.dataDir);
+  initDataDir(config.dataDir, config.league);
   const { Repository } = await import('./db/repository.js');
   const { PipelineEngine } = await import('./pipeline/engine.js');
   const { PipelineScheduler } = await import('./pipeline/scheduler.js');
@@ -170,7 +174,7 @@ export async function handleAdvance(articleId: string | undefined): Promise<void
 
 export async function handleBatch(stageArg: string | undefined): Promise<void> {
   const config = loadConfig();
-  initDataDir(config.dataDir);
+  initDataDir(config.dataDir, config.league);
   const { Repository } = await import('./db/repository.js');
   const { PipelineEngine } = await import('./pipeline/engine.js');
   const { PipelineScheduler } = await import('./pipeline/scheduler.js');
@@ -204,7 +208,7 @@ export function handleExport(articleId: string | undefined, outputDir: string | 
   }
 
   const config = loadConfig();
-  initDataDir(config.dataDir);
+  initDataDir(config.dataDir, config.league);
   const { exportArticle } = require('./cli/export.js') as typeof import('./cli/export.js');
 
   const dir = outputDir ?? `./${articleId}`;
@@ -224,7 +228,7 @@ export function handleExport(articleId: string | undefined, outputDir: string | 
 
 export async function handleMcp(): Promise<void> {
   const config = loadConfig();
-  initDataDir(config.dataDir);
+  initDataDir(config.dataDir, config.league);
   const { Repository } = await import('./db/repository.js');
   const { PipelineEngine } = await import('./pipeline/engine.js');
   const { startMCPServer } = await import('./mcp/server.js');

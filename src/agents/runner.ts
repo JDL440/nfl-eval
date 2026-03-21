@@ -383,17 +383,19 @@ export class AgentRunner {
     // 8. Separate thinking tokens from output (Qwen, DeepSeek, etc.)
     const { thinking, output: cleanContent } = separateThinking(response.content);
 
-    // 9. Store learning memory
-    const learningContent = articleContext
-      ? `Completed ${task.slice(0, 80)} for "${articleContext.title}" (${articleContext.slug})`
-      : `Completed ${task.slice(0, 120)}`;
-
-    this.memory.store({
-      agentName,
-      category: 'learning',
-      content: learningContent,
-      relevanceScore: 0.8,
-    });
+    // 9. Store learning memory — extract a meaningful summary from the output
+    const outputPreview = cleanContent.replace(/^#+\s.*/gm, '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (outputPreview.length > 20) {
+      const context = articleContext
+        ? `[${articleContext.slug}] `
+        : '';
+      this.memory.store({
+        agentName,
+        category: 'learning',
+        content: `${context}${outputPreview}`,
+        relevanceScore: 0.6,
+      });
+    }
 
     // 10. Return result — thinking stored separately so callers can save it as a debug artifact
     return {

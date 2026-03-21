@@ -2161,6 +2161,15 @@ a:hover { text-decoration: underline; }
 
 /* ── Memory Browser ─────────────────────────────────────────────────────── */
 .memory-page h1 { margin-bottom: 1rem; }
+.memory-help { margin-bottom: 1rem; border: none; padding: 0; }
+.memory-help summary { cursor: pointer; display: inline-flex; }
+.memory-help-content {
+  margin-top: 0.75rem; padding: 1rem; border-radius: var(--radius);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  font-size: 0.875rem; line-height: 1.6;
+}
+.memory-help-content p { margin: 0.5rem 0; }
+.memory-help-content code { background: var(--color-bg); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.85em; }
 .memory-stats {
   display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem;
 }

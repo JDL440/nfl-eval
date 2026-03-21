@@ -96,6 +96,16 @@ export function renderAgentsPage(data: AgentsPageData): string {
     <div class="agents-page">
       <h1>🤖 Agent Charters &amp; Skills</h1>
 
+      <details class="detail-section memory-help">
+        <summary class="btn btn-secondary btn-sm">ℹ️ Knowledge System Overview</summary>
+        <div class="memory-help-content">
+          <p><strong>Charters</strong> define agent identity — who they are, what they do, and their boundaries. Each specialist has a unique charter.</p>
+          <p><strong>Skills</strong> define workflows — how to generate ideas, run discussions, review articles, etc. Skills are shared across agents.</p>
+          <p><strong>Memory</strong> (<a href="/memory">browse →</a>) stores persistent learnings, decisions, and domain knowledge that agents accumulate over time.</p>
+          <p>Seed files ship in <code>src/config/defaults/</code>. Run <code>npm run v2:init</code> to bootstrap a fresh install.</p>
+        </div>
+      </details>
+
       <section class="detail-section">
         <h2>📋 Charters (${charters.length})</h2>
 

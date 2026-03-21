@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, cpSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, cpSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -77,19 +77,19 @@ function loadLeagueConfigs(dataDir: string): Record<string, LeagueConfig> {
 }
 
 /**
- * Initialize data directory structure. Creates directories and copies seed configs
- * if they don't exist.
+ * Initialize data directory structure. Creates directories and copies seed configs.
+ * Does NOT seed charters/skills/memory — use seedKnowledge() for that.
  */
-export function initDataDir(dataDir: string): void {
+export function initDataDir(dataDir: string, league: string = DEFAULT_LEAGUE): void {
   const dirs = [
     '',
     'config',
     'logs',
-    join('leagues', 'nfl', 'articles'),
-    join('leagues', 'nfl', 'images'),
-    join('leagues', 'nfl', 'data-cache'),
+    join('leagues', league, 'articles'),
+    join('leagues', league, 'images'),
+    join('leagues', league, 'data-cache'),
     join('agents', 'charters'),
-    join('agents', 'charters', 'nfl'),
+    join('agents', 'charters', league),
     join('agents', 'skills'),
   ];
 
@@ -100,18 +100,82 @@ export function initDataDir(dataDir: string): void {
     }
   }
 
-  // Copy seed configs if they don't exist
   const seedDir = join(__dirname, 'defaults');
-  if (existsSync(seedDir)) {
-    const configDir = join(dataDir, 'config');
-    for (const file of ['models.json', 'leagues.json']) {
-      const target = join(configDir, file);
-      const source = join(seedDir, file);
-      if (!existsSync(target) && existsSync(source)) {
-        cpSync(source, target);
+  if (!existsSync(seedDir)) return;
+
+  // Copy seed configs if they don't exist
+  const configDir = join(dataDir, 'config');
+  for (const file of ['models.json', 'leagues.json']) {
+    const target = join(configDir, file);
+    const source = join(seedDir, file);
+    if (!existsSync(target) && existsSync(source)) {
+      cpSync(source, target);
+    }
+  }
+}
+
+/**
+ * Seed agent knowledge (charters, skills, bootstrap memory) for a fresh install.
+ * Only copies files that don't already exist — safe to call multiple times.
+ * Called by `npm run v2:init`, NOT by general startup.
+ */
+export function seedKnowledge(dataDir: string, league: string = DEFAULT_LEAGUE): { charters: number; skills: number; memory: number } {
+  const seedDir = join(__dirname, 'defaults');
+  const result = { charters: 0, skills: 0, memory: 0 };
+  if (!existsSync(seedDir)) return result;
+
+  // Seed charters for this league (only if charter dir is empty)
+  const charterSeedDir = join(seedDir, 'charters', league);
+  const charterDestDir = join(dataDir, 'agents', 'charters', league);
+  if (existsSync(charterSeedDir)) {
+    const existing = existsSync(charterDestDir)
+      ? readdirSync(charterDestDir).filter((f) => f.endsWith('.md'))
+      : [];
+    if (existing.length === 0) {
+      const files = readdirSync(charterSeedDir).filter((f) => f.endsWith('.md'));
+      cpSync(charterSeedDir, charterDestDir, { recursive: true });
+      result.charters = files.length;
+    }
+  }
+
+  // Seed skills (only files that don't already exist)
+  const skillSeedDir = join(seedDir, 'skills');
+  const skillDestDir = join(dataDir, 'agents', 'skills');
+  if (existsSync(skillSeedDir)) {
+    for (const file of readdirSync(skillSeedDir)) {
+      if (!file.endsWith('.md')) continue;
+      const target = join(skillDestDir, file);
+      if (!existsSync(target)) {
+        cpSync(join(skillSeedDir, file), target);
+        result.skills++;
       }
     }
   }
+
+  // Bootstrap memory (only if memory.db doesn't exist yet)
+  const memoryPath = join(dataDir, 'agents', 'memory.db');
+  const bootstrapPath = join(seedDir, 'bootstrap-memory.json');
+  if (!existsSync(memoryPath) && existsSync(bootstrapPath)) {
+    try {
+      const { AgentMemory } = require('../agents/memory.js');
+      const entries = JSON.parse(readFileSync(bootstrapPath, 'utf-8'));
+      const memory = new AgentMemory(memoryPath);
+      for (const entry of entries) {
+        memory.store({
+          agentName: entry.agentName,
+          category: entry.category,
+          content: entry.content,
+          relevanceScore: entry.relevanceScore ?? 1.0,
+        });
+        result.memory++;
+      }
+      memory.close();
+    } catch {
+      // Non-fatal: memory bootstrap is optional
+    }
+  }
+
+  return result;
 }
 
 /**

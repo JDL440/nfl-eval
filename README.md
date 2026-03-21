@@ -124,11 +124,13 @@ Stage-aware routing lives in:
 
 ### Agent charters and skills
 
-Agent content is loaded from the data directory:
+Agent knowledge is loaded from the data directory at runtime. On a fresh install, `npm run v2:init` seeds default charters, skills, and bootstrap memory.
 
-- Charters: `~/.nfl-lab/agents/charters/nfl/`
-- Skills: `~/.nfl-lab/agents/skills/`
-- Memory DB: `~/.nfl-lab/agents/memory.db`
+- Charters: `~/.nfl-lab/agents/charters/{league}/` — agent identity and boundaries
+- Skills: `~/.nfl-lab/agents/skills/` — workflow instructions and output formats
+- Memory: `~/.nfl-lab/agents/memory.db` — persistent learnings, decisions, and domain knowledge
+
+See **[docs/knowledge-system.md](docs/knowledge-system.md)** for the full knowledge architecture, bootstrap process, and multi-league extensibility guide.
 
 ## Dashboard Pages
 
@@ -139,6 +141,7 @@ The editorial dashboard includes:
 - **New Idea** (`/ideas/new`) — prompt-driven article creation with team selection and optional auto-advance
 - **Config** (`/config`) — active provider, model routing, charters, skills, and env var status
 - **Agents** (`/agents`) — charter and skill browser
+- **Memory** (`/memory`) — agent memory browser with filters, CRUD, prune/decay
 - **Runs** (`/runs`) — filterable execution history for stage runs
 
 ## Pipeline Stages

@@ -2023,7 +2023,7 @@ export function createApp(
 
 export async function startServer(overrides?: Partial<AppConfig>): Promise<void> {
   const config = loadConfig(overrides);
-  initDataDir(config.dataDir);
+  initDataDir(config.dataDir, config.league);
   const repo = new Repository(config.dbPath);
 
   // Build ActionContext for agent-powered auto-advance (optional)
