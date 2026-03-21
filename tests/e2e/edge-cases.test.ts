@@ -557,3 +557,186 @@ describe('Guard failures', () => {
     expect(html).toContain('Stage 8');
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 6. Auto-advance REVISE loop (extracted autoAdvanceArticle)
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
+  const REVISE_REVIEW = `# Editor Review\n\n## Verdict: REVISE\n\nThe draft needs stronger statistical support and clearer structure.\n\n## Issues\n- Missing EPA citations\n- Weak conclusion`;
+  const APPROVED_REVIEW = `# Editor Review\n\n## Verdict: APPROVED\n\nStrong analytical piece. Ready for publication.\n\n## Strengths\n- Clear thesis\n- Good data support`;
+
+  it('REVISE → retry → APPROVED: auto-advances with one revision cycle', async () => {
+    const slug = 'edge-auto-revise-retry';
+    repo.createArticle({ id: slug, title: 'Auto-Advance REVISE Retry' });
+
+    // Set up idea.md so we can start from stage 1
+    writeArtifact(slug, 'idea.md', '# Idea\nTest concept for REVISE loop.');
+
+    let editorCallCount = 0;
+    const originalSetResponse = mockProvider.setResponse.bind(mockProvider);
+
+    // Track steps from the callback
+    const collectedSteps: Array<{ type: string; from: number; to: number; action: string }> = [];
+
+    const result = await autoAdvanceArticle(slug, actionCtx, {
+      maxStage: 7,
+      maxRevisions: 2,
+      onStep: (step) => {
+        collectedSteps.push({ type: step.type, from: step.from, to: step.to, action: step.action });
+
+        // When we're about to run the editor (stage 5, working), set the response
+        if (step.type === 'working' && step.from === 5) {
+          editorCallCount++;
+          if (editorCallCount === 1) {
+            // First editor pass: REVISE
+            originalSetResponse(REVISE_REVIEW);
+          } else {
+            // Second editor pass: APPROVED
+            originalSetResponse(APPROVED_REVIEW);
+          }
+        }
+        // After editor runs, clear the override so other stages use defaults
+        if (step.type === 'advance' && step.to === 6) {
+          originalSetResponse(null);
+        }
+        if (step.type === 'error' && step.from === 6) {
+          // After the guard failure at 6→7, clear override for retry
+          originalSetResponse(null);
+        }
+      },
+    });
+
+    // Clean up override
+    mockProvider.setResponse(null);
+
+    // The article should reach stage 7
+    expect(result.finalStage).toBe(7);
+    expect(result.revisionCount).toBe(1);
+    expect(result.error).toBeUndefined();
+
+    // Steps should include a regression
+    const regressionSteps = result.steps.filter(s => s.type === 'regress');
+    expect(regressionSteps.length).toBe(1);
+    expect(regressionSteps[0].to).toBe(4);
+
+    // onStep callbacks should have fired
+    expect(collectedSteps.length).toBeGreaterThan(0);
+    expect(collectedSteps.some(s => s.type === 'regress')).toBe(true);
+    expect(collectedSteps.some(s => s.type === 'advance' && s.to === 7)).toBe(true);
+  });
+
+  it('stops after maxRevisions exceeded', async () => {
+    const slug = 'edge-auto-max-revisions';
+    repo.createArticle({ id: slug, title: 'Auto-Advance Max Revisions' });
+    writeArtifact(slug, 'idea.md', '# Idea\nTest max revisions.');
+
+    // Always return REVISE for editor
+    const originalSetResponse = mockProvider.setResponse.bind(mockProvider);
+
+    const result = await autoAdvanceArticle(slug, actionCtx, {
+      maxStage: 7,
+      maxRevisions: 2,
+      onStep: (step) => {
+        if (step.type === 'working' && step.from === 5) {
+          originalSetResponse(REVISE_REVIEW);
+        }
+        if (step.type === 'advance' && step.to === 6) {
+          originalSetResponse(null);
+        }
+        if (step.type === 'error') {
+          originalSetResponse(null);
+        }
+      },
+    });
+
+    mockProvider.setResponse(null);
+
+    // Should NOT reach stage 7 — stopped after max revisions
+    expect(result.finalStage).toBeLessThan(7);
+    expect(result.revisionCount).toBeGreaterThanOrEqual(2);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('revisions');
+  });
+
+  it('calls autoAdvanceArticle directly with correct step tracking', async () => {
+    const slug = 'edge-auto-direct-call';
+    repo.createArticle({ id: slug, title: 'Direct autoAdvanceArticle Test' });
+    writeArtifact(slug, 'idea.md', '# Idea\nDirect call test.');
+
+    // Use default mock responses (editor returns PUBLISH/APPROVED by default)
+    mockProvider.setResponse(null);
+
+    const stepLog: Array<{ type: string; from: number; to: number }> = [];
+
+    const result = await autoAdvanceArticle(slug, actionCtx, {
+      maxStage: 7,
+      maxRevisions: 2,
+      onStep: (step) => {
+        stepLog.push({ type: step.type, from: step.from, to: step.to });
+      },
+    });
+
+    // Should advance cleanly to stage 7 with no revisions
+    expect(result.finalStage).toBe(7);
+    expect(result.revisionCount).toBe(0);
+    expect(result.error).toBeUndefined();
+
+    // Should have advance steps: 1→2, 2→3, 3→4, 4→5, 5→6, 6→7
+    const advanceSteps = result.steps.filter(s => s.type === 'advance');
+    expect(advanceSteps.length).toBe(6);
+    expect(advanceSteps[0].from).toBe(1);
+    expect(advanceSteps[0].to).toBe(2);
+    expect(advanceSteps[advanceSteps.length - 1].to).toBe(7);
+
+    // onStep should have fired for each advance + working
+    const workingSteps = stepLog.filter(s => s.type === 'working');
+    expect(workingSteps.length).toBe(6); // one per stage transition
+
+    // Each step should have a duration
+    for (const step of result.steps) {
+      if (step.type === 'advance') {
+        expect(step.duration).toBeDefined();
+        expect(step.duration).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('works in lightweight mode (no ActionContext)', async () => {
+    const slug = 'edge-auto-lightweight';
+    repo.createArticle({ id: slug, title: 'Lightweight Auto-Advance' });
+
+    // Pre-write all artifacts for lightweight (guard-only) advance
+    writeArtifact(slug, 'idea.md', '# Idea\nLightweight test.');
+    writeArtifact(slug, 'discussion-prompt.md', '# Prompt\nKey question.');
+    writeArtifact(slug, 'panel-composition.md', '# Panel\n- Analyst A\n- Analyst B');
+    writeArtifact(slug, 'discussion-summary.md', '# Summary\nConclusion X.');
+    writeArtifact(slug, 'draft.md', `# Draft\n\n${longText(300)}`);
+    writeArtifact(slug, 'editor-review.md', '## Final Verdict: APPROVED\nGood to go.');
+    writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nAll clear.');
+
+    const stepLog: Array<{ type: string; from: number; to: number }> = [];
+
+    // Call with null context (lightweight) but provide repo + engine
+    const result = await autoAdvanceArticle(slug, null, {
+      maxStage: 7,
+      repo,
+      engine,
+      onStep: (step) => {
+        stepLog.push({ type: step.type, from: step.from, to: step.to });
+      },
+    });
+
+    expect(result.finalStage).toBe(7);
+    expect(result.revisionCount).toBe(0);
+    expect(result.error).toBeUndefined();
+
+    // All 6 advance steps (1→2 through 6→7)
+    const advanceSteps = result.steps.filter(s => s.type === 'advance');
+    expect(advanceSteps.length).toBe(6);
+
+    // onStep callbacks fired for advances only (no 'working' in lightweight mode)
+    expect(stepLog.filter(s => s.type === 'advance').length).toBe(6);
+    expect(stepLog.filter(s => s.type === 'working').length).toBe(0);
+  });
+});
