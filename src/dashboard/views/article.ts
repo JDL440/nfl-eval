@@ -101,47 +101,50 @@ export function renderArticleMetaEditForm(article: Article): string {
   ];
 
   const depthWarning = article.current_stage > 1
-    ? `<p class="form-warning">⚠️ Changing depth level after Stage 1 may desync prompts/panel sizing.</p>`
+    ? `<p class="meta-edit-warning">⚠️ Changing depth level after Stage 1 may desync prompts/panel sizing.</p>`
     : '';
 
   return `
     <form
       id="article-meta"
-      class="meta-edit-form"
+      class="meta-edit-card"
       hx-post="/htmx/articles/${escapeHtml(article.id)}/edit-meta"
       hx-target="#article-meta"
       hx-swap="outerHTML"
     >
-      <div class="form-row">
-        <label for="meta-title">Title</label>
-        <input id="meta-title" name="title" type="text" value="${escapeHtml(article.title)}" required />
-        <div class="form-hint">Slug/ID is immutable: <code>${escapeHtml(article.id)}</code></div>
+      <div class="meta-edit-card-header">✏️ Edit Article Metadata</div>
+
+      <div class="meta-edit-field">
+        <label class="meta-edit-label" for="meta-title">Title</label>
+        <input id="meta-title" class="input input-full" name="title" type="text" value="${escapeHtml(article.title)}" required />
+        <div class="meta-edit-hint">Slug/ID is immutable: <code>${escapeHtml(article.id)}</code></div>
       </div>
 
-      <div class="form-row">
-        <label for="meta-subtitle">Subtitle</label>
-        <textarea id="meta-subtitle" name="subtitle" rows="3">${escapeHtml(article.subtitle ?? '')}</textarea>
+      <div class="meta-edit-field">
+        <label class="meta-edit-label" for="meta-subtitle">Subtitle</label>
+        <textarea id="meta-subtitle" class="input input-full textarea" name="subtitle" rows="3">${escapeHtml(article.subtitle ?? '')}</textarea>
       </div>
 
-      <div class="form-row">
-        <label for="meta-depth">Depth</label>
-        ${depthWarning}
-        <select id="meta-depth" name="depth_level">
-          ${depthOptions.map(o => `<option value="${o.value}"${o.value === article.depth_level ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
-        </select>
+      <div class="meta-edit-row-2col">
+        <div class="meta-edit-field">
+          <label class="meta-edit-label" for="meta-depth">Depth Level</label>
+          ${depthWarning}
+          <select id="meta-depth" class="input input-full select" name="depth_level">
+            ${depthOptions.map(o => `<option value="${o.value}"${o.value === article.depth_level ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="meta-edit-field">
+          <label class="meta-edit-label" for="meta-teams">Teams</label>
+          <input id="meta-teams" class="input input-full" name="teams" type="text" value="${escapeHtml(teams)}" placeholder="seahawks, chiefs" />
+          <div class="meta-edit-hint">Comma-separated team slugs.</div>
+        </div>
       </div>
 
-      <div class="form-row">
-        <label for="meta-teams">Teams</label>
-        <input id="meta-teams" name="teams" type="text" value="${escapeHtml(teams)}" placeholder="seahawks, chiefs" />
-        <div class="form-hint">Comma-separated team slugs/abbreviations.</div>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Save</button>
+      <div class="meta-edit-actions">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
         <button
           type="button"
-          class="btn"
+          class="btn btn-secondary"
           hx-get="/htmx/articles/${escapeHtml(article.id)}/meta"
           hx-target="#article-meta"
           hx-swap="outerHTML"
@@ -732,7 +735,7 @@ export function renderContextConfigShell(articleId: string): string {
   return `
     <section class="detail-section">
       <details class="context-settings">
-        <summary>⚙️ Agent Context Settings</summary>
+        <summary>⚙️ Advanced: Agent Context Settings</summary>
         <div id="context-config-panel"
           hx-get="/htmx/articles/${escapeHtml(articleId)}/context-config"
           hx-trigger="load"
@@ -755,37 +758,52 @@ export function renderContextConfigPanel(data: ContextConfigPanelData): string {
   const { articleId, stageNames, artifactChoices, defaults, overrides } = data;
   const hasOverrides = overrides != null && Object.keys(overrides).length > 0;
 
-  const hint = hasOverrides
-    ? '<div class="context-config-hint">Overrides active for this article.</div>'
-    : '<div class="context-config-hint">Using defaults (no per-article overrides).</div>';
+  const statusBadge = hasOverrides
+    ? '<span class="ctx-status ctx-status-custom">Custom</span>'
+    : '<span class="ctx-status ctx-status-default">Defaults</span>';
 
   const stagesHtml = stageNames.map((stage) => {
-    const selected = overrides?.[stage] ?? defaults[stage] ?? [];
+    const defaultSet = defaults[stage] ?? [];
+    const selected = overrides?.[stage] ?? defaultSet;
+
     const checkboxes = artifactChoices.map((artifact) => {
       const checked = selected.includes(artifact) ? 'checked' : '';
+      const isDefault = defaultSet.includes(artifact);
+      const isOverridden = hasOverrides && (checked ? !isDefault : isDefault);
+      const cls = isOverridden ? 'ctx-cb ctx-cb-overridden' : 'ctx-cb ctx-cb-default';
       return `
-        <label class="context-checkbox">
+        <label class="${cls}">
           <input type="checkbox" name="${escapeHtml(stage)}" value="${escapeHtml(artifact)}" ${checked} />
           <span>${escapeHtml(artifact)}</span>
         </label>`;
     }).join('');
 
     return `
-      <div class="context-stage" data-stage="${escapeHtml(stage)}">
-        <div class="context-stage-title"><code>${escapeHtml(stage)}</code></div>
-        <div class="context-checkboxes">${checkboxes}</div>
+      <div class="ctx-stage" data-stage="${escapeHtml(stage)}">
+        <div class="ctx-stage-title"><code>${escapeHtml(stage)}</code></div>
+        <div class="ctx-checkboxes">${checkboxes}</div>
       </div>`;
   }).join('');
 
   return `
-    <div class="context-config">
-      ${hint}
-      <form class="context-config-form"
+    <div class="ctx-config">
+      <div class="ctx-header">
+        <div class="ctx-header-left">
+          <span class="ctx-header-title">Context Artifacts</span>
+          ${statusBadge}
+        </div>
+        <p class="ctx-description">Controls which artifacts are injected into agent prompts at each pipeline stage. Override defaults to fine-tune context for this article.</p>
+      </div>
+      <form class="ctx-form context-config-form"
         hx-post="/api/articles/${escapeHtml(articleId)}/context-config"
         hx-target="#context-config-panel"
         hx-swap="innerHTML">
-        ${stagesHtml}
-        <div class="action-bar" style="margin-top:0.75rem; gap:0.5rem;">
+        <div class="ctx-stages">${stagesHtml}</div>
+        <div class="ctx-legend">
+          <span class="ctx-legend-item ctx-legend-default">Inherited default</span>
+          <span class="ctx-legend-item ctx-legend-overridden">Overridden</span>
+        </div>
+        <div class="ctx-actions">
           <button type="submit" class="btn btn-primary btn-sm">Save</button>
           <button type="button" class="btn btn-secondary btn-sm"
             hx-delete="/api/articles/${escapeHtml(articleId)}/context-config"

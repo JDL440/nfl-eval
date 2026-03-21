@@ -1936,3 +1936,190 @@ a:hover { text-decoration: underline; }
 .charter-content h2, .skill-content h2 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.25rem; }
 .charter-content ul, .skill-content ul { padding-left: 1.25rem; }
 .charter-content li, .skill-content li { margin-bottom: 0.35rem; }
+
+/* ── Meta Edit Card (Issue 1) ────────────────────────────────────────────── */
+.meta-edit-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-top: 1rem;
+  box-shadow: var(--shadow);
+}
+.meta-edit-card-header {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.meta-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.875rem;
+}
+.meta-edit-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.meta-edit-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.meta-edit-warning {
+  font-size: 0.8rem;
+  color: var(--color-warning);
+  margin: 0 0 0.25rem;
+}
+.meta-edit-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 640px) {
+  .meta-edit-row-2col { grid-template-columns: 1fr; }
+}
+.meta-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ── Context Config Redesign (Issue 2) ───────────────────────────────────── */
+.ctx-config {
+  margin-top: 0.5rem;
+}
+.ctx-header {
+  margin-bottom: 1rem;
+}
+.ctx-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.ctx-header-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+.ctx-status {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.ctx-status-default {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+.ctx-status-custom {
+  background: var(--color-accent);
+  color: #fff;
+}
+.ctx-description {
+  font-size: 0.825rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.45;
+}
+.ctx-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.ctx-stage {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.625rem 0.75rem;
+  background: var(--color-surface);
+}
+.ctx-stage-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--color-text);
+}
+.ctx-checkboxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 1rem;
+}
+@media (max-width: 640px) {
+  .ctx-checkboxes { grid-template-columns: 1fr; }
+}
+.ctx-cb {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.825rem;
+  cursor: pointer;
+  padding: 1px 0;
+}
+.ctx-cb input { accent-color: var(--color-accent); }
+.ctx-cb-default span {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+.ctx-cb-overridden span {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.ctx-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+.ctx-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.ctx-legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.ctx-legend-default::before { background: var(--color-text-muted); opacity: 0.4; }
+.ctx-legend-overridden::before { background: var(--color-accent); }
+.ctx-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* ── Agent Inline Editing (Issue 3) ──────────────────────────────────────── */
+.agent-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.agent-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.agent-edit-textarea {
+  resize: vertical;
+  min-height: 300px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}

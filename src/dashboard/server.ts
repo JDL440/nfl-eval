@@ -9,7 +9,7 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { join } from 'node:path';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
 import { initDataDir, loadConfig } from '../config/index.js';
@@ -85,6 +85,10 @@ import {
   renderAgentsPage,
   renderCharterDetail,
   renderSkillDetail,
+  renderCharterEditForm,
+  renderCharterView,
+  renderSkillEditForm,
+  renderSkillView,
   classifyCharter,
   extractIdentity,
 } from './views/agents.js';
@@ -1777,6 +1781,60 @@ export function createApp(
     }
     const content = readFileSync(filePath, 'utf-8');
     return c.html(renderCharterDetail(name, content, config.leagueConfig.name));
+  });
+
+  // ── htmx: agent charter/skill inline editing ─────────────────────────────
+
+  app.get('/htmx/agents/skills/:name/edit', (c) => {
+    const name = c.req.param('name');
+    const filePath = join(config.skillsDir, `${name}.md`);
+    if (!existsSync(filePath)) return c.html('<p class="empty-state">Skill not found</p>', 404);
+    const content = readFileSync(filePath, 'utf-8');
+    return c.html(renderSkillEditForm(name, content));
+  });
+
+  app.get('/htmx/agents/skills/:name/view', (c) => {
+    const name = c.req.param('name');
+    const filePath = join(config.skillsDir, `${name}.md`);
+    if (!existsSync(filePath)) return c.html('<p class="empty-state">Skill not found</p>', 404);
+    const content = readFileSync(filePath, 'utf-8');
+    return c.html(renderSkillView(name, content));
+  });
+
+  app.get('/htmx/agents/:name/edit', (c) => {
+    const name = c.req.param('name');
+    const filePath = resolveCharterPath(name);
+    if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
+    const content = readFileSync(filePath, 'utf-8');
+    return c.html(renderCharterEditForm(name, content));
+  });
+
+  app.get('/htmx/agents/:name/view', (c) => {
+    const name = c.req.param('name');
+    const filePath = resolveCharterPath(name);
+    if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
+    const content = readFileSync(filePath, 'utf-8');
+    return c.html(renderCharterView(name, content));
+  });
+
+  app.put('/api/agents/skills/:name', async (c) => {
+    const name = c.req.param('name');
+    const filePath = join(config.skillsDir, `${name}.md`);
+    if (!existsSync(filePath)) return c.html('<p class="empty-state">Skill not found</p>', 404);
+    const body = await c.req.parseBody();
+    const content = typeof body['content'] === 'string' ? body['content'] : '';
+    writeFileSync(filePath, content, 'utf-8');
+    return c.html(renderSkillView(name, content));
+  });
+
+  app.put('/api/agents/:name', async (c) => {
+    const name = c.req.param('name');
+    const filePath = resolveCharterPath(name);
+    if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
+    const body = await c.req.parseBody();
+    const content = typeof body['content'] === 'string' ? body['content'] : '';
+    writeFileSync(filePath, content, 'utf-8');
+    return c.html(renderCharterView(name, content));
   });
 
   // ── Pipeline Runs page ────────────────────────────────────────────────────

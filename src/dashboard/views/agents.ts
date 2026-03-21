@@ -148,12 +148,50 @@ export function renderCharterDetail(name: string, content: string, labName: stri
         ${boundariesCount ? `<span class="badge badge-depth">${boundariesCount} boundaries</span>` : ''}
         ${skillsReferenced.length ? `<span class="badge badge-team">${skillsReferenced.length} skills</span>` : ''}
       </div>
-      <div class="charter-content">
-        ${markdownToHtml(content)}
+      <div id="charter-display">
+        <div class="charter-content">
+          ${markdownToHtml(content)}
+        </div>
+        <div class="agent-edit-actions">
+          <button class="btn btn-secondary btn-sm"
+            hx-get="/htmx/agents/${escapeHtml(name)}/edit"
+            hx-target="#charter-display"
+            hx-swap="innerHTML">✏️ Edit</button>
+        </div>
       </div>
     </div>`;
 
   return renderLayout(`Charter: ${name}`, html, labName);
+}
+
+export function renderCharterEditForm(name: string, rawContent: string): string {
+  return `
+    <form class="agent-edit-form"
+      hx-put="/api/agents/${escapeHtml(name)}"
+      hx-target="#charter-display"
+      hx-swap="innerHTML">
+      <textarea class="input input-full agent-edit-textarea" name="content" rows="24">${escapeHtml(rawContent)}</textarea>
+      <div class="agent-edit-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        <button type="button" class="btn btn-secondary btn-sm"
+          hx-get="/htmx/agents/${escapeHtml(name)}/view"
+          hx-target="#charter-display"
+          hx-swap="innerHTML">Cancel</button>
+      </div>
+    </form>`;
+}
+
+export function renderCharterView(name: string, content: string): string {
+  return `
+    <div class="charter-content">
+      ${markdownToHtml(content)}
+    </div>
+    <div class="agent-edit-actions">
+      <button class="btn btn-secondary btn-sm"
+        hx-get="/htmx/agents/${escapeHtml(name)}/edit"
+        hx-target="#charter-display"
+        hx-swap="innerHTML">✏️ Edit</button>
+    </div>`;
 }
 
 // ── Skill detail page ────────────────────────────────────────────────────────
@@ -162,10 +200,48 @@ export function renderSkillDetail(name: string, content: string, labName: string
   const html = `
     <div class="agents-detail">
       <a href="/agents" class="back-link">← Back to Agents</a>
-      <div class="skill-content">
-        ${markdownToHtml(content)}
+      <div id="skill-display">
+        <div class="skill-content">
+          ${markdownToHtml(content)}
+        </div>
+        <div class="agent-edit-actions">
+          <button class="btn btn-secondary btn-sm"
+            hx-get="/htmx/agents/skills/${escapeHtml(name)}/edit"
+            hx-target="#skill-display"
+            hx-swap="innerHTML">✏️ Edit</button>
+        </div>
       </div>
     </div>`;
 
   return renderLayout(`Skill: ${name}`, html, labName);
+}
+
+export function renderSkillEditForm(name: string, rawContent: string): string {
+  return `
+    <form class="agent-edit-form"
+      hx-put="/api/agents/skills/${escapeHtml(name)}"
+      hx-target="#skill-display"
+      hx-swap="innerHTML">
+      <textarea class="input input-full agent-edit-textarea" name="content" rows="24">${escapeHtml(rawContent)}</textarea>
+      <div class="agent-edit-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        <button type="button" class="btn btn-secondary btn-sm"
+          hx-get="/htmx/agents/skills/${escapeHtml(name)}/view"
+          hx-target="#skill-display"
+          hx-swap="innerHTML">Cancel</button>
+      </div>
+    </form>`;
+}
+
+export function renderSkillView(name: string, content: string): string {
+  return `
+    <div class="skill-content">
+      ${markdownToHtml(content)}
+    </div>
+    <div class="agent-edit-actions">
+      <button class="btn btn-secondary btn-sm"
+        hx-get="/htmx/agents/skills/${escapeHtml(name)}/edit"
+        hx-target="#skill-display"
+        hx-swap="innerHTML">✏️ Edit</button>
+    </div>`;
 }
