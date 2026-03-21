@@ -166,7 +166,9 @@ export function createApp(
   /** Helper: emit SSE events for auto-advance steps. */
   function emitStepEvents(id: string, step: AutoAdvanceStep): void {
     if (step.type === 'working') {
-      bus.emit({ type: 'stage_working', articleId: id, data: { stage: step.from, stageName: STAGE_NAMES[step.from as Stage] ?? `Stage ${step.from}` }, timestamp: new Date().toISOString() });
+      const targetStage = step.to;
+      const targetName = STAGE_NAMES[targetStage as Stage] ?? `Stage ${targetStage}`;
+      bus.emit({ type: 'stage_working', articleId: id, data: { stage: targetStage, stageName: targetName, action: step.action }, timestamp: new Date().toISOString() });
     } else if (step.type === 'error') {
       console.warn(`[auto-advance] Stage ${step.from} failed: ${step.error}`);
       bus.emit({ type: 'stage_error', articleId: id, data: { stage: step.from, error: step.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });

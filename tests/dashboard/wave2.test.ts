@@ -322,8 +322,8 @@ describe('renderStageRunsPanel', () => {
     const html = renderStageRunsPanel([makeStageRun({})]);
     expect(html).toContain('Stage Runs');
     expect(html).toContain('✅');
-    expect(html).toContain('Stage 5');
-    expect(html).toContain('writer');
+    expect(html).toContain('Stage 6');  // target stage (from=5 → target=6)
+    expect(html).toContain('Editor Pass');
   });
 
   it('shows failed run with error icon', () => {
@@ -450,8 +450,7 @@ describe('Wave 2 Routes', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Stage Runs');
-      expect(html).toContain('Stage 5');
-      expect(html).toContain('writer-agent');
+      expect(html).toContain('Stage 6');  // target stage (from=5 → target=6)
       expect(html).toContain('claude-sonnet-4');
     });
 

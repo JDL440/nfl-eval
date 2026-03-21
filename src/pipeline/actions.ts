@@ -808,12 +808,15 @@ export async function autoAdvanceArticle(
 
   while (current.current_stage < maxStage) {
     if (ctx) {
-      // Emit working status before starting the stage
+      // Emit working status — use the action name for what's actually happening
+      const actionLabel = STAGE_ACTION_MAP[current.current_stage as Stage] ?? 'processing';
+      const nextStage = current.current_stage + 1;
+      const nextStageName = STAGE_NAMES[nextStage as Stage] ?? `Stage ${nextStage}`;
       onStep?.({
         type: 'working',
         from: current.current_stage,
-        to: current.current_stage,
-        action: `Working on Stage ${current.current_stage} — ${STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown'}`,
+        to: nextStage,
+        action: actionLabel,
       });
 
       // Full execution: run agent → write artifact → advance

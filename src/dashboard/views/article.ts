@@ -988,12 +988,13 @@ export function renderStageRunsPanel(runs: StageRun[]): string {
           const duration = r.completed_at && r.started_at
             ? formatDuration(new Date(r.completed_at).getTime() - new Date(r.started_at).getTime())
             : '';
+          const targetStage = Math.min(r.stage + 1, 8) as Stage;
+          const targetName = STAGE_NAMES[targetStage] ?? `Stage ${targetStage}`;
           return `
           <div class="stage-run stage-run-${r.status}">
             <div class="stage-run-header">
               <span class="stage-run-icon">${statusIcon}</span>
-              <span class="badge badge-stage badge-stage-${r.stage}">Stage ${r.stage}</span>
-              ${r.actor ? `<span class="stage-run-actor">${escapeHtml(r.actor)}</span>` : ''}
+              <span class="badge badge-stage badge-stage-${targetStage}">Stage ${targetStage} — ${escapeHtml(targetName)}</span>
             </div>
             <div class="stage-run-meta">
               ${duration ? `<span class="stage-run-duration">⏱ ${duration}</span>` : ''}
