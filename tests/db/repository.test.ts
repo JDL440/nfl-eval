@@ -701,4 +701,42 @@ describe('Repository', () => {
       expect(afterReviews.length).toBe(0);
     });
   });
+
+  // ── Pinned Agents ───────────────────────────────────────────────────────────
+
+  describe('pinned agents', () => {
+    beforeEach(() => {
+      repo.createArticle({ id: 'pin-test', title: 'Pin Test' });
+    });
+
+    it('pins and retrieves agents', () => {
+      repo.pinAgent('pin-test', 'cap-analyst', 'specialist');
+      repo.pinAgent('pin-test', 'draft-scout');
+      const agents = repo.getPinnedAgents('pin-test');
+      expect(agents).toHaveLength(2);
+      expect(agents[0].agent_name).toBe('cap-analyst');
+      expect(agents[0].role).toBe('specialist');
+      expect(agents[1].agent_name).toBe('draft-scout');
+      expect(agents[1].role).toBeNull();
+    });
+
+    it('ignores duplicate pins', () => {
+      repo.pinAgent('pin-test', 'cap-analyst');
+      repo.pinAgent('pin-test', 'cap-analyst');
+      expect(repo.getPinnedAgents('pin-test')).toHaveLength(1);
+    });
+
+    it('unpins an agent', () => {
+      repo.pinAgent('pin-test', 'cap-analyst');
+      repo.pinAgent('pin-test', 'draft-scout');
+      repo.unpinAgent('pin-test', 'cap-analyst');
+      const agents = repo.getPinnedAgents('pin-test');
+      expect(agents).toHaveLength(1);
+      expect(agents[0].agent_name).toBe('draft-scout');
+    });
+
+    it('returns empty array when no agents pinned', () => {
+      expect(repo.getPinnedAgents('pin-test')).toEqual([]);
+    });
+  });
 });

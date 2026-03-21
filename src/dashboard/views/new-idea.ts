@@ -129,7 +129,15 @@ export function renderIdeaSuccess(article: { id: string; title: string }): strin
 
 // ── Smart idea form ──────────────────────────────────────────────────────────
 
-export function renderNewIdeaPage(config: { labName: string }): string {
+export function renderNewIdeaPage(config: { labName: string; expertAgents?: string[] }): string {
+  const agents = config.expertAgents ?? [];
+  const agentChips = agents.length > 0 ? agents.map(a => `
+    <button type="button" class="agent-badge" data-agent="${escapeHtml(a)}"
+      onclick="toggleAgent(this, '${escapeHtml(a)}')">
+      ${escapeHtml(a)}
+    </button>
+  `).join('') : '<span class="form-hint">No expert agents available</span>';
+
   return renderLayout('New Idea', `
     <div class="idea-form-container">
       <h1>New Article Idea</h1>
@@ -172,6 +180,15 @@ export function renderNewIdeaPage(config: { labName: string }): string {
             <option value="2" selected>2 — The Beat</option>
             <option value="3">3 — Deep Dive</option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label>Pin Expert Agents <span class="form-hint">(optional — these agents will always be included on the panel)</span></label>
+          <div id="selected-agents" class="team-chips"></div>
+          <div class="agent-grid">
+            ${agentChips}
+          </div>
+          <input type="hidden" id="pinned-agents" name="pinnedAgents" value="">
         </div>
 
         <div id="form-status" class="form-status" style="display:none"></div>
@@ -245,6 +262,37 @@ export function renderNewIdeaPage(config: { labName: string }): string {
         renderChips();
       }
 
+      // ── Pinned agents ──────────────────────────
+      const pinnedAgents = new Set();
+
+      function toggleAgent(btn, name) {
+        if (pinnedAgents.has(name)) {
+          pinnedAgents.delete(name);
+          btn.classList.remove('selected');
+        } else {
+          pinnedAgents.add(name);
+          btn.classList.add('selected');
+        }
+        document.getElementById('pinned-agents').value = Array.from(pinnedAgents).join(',');
+        renderAgentChips();
+      }
+
+      function renderAgentChips() {
+        var container = document.getElementById('selected-agents');
+        container.innerHTML = Array.from(pinnedAgents).map(function(name) {
+          return '<span class="team-chip">' + name +
+            ' <button type="button" onclick="removeAgent(\\'' + name + '\\')">&times;</button></span>';
+        }).join('');
+      }
+
+      function removeAgent(name) {
+        pinnedAgents.delete(name);
+        var btn = document.querySelector('.agent-badge[data-agent="' + name + '"]');
+        if (btn) btn.classList.remove('selected');
+        document.getElementById('pinned-agents').value = Array.from(pinnedAgents).join(',');
+        renderAgentChips();
+      }
+
       // Persist auto-advance preference via localStorage
       (function initAutoAdvance() {
         const cb = document.getElementById('auto-advance');
@@ -277,6 +325,7 @@ export function renderNewIdeaPage(config: { labName: string }): string {
               teams: Array.from(selectedTeams),
               depthLevel: parseInt(document.getElementById('depth-level').value, 10),
               autoAdvance: document.getElementById('auto-advance').checked,
+              pinnedAgents: Array.from(pinnedAgents),
             }),
           });
 

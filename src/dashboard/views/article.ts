@@ -43,6 +43,7 @@ export interface ArticleDetailData {
   flashMessage?: string;
   errorMessage?: string;
   autoAdvanceActive?: boolean;
+  pinnedAgents?: Array<{ agent_name: string; role: string | null }>;
 }
 
 function parseTeams(raw: string | null): string[] {
@@ -154,7 +155,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive } = data;
+  const { config, article, transitions, reviews, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive, pinnedAgents } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -204,7 +205,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           ${renderUsagePanel(usageEvents ?? [])}
           ${renderStageRunsPanel(stageRuns ?? [])}
           ${renderAuditLog(transitions)}
-          ${renderArticleMetadata(article)}
+          ${renderArticleMetadata(article, pinnedAgents)}
           ${renderContextConfigShell(article.id)}
         </div>
       </div>
@@ -293,11 +294,11 @@ export function renderLiveArtifacts(article: Article, artifactNames?: string[]):
   return renderArtifactTabs(article, artifactNames);
 }
 
-export function renderLiveSidebar(article: Article, usageEvents: UsageEvent[], stageRuns: StageRun[], transitions: StageTransition[]): string {
+export function renderLiveSidebar(article: Article, usageEvents: UsageEvent[], stageRuns: StageRun[], transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
   return renderUsagePanel(usageEvents)
     + renderStageRunsPanel(stageRuns)
     + renderAuditLog(transitions)
-    + renderArticleMetadata(article)
+    + renderArticleMetadata(article, pinnedAgents)
     + renderContextConfigShell(article.id);
 }
 
@@ -841,8 +842,11 @@ export function renderContextConfigPanel(data: ContextConfigPanelData): string {
 
 // ── Article Metadata ─────────────────────────────────────────────────────────
 
-function renderArticleMetadata(article: Article): string {
+function renderArticleMetadata(article: Article, pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
   const teams = parseTeams(article.teams);
+  const pinned = pinnedAgents && pinnedAgents.length > 0
+    ? `<dt>Pinned Agents</dt><dd>${pinnedAgents.map(a => escapeHtml(a.agent_name.replace(/-/g, ' '))).join(', ')}</dd>`
+    : '';
   return `
     <section class="detail-section">
       <h2>Article Metadata</h2>
@@ -853,6 +857,7 @@ function renderArticleMetadata(article: Article): string {
         <dt>League</dt><dd>${escapeHtml(article.league)}</dd>
         <dt>Depth</dt><dd>${DEPTH_LABELS[article.depth_level] ?? article.depth_level}</dd>
         <dt>Status</dt><dd>${escapeHtml(article.status)}</dd>
+        ${pinned}
         <dt>Created</dt><dd>${formatDate(article.created_at)}</dd>
         ${article.target_publish_date ? `<dt>Target Publish</dt><dd>${escapeHtml(article.target_publish_date)}</dd>` : ''}
         ${article.publish_window ? `<dt>Publish Window</dt><dd>${escapeHtml(article.publish_window)}</dd>` : ''}

@@ -993,4 +993,31 @@ export class Repository {
 
     return this.getArticle(id)!;
   }
+
+  // ── Pinned agents (article_panels) ────────────────────────────────────────
+
+  /** Pin an expert agent to an article's panel. */
+  pinAgent(articleId: string, agentName: string, role?: string): void {
+    const stmt = this.db.prepare(
+      `INSERT OR IGNORE INTO article_panels (article_id, agent_name, role)
+       VALUES (?, ?, ?)`,
+    );
+    stmt.run(articleId, agentName, role ?? null);
+  }
+
+  /** Get all pinned agents for an article. */
+  getPinnedAgents(articleId: string): Array<{ agent_name: string; role: string | null }> {
+    const stmt = this.db.prepare(
+      'SELECT agent_name, role FROM article_panels WHERE article_id = ? ORDER BY id',
+    );
+    return stmt.all(articleId) as Array<{ agent_name: string; role: string | null }>;
+  }
+
+  /** Remove a pinned agent from an article. */
+  unpinAgent(articleId: string, agentName: string): void {
+    const stmt = this.db.prepare(
+      'DELETE FROM article_panels WHERE article_id = ? AND agent_name = ?',
+    );
+    stmt.run(articleId, agentName);
+  }
 }

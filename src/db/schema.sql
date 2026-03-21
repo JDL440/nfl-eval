@@ -138,6 +138,9 @@ CREATE TABLE IF NOT EXISTS article_panels (
     completed_at    TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_article_panels_unique
+  ON article_panels (article_id, agent_name);
+
 -- ─────────────────────────────────────────────
 -- DISCUSSION PROMPTS
 -- ─────────────────────────────────────────────

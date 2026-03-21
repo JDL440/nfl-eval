@@ -338,6 +338,7 @@ export function createApp(
         flashMessage,
         errorMessage,
         autoAdvanceActive,
+        pinnedAgents: repo.getPinnedAgents(id),
       }),
     );
   });
@@ -402,7 +403,19 @@ export function createApp(
   });
 
   app.get('/ideas/new', (c) => {
-    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name }));
+    // Build list of expert agents (non-production, non-team) for the pin selector
+    let expertAgents: string[] = [];
+    const runner = deps?.actionContext?.runner;
+    if (runner) {
+      const PROD = new Set(['lead', 'writer', 'editor', 'scribe', 'coordinator', 'panel-moderator', 'publisher']);
+      const TEAMS = new Set([
+        'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
+        'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
+        'nyj','phi','pit','sea','sf','tb','ten','wsh',
+      ]);
+      expertAgents = runner.listAgents().filter(a => !PROD.has(a) && !TEAMS.has(a));
+    }
+    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, expertAgents }));
   });
 
   app.get('/config', (c) => {
@@ -634,6 +647,7 @@ export function createApp(
       const teams: string[] = Array.isArray(body.teams) ? body.teams : [];
       const depthLevel = [1, 2, 3, 4].includes(body.depthLevel) ? body.depthLevel : 2;
       const autoAdvance = body.autoAdvance === true;
+      const pinnedAgents: string[] = Array.isArray(body.pinnedAgents) ? body.pinnedAgents.filter((a: unknown) => typeof a === 'string' && a.length > 0) : [];
       const actionContext = deps?.actionContext;
 
       let ideaContent: string;
@@ -707,6 +721,11 @@ export function createApp(
         league: config.league,
         depth_level: depthLevel,
       });
+
+      // Store pinned expert agents
+      for (const agentName of pinnedAgents) {
+        repo.pinAgent(slug, agentName);
+      }
 
       repo.artifacts.put(slug, 'idea.md', ideaContent);
       if (ideaThinking) {
@@ -1070,6 +1089,7 @@ export function createApp(
       repo.getUsageEvents(id),
       repo.getStageRuns(id),
       repo.getStageTransitions(id),
+      repo.getPinnedAgents(id),
     ));
   });
 

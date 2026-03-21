@@ -302,10 +302,24 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
     const roster = buildAgentRoster(ctx.runner);
     const depthLevel = article.depth_level ?? 2;
 
+    // Check for pinned agents
+    const pinnedAgents = ctx.repo.getPinnedAgents(articleId);
+    const pinnedSection = pinnedAgents.length > 0
+      ? [
+          '',
+          '## Required Agents (must be included)',
+          'The following agents have been pinned by the user and MUST appear on the panel:',
+          ...pinnedAgents.map(a => `- **${a.agent_name}**${a.role ? ` — ${a.role}` : ''}`),
+          '',
+          'Include these agents first, then fill remaining slots from the roster.',
+        ].join('\n')
+      : '';
+
     const task = [
       'Select a panel of analysts for this discussion from the available roster.',
       '',
       `Depth Level: ${depthLevel} (${depthLevel === 1 ? '2 agents max' : depthLevel === 2 ? '3-4 agents' : '4-5 agents'})`,
+      pinnedSection,
       '',
       '## Available Agents',
       roster,
@@ -313,10 +327,11 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       'Rules:',
       '- Always include the relevant team agent for the primary team',
       '- Always include at least one specialist',
+      pinnedAgents.length > 0 ? '- Always include the required/pinned agents listed above' : '',
       '- Select agents whose expertise matches the article topic',
       '- Panel size must respect the depth level limits',
       '- Each panelist should have a distinct analytical lane',
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     const result = await ctx.runner.run({
       agentName: 'lead',
