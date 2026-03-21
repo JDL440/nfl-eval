@@ -72,7 +72,21 @@ export function requirePanelComposition(store: ArtifactStore, articleId: string)
   if (!store.exists(articleId, 'panel-composition.md')) {
     return { passed: false, reason: 'Panel composition has not been generated yet' };
   }
-  return { passed: true, reason: 'Panel composition ready' };
+  const content = store.get(articleId, 'panel-composition.md');
+  if (!content || content.trim().length === 0) {
+    return { passed: false, reason: 'Panel composition is empty' };
+  }
+  // Count identifiable panel member lines (- Name, * Name, or numbered list)
+  const memberLines = content.split('\n').filter(line =>
+    /^\s*[-*]\s+\S/.test(line) || /^\s*\d+[.)]\s+\S/.test(line)
+  );
+  const memberCount = memberLines.length;
+  return {
+    passed: true,
+    reason: memberCount > 0
+      ? `Panel composition ready (${memberCount} members)`
+      : 'Panel composition ready',
+  };
 }
 
 export function requireDiscussionSummary(store: ArtifactStore, articleId: string): GuardResult {

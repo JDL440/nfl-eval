@@ -21,6 +21,7 @@ import type { PipelineEngine } from '../pipeline/engine.js';
 import type { AppConfig } from '../config/index.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Article, Stage } from '../types.js';
+import { autoAdvanceArticle, type ActionContext } from '../pipeline/actions.js';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -200,8 +201,9 @@ export function createMCPServer(options: {
   repo: Repository;
   engine: PipelineEngine;
   config: AppConfig;
+  actionContext?: ActionContext;
 }): Server {
-  const { repo, engine, config } = options;
+  const { repo, engine, config, actionContext } = options;
 
   const server = new Server(
     { name: 'nfl-eval-pipeline', version: '2.0.0' },
@@ -302,6 +304,35 @@ export function createMCPServer(options: {
           const article = repo.getArticle(articleId);
           if (!article) return errorResult(`Article '${articleId}' not found`);
 
+          // When ActionContext is available, use autoAdvanceArticle for full
+          // REVISE-aware pipeline execution (single step: maxStage = currentStage + 1)
+          if (actionContext) {
+            const fromStage = article.current_stage;
+            const result = await autoAdvanceArticle(articleId, actionContext, {
+              maxStage: Math.min(fromStage + 1, 7) as any,
+            });
+
+            if (result.error) {
+              return errorResult(
+                `Cannot advance '${articleId}' from stage ${fromStage} ` +
+                `(${STAGE_NAMES[fromStage]}): ${result.error}`,
+              );
+            }
+
+            const updated = repo.getArticle(articleId);
+            return textResult({
+              advanced: true,
+              article_id: articleId,
+              from_stage: fromStage,
+              to_stage: updated?.current_stage ?? fromStage,
+              from_name: STAGE_NAMES[fromStage],
+              to_name: STAGE_NAMES[(updated?.current_stage ?? fromStage) as Stage],
+              steps: result.steps,
+              revisionCount: result.revisionCount,
+            });
+          }
+
+          // Lightweight mode: guard check + advance only
           const fromStage = article.current_stage;
           const check = engine.canAdvance(articleId, fromStage);
           if (!check.allowed) {

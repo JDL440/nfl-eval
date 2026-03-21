@@ -12,6 +12,7 @@ import type { PipelineEngine } from './engine.js';
 import type { AgentRunner, AgentRunResult } from '../agents/runner.js';
 import type { PipelineAuditor } from './audit.js';
 import type { AppConfig } from '../config/index.js';
+import { extractVerdict } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -30,6 +31,7 @@ export interface ActionResult {
   artifactPath?: string;
   error?: string;
   duration: number;
+  outcome?: 'APPROVED' | 'REVISE' | 'REJECT';
 }
 
 export type StageAction = (articleId: string, ctx: ActionContext) => Promise<ActionResult>;
@@ -450,9 +452,16 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
 
     const content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
 
+    // Detect whether this is a revision (editor-review.md exists from a previous pass)
+    const editorReview = ctx.repo.artifacts.get(articleId, 'editor-review.md');
+    const isRevision = editorReview != null;
+    const task = isRevision
+      ? 'Revise the article draft based on the editor feedback provided. Address all issues raised in the editor review while preserving the article\'s strengths.'
+      : 'Write an analytical article draft based on the panel discussion.';
+
     const result = await ctx.runner.run({
       agentName: 'writer',
-      task: 'Write the full article draft from the panel discussion summary.',
+      task,
       skills: ['substack-article'],
       articleContext: {
         slug: articleId,
@@ -497,7 +506,14 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     writeAgentResult(ctx.repo, articleId, 'editor-review.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor', result);
-    return { success: true, duration: Date.now() - start };
+
+    // Extract semantic verdict from the editor review content
+    const verdict = extractVerdict(result.content);
+    return {
+      success: true,
+      duration: Date.now() - start,
+      outcome: verdict ? verdict as ActionResult['outcome'] : undefined,
+    };
   } catch (err) {
     return {
       success: false,
@@ -720,4 +736,182 @@ export async function executeTransition(
   });
 
   return actionResult;
+}
+
+// ── Auto-advance types ──────────────────────────────────────────────────────
+
+export interface AutoAdvanceOptions {
+  maxStage?: number;        // Default 7 (stop before publish)
+  maxRevisions?: number;    // Default 2
+  onStep?: (step: AutoAdvanceStep) => void;  // Callback for SSE events
+  generateImages?: (articleId: string) => Promise<void>;  // Image gen hook
+  repo?: Repository;        // Required when ctx is null (lightweight mode)
+  engine?: PipelineEngine;  // Required when ctx is null (lightweight mode)
+}
+
+export interface AutoAdvanceStep {
+  type: 'advance' | 'regress' | 'error' | 'working';
+  from: number;
+  to: number;
+  action: string;
+  duration?: number;
+  error?: string;
+}
+
+export interface AutoAdvanceResult {
+  steps: AutoAdvanceStep[];
+  finalStage: number;
+  error?: string;
+  revisionCount: number;
+}
+
+// ── Auto-advance engine ─────────────────────────────────────────────────────
+
+/**
+ * Advance an article through the pipeline as far as possible.
+ *
+ * When an ActionContext is provided, runs the full agent-powered pipeline
+ * (execute transition → write artifact → advance). Detects REVISE outcomes
+ * via the `outcome` field on ActionResult and regresses to stage 4 for
+ * re-drafting, up to `maxRevisions` times.
+ *
+ * When no ActionContext is provided (lightweight mode), only checks guards
+ * and advances — no agent execution.
+ */
+export async function autoAdvanceArticle(
+  articleId: string,
+  ctx: ActionContext | null,
+  options?: AutoAdvanceOptions,
+): Promise<AutoAdvanceResult> {
+  const maxStage = options?.maxStage ?? 7;
+  const maxRevisions = options?.maxRevisions ?? 2;
+  const onStep = options?.onStep;
+  const generateImages = options?.generateImages;
+
+  const repo = ctx?.repo ?? options?.repo ?? null;
+  const engine = ctx?.engine ?? options?.engine ?? null;
+
+  // We need at least a repo and engine; for lightweight mode they come from ctx or are passed in.
+  // In lightweight mode (ctx === null), caller should use the overload that passes engine separately.
+  if (!repo || !engine) {
+    return { steps: [], finalStage: 0, error: 'No repository or engine available', revisionCount: 0 };
+  }
+
+  let revisionCount = 0;
+  const steps: AutoAdvanceStep[] = [];
+  let lastError: string | undefined;
+
+  let current = repo.getArticle(articleId);
+  if (!current) {
+    return { steps: [], finalStage: 0, error: `Article '${articleId}' not found`, revisionCount: 0 };
+  }
+
+  while (current.current_stage < maxStage) {
+    if (ctx) {
+      // Emit working status before starting the stage
+      onStep?.({
+        type: 'working',
+        from: current.current_stage,
+        to: current.current_stage,
+        action: `Working on Stage ${current.current_stage} — ${STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown'}`,
+      });
+
+      // Full execution: run agent → write artifact → advance
+      const result = await executeTransition(articleId, current.current_stage as Stage, ctx);
+      if (!result.success) {
+        lastError = result.error;
+
+        onStep?.({
+          type: 'error',
+          from: current.current_stage,
+          to: current.current_stage,
+          action: `Stage ${current.current_stage} failed`,
+          error: result.error,
+          duration: result.duration,
+        });
+
+        // Handle REVISE/PIVOT: use semantic outcome field first, fall back to regex on error
+        const isRevise =
+          result.outcome === 'REVISE' ||
+          ((current.current_stage === 5 || current.current_stage === 6) &&
+            /REVISE|PIVOT|not APPROVED/i.test(result.error ?? ''));
+
+        if (isRevise) {
+          revisionCount++;
+          if (revisionCount <= maxRevisions) {
+            try {
+              engine.regress(articleId, current.current_stage as Stage, 4 as Stage, 'auto-advance', `Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`);
+              repo.clearArtifactsAfterStage(articleId, 4);
+
+              const regressStep: AutoAdvanceStep = {
+                type: 'regress',
+                from: current.current_stage,
+                to: 4,
+                action: `Sent back to Stage 4 — Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`,
+                duration: result.duration,
+              };
+              steps.push(regressStep);
+              onStep?.(regressStep);
+
+              current = repo.getArticle(articleId)!;
+              continue; // Retry from stage 4
+            } catch { /* ignore regression failure, fall through to break */ }
+          } else {
+            lastError = `Editor requested revisions ${revisionCount} times — stopping auto-advance`;
+          }
+        }
+        break;
+      }
+
+      const updated = repo.getArticle(articleId)!;
+      const advanceStep: AutoAdvanceStep = {
+        type: 'advance',
+        from: current.current_stage,
+        to: updated.current_stage,
+        action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage] ?? 'Unknown'}`,
+        duration: result.duration,
+      };
+      steps.push(advanceStep);
+      onStep?.(advanceStep);
+
+      current = updated;
+
+      // Auto-generate images after draft is written (stage 5 reached)
+      if (current.current_stage === 5 && generateImages) {
+        await generateImages(articleId);
+      }
+    } else {
+      // Lightweight mode (no agents): just check guards and advance
+      const check = engine.canAdvance(articleId, current.current_stage as Stage);
+      if (!check.allowed) {
+        lastError = check.reason;
+        break;
+      }
+
+      try {
+        const newStage = engine.advance(articleId, current.current_stage as Stage, 'auto-advance');
+        const advanceStep: AutoAdvanceStep = {
+          type: 'advance',
+          from: current.current_stage,
+          to: newStage,
+          action: `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}`,
+        };
+        steps.push(advanceStep);
+        onStep?.(advanceStep);
+
+        current = repo.getArticle(articleId)!;
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+        break;
+      }
+    }
+  }
+
+  current = repo.getArticle(articleId)!;
+  return {
+    steps,
+    finalStage: current.current_stage,
+    error: lastError,
+    revisionCount,
+  };
 }

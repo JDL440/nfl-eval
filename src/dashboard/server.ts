@@ -65,7 +65,8 @@ import { markdownToProseMirror } from '../services/prosemirror.js';
 import { renderArticlePreview, parseImageManifest } from './views/preview.js';
 import type { SubstackService } from '../services/substack.js';
 import type { TwitterService } from '../services/twitter.js';
-import { executeTransition, type ActionContext } from '../pipeline/actions.js';
+import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
+import { assertPipelineConfigValid } from '../pipeline/validation.js';
 import {
   CONTEXT_CONFIG,
   getArticleContextOverrides,
@@ -150,6 +151,9 @@ export function createApp(
   config: AppConfig,
   deps?: { substackService?: SubstackService; twitterService?: TwitterService; actionContext?: ActionContext; imageService?: ImageService },
 ): Hono {
+  // Validate pipeline configuration consistency at startup
+  assertPipelineConfigValid();
+
   const app = new Hono();
   const substackService = deps?.substackService;
   const twitterService = deps?.twitterService;
@@ -745,97 +749,37 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.json({ error: 'Article not found' }, 404);
 
-    const maxStage = 7; // Stop before publish
-    const maxRevisions = 2; // Max REVISE loops before giving up
-    let revisionCount = 0;
-    const engine = new PipelineEngine(repo);
-    const steps: { from: number; to: number; action: string; duration?: number }[] = [];
-    let lastError: string | undefined;
+    const ctx = deps?.actionContext ?? null;
+    const engine = ctx?.engine ?? new PipelineEngine(repo);
 
-    let current = repo.getArticle(id)!;
-
-    // If we have an ActionContext (agents available), use executeTransition
-    const ctx = deps?.actionContext;
-
-    while (current.current_stage < maxStage) {
-      if (ctx) {
-        // Emit working status before starting the stage
-        const workingStageName = STAGE_NAMES[current.current_stage as Stage] ?? `Stage ${current.current_stage}`;
-        bus.emit({ type: 'stage_working', articleId: id, data: { stage: current.current_stage, stageName: workingStageName }, timestamp: new Date().toISOString() });
-
-        // Full execution: run agent → write artifact → advance
-        const result = await executeTransition(id, current.current_stage as Stage, ctx);
-        if (!result.success) {
-          console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
-          lastError = result.error;
-          bus.emit({ type: 'stage_error', articleId: id, data: { stage: current.current_stage, error: result.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
-          // Handle REVISE/PIVOT: regress to stage 4 and retry (up to maxRevisions times)
-          if ((current.current_stage === 5 || current.current_stage === 6) && /REVISE|PIVOT|not APPROVED/i.test(result.error ?? '')) {
-            revisionCount++;
-            if (revisionCount <= maxRevisions) {
-              try {
-                engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', `Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`);
-                steps.push({
-                  from: current.current_stage,
-                  to: 4,
-                  action: `Sent back to Stage 4 — Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`,
-                  duration: result.duration,
-                });
-                bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: 4, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
-                current = repo.getArticle(id)!;
-                continue; // Retry from stage 4
-              } catch { /* ignore regression failure, fall through to break */ }
-            } else {
-              lastError = `Editor requested revisions ${revisionCount} times — stopping auto-advance`;
-            }
-          }
-          break;
+    const result = await autoAdvanceArticle(id, ctx, {
+      maxStage: 7,
+      maxRevisions: 2,
+      repo,
+      engine,
+      onStep: (step: AutoAdvanceStep) => {
+        if (step.type === 'working') {
+          bus.emit({ type: 'stage_working', articleId: id, data: { stage: step.from, stageName: STAGE_NAMES[step.from as Stage] ?? `Stage ${step.from}` }, timestamp: new Date().toISOString() });
+        } else if (step.type === 'error') {
+          console.warn(`[auto-advance] Stage ${step.from} failed: ${step.error}`);
+          bus.emit({ type: 'stage_error', articleId: id, data: { stage: step.from, error: step.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
+        } else if (step.type === 'regress') {
+          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
+        } else if (step.type === 'advance') {
+          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance' }, timestamp: new Date().toISOString() });
         }
+      },
+      generateImages: autoGenerateImages,
+    });
 
-        const updated = repo.getArticle(id)!;
-        steps.push({
-          from: current.current_stage,
-          to: updated.current_stage,
-          action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage]}`,
-          duration: result.duration,
-        });
-        bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: updated.current_stage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
-        current = updated;
-
-        // Auto-generate images after draft is written (before editor review)
-        if (current.current_stage === 5) await autoGenerateImages(id);
-      } else {
-        // Lightweight mode (no agents): just check guards and advance
-        const check = engine.canAdvance(id, current.current_stage as Stage);
-        if (!check.allowed) {
-          lastError = check.reason;
-          break;
-        }
-
-        try {
-          const newStage = engine.advance(id, current.current_stage as Stage, 'auto-advance');
-          steps.push({
-            from: current.current_stage,
-            to: newStage,
-            action: `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}`,
-          });
-          bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: newStage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
-          current = repo.getArticle(id)!;
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : String(err);
-          break;
-        }
-      }
-    }
-
-    current = repo.getArticle(id)!;
+    const current = repo.getArticle(id)!;
     return c.json({
       id,
       currentStage: current.current_stage,
-      steps,
-      stoppedAt: current.current_stage,
-      reason: lastError
-        ?? (current.current_stage >= maxStage
+      steps: result.steps,
+      stoppedAt: result.finalStage,
+      reason: result.error
+        ?? (result.finalStage >= 7
           ? 'Reached Stage 7 — ready for publish review'
           : engine.canAdvance(id, current.current_stage as Stage).reason),
     });
@@ -1130,79 +1074,42 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.html(renderAdvanceResult(false, 'Article not found'), 404);
 
-    // Reuse the same auto-advance logic as POST /api/articles/:id/auto-advance
-    const maxStage = 7;
-    const maxRevisions = 2;
-    let revisionCount = 0;
-    const engine = new PipelineEngine(repo);
-    const steps: { from: number; to: number; action: string; duration?: number }[] = [];
-    let lastError: string | undefined;
+    const ctx = deps?.actionContext ?? null;
 
-    let current = repo.getArticle(id)!;
-    const ctx = deps?.actionContext;
-
-    while (current.current_stage < maxStage) {
-      if (ctx) {
-        const workingStageName = STAGE_NAMES[current.current_stage as Stage] ?? `Stage ${current.current_stage}`;
-        bus.emit({ type: 'stage_working', articleId: id, data: { stage: current.current_stage, stageName: workingStageName }, timestamp: new Date().toISOString() });
-
-        const result = await executeTransition(id, current.current_stage as Stage, ctx);
-        if (!result.success) {
-          console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
-          lastError = result.error;
-          bus.emit({ type: 'stage_error', articleId: id, data: { stage: current.current_stage, error: result.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
-          if ((current.current_stage === 5 || current.current_stage === 6) && /REVISE|PIVOT|not APPROVED/i.test(result.error ?? '')) {
-            revisionCount++;
-            if (revisionCount <= maxRevisions) {
-              try {
-                engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', `Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`);
-                steps.push({ from: current.current_stage, to: 4, action: `Sent back to Stage 4 — Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`, duration: result.duration });
-                bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: 4, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
-                current = repo.getArticle(id)!;
-                continue;
-              } catch { /* ignore regression failure, fall through to break */ }
-            } else {
-              lastError = `Editor requested revisions ${revisionCount} times — stopping auto-advance`;
-            }
-          }
-          break;
+    const result = await autoAdvanceArticle(id, ctx, {
+      maxStage: 7,
+      maxRevisions: 2,
+      repo,
+      engine: new PipelineEngine(repo),
+      onStep: (step: AutoAdvanceStep) => {
+        if (step.type === 'working') {
+          bus.emit({ type: 'stage_working', articleId: id, data: { stage: step.from, stageName: STAGE_NAMES[step.from as Stage] ?? `Stage ${step.from}` }, timestamp: new Date().toISOString() });
+        } else if (step.type === 'error') {
+          console.warn(`[auto-advance] Stage ${step.from} failed: ${step.error}`);
+          bus.emit({ type: 'stage_error', articleId: id, data: { stage: step.from, error: step.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
+        } else if (step.type === 'regress') {
+          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance-regress' }, timestamp: new Date().toISOString() });
+        } else if (step.type === 'advance') {
+          bus.emit({ type: 'stage_changed', articleId: id, data: { from: step.from, to: step.to, action: 'auto-advance' }, timestamp: new Date().toISOString() });
         }
-        const updated = repo.getArticle(id)!;
-        steps.push({ from: current.current_stage, to: updated.current_stage, action: `Advanced to Stage ${updated.current_stage} — ${STAGE_NAMES[updated.current_stage as Stage]}`, duration: result.duration });
-        bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: updated.current_stage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
-        current = updated;
+      },
+      generateImages: autoGenerateImages,
+    });
 
-        // Auto-generate images after draft is written (before editor review)
-        if (current.current_stage === 5) await autoGenerateImages(id);
-      } else {
-        const check = engine.canAdvance(id, current.current_stage as Stage);
-        if (!check.allowed) { lastError = check.reason; break; }
-        try {
-          const newStage = engine.advance(id, current.current_stage as Stage, 'auto-advance');
-          steps.push({ from: current.current_stage, to: newStage, action: `Advanced to Stage ${newStage} — ${STAGE_NAMES[newStage]}` });
-          bus.emit({ type: 'stage_changed', articleId: id, data: { from: current.current_stage, to: newStage, action: 'auto-advance' }, timestamp: new Date().toISOString() });
-          current = repo.getArticle(id)!;
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : String(err);
-          break;
-        }
-      }
-    }
+    const current = repo.getArticle(id)!;
 
-    current = repo.getArticle(id)!;
-
-    if (lastError) {
-      const stepsHtml = steps.length > 0
-        ? `<div style="margin-bottom:0.5rem">Traversed ${steps.length} stage(s) before failing.</div>`
+    if (result.error) {
+      const stepsHtml = result.steps.length > 0
+        ? `<div style="margin-bottom:0.5rem">Traversed ${result.steps.length} stage(s) before failing.</div>`
         : '';
       bus.emit({ type: 'stage_changed', articleId: id, data: { stage: current.current_stage, action: 'auto-advance-error' }, timestamp: new Date().toISOString() });
       return c.html(
-        `<div class="advance-result advance-error">${stepsHtml}❌ ${escapeHtml(lastError)}</div>`,
+        `<div class="advance-result advance-error">${stepsHtml}❌ ${escapeHtml(result.error)}</div>`,
         200,
       );
     }
 
-    const stageList = steps.map(s => `Stage ${s.to}`).join(' → ');
+    const stageList = result.steps.map(s => `Stage ${s.to}`).join(' → ');
     return c.html(
       `<div class="advance-result advance-success">✅ Auto-advanced: ${escapeHtml(stageList)}. Now at Stage ${current.current_stage} — ${escapeHtml(STAGE_NAMES[current.current_stage as Stage] ?? 'Unknown')}.</div>`,
       200,

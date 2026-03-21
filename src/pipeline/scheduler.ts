@@ -10,7 +10,7 @@ import type { Stage } from '../types.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Repository } from '../db/repository.js';
 import type { PipelineEngine } from './engine.js';
-import { executeTransition, type ActionContext } from './actions.js';
+import { autoAdvanceArticle, type ActionContext } from './actions.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
@@ -97,6 +97,8 @@ export class PipelineScheduler {
 
   /**
    * Advance a single article to its next stage.
+   * When an actionContext is provided, uses autoAdvanceArticle for full agent
+   * execution with REVISE handling. Otherwise uses lightweight guard-only path.
    */
   async advanceSingle(
     articleId: string,
@@ -117,12 +119,15 @@ export class PipelineScheduler {
     }
 
     if (actionContext) {
-      // Full execution: run agent → write artifact → advance
-      const result = await executeTransition(articleId, article.current_stage as Stage, actionContext);
-      if (!result.success) {
+      // Full execution with REVISE handling via autoAdvanceArticle
+      const result = await autoAdvanceArticle(articleId, actionContext, {
+        maxStage: (article.current_stage + 1) as number, // advance one step only
+        maxRevisions: 2,
+      });
+      if (result.error) {
         return { success: false, error: result.error };
       }
-      return { success: true };
+      return { success: result.finalStage > article.current_stage };
     }
 
     // Lightweight mode: just check guards and advance

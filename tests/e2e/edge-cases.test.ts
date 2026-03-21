@@ -29,7 +29,7 @@ import { AgentMemory } from '../../src/agents/memory.js';
 import { LLMGateway } from '../../src/llm/gateway.js';
 import { MockProvider } from '../../src/llm/providers/mock.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
-import { executeTransition, type ActionContext } from '../../src/pipeline/actions.js';
+import { executeTransition, autoAdvanceArticle, type ActionContext } from '../../src/pipeline/actions.js';
 
 // ── Test infrastructure ──────────────────────────────────────────────────────
 

@@ -664,25 +664,45 @@ export class Repository {
 
   /** Delete artifacts that belong to stages after toStage. */
   clearArtifactsAfterStage(articleId: string, toStage: number): string[] {
-    const ARTIFACT_STAGE: Record<string, number> = {
-      'idea.md': 1,
-      'discussion-prompt.md': 2,
-      'panel-composition.md': 3,
-      'discussion-summary.md': 4,
-      'draft.md': 5,
-      'editor-review.md': 6,
-    };
+    // Pattern-based: artifact name → minimum stage it belongs to
+    const ARTIFACT_PATTERNS: Array<{ pattern: RegExp; stage: number }> = [
+      { pattern: /^idea\.md$/, stage: 1 },
+      { pattern: /^discussion-prompt\.md$/, stage: 2 },
+      { pattern: /^panel-composition\.md$/, stage: 3 },
+      { pattern: /^panel-.*\.md$/, stage: 4 },           // individual panelist contributions
+      { pattern: /^discussion-summary\.md$/, stage: 4 },
+      { pattern: /^draft\.md$/, stage: 5 },
+      { pattern: /^editor-review(-\d+)?\.md$/, stage: 6 }, // numbered reviews too
+      { pattern: /^publisher-pass\.md$/, stage: 7 },        // was missing!
+      { pattern: /^images\.json$/, stage: 5 },              // image manifest
+    ];
 
+    const allArtifacts = this.artifacts.list(articleId);
     const cleared: string[] = [];
-    for (const [artifact, minStage] of Object.entries(ARTIFACT_STAGE)) {
-      if (minStage > toStage) {
-        const existed = this.artifacts.get(articleId, artifact);
-        if (existed != null) {
-          this.artifacts.delete(articleId, artifact);
-          cleared.push(artifact);
+
+    for (const artifact of allArtifacts) {
+      if (artifact.name === '_config.json') continue; // never delete config
+
+      // Check thinking traces: X.thinking.md belongs to same stage as X.md
+      const thinkingMatch = artifact.name.match(/^(.+)\.thinking\.md$/);
+      if (thinkingMatch) {
+        const parentName = `${thinkingMatch[1]}.md`;
+        const parentPattern = ARTIFACT_PATTERNS.find(p => p.pattern.test(parentName));
+        if (parentPattern && parentPattern.stage > toStage) {
+          this.artifacts.delete(articleId, artifact.name);
+          cleared.push(artifact.name);
         }
+        continue;
+      }
+
+      // Check regular artifacts
+      const matched = ARTIFACT_PATTERNS.find(p => p.pattern.test(artifact.name));
+      if (matched && matched.stage > toStage) {
+        this.artifacts.delete(articleId, artifact.name);
+        cleared.push(artifact.name);
       }
     }
+
     return cleared;
   }
 
