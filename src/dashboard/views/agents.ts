@@ -49,8 +49,16 @@ export function extractIdentity(content: string): string {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-    // Strip leading > for blockquote identity lines
-    const clean = trimmed.replace(/^>\s*/, '');
+    // Strip blockquote prefix, list markers, and markdown formatting
+    let clean = trimmed
+      .replace(/^>\s*/, '')       // blockquote >
+      .replace(/^[-*+]\s+/, '')   // list markers - * +
+      .replace(/\*\*(.+?)\*\*/g, '$1')  // **bold**
+      .replace(/\*(.+?)\*/g, '$1')      // *italic*
+      .replace(/__(.+?)__/g, '$1')      // __bold__
+      .replace(/_(.+?)_/g, '$1')        // _italic_
+      .replace(/`(.+?)`/g, '$1')        // `code`
+      .trim();
     if (clean) return clean;
   }
   return '';

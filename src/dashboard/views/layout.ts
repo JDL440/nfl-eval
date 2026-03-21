@@ -12,11 +12,15 @@ export function escapeHtml(str: string): string {
 
 export function formatDate(iso: string | null): string {
   if (!iso) return '—';
-  const d = new Date(iso);
+  // SQLite datetime('now') produces 'YYYY-MM-DD HH:MM:SS' in UTC without Z suffix.
+  // Normalize to ISO 8601 so JS Date parses it as UTC.
+  const normalized = iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z';
+  const d = new Date(normalized);
   if (isNaN(d.getTime())) return iso;
   const now = Date.now();
   const diff = now - d.getTime();
 
+  if (diff < 0) return 'just now';
   if (diff < 60_000) return 'just now';
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
