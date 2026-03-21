@@ -346,10 +346,18 @@ export function createApp(
       'DATA_SOURCE',
     ];
 
-    const envStatus = envVars.map((key) => ({
-      key,
-      isSet: Boolean(process.env[key] && String(process.env[key]).trim()),
-    }));
+    // Non-secret env vars whose values we can safely display
+    const displayableVars = new Set(['LLM_PROVIDER', 'LMSTUDIO_URL', 'SUBSTACK_PUBLICATION_URL', 'DATA_SOURCE']);
+    const envDefaultValues: Record<string, string> = { DATA_SOURCE: 'scripts' };
+
+    const envStatus = envVars.map((key) => {
+      const rawVal = process.env[key] ? String(process.env[key]).trim() : '';
+      const isSet = Boolean(rawVal);
+      const displayValue = displayableVars.has(key)
+        ? (rawVal || envDefaultValues[key] ? `${rawVal || envDefaultValues[key]}${!rawVal && envDefaultValues[key] ? ' (default)' : ''}` : undefined)
+        : undefined;
+      return { key, isSet, displayValue };
+    });
 
     const usingMock = process.env['MOCK_LLM'] === '1';
     const usingLMStudio = process.env['LLM_PROVIDER'] === 'lmstudio' || Boolean(process.env['LMSTUDIO_URL']);

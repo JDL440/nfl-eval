@@ -1612,9 +1612,6 @@ a:hover { text-decoration: underline; }
   padding: 0.75rem 1.5rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
   box-shadow: var(--shadow);
 }
 .preview-toolbar .back-link {

@@ -646,8 +646,35 @@ export async function executeTransition(
     return result;
   }
 
+  // 1b. Record stage run start
+  let stageRunId: string | undefined;
+  try {
+    stageRunId = ctx.repo.startStageRun({
+      articleId,
+      stage: fromStage,
+      surface: actionName,
+      actor: actionName,
+    });
+  } catch {
+    // Non-fatal — don't block the action if stage_run recording fails
+  }
+
   // 2. Run the action
   const actionResult = await action(articleId, ctx);
+
+  // 2b. Finish stage run
+  if (stageRunId) {
+    try {
+      ctx.repo.finishStageRun(
+        stageRunId,
+        actionResult.success ? 'completed' : 'failed',
+        actionResult.error ?? null,
+        actionResult.artifactPath ?? null,
+      );
+    } catch {
+      // Non-fatal
+    }
+  }
 
   if (!actionResult.success) {
     ctx.auditor.log({

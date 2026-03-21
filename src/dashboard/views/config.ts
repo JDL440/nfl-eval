@@ -7,6 +7,8 @@ import { renderLayout, escapeHtml } from './layout.js';
 export interface EnvVarStatus {
   key: string;
   isSet: boolean;
+  /** Optional displayed value (only for non-secret vars). */
+  displayValue?: string;
 }
 
 export interface LLMProviderInfo {
@@ -61,16 +63,20 @@ function renderEnvStatusTable(envStatus: EnvVarStatus[]): string {
   return `
     <table class="artifact-table">
       <thead>
-        <tr><th>Environment Variable</th><th>Status</th></tr>
+        <tr><th>Environment Variable</th><th>Status</th><th>Value</th></tr>
       </thead>
       <tbody>
         ${envStatus.map(v => {
           const badgeClass = v.isSet ? 'badge-verdict-approved' : 'badge-verdict-reject';
           const label = v.isSet ? 'SET' : 'NOT SET';
+          const valueCell = v.displayValue
+            ? `<td><code>${escapeHtml(v.displayValue)}</code></td>`
+            : '<td class="muted">—</td>';
           return `
             <tr>
               <td><code>${escapeHtml(v.key)}</code></td>
               <td><span class="badge ${badgeClass}">${label}</span></td>
+              ${valueCell}
             </tr>`;
         }).join('')}
       </tbody>
@@ -117,7 +123,7 @@ export function renderConfigPage(data: ConfigPageData): string {
 
       <section class="detail-section" id="env-status">
         <h2>🌱 Environment Status</h2>
-        <p class="subtitle">Values are never shown — only whether each variable is set.</p>
+        <p class="subtitle">Secret keys show SET / NOT SET only. Non-secret URLs and modes are displayed.</p>
         ${renderEnvStatusTable(envStatus)}
       </section>
     </div>`;
