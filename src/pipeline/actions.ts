@@ -465,6 +465,24 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
+    // Run lightweight fact-check on panel discussion output (if available)
+    const discussionArtifact = ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
+    if (discussionArtifact) {
+      const factCheckResult = await ctx.runner.run({
+        agentName: 'lead',
+        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists.',
+        skills: ['fact-checking'],
+        articleContext: {
+          slug: articleId,
+          title: article.title,
+          stage: article.current_stage,
+          content: discussionArtifact,
+        },
+      });
+      writeAgentResult(ctx.repo, articleId, 'panel-factcheck.md', factCheckResult);
+      recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-factcheck', factCheckResult);
+    }
+
     const content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
 
     // Detect whether this is a revision (editor-review.md exists from a previous pass)

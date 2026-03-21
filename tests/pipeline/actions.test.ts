@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   mkdtempSync,
   mkdirSync,
@@ -791,5 +791,91 @@ describe('Token usage recording', () => {
     expect(event.event_type).toBe('completed');
     expect(event.prompt_tokens).toBe(500);
     expect(event.output_tokens).toBe(200);
+  });
+});
+
+// ── Fact-check preflight in writeDraft ──────────────────────────────────────
+
+describe('writeDraft fact-check preflight', () => {
+  let fixtures: TestFixtures;
+
+  beforeEach(() => {
+    fixtures = createFixtures();
+    resetContextConfigCache();
+  });
+
+  afterEach(() => {
+    fixtures.memory.close();
+    fixtures.repo.close();
+    rmSync(fixtures.tempDir, { recursive: true, force: true });
+    resetContextConfigCache();
+  });
+
+  it('runs fact-check then writer when discussion-summary.md exists', async () => {
+    createArticleWithStage(fixtures, 'test-fc', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+    });
+
+    const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+
+    const result = await STAGE_ACTIONS.writeDraft('test-fc', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    // Two runner calls: fact-check (lead) + draft (writer)
+    expect(runSpy).toHaveBeenCalledTimes(2);
+
+    const firstCall = runSpy.mock.calls[0][0];
+    expect(firstCall.agentName).toBe('lead');
+    expect(firstCall.skills).toContain('fact-checking');
+
+    const secondCall = runSpy.mock.calls[1][0];
+    expect(secondCall.agentName).toBe('writer');
+
+    runSpy.mockRestore();
+  });
+
+  it('stores panel-factcheck.md artifact', async () => {
+    createArticleWithStage(fixtures, 'test-fc-art', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-fc-art', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    const factCheck = fixtures.repo.artifacts.get('test-fc-art', 'panel-factcheck.md');
+    expect(factCheck).toBeTruthy();
+  });
+
+  it('skips fact-check when discussion-summary.md does not exist', async () => {
+    // Create article at stage 4 but WITHOUT discussion-summary.md —
+    // writeDraft will fail on the primary artifact read, but the fact-check
+    // should not have run. We manually add it later to isolate the skip.
+    fixtures.repo.createArticle({ id: 'test-fc-skip', title: 'Test: test-fc-skip' });
+    // Advance to stage 4
+    for (let s = 1; s < 4; s++) {
+      fixtures.repo.advanceStage('test-fc-skip', s, (s + 1) as Stage, 'test-setup');
+    }
+    // Only add idea.md (no discussion-summary.md)
+    fixtures.repo.artifacts.put('test-fc-skip', 'idea.md', '# Idea');
+
+    const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+
+    // This will fail because gatherContext needs discussion-summary.md as primary,
+    // but fact-check should have been skipped (no runner call for lead).
+    const result = await STAGE_ACTIONS.writeDraft('test-fc-skip', fixtures.ctx);
+
+    expect(result.success).toBe(false);
+    // Fact-check was skipped — no runner calls at all (writer also fails on missing primary)
+    const leadCalls = runSpy.mock.calls.filter(c => c[0].agentName === 'lead');
+    expect(leadCalls.length).toBe(0);
+    expect(fixtures.repo.artifacts.get('test-fc-skip', 'panel-factcheck.md')).toBeNull();
+
+    runSpy.mockRestore();
   });
 });
