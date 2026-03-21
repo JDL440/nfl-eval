@@ -24,7 +24,7 @@ export const CONTEXT_CONFIG: Record<string, StageContextEntry> = {
   generatePrompt:   { primary: 'idea.md',               include: [] },
   composePanel:     { primary: 'discussion-prompt.md',  include: ['idea.md'] },
   runDiscussion:    { primary: 'discussion-prompt.md',  include: [] },  // panel-composition injected separately
-  writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md'] },
+  writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'editor-review.md'] },
   runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md'] },
   runPublisherPass: { primary: 'draft.md',              include: ['editor-review.md'] },
 };
