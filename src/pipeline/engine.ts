@@ -5,7 +5,7 @@
  * prerequisite conditions before any advance is allowed.
  */
 
-import type { Stage, PublisherPass } from '../types.js';
+import type { Stage } from '../types.js';
 import { STAGE_NAMES } from '../types.js';
 import type { Repository } from '../db/repository.js';
 import type { ArtifactStore } from '../db/artifact-store.js';
@@ -47,23 +47,6 @@ export interface ValidationReport {
   currentStage: Stage;
   items: ValidationItem[];
 }
-
-// ── Publisher pass boolean check fields ──────────────────────────────────────
-
-const PUBLISHER_PASS_CHECKS: (keyof PublisherPass)[] = [
-  'title_final',
-  'subtitle_final',
-  'body_clean',
-  'section_assigned',
-  'tags_set',
-  'url_slug_set',
-  'cover_image_set',
-  'paywall_set',
-  'email_send',
-  'names_verified',
-  'numbers_current',
-  'no_stale_refs',
-];
 
 // ── Guard functions ─────────────────────────────────────────────────────────
 
@@ -182,31 +165,14 @@ export function requireEditorApproval(store: ArtifactStore, articleId: string): 
 }
 
 export function requirePublisherPass(
-  repo: Repository,
+  store: ArtifactStore,
   articleId: string,
 ): GuardResult {
-  const pass = repo.getPublisherPass(articleId);
-  if (pass == null) {
-    return { passed: false, reason: 'No publisher pass record found' };
+  const pass = store.get(articleId, 'publisher-pass.md');
+  if (!pass) {
+    return { passed: false, reason: 'Publisher pass review has not been run yet' };
   }
-
-  const failing: string[] = [];
-  for (const field of PUBLISHER_PASS_CHECKS) {
-    if ((pass as unknown as Record<string, unknown>)[field] !== 1) {
-      failing.push(field);
-    }
-  }
-  if (pass.publish_datetime == null) {
-    failing.push('publish_datetime');
-  }
-
-  if (failing.length > 0) {
-    return {
-      passed: false,
-      reason: `Publisher pass incomplete: ${failing.join(', ')}`,
-    };
-  }
-  return { passed: true, reason: 'All publisher pass checks passed' };
+  return { passed: true, reason: 'Publisher pass review complete' };
 }
 
 export function requireSubstackUrl(
@@ -266,7 +232,7 @@ export const TRANSITION_MAP: TransitionDef[] = [
     from: 7 as Stage,
     to: 8 as Stage,
     action: 'publish',
-    guard: (_store, id, repo) => requirePublisherPass(repo, id),
+    guard: (store, id) => requirePublisherPass(store, id),
   },
 ];
 

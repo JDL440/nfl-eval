@@ -7,7 +7,7 @@
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
 import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
-import type { Article, Stage, StageTransition, StageRun, EditorReview, PublisherPass, UsageEvent } from '../../types.js';
+import type { Article, Stage, StageTransition, StageRun, EditorReview, UsageEvent } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { markdownToHtml } from '../../services/markdown.js';
@@ -36,7 +36,6 @@ export interface ArticleDetailData {
   article: Article;
   transitions: StageTransition[];
   reviews: EditorReview[];
-  publisherPass: PublisherPass | null;
   advanceCheck?: AdvanceCheck;
   usageEvents?: UsageEvent[];
   stageRuns?: StageRun[];
@@ -152,7 +151,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, publisherPass, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive } = data;
+  const { config, article, transitions, reviews, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -193,7 +192,6 @@ export function renderArticleDetail(data: ArticleDetailData): string {
             ${renderArtifactTabs(article, artifactNames)}
           </div>
           ${reviews.length > 0 ? renderEditorReviews(reviews) : ''}
-          ${publisherPass ? renderPublisherChecklist(publisherPass) : ''}
         </div>
         <div class="detail-sidebar"
           hx-get="/htmx/articles/${eid}/live-sidebar"
@@ -441,6 +439,11 @@ export function extractThinking(content: string): { thinking: string | null; out
 // ── Action Panel ─────────────────────────────────────────────────────────────
 
 function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageRuns?: StageRun[]): string {
+  // Preview button for articles with a draft (stage >= 5)
+  const previewLink = article.current_stage >= 5
+    ? `<a href="/articles/${escapeHtml(article.id)}/preview" class="btn btn-secondary">👁 Preview</a>`
+    : '';
+
   // Find the most recent stage_run failure for inline display
   const lastRun = stageRuns && stageRuns.length > 0 ? stageRuns[0] : undefined;
   const lastRunError = lastRun && lastRun.status !== 'completed' && lastRun.notes
@@ -457,6 +460,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           ${article.substack_url
             ? `<a href="${escapeHtml(article.substack_url)}" target="_blank" class="btn btn-secondary">View on Substack ↗</a>`
             : ''}
+          ${previewLink}
         </div>
       </section>`;
   }
@@ -497,8 +501,9 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         <h2>Actions</h2>
         <div class="action-bar">
           ${article.substack_draft_url
-            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Preview ↗</a>`
+            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Draft ↗</a>`
             : ''}
+          ${previewLink}
           <button class="btn btn-publish"
             hx-post="/htmx/articles/${escapeHtml(article.id)}/advance"
             hx-target="#advance-result-${escapeHtml(article.id)}"
@@ -550,6 +555,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         ${article.substack_draft_url
           ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Preview Draft ↗</a>`
           : ''}
+        ${previewLink}
         <button class="btn btn-primary"
           hx-post="/htmx/articles/${escapeHtml(article.id)}/advance"
           hx-target="#advance-result-${escapeHtml(article.id)}"
@@ -684,39 +690,6 @@ function renderEditorReviews(reviews: EditorReview[]): string {
             </div>
           </div>`;
         }).join('')}
-      </div>
-    </section>`;
-}
-
-// ── Publisher checklist ──────────────────────────────────────────────────────
-
-function renderPublisherChecklist(pass: PublisherPass): string {
-  const items: { label: string; checked: number }[] = [
-    { label: 'Title finalized', checked: pass.title_final },
-    { label: 'Subtitle finalized', checked: pass.subtitle_final },
-    { label: 'Body clean', checked: pass.body_clean },
-    { label: 'Section assigned', checked: pass.section_assigned },
-    { label: 'Tags set', checked: pass.tags_set },
-    { label: 'URL slug set', checked: pass.url_slug_set },
-    { label: 'Cover image set', checked: pass.cover_image_set },
-    { label: 'Paywall set', checked: pass.paywall_set },
-    { label: 'Email send', checked: pass.email_send },
-    { label: 'Names verified', checked: pass.names_verified },
-    { label: 'Numbers current', checked: pass.numbers_current },
-    { label: 'No stale refs', checked: pass.no_stale_refs },
-  ];
-  const done = items.filter(i => i.checked).length;
-
-  return `
-    <section class="detail-section">
-      <h2>Publisher Checklist (${done}/${items.length})</h2>
-      <div class="checklist">
-        ${items.map(i => `
-          <div class="checklist-item ${i.checked ? 'checked' : ''}">
-            <span class="check-icon">${i.checked ? '✅' : '⬜'}</span>
-            <span class="check-label">${escapeHtml(i.label)}</span>
-          </div>
-        `).join('')}
       </div>
     </section>`;
 }

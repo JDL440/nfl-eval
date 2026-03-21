@@ -173,23 +173,18 @@ describe('Publish Workflow', () => {
       expect(html).toContain('No article draft found');
     });
 
-    it('displays publisher checklist when pass exists', async () => {
+    it('displays publish actions without checklist gate', async () => {
       repo.createArticle({ id: 'with-pass', title: 'With Pass' });
       advanceToStage(repo, 'with-pass', 7);
-      repo.recordPublisherPass('with-pass', {
-        title_final: 1,
-        subtitle_final: 1,
-        body_clean: 1,
-      });
       writeArticleDraft(repo, 'with-pass', '# Article\n\nContent');
 
       const app = createApp(repo, config);
       const res = await app.request('/articles/with-pass/publish');
       const html = await res.text();
-      expect(html).toContain('Publisher Checklist');
-      expect(html).toContain('Title finalized');
-      expect(html).toContain('✅');
-      expect(html).toContain('⬜');
+      expect(html).toContain('Publish Actions');
+      expect(html).toContain('Article Preview');
+      // Checklist no longer shown on publish page
+      expect(html).not.toContain('Publisher Checklist');
     });
   });
 

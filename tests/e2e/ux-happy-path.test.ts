@@ -203,15 +203,18 @@ describe('UX Happy Path — full user journey', () => {
     expect(repo.getArticle(articleId)!.current_stage).toBe(6);
   });
 
-  /* ─── 10. Advance 6→7, then record publisher pass ─────── */
-  it('10. advances 6→7 and records publisher pass', async () => {
+  /* ─── 10. Advance 6→7, then create publisher pass artifact ── */
+  it('10. advances 6→7 and creates publisher pass artifact', async () => {
     // Advance first (guard: editor-review.md APPROVED — satisfied by step 9)
     const res = await htmxPost(`/htmx/articles/${articleId}/advance`);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('Stage 7');
     expect(repo.getArticle(articleId)!.current_stage).toBe(7);
 
-    // Record publisher pass now (for publish page / checklist tests)
+    // Create publisher-pass.md artifact (the LLM review artifact)
+    repo.artifacts.put(articleId, 'publisher-pass.md', '# Publisher Pass\nAll checks passed by LLM review.');
+
+    // Also record publisher pass DB row (for publish page / checklist tests)
     repo.recordPublisherPass(articleId, {
       title_final: 1,
       subtitle_final: 1,
@@ -237,15 +240,14 @@ describe('UX Happy Path — full user journey', () => {
   });
 
   /* ─── 12. Publish page ────────────────────────────────── */
-  it('12. loads publish page with preview and checklist', async () => {
+  it('12. loads publish page with preview and publish actions', async () => {
     const res = await appFetch(`/articles/${articleId}/publish`);
     expect(res.status).toBe(200);
     const html = await res.text();
     // Draft preview rendered
     expect(html).toContain('word0');
-    // Checklist visible with completed items
-    expect(html).toContain('checklist');
-    expect(html).toContain('✅');
+    // Publish actions visible
+    expect(html).toContain('Publish Actions');
   });
 
   /* ─── 13. Toggle a checklist item ─────────────────────── */

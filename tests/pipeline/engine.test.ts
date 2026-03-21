@@ -258,62 +258,17 @@ describe('Guard functions', () => {
       repo.createArticle({ id: 'test-pub', title: 'Test' });
     });
 
-    it('fails when no publisher pass record exists', () => {
-      const result = requirePublisherPass(repo, 'test-pub');
+    it('fails when publisher-pass.md artifact does not exist', () => {
+      const result = requirePublisherPass(repo.artifacts, 'test-pub');
       expect(result.passed).toBe(false);
-      expect(result.reason).toContain('No publisher pass');
+      expect(result.reason).toContain('not been run');
     });
 
-    it('fails when publisher pass has incomplete checks', () => {
-      repo.recordPublisherPass('test-pub', {
-        title_final: 1,
-        subtitle_final: 1,
-        body_clean: 0,   // incomplete
-      });
-      const result = requirePublisherPass(repo, 'test-pub');
-      expect(result.passed).toBe(false);
-      expect(result.reason).toContain('body_clean');
-    });
-
-    it('fails when publish_datetime is null', () => {
-      repo.recordPublisherPass('test-pub', {
-        title_final: 1,
-        subtitle_final: 1,
-        body_clean: 1,
-        section_assigned: 1,
-        tags_set: 1,
-        url_slug_set: 1,
-        cover_image_set: 1,
-        paywall_set: 1,
-        email_send: 1,
-        names_verified: 1,
-        numbers_current: 1,
-        no_stale_refs: 1,
-        publish_datetime: null,
-      });
-      const result = requirePublisherPass(repo, 'test-pub');
-      expect(result.passed).toBe(false);
-      expect(result.reason).toContain('publish_datetime');
-    });
-
-    it('passes when all checks are complete', () => {
-      repo.recordPublisherPass('test-pub', {
-        title_final: 1,
-        subtitle_final: 1,
-        body_clean: 1,
-        section_assigned: 1,
-        tags_set: 1,
-        url_slug_set: 1,
-        cover_image_set: 1,
-        paywall_set: 1,
-        email_send: 1,
-        names_verified: 1,
-        numbers_current: 1,
-        no_stale_refs: 1,
-        publish_datetime: '2025-07-01 12:00:00',
-      });
-      const result = requirePublisherPass(repo, 'test-pub');
+    it('passes when publisher-pass.md artifact exists', () => {
+      repo.artifacts.put('test-pub', 'publisher-pass.md', '# Publisher Pass\nAll checks passed.');
+      const result = requirePublisherPass(repo.artifacts, 'test-pub');
       expect(result.passed).toBe(true);
+      expect(result.reason).toContain('review complete');
     });
   });
 
@@ -454,23 +409,9 @@ describe('PipelineEngine', () => {
       expect(check.allowed).toBe(false);
     });
 
-    it('allows 7→8 when publisher pass complete', () => {
+    it('allows 7→8 when publisher pass artifact exists', () => {
       repo.createArticle({ id: 'test-article', title: 'Test' });
-      repo.recordPublisherPass('test-article', {
-        title_final: 1,
-        subtitle_final: 1,
-        body_clean: 1,
-        section_assigned: 1,
-        tags_set: 1,
-        url_slug_set: 1,
-        cover_image_set: 1,
-        paywall_set: 1,
-        email_send: 1,
-        names_verified: 1,
-        numbers_current: 1,
-        no_stale_refs: 1,
-        publish_datetime: '2025-07-01 12:00:00',
-      });
+      repo.artifacts.put('test-article', 'publisher-pass.md', '# Publisher Pass\nAll good.');
       const check = engine.canAdvance('test-article', 7 as Stage);
       expect(check.allowed).toBe(true);
       expect(check.nextStage).toBe(8);
@@ -656,28 +597,12 @@ describe('PipelineEngine', () => {
       expect(check.allowed).toBe(false);
     });
 
-    it('partial publisher pass reports specific failing checks', () => {
+    it('publisher pass blocks 7→8 when artifact missing', () => {
       repo.createArticle({ id: 'partial-pub', title: 'Partial' });
-      repo.recordPublisherPass('partial-pub', {
-        title_final: 1,
-        subtitle_final: 1,
-        body_clean: 1,
-        section_assigned: 0,
-        tags_set: 0,
-        url_slug_set: 1,
-        cover_image_set: 1,
-        paywall_set: 1,
-        email_send: 1,
-        names_verified: 1,
-        numbers_current: 1,
-        no_stale_refs: 1,
-        publish_datetime: '2025-07-01 12:00:00',
-      });
-
+      // No publisher-pass.md artifact — guard should fail
       const check = engine.canAdvance('partial-pub', 7 as Stage);
       expect(check.allowed).toBe(false);
-      expect(check.reason).toContain('section_assigned');
-      expect(check.reason).toContain('tags_set');
+      expect(check.reason).toContain('not been run');
     });
 
     it('empty draft file fails word count check', () => {

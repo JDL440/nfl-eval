@@ -57,12 +57,12 @@ import {
   renderPublishResult,
   proseMirrorToHtml,
   extractDraftId,
-  renderChecklist,
   renderNoteComposer,
   renderTweetComposer,
   CHECKLIST_ITEMS,
 } from './views/publish.js';
 import { markdownToProseMirror } from '../services/prosemirror.js';
+import { renderArticlePreview, parseImageManifest } from './views/preview.js';
 import type { SubstackService } from '../services/substack.js';
 import type { TwitterService } from '../services/twitter.js';
 import { executeTransition, type ActionContext } from '../pipeline/actions.js';
@@ -261,7 +261,6 @@ export function createApp(
         article,
         transitions: repo.getStageTransitions(id),
         reviews: repo.getEditorReviews(id),
-        publisherPass: repo.getPublisherPass(id),
         advanceCheck,
         usageEvents: repo.getUsageEvents(id),
         stageRuns: repo.getStageRuns(id),
@@ -1206,6 +1205,41 @@ export function createApp(
     }
   });
 
+  // ── Rich article preview ────────────────────────────────────────────────────
+
+  app.get('/articles/:id/preview', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.notFound();
+
+    const markdown = repo.artifacts.get(id, 'draft.md');
+    let htmlBody = '<p class="empty-state">No article draft found</p>';
+    if (markdown) {
+      const doc = markdownToProseMirror(markdown);
+      htmlBody = proseMirrorToHtml(doc);
+    }
+
+    // Parse image manifest for cover and inline images
+    let coverImageUrl: string | null = null;
+    let inlineImageUrls: string[] = [];
+    const manifestJson = repo.artifacts.get(id, 'images.json');
+    if (manifestJson) {
+      const parsed = parseImageManifest(manifestJson);
+      coverImageUrl = parsed.cover;
+      inlineImageUrls = parsed.inlines;
+    }
+
+    return c.html(
+      renderArticlePreview({
+        config,
+        article,
+        htmlBody,
+        coverImageUrl,
+        inlineImageUrls,
+      }),
+    );
+  });
+
   // ── Publish workflow routes ─────────────────────────────────────────────────
 
   app.get('/articles/:id/publish', (c) => {
@@ -1213,7 +1247,6 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
 
-    const publisherPass = repo.getPublisherPass(id);
     let htmlPreview = '';
 
     // Load article markdown from DB artifact store
@@ -1230,7 +1263,6 @@ export function createApp(
         config,
         article,
         htmlPreview,
-        publisherPass,
       }),
     );
   });

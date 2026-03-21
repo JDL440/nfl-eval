@@ -221,64 +221,14 @@ describe('Full lifecycle: Stage 1 → 8', () => {
     expect(article.current_stage).toBe(7);
   });
 
-  it('cannot advance 7→8 without publisher pass', async () => {
+  it('cannot advance 7→8 without publisher-pass.md artifact', async () => {
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(422);
-    expect(await res.text()).toContain('No publisher pass record found');
+    expect(await res.text()).toContain('Publisher pass review has not been run yet');
   });
 
-  it('cannot advance 7→8 with incomplete publisher pass', async () => {
-    // Record a partial publisher pass (only some checks = 1)
-    repo.recordPublisherPass(slug, {
-      title_final: 1,
-      subtitle_final: 1,
-      body_clean: 0,  // intentionally failing
-    });
-
-    const res = await htmxAdvance(slug);
-    expect(res.status).toBe(422);
-    const html = await res.text();
-    expect(html).toContain('Publisher pass incomplete');
-  });
-
-  it('cannot advance 7→8 with all checks but no publish_datetime', async () => {
-    repo.recordPublisherPass(slug, {
-      title_final: 1,
-      subtitle_final: 1,
-      body_clean: 1,
-      section_assigned: 1,
-      tags_set: 1,
-      url_slug_set: 1,
-      cover_image_set: 1,
-      paywall_set: 1,
-      email_send: 1,
-      names_verified: 1,
-      numbers_current: 1,
-      no_stale_refs: 1,
-      publish_datetime: null,
-    });
-
-    const res = await htmxAdvance(slug);
-    expect(res.status).toBe(422);
-    expect(await res.text()).toContain('publish_datetime');
-  });
-
-  it('advances 7→8 with complete publisher pass', async () => {
-    repo.recordPublisherPass(slug, {
-      title_final: 1,
-      subtitle_final: 1,
-      body_clean: 1,
-      section_assigned: 1,
-      tags_set: 1,
-      url_slug_set: 1,
-      cover_image_set: 1,
-      paywall_set: 1,
-      email_send: 1,
-      names_verified: 1,
-      numbers_current: 1,
-      no_stale_refs: 1,
-      publish_datetime: '2026-03-20T12:00:00Z',
-    });
+  it('advances 7→8 with publisher-pass.md artifact', async () => {
+    repo.artifacts.put(slug, 'publisher-pass.md', '# Publisher Pass\nAll checks passed.');
 
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(200);
@@ -423,13 +373,7 @@ describe('JSON API advance: full lifecycle', () => {
     expect(res.status).toBe(200);
 
     // 7→8
-    repo.recordPublisherPass(slug, {
-      title_final: 1, subtitle_final: 1, body_clean: 1,
-      section_assigned: 1, tags_set: 1, url_slug_set: 1,
-      cover_image_set: 1, paywall_set: 1, email_send: 1,
-      names_verified: 1, numbers_current: 1, no_stale_refs: 1,
-      publish_datetime: '2026-03-20T14:00:00Z',
-    });
+    writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nAll checks passed.');
     res = await postJson(`/api/articles/${slug}/advance`, { to_stage: 8 });
     expect(res.status).toBe(200);
 
@@ -470,9 +414,9 @@ describe('Draft word count boundary', () => {
   });
 });
 
-// ── Publisher pass: individual check failures ────────────────────────────────
+// ── Publisher pass: artifact-based guard ──────────────────────────────────────
 
-describe('Publisher pass check granularity', () => {
+describe('Publisher pass artifact guard', () => {
   const slug = 'publisher-checks';
 
   beforeAll(() => {
@@ -491,30 +435,20 @@ describe('Publisher pass check granularity', () => {
     repo.advanceStage(slug, 6, 7, 'test');
   });
 
-  const checkFields = [
-    'title_final', 'subtitle_final', 'body_clean', 'section_assigned',
-    'tags_set', 'url_slug_set', 'cover_image_set', 'paywall_set',
-    'email_send', 'names_verified', 'numbers_current', 'no_stale_refs',
-  ] as const;
+  it('rejects 7→8 when publisher-pass.md artifact is missing', async () => {
+    const res = await htmxAdvance(slug);
+    expect(res.status).toBe(422);
+    const html = await res.text();
+    expect(html).toContain('Publisher pass review has not been run yet');
+  });
 
-  for (const field of checkFields) {
-    it(`reports failure when ${field} = 0`, async () => {
-      const allPassing: Record<string, number | string | null> = {
-        title_final: 1, subtitle_final: 1, body_clean: 1,
-        section_assigned: 1, tags_set: 1, url_slug_set: 1,
-        cover_image_set: 1, paywall_set: 1, email_send: 1,
-        names_verified: 1, numbers_current: 1, no_stale_refs: 1,
-        publish_datetime: '2026-03-20T12:00:00Z',
-      };
-      allPassing[field] = 0;
-      repo.recordPublisherPass(slug, allPassing as any);
-
-      const res = await htmxAdvance(slug);
-      expect(res.status).toBe(422);
-      const html = await res.text();
-      expect(html).toContain(field);
-    });
-  }
+  it('allows 7→8 when publisher-pass.md artifact exists', async () => {
+    writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nAll checks passed.');
+    const res = await htmxAdvance(slug);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('Stage 8');
+  });
 });
 
 // ── Concurrent articles at different stages ──────────────────────────────────

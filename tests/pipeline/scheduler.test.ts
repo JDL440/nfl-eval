@@ -74,12 +74,7 @@ describe('PipelineScheduler', () => {
       engine.advance('published', 5 as Stage);
       repo.artifacts.put('published', 'editor-review.md', '## Verdict: APPROVED\nLGTM.');
       engine.advance('published', 6 as Stage);
-      repo.recordPublisherPass('published', {
-        title_final: 1, subtitle_final: 1, body_clean: 1, section_assigned: 1,
-        tags_set: 1, url_slug_set: 1, cover_image_set: 1, paywall_set: 1,
-        email_send: 1, names_verified: 1, numbers_current: 1, no_stale_refs: 1,
-        publish_datetime: '2025-07-01 12:00:00',
-      });
+      repo.artifacts.put('published', 'publisher-pass.md', '# Publisher Pass\nAll good.');
       engine.advance('published', 7 as Stage);
 
       const ready = scheduler.findReady();

@@ -114,17 +114,12 @@ export interface PublishPreviewData {
   config: AppConfig;
   article: Article;
   htmlPreview: string;
-  publisherPass: PublisherPass | null;
 }
 
 export function renderPublishPreview(data: PublishPreviewData): string {
-  const { config, article, htmlPreview, publisherPass } = data;
+  const { config, article, htmlPreview } = data;
 
   const hasDraft = !!article.substack_draft_url;
-  const draftId = hasDraft ? extractDraftId(article.substack_draft_url!) : null;
-
-  const checklist = publisherPass ? renderChecklist(publisherPass, article.id) : '';
-  const allPassed = publisherPass ? checkAllPassed(publisherPass) : false;
 
   const content = `
     <div class="article-detail">
@@ -154,8 +149,6 @@ export function renderPublishPreview(data: PublishPreviewData): string {
         </div>
 
         <div class="detail-sidebar">
-          ${checklist}
-
           <section class="detail-section">
             <h2>Publish Actions</h2>
             <div id="publish-actions" class="action-bar" style="flex-direction:column;gap:0.5rem;">
@@ -164,8 +157,7 @@ export function renderPublishPreview(data: PublishPreviewData): string {
                    <button class="btn btn-primary btn-publish"
                      hx-post="/api/articles/${escapeHtml(article.id)}/publish"
                      hx-target="#publish-result"
-                     hx-swap="innerHTML"
-                     ${allPassed ? '' : 'disabled title="Complete all publisher checks first"'}>
+                     hx-swap="innerHTML">
                      Publish to Substack
                    </button>`
                 : `<button class="btn btn-secondary"
@@ -181,7 +173,7 @@ export function renderPublishPreview(data: PublishPreviewData): string {
           ${renderNoteComposer(article)}
           ${renderTweetComposer(article)}
 
-          ${renderPublishAll(article.id, hasDraft && allPassed)}
+          ${renderPublishAll(article.id, hasDraft)}
         </div>
       </div>
     </div>`;
@@ -365,7 +357,7 @@ export function renderPublishAll(articleId: string, publishEnabled: boolean): st
       </div>
       <button class="btn btn-publish btn-lg" id="publish-all-btn"
         onclick="publishAll('${id}')"
-        ${publishEnabled ? '' : 'disabled title="Complete all publisher checks and create a draft first"'}>
+        ${publishEnabled ? '' : 'disabled title="Create a draft first"'}>
         🚀 Publish All
       </button>
       <div id="publish-all-progress"></div>

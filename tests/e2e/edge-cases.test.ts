@@ -522,25 +522,18 @@ describe('Guard failures', () => {
     expect(html).toContain('Discussion summary');
   });
 
-  it('rejects publish (7→8) without substack_url via executeTransition', async () => {
+  it('rejects publish (7→8) without publisher-pass.md via executeTransition', async () => {
     const slug = 'edge-guard-no-substack';
     repo.createArticle({ id: slug, title: 'Publish Guard No URL' });
     advanceToStage(slug, 7 as Stage);
 
-    repo.recordPublisherPass(slug, {
-      title_final: 1, subtitle_final: 1, body_clean: 1,
-      section_assigned: 1, tags_set: 1, url_slug_set: 1,
-      cover_image_set: 1, paywall_set: 1, email_send: 1,
-      names_verified: 1, numbers_current: 1, no_stale_refs: 1,
-      publish_datetime: '2025-01-01 00:00:00',
-    });
-
+    // No publisher-pass.md artifact — guard should fail
     const result = await executeTransition(slug, 7 as Stage, actionCtx);
     expect(result.success).toBe(false);
-    expect(result.error).toContain('substack_url');
+    expect(result.error).toContain('Publisher pass review has not been run yet');
   });
 
-  it('rejects advance from stage 7 without publisher pass record', async () => {
+  it('rejects advance from stage 7 without publisher-pass.md artifact', async () => {
     const slug = 'edge-guard-no-publisher';
     repo.createArticle({ id: slug, title: 'Guard No Publisher Pass' });
     advanceToStage(slug, 7 as Stage);
@@ -548,26 +541,19 @@ describe('Guard failures', () => {
     const res = await htmxPost(`/htmx/articles/${slug}/advance`);
     expect(res.status).toBe(422);
     const html = await res.text();
-    expect(html).toContain('publisher pass');
+    expect(html).toContain('Publisher pass review');
   });
 
-  it('rejects advance from stage 7 with incomplete publisher pass', async () => {
-    const slug = 'edge-guard-incomplete-pub';
-    repo.createArticle({ id: slug, title: 'Guard Incomplete Publisher' });
+  it('allows advance from stage 7 when publisher-pass.md artifact exists', async () => {
+    const slug = 'edge-guard-has-publisher';
+    repo.createArticle({ id: slug, title: 'Guard Has Publisher Pass' });
     advanceToStage(slug, 7 as Stage);
 
-    repo.recordPublisherPass(slug, {
-      title_final: 0,
-      subtitle_final: 1, body_clean: 1, section_assigned: 1,
-      tags_set: 1, url_slug_set: 1, cover_image_set: 1, paywall_set: 1,
-      email_send: 1, names_verified: 1, numbers_current: 1, no_stale_refs: 1,
-      publish_datetime: '2025-01-01T00:00:00Z',
-    });
+    writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nReview complete.');
 
     const res = await htmxPost(`/htmx/articles/${slug}/advance`);
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('Publisher pass incomplete');
-    expect(html).toContain('title_final');
+    expect(html).toContain('Stage 8');
   });
 });

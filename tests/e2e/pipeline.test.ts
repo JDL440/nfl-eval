@@ -357,27 +357,8 @@ describe('E2E: Full Pipeline', () => {
     expect(f.repo.getArticle(slug)!.current_stage).toBe(7);
 
     // ── Stage 7→8: publish ──
-    // The publish guard requires a publisher_pass record AND substack_url.
-    // Record a full publisher pass with all checks passing.
-    f.repo.recordPublisherPass(slug, {
-      title_final: 1,
-      subtitle_final: 1,
-      body_clean: 1,
-      section_assigned: 1,
-      tags_set: 1,
-      url_slug_set: 1,
-      cover_image_set: 1,
-      paywall_set: 1,
-      publish_datetime: '2025-01-15 10:00:00',
-      email_send: 1,
-      names_verified: 1,
-      numbers_current: 1,
-      no_stale_refs: 1,
-    });
-
-    // recordPublisherPass auto-advances 6→7, but we were already at 7
-    // so we should still be at 7 (or auto-advanced to 7 — it's idempotent).
-    // The 7→8 guard requires substack_url.
+    // The publish guard now only requires the publisher-pass.md artifact (already created above).
+    // Also needs substack_url for the 8→published transition.
     f.repo.recordPublish(slug, 'https://nfllab.substack.com/p/seahawks-draft-analysis');
 
     const final = f.repo.getArticle(slug)!;
