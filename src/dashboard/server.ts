@@ -10,6 +10,7 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { join } from 'node:path';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
 import { initDataDir, loadConfig } from '../config/index.js';
@@ -43,7 +44,7 @@ import {
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
-import { escapeHtml } from './views/layout.js';
+import { escapeHtml, renderLayout } from './views/layout.js';
 import {
   renderNewIdeaPage,
   renderIdeaSuccess,
@@ -93,6 +94,14 @@ import {
   classifyCharter,
   extractIdentity,
 } from './views/agents.js';
+import {
+  renderMemoryPage,
+  renderMemoryTable,
+  renderMemoryRow,
+  renderMemoryEditRow,
+  renderAgentMemorySection,
+} from './views/memory.js';
+import type { MemoryCategory } from '../agents/memory.js';
 import { renderConfigPage } from './views/config.js';
 import type { CharterSummary, SkillSummary } from './views/agents.js';
 import { renderRunsPage, renderRunsTable, type RunsFilters } from './views/runs.js';
@@ -149,7 +158,7 @@ function buildPipelineSummary(
 export function createApp(
   repo: Repository,
   config: AppConfig,
-  deps?: { substackService?: SubstackService; twitterService?: TwitterService; actionContext?: ActionContext; imageService?: ImageService },
+  deps?: { substackService?: SubstackService; twitterService?: TwitterService; actionContext?: ActionContext; imageService?: ImageService; memory?: AgentMemory },
 ): Hono {
   // Validate pipeline configuration consistency at startup
   assertPipelineConfigValid();
@@ -158,6 +167,7 @@ export function createApp(
   const substackService = deps?.substackService;
   const twitterService = deps?.twitterService;
   const imageService = deps?.imageService;
+  const memory = deps?.memory;
   const bus = new EventBus();
 
   // Track active auto-advance runs so article pages know whether to show the progress bar
@@ -1726,7 +1736,12 @@ export function createApp(
       return c.html('<p class="empty-state">Charter not found</p>', 404);
     }
     const content = readFileSync(filePath, 'utf-8');
-    return c.html(renderCharterDetail(name, content, config.leagueConfig.name));
+    let memoryHtml: string | undefined;
+    if (memory) {
+      const entries = memory.recall(name, { limit: 50, includeExpired: true });
+      memoryHtml = renderAgentMemorySection(name, entries);
+    }
+    return c.html(renderCharterDetail(name, content, config.leagueConfig.name, memoryHtml));
   });
 
   // ── htmx: agent charter/skill inline editing ─────────────────────────────
@@ -1783,6 +1798,190 @@ export function createApp(
     return c.html(renderCharterView(name, content));
   });
 
+  // ── Memory Browser ──────────────────────────────────────────────────────
+
+  /** Helper: open a lightweight admin connection for delete/update ops not in AgentMemory API. */
+  function memoryAdminDb(): DatabaseSync | null {
+    if (!config.memoryDbPath || !existsSync(config.memoryDbPath)) return null;
+    return new DatabaseSync(config.memoryDbPath);
+  }
+
+  /** Helper: get current filter params and refresh the memory table. */
+  function getFilteredEntries(c: { req: { query: (k: string) => string | undefined } }): { entries: import('../agents/memory.js').MemoryEntry[]; agent?: string; category?: string; search?: string } {
+    const agent = c.req.query('agent') || undefined;
+    const category = c.req.query('category') || undefined;
+    const search = c.req.query('search') || undefined;
+
+    if (!memory) return { entries: [], agent, category, search };
+
+    if (agent) {
+      return {
+        entries: memory.recall(agent, {
+          category: category as MemoryCategory | undefined,
+          limit: 200,
+          includeExpired: true,
+        }).filter(e => !search || e.content.toLowerCase().includes(search.toLowerCase())),
+        agent, category, search,
+      };
+    }
+
+    return {
+      entries: memory.recallGlobal({
+        category: category as MemoryCategory | undefined,
+        search,
+        limit: 200,
+      }),
+      agent, category, search,
+    };
+  }
+
+  app.get('/memory', (c) => {
+    if (!memory) {
+      return c.html(renderLayout('Memory', '<div class="empty-state">Agent memory is not available. Start the server with LLM providers configured.</div>', config.leagueConfig.name));
+    }
+
+    const { entries, agent, category, search } = getFilteredEntries(c);
+    const stats = memory.stats();
+    const agentNames = stats.map(s => s.agentName);
+
+    return c.html(renderMemoryPage({
+      labName: config.leagueConfig.name,
+      entries,
+      stats,
+      filters: { agent, category, search },
+      agentNames,
+    }));
+  });
+
+  // htmx: filtered memory table partial
+  app.get('/htmx/memory', (c) => {
+    const { entries } = getFilteredEntries(c);
+    return c.html(renderMemoryTable(entries));
+  });
+
+  // htmx: single entry edit form
+  app.get('/htmx/memory/:id/edit', (c) => {
+    const id = parseInt(c.req.param('id'), 10);
+    if (!memory) return c.html('', 404);
+    const entries = memory.recallGlobal({ limit: 500 });
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return c.html('', 404);
+    return c.html(renderMemoryEditRow(entry));
+  });
+
+  // htmx: single entry view (cancel edit)
+  app.get('/htmx/memory/:id/view', (c) => {
+    const id = parseInt(c.req.param('id'), 10);
+    if (!memory) return c.html('', 404);
+    const entries = memory.recallGlobal({ limit: 500 });
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return c.html('', 404);
+    return c.html(renderMemoryRow(entry));
+  });
+
+  // Delete a single memory entry
+  app.delete('/api/memory/:id', (c) => {
+    const id = parseInt(c.req.param('id'), 10);
+    const db = memoryAdminDb();
+    if (!db) return c.html('', 404);
+    try {
+      db.prepare('DELETE FROM agent_memory WHERE id = ?').run(id);
+      return c.html(''); // Empty response removes the row via hx-swap="outerHTML"
+    } finally {
+      db.close();
+    }
+  });
+
+  // Update a memory entry
+  app.put('/api/memory/:id', async (c) => {
+    const id = parseInt(c.req.param('id'), 10);
+    const db = memoryAdminDb();
+    if (!db) return c.html('', 404);
+    try {
+      const body = await c.req.parseBody();
+      const content = typeof body['content'] === 'string' ? body['content'] : undefined;
+      const category = typeof body['category'] === 'string' ? body['category'] : undefined;
+      const relevanceStr = typeof body['relevanceScore'] === 'string' ? body['relevanceScore'] : undefined;
+      const relevanceScore = relevanceStr ? parseFloat(relevanceStr) : undefined;
+
+      const sets: string[] = [];
+      const params: (string | number)[] = [];
+      if (content !== undefined) { sets.push('content = ?'); params.push(content); }
+      if (category !== undefined) { sets.push('category = ?'); params.push(category); }
+      if (relevanceScore !== undefined && !isNaN(relevanceScore)) { sets.push('relevance_score = ?'); params.push(relevanceScore); }
+
+      if (sets.length > 0) {
+        params.push(id);
+        db.prepare(`UPDATE agent_memory SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+      }
+
+      // Re-fetch updated entry to render the row
+      const row = db.prepare('SELECT * FROM agent_memory WHERE id = ?').get(id) as any;
+      if (!row) return c.html('', 404);
+      const entry = {
+        id: row.id,
+        agentName: row.agent_name,
+        category: row.category,
+        content: row.content,
+        sourceSession: row.source_session,
+        createdAt: row.created_at,
+        expiresAt: row.expires_at,
+        relevanceScore: row.relevance_score,
+        accessCount: row.access_count,
+      } as import('../agents/memory.js').MemoryEntry;
+      return c.html(renderMemoryRow(entry));
+    } finally {
+      db.close();
+    }
+  });
+
+  // Create a new memory entry
+  app.post('/api/memory', async (c) => {
+    if (!memory) return c.html('<div class="empty-state">Memory not available</div>', 500);
+    const body = await c.req.parseBody();
+    const agentName = typeof body['agentName'] === 'string' ? body['agentName'] : '';
+    const category = typeof body['category'] === 'string' ? body['category'] as MemoryCategory : 'learning';
+    const content = typeof body['content'] === 'string' ? body['content'] : '';
+    const relevanceStr = typeof body['relevanceScore'] === 'string' ? body['relevanceScore'] : '1.0';
+    const relevanceScore = parseFloat(relevanceStr) || 1.0;
+
+    if (!agentName || !content) {
+      return c.html('<div class="empty-state">Agent name and content are required.</div>', 400);
+    }
+
+    memory.store({ agentName, category, content, relevanceScore });
+
+    // Return refreshed table
+    const entries = memory.recallGlobal({ limit: 200 });
+    return c.html(renderMemoryTable(entries));
+  });
+
+  // Prune stale entries
+  app.post('/api/memory/prune', (c) => {
+    if (!memory) return c.html('<div class="empty-state">Memory not available</div>', 500);
+    const pruned = memory.prune();
+    const entries = memory.recallGlobal({ limit: 200 });
+    return c.html(
+      `<div class="memory-action-result">Pruned ${pruned} stale entries</div>` +
+      renderMemoryTable(entries),
+    );
+  });
+
+  // Decay all agents
+  app.post('/api/memory/decay', (c) => {
+    if (!memory) return c.html('<div class="empty-state">Memory not available</div>', 500);
+    const stats = memory.stats();
+    let totalDecayed = 0;
+    for (const s of stats) {
+      totalDecayed += memory.decay(s.agentName);
+    }
+    const entries = memory.recallGlobal({ limit: 200 });
+    return c.html(
+      `<div class="memory-action-result">Decayed ${totalDecayed} entries across ${stats.length} agents</div>` +
+      renderMemoryTable(entries),
+    );
+  });
+
   // ── Pipeline Runs page ────────────────────────────────────────────────────
 
   app.get('/runs', (c) => {
@@ -1829,6 +2028,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
 
   // Build ActionContext for agent-powered auto-advance (optional)
   let actionContext: ActionContext | undefined;
+  let memory: AgentMemory | undefined;
   try {
     const modelPolicy = new ModelPolicy();
     const gateway = new LLMGateway({ modelPolicy });
@@ -1863,7 +2063,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       }
     }
 
-    const memory = new AgentMemory(config.memoryDbPath);
+    memory = new AgentMemory(config.memoryDbPath);
     const runner = new AgentRunner({
       gateway,
       memory,
@@ -1897,7 +2097,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Image service not available: ${err instanceof Error ? err.message : err}`);
   }
 
-  const app = createApp(repo, config, { actionContext, imageService });
+  const app = createApp(repo, config, { actionContext, imageService, memory });
 
   serve({ fetch: app.fetch, port: config.port }, (info) => {
     console.log(`NFL Lab Dashboard running at http://localhost:${info.port}`);

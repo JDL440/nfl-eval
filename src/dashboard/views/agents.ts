@@ -143,7 +143,7 @@ function renderCharterCard(c: CharterSummary): string {
 
 // ── Charter detail page ──────────────────────────────────────────────────────
 
-export function renderCharterDetail(name: string, content: string, labName: string): string {
+export function renderCharterDetail(name: string, content: string, labName: string, memoryHtml?: string): string {
   const responsibilitiesCount = countSection(content, 'Responsibilities');
   const boundariesCount = countSection(content, 'Boundaries');
   const skillsReferenced = extractSkillsReferenced(content);
@@ -167,6 +167,7 @@ export function renderCharterDetail(name: string, content: string, labName: stri
             hx-swap="innerHTML">✏️ Edit</button>
         </div>
       </div>
+      ${memoryHtml ?? ''}
     </div>`;
 
   return renderLayout(`Charter: ${name}`, html, labName);

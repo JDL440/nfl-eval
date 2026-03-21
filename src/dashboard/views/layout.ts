@@ -46,6 +46,7 @@ export function renderLayout(title: string, content: string, labName: string): s
       <a href="/" class="logo">${escapeHtml(labName)}</a>
       <nav class="header-nav">
         <a href="/agents" class="btn btn-header">🤖 Agents</a>
+        <a href="/memory" class="btn btn-header">🧠 Memory</a>
         <a href="/runs" class="btn btn-header">📊 Runs</a>
         <a href="/config" class="btn btn-header">⚙️ Config</a>
         <a href="/ideas/new" class="btn btn-header">+ New Idea</a>
