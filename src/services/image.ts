@@ -17,6 +17,14 @@ export interface ImagePrompt {
   aspectRatio?: '16:9' | '1:1' | '4:3';
   team?: string;
   players?: string[];
+  /** 'cover' | 'inline' — used by buildEditorialPrompt for context-aware prompt construction */
+  imageType?: 'cover' | 'inline';
+  /** Full article title — used for richer prompt context */
+  articleTitle?: string;
+  /** 1-3 sentence article summary */
+  articleSummary?: string;
+  /** Fully custom prompt — bypasses all template logic */
+  customPrompt?: string;
 }
 
 export interface ImageResult {
@@ -49,7 +57,62 @@ const PLACEHOLDER_PNG = Buffer.from(
   'base64',
 );
 
+/** Editorial style guide matching v1 prompt quality — photorealistic, cinematic, no AI artifacts. */
+const STYLE_GUIDE = [
+  'Photorealistic photograph, not an illustration or digital art.',
+  'High contrast, dramatic natural lighting.',
+  'NFL football aesthetic — stadium atmosphere, team colors, intensity.',
+  'No text, logos, watermarks, or numbers anywhere in the image.',
+  'Cinematic composition, widescreen feel.',
+  'Professional quality suitable for a sports editorial publication.',
+  'Shot on a full-frame DSLR. Natural color grading, realistic film grain.',
+  'No oversaturation, no neon glow, no fantasy lighting.',
+].join(' ');
+
 function buildPromptText(prompt: ImagePrompt): string {
+  // Fully custom prompt bypasses all template logic
+  if (prompt.customPrompt) return prompt.customPrompt;
+
+  const teamStr = prompt.team ? `${prompt.team} NFL team` : 'NFL';
+  const playerStr = prompt.players?.length
+    ? `featuring ${prompt.players.join(', ')}`
+    : '';
+  const isPlayerCentric = (prompt.players?.length ?? 0) > 0;
+  const title = prompt.articleTitle ?? prompt.description;
+  const summary = prompt.articleSummary ?? '';
+
+  if (prompt.imageType === 'cover') {
+    return [
+      `Cover image for an NFL article titled "${title}".`,
+      summary ? `Article topic: ${summary}.` : '',
+      `Subject: ${teamStr} ${playerStr}.`,
+      STYLE_GUIDE,
+      'Wide aspect ratio. Hero image that captures the emotional core of the article.',
+      isPlayerCentric
+        ? 'If the article is centered on a specific player, make that player the clear visual subject in a realistic game-action or sideline moment that reflects the headline.'
+        : 'If the story is team-wide or abstract, use a strong atmospheric team-driven scene tied to the headline.',
+      'The image should explain the article at a glance and feel social-share ready.',
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  if (prompt.imageType === 'inline') {
+    return [
+      'Inline editorial image for an NFL article.',
+      `Context: ${summary || title}.`,
+      `Subject: ${teamStr} ${playerStr}.`,
+      STYLE_GUIDE,
+      'Wide 16:9 landscape format. Banner-style image that breaks up body text.',
+      isPlayerCentric
+        ? 'When the article is player-centric, use the player as the visual subject rather than a generic atmospheric scene.'
+        : 'When the article is not player-centric, focus on atmosphere, environment, and team-driven editorial storytelling.',
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  // Generic fallback (non-editorial callers or unknown imageType)
   const parts: string[] = [prompt.description];
   if (prompt.style) parts.push(`Style: ${prompt.style}`);
   if (prompt.team) parts.push(`Team: ${prompt.team}`);
@@ -113,14 +176,14 @@ export class GeminiImageProvider implements ImageProvider {
     const promptText = buildPromptText(prompt);
 
     const body = {
-      contents: [{ parts: [{ text: `Generate an image: ${promptText}` }] }],
+      contents: [{ parts: [{ text: promptText }] }],
       generationConfig: {
-        responseModalities: ['TEXT', 'IMAGE'],
+        responseModalities: ['IMAGE', 'TEXT'],
       },
     };
 
     const url =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent' +
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent' +
       `?key=${this.apiKey}`;
 
     const res = await fetch(url, {
@@ -145,11 +208,16 @@ export class GeminiImageProvider implements ImageProvider {
       throw new Error('Gemini API returned no image data');
     }
 
-    ensureDir(join(outputPath, '..'));
-    writeFileSync(outputPath, Buffer.from(b64, 'base64'));
+    const mimeType = imagePart?.inlineData?.mimeType ?? 'image/png';
+    const ext = mimeType === 'image/jpeg' ? 'jpg' : mimeType === 'image/webp' ? 'webp' : 'png';
+    // Replace .png extension with detected extension if different
+    const finalPath = ext !== 'png' ? outputPath.replace(/\.png$/, `.${ext}`) : outputPath;
+
+    ensureDir(join(finalPath, '..'));
+    writeFileSync(finalPath, Buffer.from(b64, 'base64'));
 
     return {
-      path: outputPath,
+      path: finalPath,
       width: dims.width,
       height: dims.height,
       prompt: promptText,

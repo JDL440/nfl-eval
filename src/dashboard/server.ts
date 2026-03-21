@@ -162,10 +162,10 @@ export function createApp(
       const summary = rawDraft ? separateThinking(rawDraft).output.slice(0, 500) : '';
       const team = art.primary_team ?? undefined;
       const results = await imageService.generateArticleImages(articleId, {
-        cover: { description: `Cover image for: ${art.title}. ${summary}`, style: 'editorial sports photography, dramatic lighting, 16:9 hero image', team, aspectRatio: '16:9' },
+        cover: { description: art.title, imageType: 'cover', articleTitle: art.title, articleSummary: summary, team, aspectRatio: '16:9' },
         inline: [
-          { description: `Inline image 1 for: ${art.title}. ${summary}`, style: 'editorial sports analysis, clean wide banner', team, aspectRatio: '16:9' },
-          { description: `Inline image 2 for: ${art.title}. ${summary}`, style: 'editorial sports context, wide banner', team, aspectRatio: '16:9' },
+          { description: art.title, imageType: 'inline', articleTitle: art.title, articleSummary: summary, team, aspectRatio: '16:9' },
+          { description: art.title, imageType: 'inline', articleTitle: art.title, articleSummary: summary, team, aspectRatio: '16:9' },
         ],
       });
       const manifest: { type: string; path: string; prompt: string }[] = [];
@@ -1578,21 +1578,27 @@ export function createApp(
 
       const results = await imageService.generateArticleImages(id, {
         cover: {
-          description: `Cover image for: ${article.title}. ${summary}`,
-          style: 'editorial sports photography, dramatic lighting, 16:9 hero image',
+          description: article.title,
+          imageType: 'cover',
+          articleTitle: article.title,
+          articleSummary: summary,
           team,
           aspectRatio: '16:9',
         },
         inline: [
           {
-            description: `Inline image 1 for: ${article.title}. ${summary}`,
-            style: 'editorial sports analysis, clean wide banner',
+            description: article.title,
+            imageType: 'inline',
+            articleTitle: article.title,
+            articleSummary: summary,
             team,
             aspectRatio: '16:9',
           },
           {
-            description: `Inline image 2 for: ${article.title}. ${summary}`,
-            style: 'editorial sports context, wide banner',
+            description: article.title,
+            imageType: 'inline',
+            articleTitle: article.title,
+            articleSummary: summary,
             team,
             aspectRatio: '16:9',
           },
@@ -1635,10 +1641,10 @@ export function createApp(
       const summary = rawDraft2 ? separateThinking(rawDraft2).output.slice(0, 500) : '';
       const team = article.primary_team ?? undefined;
       const results = await imageService.generateArticleImages(id, {
-        cover: { description: `Cover image for: ${article.title}. ${summary}`, style: 'editorial sports photography, dramatic lighting, 16:9 hero image', team, aspectRatio: '16:9' },
+        cover: { description: article.title, imageType: 'cover', articleTitle: article.title, articleSummary: summary, team, aspectRatio: '16:9' },
         inline: [
-          { description: `Inline image 1 for: ${article.title}. ${summary}`, style: 'editorial sports analysis, clean wide banner', team, aspectRatio: '16:9' },
-          { description: `Inline image 2 for: ${article.title}. ${summary}`, style: 'editorial sports context, wide banner', team, aspectRatio: '16:9' },
+          { description: article.title, imageType: 'inline', articleTitle: article.title, articleSummary: summary, team, aspectRatio: '16:9' },
+          { description: article.title, imageType: 'inline', articleTitle: article.title, articleSummary: summary, team, aspectRatio: '16:9' },
         ],
       });
       const manifest: { type: string; path: string; prompt: string }[] = [];
