@@ -77,8 +77,8 @@ Spawn Writer with:
 - All raw expert analysis (pasted into the prompt)
 - The structure template below
 - **The `panel-factcheck.md` preflight** — include a summary so Writer knows which claims are verified, flagged, or problematic
-- **Model:** `claude-opus-4.6` (always — see `.squad/config/models.json` → `models.writer`)
-- **Output budget:** 5,000 tokens max. If content is dense, tighten narrative connective tissue first; never drop expert analysis. (See `.squad/config/models.json` → `max_output_tokens.writer`)
+- **Model:** Selected by the LLM Gateway model-policy (writer stage key)
+- **Output budget:** 5,000 tokens max. If content is dense, tighten narrative connective tissue first; never drop expert analysis.
 
 Writer produces a complete markdown draft saved to `content/articles/{slug}.md`.
 

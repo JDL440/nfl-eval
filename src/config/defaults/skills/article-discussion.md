@@ -18,7 +18,7 @@ Codifies the three-phase discussion workflow (Stages 2–4 of the Article Lifecy
 
 This skill is the "inner loop" of article production. The [article-lifecycle skill](../article-lifecycle/SKILL.md) orchestrates the full 8-stage pipeline; this skill provides the detailed playbook for Stages 2–4 specifically.
 
-> **Runtime model policy:** resolve panel, Writer, and Editor models from `.squad/config/models.json` via `python content/model_policy.py select ...`; do not rely on hard-coded model names in prompts.
+> **Runtime model policy:** model selection is handled by the LLM Gateway and model-policy.ts; do not rely on hard-coded model names in prompts.
 
 ---
 
@@ -155,7 +155,7 @@ Omit data anchor tables entirely. Level 1 articles are narrative-first; agents s
 
 ### Panel Size Limits by Depth Level
 
-> **Source of truth:** `.squad/config/models.json` → `panel_size_limits`
+> **Source of truth:** `models.json` → `panel_size_limits` (in data dir)
 
 | Depth Level | Min | Max | Rationale |
 |-------------|-----|-----|-----------|
@@ -191,7 +191,7 @@ Omit data anchor tables entirely. Level 1 articles are narrative-first; agents s
 
 ### Execution Protocol
 
-> **Model config source of truth:** `.squad/config/models.json` plus `content/model_policy.py`
+> **Model config source of truth:** `models.json` in data dir, resolved by `model-policy.ts`
 
 1. **Spawn all panelists simultaneously** — use `task` tool in parallel, all as `background` agents
 2. **Model selection is depth-level-driven:**
@@ -220,9 +220,7 @@ Omit data anchor tables entirely. Level 1 articles are narrative-first; agents s
 ```
 You are [Name], the [Role] for an NFL analysis team. You are participating in a panel discussion.
 
-TEAM ROOT: C:\github\nfl-eval
-Read .squad/agents/[agent-folder]/charter.md and history.md.
-Read .squad/decisions.md.
+Your charter and relevant memories are loaded automatically by the runner.
 
 ## Your Role
 [2–3 sentences on what you do and why you're on this panel]

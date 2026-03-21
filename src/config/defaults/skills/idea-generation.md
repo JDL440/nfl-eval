@@ -207,51 +207,21 @@ Reasoning:
 
 ## 4. Routing — Getting Ideas Into the Decision Pipeline
 
-All new ideas route through **Lead's decisions inbox** for approval before DB insertion.
+All new ideas are submitted via the dashboard idea form or API.
 
-### File Naming & Location
-```
-.squad/decisions/inbox/{agent}-idea-{slug}.md
-```
+### Idea Workflow
+Ideas are submitted through the dashboard at `/new`. The lead agent generates a structured idea with title, slug, teams, and depth level, which is stored directly in the pipeline database.
 
-Example:
-```
-.squad/decisions/inbox/media-idea-seahawks-pass-rush-comp-nfcw.md
-```
-
-### File Format
-Write your idea proposal as a markdown file with frontmatter:
-
-```yaml
----
-type: "idea"
-agent: "{your-agent-name}"
-idea_id: "{slug}"
-score: {numeric score from rubric}
-status: "pending"
----
-
-# Article Idea: {Title}
-
-{Full idea proposal using template above}
-
----
-
-## Evaluation Checklist
-- [ ] Trigger is clear (news hook, calendar, gap, etc.)
-- [ ] Angle is unique (checked recent 30 ideas)
-- [ ] SEA relevance is explicit
-- [ ] Reader value is defensible at depth level
-- [ ] Window/date alignment is sound
-- [ ] Expires/time-sensitive flags are correct
-```
+### Evaluation Checklist
+- Trigger is clear (news hook, calendar, gap, etc.)
+- Angle is unique (checked recent ideas)
+- Team relevance is explicit
+- Reader value is defensible at depth level
+- Window/date alignment is sound
+- Expires/time-sensitive flags are correct
 
 ### Lead's Review
-Lead will:
-1. Review score and reasoning
-2. Approve (→ DB insertion) or reject (→ feedback in inbox)
-3. Update status to "approved" or "rejected"
-4. Archive to `.squad/decisions/archive/`
+Lead reviews the idea quality during Stage 1 (idea generation). The pipeline auto-advances through subsequent stages.
 
 ---
 

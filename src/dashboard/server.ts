@@ -2020,6 +2020,166 @@ export function createApp(
     );
   });
 
+  // ── Refresh Knowledge ────────────────────────────────────────────────────
+
+  const TEAM_ABBRS_SET = new Set([
+    'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
+    'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
+    'nyj','phi','pit','sf','sea','tb','ten','was',
+  ]);
+
+  function knowledgeSkillsFor(agentName: string): string[] {
+    if (TEAM_ABBRS_SET.has(agentName)) return ['nflverse-data'];
+    switch (agentName) {
+      case 'analytics':
+      case 'cap-analyst':
+        return ['nflverse-data'];
+      case 'draft-analyst':
+        return ['nflverse-data'];
+      case 'defense-analyst':
+        return ['nflverse-data'];
+      default:
+        return [];
+    }
+  }
+
+  function knowledgePromptFor(agentName: string): string {
+    if (TEAM_ABBRS_SET.has(agentName)) {
+      return `Review and update your domain knowledge for the ${agentName.toUpperCase()} team. Summarize the most important current facts, figures, and developments you need to track. Focus on verifiable data: cap numbers, roster moves, coaching changes, key statistics, and recent transactions. Format as a structured knowledge brief with dates and sources where possible.`;
+    }
+    switch (agentName) {
+      case 'analytics':
+      case 'cap-analyst':
+        return 'Review and update your domain knowledge on team efficiency metrics and salary cap data across the league. Summarize key figures, trends, and notable changes. Format as a structured knowledge brief.';
+      case 'draft-analyst':
+        return 'Review and update your domain knowledge on draft prospects, combine results, and draft pick value. Summarize key figures, trends, and notable developments. Format as a structured knowledge brief.';
+      case 'defense-analyst':
+        return 'Review and update your domain knowledge on defensive performance across the league. Summarize key figures, rankings, and notable developments. Format as a structured knowledge brief.';
+      default:
+        return 'Review and update your domain knowledge. Summarize the most important current facts, figures, and developments you need to track. Format as a structured knowledge brief.';
+    }
+  }
+
+  // Active background refreshes
+  const activeRefreshes = new Map<string, { startedAt: number }>();
+
+  app.post('/api/agents/:name/refresh-knowledge', async (c) => {
+    const name = c.req.param('name');
+    const isHtmx = c.req.header('HX-Request') === 'true';
+
+    const runner = deps?.actionContext?.runner;
+    if (!runner || !memory) {
+      const msg = 'Runner or memory not available';
+      return isHtmx
+        ? c.html(`<div class="memory-action-result" style="color:var(--danger)">${msg}</div>`, 503)
+        : c.json({ error: msg }, 503);
+    }
+
+    const skills = knowledgeSkillsFor(name);
+    if (skills.length === 0) {
+      const msg = `No data tools mapped for agent "${name}"`;
+      return isHtmx
+        ? c.html(`<div class="memory-action-result" style="color:var(--warning)">${msg}</div>`)
+        : c.json({ error: msg }, 400);
+    }
+
+    if (activeRefreshes.has(name)) {
+      const msg = `Refresh already in progress for "${name}"`;
+      return isHtmx
+        ? c.html(`<div class="memory-action-result">${msg}</div>`)
+        : c.json({ error: msg }, 409);
+    }
+
+    // Run in background — return immediately
+    activeRefreshes.set(name, { startedAt: Date.now() });
+
+    runner.run({
+      agentName: name,
+      task: knowledgePromptFor(name),
+      skills,
+    }).then((result) => {
+      memory.store({
+        agentName: name,
+        category: 'domain_knowledge',
+        content: result.content,
+        relevanceScore: 1.0,
+        sourceSession: `refresh-${new Date().toISOString()}`,
+      });
+      activeRefreshes.delete(name);
+      bus.emit({ type: 'refresh_complete', articleId: name, data: { success: true, contentLength: result.content.length }, timestamp: new Date().toISOString() });
+    }).catch((err) => {
+      activeRefreshes.delete(name);
+      bus.emit({ type: 'refresh_complete', articleId: name, data: { error: String((err as Error).message ?? err) }, timestamp: new Date().toISOString() });
+    });
+
+    if (isHtmx) {
+      return c.html('<div class="memory-action-result">⏳ Knowledge refresh started — this may take a minute…</div>');
+    }
+    return c.json({ success: true, agent: name, status: 'started' });
+  });
+
+  app.post('/api/agents/refresh-all', async (c) => {
+    const isHtmx = c.req.header('HX-Request') === 'true';
+
+    const runner = deps?.actionContext?.runner;
+    if (!runner || !memory) {
+      const msg = 'Runner or memory not available';
+      return isHtmx
+        ? c.html(`<div class="memory-action-result" style="color:var(--danger)">${msg}</div>`, 503)
+        : c.json({ error: msg }, 503);
+    }
+
+    const allAgents = runner.listAgents();
+    const eligible = allAgents.filter((a) => knowledgeSkillsFor(a).length > 0);
+
+    if (eligible.length === 0) {
+      const msg = 'No agents with mapped data tools found';
+      return isHtmx
+        ? c.html(`<div class="memory-action-result">${msg}</div>`)
+        : c.json({ error: msg }, 400);
+    }
+
+    // Run sequentially in background to avoid overwhelming the LLM
+    const doRefreshAll = async () => {
+      let succeeded = 0;
+      let failed = 0;
+      for (const name of eligible) {
+        try {
+          const skills = knowledgeSkillsFor(name);
+          const result = await runner.run({
+            agentName: name,
+            task: knowledgePromptFor(name),
+            skills,
+          });
+          memory.store({
+            agentName: name,
+            category: 'domain_knowledge',
+            content: result.content,
+            relevanceScore: 1.0,
+            sourceSession: `refresh-all-${new Date().toISOString()}`,
+          });
+          succeeded++;
+        } catch {
+          failed++;
+        }
+      }
+      bus.emit({
+        type: 'refresh_complete',
+        articleId: '_all',
+        data: { succeeded, failed, total: eligible.length },
+        timestamp: new Date().toISOString(),
+      });
+    };
+    doRefreshAll();
+
+    if (isHtmx) {
+      return c.html(
+        `<div class="memory-action-result">⏳ Refreshing ${eligible.length} agents — this may take several minutes…</div>`,
+      );
+    }
+    return c.json({ success: true, status: 'started', agentCount: eligible.length });
+  });
+
   // ── Pipeline Runs page ────────────────────────────────────────────────────
 
   app.get('/runs', (c) => {
@@ -2133,6 +2293,22 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Image service initialized (provider: ${provider})`);
   } catch (err) {
     console.log(`Image service not available: ${err instanceof Error ? err.message : err}`);
+  }
+
+  // Periodic relevance decay — run once at startup
+  if (memory) {
+    try {
+      const agentStats = memory.stats();
+      let totalDecayed = 0;
+      for (const s of agentStats) {
+        totalDecayed += memory.decay(s.agentName, 0.95);
+      }
+      if (totalDecayed > 0) {
+        console.log(`[memory] Decayed ${totalDecayed} entries across ${agentStats.length} agents (×0.95)`);
+      }
+    } catch (err) {
+      console.warn(`[memory] Startup decay skipped: ${err instanceof Error ? err.message : err}`);
+    }
   }
 
   const app = createApp(repo, config, { actionContext, imageService, memory });

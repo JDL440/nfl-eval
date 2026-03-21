@@ -528,4 +528,4 @@ Include the actual numbers from the output in your analysis.
 - **Tier 4:** DataScience agent — writes Python for custom models (aging curves, statistical comps, visualizations)
 - **Tier 5:** Gameday review pipeline — same-day article production after NFL games
 
-See `.squad/decisions/inbox/lead-nflverse-detailed-plan.md` for full roadmap.
+See the nflverse data documentation for the full integration roadmap.

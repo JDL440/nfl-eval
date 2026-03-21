@@ -20,7 +20,8 @@ export interface PipelineEvent {
     | 'article_created'
     | 'article_published'
     | 'batch_started'
-    | 'batch_completed';
+    | 'batch_completed'
+    | 'refresh_complete';
   articleId?: string;
   data: Record<string, unknown>;
   timestamp: string;

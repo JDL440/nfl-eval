@@ -407,6 +407,56 @@ describe('AgentRunner', () => {
       expect(result.memoriesUsed).toBe(1);
     });
 
+    it('touches recalled memories after successful run', async () => {
+      // Seed two memories
+      memory.store({
+        agentName: 'writer',
+        category: 'learning',
+        content: 'Use EPA per play metrics',
+      });
+      memory.store({
+        agentName: 'writer',
+        category: 'decision',
+        content: 'Prefer advanced stats over box score',
+      });
+
+      const before = memory.recall('writer');
+      expect(before).toHaveLength(2);
+      const beforeCounts = before.map((m) => ({ id: m.id, accessCount: m.accessCount }));
+
+      await runner.run({
+        agentName: 'writer',
+        task: 'Analyze passing efficiency',
+      });
+
+      // Verify each recalled memory was touched (access_count incremented)
+      for (const bc of beforeCounts) {
+        const after = memory.recall('writer').find((m) => m.id === bc.id);
+        expect(after).toBeDefined();
+        expect(after!.accessCount).toBe(bc.accessCount + 1);
+      }
+    });
+
+    it('touches recalled memories with spy verification', async () => {
+      memory.store({
+        agentName: 'writer',
+        category: 'learning',
+        content: 'Always cite sources',
+      });
+
+      const touchSpy = vi.spyOn(memory, 'touch');
+
+      await runner.run({
+        agentName: 'writer',
+        task: 'Write about rushing trends',
+      });
+
+      const recalled = memory.recall('writer').filter((m) => m.content === 'Always cite sources');
+      expect(recalled).toHaveLength(1);
+      expect(touchSpy).toHaveBeenCalledWith(recalled[0].id);
+      touchSpy.mockRestore();
+    });
+
     it('stores a learning memory after successful run', async () => {
       const beforeCount = memory.recall('writer').length;
 

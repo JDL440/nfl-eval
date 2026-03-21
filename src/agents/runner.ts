@@ -383,6 +383,11 @@ export class AgentRunner {
     // 8. Separate thinking tokens from output (Qwen, DeepSeek, etc.)
     const { thinking, output: cleanContent } = separateThinking(response.content);
 
+    // 8b. Boost relevance of memories that were used in this successful run
+    for (const mem of memories) {
+      this.memory.touch(mem.id);
+    }
+
     // 9. Store learning memory — extract a meaningful summary from the output
     const outputPreview = cleanContent.replace(/^#+\s.*/gm, '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (outputPreview.length > 20) {
