@@ -186,6 +186,64 @@ describe('Agent Charter & Skill Viewer', () => {
     });
   });
 
+  // ── Charter History ───────────────────────────────────────────────────────
+
+  describe('Charter History', () => {
+    it('records history when charter content changes', async () => {
+      // First save — changes from original seed content
+      const res1 = await app.request('/api/agents/sea', {
+        method: 'PUT',
+        body: new URLSearchParams({ content: '# Updated Charter\n\nNew content.' }),
+      });
+      expect(res1.status).toBe(200);
+
+      // Verify history was recorded
+      const historyRes = await app.request('/api/agents/sea/history');
+      expect(historyRes.status).toBe(200);
+      const rows = await historyRes.json() as Array<{ id: number; content_length: number }>;
+      expect(rows.length).toBe(1);
+      expect(rows[0].content_length).toBeGreaterThan(0);
+    });
+
+    it('does not record history when content is unchanged', async () => {
+      // Read current content
+      const original = '# Seattle Seahawks Expert\n\n> The 12th man whisperer.\n\n## Responsibilities\n- Track roster\n- Analyze cap\n\n## Boundaries\n- No gambling advice\n';
+
+      // Save same content (whitespace-trimmed match)
+      const res = await app.request('/api/agents/sea', {
+        method: 'PUT',
+        body: new URLSearchParams({ content: original }),
+      });
+      expect(res.status).toBe(200);
+
+      // History should be empty
+      const historyRes = await app.request('/api/agents/sea/history');
+      const rows = await historyRes.json() as Array<{ id: number }>;
+      expect(rows.length).toBe(0);
+    });
+
+    it('returns empty history via HTMX endpoint', async () => {
+      const res = await app.request('/htmx/agents/sea/history');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('No edit history');
+    });
+
+    it('returns history entries via HTMX after edits', async () => {
+      // Make an edit
+      await app.request('/api/agents/sea', {
+        method: 'PUT',
+        body: new URLSearchParams({ content: '# Changed\n' }),
+      });
+
+      const res = await app.request('/htmx/agents/sea/history');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('charter-history');
+      expect(html).toContain('history-entry');
+    });
+  });
+
   // ── Unit tests for helpers ────────────────────────────────────────────────
 
   describe('classifyCharter', () => {

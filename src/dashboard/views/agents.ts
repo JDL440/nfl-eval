@@ -175,8 +175,20 @@ export function renderCharterDetail(name: string, content: string, labName: stri
             hx-get="/htmx/agents/${escapeHtml(name)}/edit"
             hx-target="#charter-display"
             hx-swap="innerHTML">✏️ Edit</button>
+          <button class="btn btn-secondary btn-sm"
+            hx-get="/htmx/agents/${escapeHtml(name)}/history"
+            hx-target="#charter-history"
+            hx-swap="innerHTML">📜 Edit History</button>
+          <button class="btn btn-secondary btn-sm"
+            hx-post="/api/agents/${escapeHtml(name)}/refresh-knowledge"
+            hx-target="#refresh-result"
+            hx-indicator="#refresh-spinner"
+            hx-swap="innerHTML">🔄 Refresh Knowledge</button>
+          <span id="refresh-spinner" class="htmx-indicator" style="margin-left:0.5rem">Refreshing…</span>
         </div>
+        <div id="refresh-result"></div>
       </div>
+      <div id="charter-history"></div>
       ${memoryHtml ?? ''}
     </div>`;
 

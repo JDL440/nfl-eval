@@ -272,3 +272,12 @@ ORDER BY
     END,
     a.time_sensitive DESC,
     a.target_publish_date ASC NULLS LAST;
+
+-- ── Charter edit history ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS charter_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  edited_at TEXT NOT NULL DEFAULT (datetime('now')),
+  summary TEXT
+);

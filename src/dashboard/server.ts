@@ -44,7 +44,7 @@ import {
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
-import { escapeHtml, renderLayout } from './views/layout.js';
+import { escapeHtml, formatDate, renderLayout } from './views/layout.js';
 import {
   renderNewIdeaPage,
   renderIdeaSuccess,
@@ -1792,10 +1792,48 @@ export function createApp(
     const name = c.req.param('name');
     const filePath = resolveCharterPath(name);
     if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
+
+    // Read existing content for history
+    const existingContent = existsSync(filePath) ? readFileSync(filePath, 'utf-8') : '';
+
     const body = await c.req.parseBody();
     const content = typeof body['content'] === 'string' ? body['content'] : '';
+
+    // Save history if content actually changed
+    if (existingContent.trim() !== content.trim()) {
+      try {
+        repo.insertCharterHistory(name, existingContent);
+      } catch (_) { /* non-fatal */ }
+    }
+
     writeFileSync(filePath, content, 'utf-8');
     return c.html(renderCharterView(name, content));
+  });
+
+  // ── Charter History ─────────────────────────────────────────────────────
+
+  app.get('/api/agents/:name/history', (c) => {
+    const name = c.req.param('name');
+    const rows = repo.getCharterHistorySummary(name);
+    return c.json(rows);
+  });
+
+  app.get('/htmx/agents/:name/history', (c) => {
+    const name = c.req.param('name');
+    const rows = repo.getCharterHistory(name);
+
+    if (rows.length === 0) {
+      return c.html('<p class="empty-state">No edit history</p>');
+    }
+
+    const items = rows.map(r => `
+      <details class="history-entry">
+        <summary>${formatDate(r.edited_at)} — ${r.content.length} chars</summary>
+        <pre class="history-content">${escapeHtml(r.content.slice(0, 2000))}</pre>
+      </details>
+    `).join('');
+
+    return c.html(`<div class="charter-history">${items}</div>`);
   });
 
   // ── Memory Browser ──────────────────────────────────────────────────────

@@ -1020,4 +1020,27 @@ export class Repository {
     );
     stmt.run(articleId, agentName);
   }
+
+  // ── Charter History ───────────────────────────────────────────────────────
+
+  /** Save a snapshot of charter content before an edit. */
+  insertCharterHistory(agentName: string, content: string): void {
+    this.db.prepare(
+      `INSERT INTO charter_history (agent_name, content) VALUES (?, ?)`,
+    ).run(agentName, content);
+  }
+
+  /** Get charter edit history (JSON-friendly: id, edited_at, content_length). */
+  getCharterHistorySummary(agentName: string, limit = 20): Array<{ id: number; edited_at: string; content_length: number }> {
+    return this.db.prepare(
+      `SELECT id, edited_at, length(content) as content_length FROM charter_history WHERE agent_name = ? ORDER BY edited_at DESC LIMIT ?`,
+    ).all(agentName, limit) as Array<{ id: number; edited_at: string; content_length: number }>;
+  }
+
+  /** Get charter edit history with full content. */
+  getCharterHistory(agentName: string, limit = 10): Array<{ id: number; edited_at: string; content: string }> {
+    return this.db.prepare(
+      `SELECT id, edited_at, content FROM charter_history WHERE agent_name = ? ORDER BY edited_at DESC LIMIT ?`,
+    ).all(agentName, limit) as Array<{ id: number; edited_at: string; content: string }>;
+  }
 }
