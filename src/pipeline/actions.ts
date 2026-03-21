@@ -854,6 +854,7 @@ export async function autoAdvanceArticle(
               onStep?.(regressStep);
 
               current = repo.getArticle(articleId)!;
+              lastError = undefined; // Clear stale error — regression succeeded, retrying
               continue; // Retry from stage 4
             } catch { /* ignore regression failure, fall through to break */ }
           } else {

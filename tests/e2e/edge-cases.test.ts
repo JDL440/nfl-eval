@@ -566,6 +566,45 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
   const REVISE_REVIEW = `# Editor Review\n\n## Verdict: REVISE\n\nThe draft needs stronger statistical support and clearer structure.\n\n## Issues\n- Missing EPA citations\n- Weak conclusion`;
   const APPROVED_REVIEW = `# Editor Review\n\n## Verdict: APPROVED\n\nStrong analytical piece. Ready for publication.\n\n## Strengths\n- Clear thesis\n- Good data support`;
 
+  // The mock's detectStageContext gets confused when gathered context includes
+  // keywords from earlier stages (e.g., "discussion prompt" in the context causes
+  // writeDraft to get the wrong mock response). We need to set the correct mock
+  // response before each stage runs.
+  //
+  // Stage-to-action mapping:
+  //  1→2: generatePrompt (result doesn't need word count)
+  //  2→3: composePanel (result doesn't need word count)
+  //  3→4: runDiscussion (result doesn't need word count)
+  //  4→5: writeDraft (draft MUST have 200+ words for guard at 5→6)
+  //  5→6: runEditor (writes editor-review.md)
+  //  6→7: runPublisherPass (writes publisher-pass.md)
+  //
+  // The critical override is at stage 4 (writeDraft) and stage 5 (runEditor).
+
+  // A 300-word draft to satisfy the requireDraft guard
+  const MOCK_DRAFT = `# Test Article Draft\n\n${Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')}`;
+
+  // Publisher pass content
+  const MOCK_PUBLISHER = `# Publisher Pass\n\n## Pre-Publication Checklist\n- [x] Title finalized\n- [x] Content verified\n- [x] Images checked\n\nReady for publication.`;
+
+  /** Set the correct mock response before a stage's action runs. */
+  function setMockForStage(stage: number, editorResponse?: string): void {
+    if (stage === 4) {
+      // writeDraft needs 200+ word content
+      mockProvider.setResponse(MOCK_DRAFT);
+    } else if (stage === 5) {
+      // runEditor needs a verdict
+      mockProvider.setResponse(editorResponse ?? APPROVED_REVIEW);
+    } else if (stage === 6) {
+      // runPublisherPass
+      mockProvider.setResponse(MOCK_PUBLISHER);
+    } else {
+      // Other stages: let mock auto-detect (works for stages 1-3 since
+      // context is simpler and detectStageContext matches correctly)
+      mockProvider.setResponse(null);
+    }
+  }
+
   it('REVISE → retry → APPROVED: auto-advances with one revision cycle', async () => {
     const slug = 'edge-auto-revise-retry';
     repo.createArticle({ id: slug, title: 'Auto-Advance REVISE Retry' });
@@ -574,7 +613,6 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     writeArtifact(slug, 'idea.md', '# Idea\nTest concept for REVISE loop.');
 
     let editorCallCount = 0;
-    const originalSetResponse = mockProvider.setResponse.bind(mockProvider);
 
     // Track steps from the callback
     const collectedSteps: Array<{ type: string; from: number; to: number; action: string }> = [];
@@ -585,24 +623,14 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
       onStep: (step) => {
         collectedSteps.push({ type: step.type, from: step.from, to: step.to, action: step.action });
 
-        // When we're about to run the editor (stage 5, working), set the response
-        if (step.type === 'working' && step.from === 5) {
-          editorCallCount++;
-          if (editorCallCount === 1) {
-            // First editor pass: REVISE
-            originalSetResponse(REVISE_REVIEW);
+        if (step.type === 'working') {
+          if (step.from === 5) {
+            editorCallCount++;
+            // First editor pass: REVISE. Second: APPROVED.
+            setMockForStage(5, editorCallCount === 1 ? REVISE_REVIEW : APPROVED_REVIEW);
           } else {
-            // Second editor pass: APPROVED
-            originalSetResponse(APPROVED_REVIEW);
+            setMockForStage(step.from);
           }
-        }
-        // After editor runs, clear the override so other stages use defaults
-        if (step.type === 'advance' && step.to === 6) {
-          originalSetResponse(null);
-        }
-        if (step.type === 'error' && step.from === 6) {
-          // After the guard failure at 6→7, clear override for retry
-          originalSetResponse(null);
         }
       },
     });
@@ -631,21 +659,17 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     repo.createArticle({ id: slug, title: 'Auto-Advance Max Revisions' });
     writeArtifact(slug, 'idea.md', '# Idea\nTest max revisions.');
 
-    // Always return REVISE for editor
-    const originalSetResponse = mockProvider.setResponse.bind(mockProvider);
-
     const result = await autoAdvanceArticle(slug, actionCtx, {
       maxStage: 7,
       maxRevisions: 2,
       onStep: (step) => {
-        if (step.type === 'working' && step.from === 5) {
-          originalSetResponse(REVISE_REVIEW);
-        }
-        if (step.type === 'advance' && step.to === 6) {
-          originalSetResponse(null);
-        }
-        if (step.type === 'error') {
-          originalSetResponse(null);
+        if (step.type === 'working') {
+          if (step.from === 5) {
+            // Always REVISE — editor never approves
+            setMockForStage(5, REVISE_REVIEW);
+          } else {
+            setMockForStage(step.from);
+          }
         }
       },
     });
@@ -664,9 +688,6 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     repo.createArticle({ id: slug, title: 'Direct autoAdvanceArticle Test' });
     writeArtifact(slug, 'idea.md', '# Idea\nDirect call test.');
 
-    // Use default mock responses (editor returns PUBLISH/APPROVED by default)
-    mockProvider.setResponse(null);
-
     const stepLog: Array<{ type: string; from: number; to: number }> = [];
 
     const result = await autoAdvanceArticle(slug, actionCtx, {
@@ -674,8 +695,13 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
       maxRevisions: 2,
       onStep: (step) => {
         stepLog.push({ type: step.type, from: step.from, to: step.to });
+        if (step.type === 'working') {
+          setMockForStage(step.from);
+        }
       },
     });
+
+    mockProvider.setResponse(null);
 
     // Should advance cleanly to stage 7 with no revisions
     expect(result.finalStage).toBe(7);

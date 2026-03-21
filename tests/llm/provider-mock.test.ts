@@ -102,7 +102,7 @@ describe('MockProvider', () => {
         stageReq('You are the editor agent.', 'Review the article draft and provide editorial feedback.'),
       );
       expect(res.content).toContain('Editor Review');
-      expect(res.content).toContain('PUBLISH');
+      expect(res.content).toContain('APPROVED');
     });
 
     it('returns publisher pass for runPublisherPass context', async () => {
