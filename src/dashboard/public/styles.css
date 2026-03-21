@@ -2243,3 +2243,19 @@ a:hover { text-decoration: underline; }
   .memory-table { font-size: 0.8rem; }
   .memory-cell-content { max-width: 200px; }
 }
+
+/* ── Staleness badges ─────────────────────────────────────────────────────── */
+.badge-stale {
+  background: var(--warning, #f0ad4e);
+  color: #000;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.badge-fresh {
+  background: var(--success, #5cb85c);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+}

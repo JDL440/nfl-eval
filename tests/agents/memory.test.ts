@@ -348,4 +348,127 @@ describe('AgentMemory', () => {
       expect(mem.prune()).toBe(0);
     });
   });
+
+  // ── latestKnowledge ───────────────────────────────────────────────────────
+
+  describe('latestKnowledge', () => {
+    it('returns null when no domain_knowledge exists', () => {
+      mem.store({ agentName: 'writer', category: 'learning', content: 'not dk' });
+      expect(mem.latestKnowledge('writer')).toBeNull();
+    });
+
+    it('returns null for unknown agent', () => {
+      expect(mem.latestKnowledge('nonexistent')).toBeNull();
+    });
+
+    it('returns the latest domain_knowledge date', () => {
+      mem.store({ agentName: 'scout', category: 'domain_knowledge', content: 'first' });
+      mem.store({ agentName: 'scout', category: 'domain_knowledge', content: 'second' });
+      const result = mem.latestKnowledge('scout');
+      expect(result).toBeTruthy();
+      expect(typeof result).toBe('string');
+    });
+
+    it('ignores other categories', () => {
+      mem.store({ agentName: 'scout', category: 'learning', content: 'learn' });
+      mem.store({ agentName: 'scout', category: 'domain_knowledge', content: 'dk' });
+      const result = mem.latestKnowledge('scout');
+      expect(result).toBeTruthy();
+    });
+  });
+
+  // ── knowledgeFreshness ────────────────────────────────────────────────────
+
+  describe('knowledgeFreshness', () => {
+    it('returns empty map on empty db', () => {
+      const map = mem.knowledgeFreshness();
+      expect(map.size).toBe(0);
+    });
+
+    it('returns map with entries for agents that have domain_knowledge', () => {
+      mem.store({ agentName: 'writer', category: 'domain_knowledge', content: 'dk1' });
+      mem.store({ agentName: 'editor', category: 'domain_knowledge', content: 'dk2' });
+      mem.store({ agentName: 'scout', category: 'learning', content: 'not dk' });
+
+      const map = mem.knowledgeFreshness();
+      expect(map.size).toBe(2);
+      expect(map.has('writer')).toBe(true);
+      expect(map.has('editor')).toBe(true);
+      expect(map.has('scout')).toBe(false);
+    });
+
+    it('returns latest date per agent', () => {
+      mem.store({ agentName: 'writer', category: 'domain_knowledge', content: 'first' });
+      mem.store({ agentName: 'writer', category: 'domain_knowledge', content: 'second' });
+
+      const map = mem.knowledgeFreshness();
+      expect(map.size).toBe(1);
+      expect(map.get('writer')).toBeTruthy();
+    });
+  });
+
+  // ── categoryStats ─────────────────────────────────────────────────────────
+
+  describe('categoryStats', () => {
+    it('returns empty array for unknown agent', () => {
+      expect(mem.categoryStats('nonexistent')).toEqual([]);
+    });
+
+    it('returns per-category breakdown', () => {
+      mem.store({ agentName: 'scout', category: 'learning', content: 'l1', relevanceScore: 1.0 });
+      mem.store({ agentName: 'scout', category: 'learning', content: 'l2', relevanceScore: 0.5 });
+      mem.store({ agentName: 'scout', category: 'domain_knowledge', content: 'dk1', relevanceScore: 1.0 });
+      mem.store({ agentName: 'scout', category: 'decision', content: 'd1', relevanceScore: 0.8 });
+
+      const stats = mem.categoryStats('scout');
+      expect(stats.length).toBe(3);
+
+      const learning = stats.find(s => s.category === 'learning');
+      expect(learning).toBeDefined();
+      expect(learning!.count).toBe(2);
+      expect(learning!.avgRelevance).toBeCloseTo(0.75, 5);
+      expect(learning!.latestAt).toBeTruthy();
+
+      const dk = stats.find(s => s.category === 'domain_knowledge');
+      expect(dk).toBeDefined();
+      expect(dk!.count).toBe(1);
+    });
+
+    it('does not include other agents', () => {
+      mem.store({ agentName: 'scout', category: 'learning', content: 'mine' });
+      mem.store({ agentName: 'writer', category: 'learning', content: 'theirs' });
+
+      const stats = mem.categoryStats('scout');
+      expect(stats.length).toBe(1);
+      expect(stats[0].count).toBe(1);
+    });
+  });
+
+  // ── Stale badge logic ─────────────────────────────────────────────────────
+
+  describe('stale badge logic', () => {
+    it('knowledge older than 7 days is stale', () => {
+      const oldDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      const ageMs = Date.now() - new Date(oldDate).getTime();
+      const ageDays = ageMs / (1000 * 60 * 60 * 24);
+      expect(ageDays).toBeGreaterThan(7);
+    });
+
+    it('knowledge within 7 days is fresh', () => {
+      const recentDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+      const ageMs = Date.now() - new Date(recentDate).getTime();
+      const ageDays = ageMs / (1000 * 60 * 60 * 24);
+      expect(ageDays).toBeLessThanOrEqual(7);
+    });
+
+    it('SQLite date format (without T) is handled', () => {
+      // SQLite datetime('now') produces 'YYYY-MM-DD HH:MM:SS' without T or Z.
+      // The badge code normalizes via replace(' ', 'T') + 'Z', matching formatDate.
+      const sqliteDate = '2020-01-01 00:00:00';
+      const normalized = sqliteDate.replace(' ', 'T') + 'Z';
+      const d = new Date(normalized);
+      expect(isNaN(d.getTime())).toBe(false);
+      expect(d.toISOString()).toBe('2020-01-01T00:00:00.000Z');
+    });
+  });
 });

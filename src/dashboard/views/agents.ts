@@ -28,6 +28,7 @@ export interface AgentsPageData {
   labName: string;
   charters: CharterSummary[];
   skills: SkillSummary[];
+  freshness?: Map<string, string>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ function extractSkillsReferenced(content: string): string[] {
 // ── Main listing page ────────────────────────────────────────────────────────
 
 export function renderAgentsPage(data: AgentsPageData): string {
-  const { labName, charters, skills } = data;
+  const { labName, charters, skills, freshness } = data;
 
   const teamCharters = charters.filter(c => c.type === 'team');
   const specialistCharters = charters.filter(c => c.type === 'specialist');
@@ -111,12 +112,12 @@ export function renderAgentsPage(data: AgentsPageData): string {
 
         <h3>Team Experts (${teamCharters.length})</h3>
         <div class="agent-grid">
-          ${teamCharters.map(c => renderCharterCard(c)).join('')}
+          ${teamCharters.map(c => renderCharterCard(c, freshness?.get(c.name))).join('')}
         </div>
 
         <h3>Specialists (${specialistCharters.length})</h3>
         <div class="agent-grid">
-          ${specialistCharters.map(c => renderCharterCard(c)).join('')}
+          ${specialistCharters.map(c => renderCharterCard(c, freshness?.get(c.name))).join('')}
         </div>
       </section>
 
@@ -139,13 +140,25 @@ export function renderAgentsPage(data: AgentsPageData): string {
   return renderLayout('Agents', content, labName);
 }
 
-function renderCharterCard(c: CharterSummary): string {
+function renderCharterCard(c: CharterSummary, knowledgeDate?: string | null): string {
   const badgeClass = c.type === 'team' ? 'badge-team' : 'badge-specialist';
+  let staleBadge = '';
+  if (knowledgeDate) {
+    const normalized = knowledgeDate.includes('T') ? knowledgeDate : knowledgeDate.replace(' ', 'T') + 'Z';
+    const ageMs = Date.now() - new Date(normalized).getTime();
+    const ageDays = ageMs / (1000 * 60 * 60 * 24);
+    if (ageDays > 7) {
+      staleBadge = '<span class="badge badge-stale" title="Knowledge older than 7 days">⚠ stale</span>';
+    } else {
+      staleBadge = '<span class="badge badge-fresh" title="Knowledge updated recently">✓ fresh</span>';
+    }
+  }
   return `
     <a href="/agents/${escapeHtml(c.name)}" class="agent-card">
       <div class="agent-card-header">
         <span class="agent-card-name">${escapeHtml(c.name)}</span>
         <span class="badge ${badgeClass}">${escapeHtml(c.type)}</span>
+        ${staleBadge}
       </div>
       <div class="agent-card-identity">${escapeHtml(c.identity)}</div>
     </a>`;
@@ -189,6 +202,10 @@ export function renderCharterDetail(name: string, content: string, labName: stri
         <div id="refresh-result"></div>
       </div>
       <div id="charter-history"></div>
+      <section class="detail-section">
+        <h3>Memory Stats</h3>
+        <div hx-get="/htmx/agents/${escapeHtml(name)}/memory-stats" hx-trigger="load" hx-target="this"></div>
+      </section>
       ${memoryHtml ?? ''}
     </div>`;
 

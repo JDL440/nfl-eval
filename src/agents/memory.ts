@@ -240,6 +240,44 @@ export class AgentMemory {
     }));
   }
 
+  /** Get the latest domain_knowledge entry date for an agent, or null if none exist. */
+  latestKnowledge(agentName: string): string | null {
+    const stmt = this.db.prepare(
+      `SELECT created_at FROM agent_memory WHERE agent_name = ? AND category = 'domain_knowledge' ORDER BY created_at DESC LIMIT 1`,
+    );
+    const row = stmt.get(agentName) as unknown as { created_at: string } | undefined;
+    return row?.created_at ?? null;
+  }
+
+  /** Get latest domain_knowledge dates for all agents. */
+  knowledgeFreshness(): Map<string, string> {
+    const stmt = this.db.prepare(
+      `SELECT agent_name, MAX(created_at) as latest FROM agent_memory WHERE category = 'domain_knowledge' GROUP BY agent_name`,
+    );
+    const rows = stmt.all() as unknown as Array<{ agent_name: string; latest: string }>;
+    const map = new Map<string, string>();
+    for (const r of rows) map.set(r.agent_name, r.latest);
+    return map;
+  }
+
+  /** Get memory stats per agent per category. */
+  categoryStats(agentName: string): Array<{ category: string; count: number; avgRelevance: number; latestAt: string }> {
+    const stmt = this.db.prepare(`
+      SELECT category, COUNT(*) as count, AVG(relevance_score) as avg_relevance, MAX(created_at) as latest_at
+      FROM agent_memory
+      WHERE agent_name = ?
+      GROUP BY category
+      ORDER BY count DESC
+    `);
+    const rows = stmt.all(agentName) as unknown as Array<{ category: string; count: number; avg_relevance: number; latest_at: string }>;
+    return rows.map((r) => ({
+      category: r.category,
+      count: Number(r.count),
+      avgRelevance: r.avg_relevance,
+      latestAt: r.latest_at,
+    }));
+  }
+
   close(): void {
     this.db.close();
   }

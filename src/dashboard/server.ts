@@ -1709,11 +1709,13 @@ export function createApp(
   }
 
   app.get('/agents', (c) => {
+    const freshness = memory?.knowledgeFreshness() ?? new Map<string, string>();
     return c.html(
       renderAgentsPage({
         labName: config.leagueConfig.name,
         charters: readCharterSummaries(),
         skills: readSkillSummaries(),
+        freshness,
       }),
     );
   });
@@ -1834,6 +1836,29 @@ export function createApp(
     `).join('');
 
     return c.html(`<div class="charter-history">${items}</div>`);
+  });
+
+  app.get('/htmx/agents/:name/memory-stats', (c) => {
+    const name = c.req.param('name');
+    if (!memory) return c.html('<p class="empty-state">Memory not available</p>');
+    const cats = memory.categoryStats(name);
+    if (cats.length === 0) return c.html('<p class="empty-state">No memories yet</p>');
+
+    const rows = cats.map(cat => `
+      <tr>
+        <td><span class="badge">${escapeHtml(cat.category)}</span></td>
+        <td>${cat.count}</td>
+        <td>${cat.avgRelevance.toFixed(2)}</td>
+        <td>${formatDate(cat.latestAt)}</td>
+      </tr>
+    `).join('');
+
+    return c.html(`
+      <table class="data-table compact">
+        <thead><tr><th>Category</th><th>Count</th><th>Avg Relevance</th><th>Latest</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `);
   });
 
   // ── Memory Browser ──────────────────────────────────────────────────────
@@ -2098,10 +2123,17 @@ export function createApp(
       task: knowledgePromptFor(name),
       skills,
     }).then((result) => {
+      const structured = JSON.stringify({
+        type: 'knowledge_refresh',
+        agent: name,
+        summary: result.content,
+        source: 'llm-refresh',
+        refreshedAt: new Date().toISOString(),
+      });
       memory.store({
         agentName: name,
         category: 'domain_knowledge',
-        content: result.content,
+        content: structured,
         relevanceScore: 1.0,
         sourceSession: `refresh-${new Date().toISOString()}`,
       });
