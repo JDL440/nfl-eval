@@ -530,6 +530,13 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     writeAgentResult(ctx.repo, articleId, 'publisher-pass.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runPublisherPass', result);
+
+    // Ensure publisher_pass DB row exists for the interactive checklist UI.
+    // The LLM's review goes into the artifact; the human ticks off checks.
+    if (!ctx.repo.getPublisherPass(articleId)) {
+      ctx.repo.recordPublisherPass(articleId);
+    }
+
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {

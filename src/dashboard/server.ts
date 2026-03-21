@@ -74,7 +74,7 @@ import {
 } from '../pipeline/context-config.js';
 import { LLMGateway } from '../llm/gateway.js';
 import { ModelPolicy } from '../llm/model-policy.js';
-import { AgentRunner } from '../agents/runner.js';
+import { AgentRunner, separateThinking } from '../agents/runner.js';
 import { AgentMemory } from '../agents/memory.js';
 import { PipelineAuditor } from '../pipeline/audit.js';
 import { CopilotProvider } from '../llm/providers/copilot.js';
@@ -158,8 +158,8 @@ export function createApp(
     const art = repo.getArticle(articleId);
     if (!art || art.current_stage < 5) return;
     try {
-      const draft = repo.artifacts.get(articleId, 'draft.md');
-      const summary = draft?.slice(0, 500) ?? '';
+      const rawDraft = repo.artifacts.get(articleId, 'draft.md');
+      const summary = rawDraft ? separateThinking(rawDraft).output.slice(0, 500) : '';
       const team = art.primary_team ?? undefined;
       const results = await imageService.generateArticleImages(articleId, {
         cover: { description: `Cover image for: ${art.title}. ${summary}`, style: 'editorial sports photography, dramatic lighting, 16:9 hero image', team, aspectRatio: '16:9' },
@@ -1596,8 +1596,8 @@ export function createApp(
 
     try {
       // Call imageService directly (NOT autoGenerateImages) so errors propagate to the user
-      const draft = repo.artifacts.get(id, 'draft.md');
-      const summary = draft?.slice(0, 500) ?? '';
+      const rawDraft2 = repo.artifacts.get(id, 'draft.md');
+      const summary = rawDraft2 ? separateThinking(rawDraft2).output.slice(0, 500) : '';
       const team = article.primary_team ?? undefined;
       const results = await imageService.generateArticleImages(id, {
         cover: { description: `Cover image for: ${article.title}. ${summary}`, style: 'editorial sports photography, dramatic lighting, 16:9 hero image', team, aspectRatio: '16:9' },

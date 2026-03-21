@@ -166,12 +166,14 @@ describe('Repository', () => {
       // Should succeed without error
     });
 
-    it('auto-advances from stage 6 to 7', () => {
+    it('records publisher pass without auto-advancing', () => {
       repo.createArticle({ id: 'auto-adv', title: 'Auto Advance' });
       repo.advanceStage('auto-adv', 1, 6, 'editor');
       repo.recordPublisherPass('auto-adv', { title_final: 1 });
       const article = repo.getArticle('auto-adv');
-      expect(article!.current_stage).toBe(7);
+      // recordPublisherPass no longer auto-advances; executeTransition handles that
+      expect(article!.current_stage).toBe(6);
+      expect(repo.getPublisherPass('auto-adv')!.title_final).toBe(1);
     });
 
     it('rejects nonexistent article', () => {
@@ -672,8 +674,9 @@ describe('Repository', () => {
       repo.advanceStage('reg-pub', 4, 5, 'agent');
       repo.advanceStage('reg-pub', 5, 6, 'agent');
       repo.recordPublisherPass('reg-pub');
+      // Manually advance to 7 (recordPublisherPass no longer auto-advances)
+      repo.advanceStage('reg-pub', 6, 7, 'publisher');
 
-      // recordPublisherPass auto-advances 6→7
       const afterPass = repo.getArticle('reg-pub');
       expect(afterPass!.current_stage).toBe(7);
       expect(repo.getPublisherPass('reg-pub')).not.toBeNull();

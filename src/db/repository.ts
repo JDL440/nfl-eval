@@ -780,21 +780,6 @@ export class Repository {
       merged.no_stale_refs,
     );
 
-    // Auto-advance from stage 6 to 7 when publisher pass is recorded
-    if (typeof article.current_stage === 'number' && article.current_stage >= 6 && article.current_stage < 7) {
-      const now = nowISO();
-      const transStmt = this.db.prepare(
-        `INSERT INTO stage_transitions
-         (article_id, from_stage, to_stage, agent, notes, transitioned_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      );
-      transStmt.run(articleId, article.current_stage, 7, 'Publisher', 'Publisher pass recorded; ready for dashboard review', now);
-
-      const upStmt = this.db.prepare(
-        'UPDATE articles SET current_stage = ?, updated_at = ? WHERE id = ?',
-      );
-      upStmt.run(7, now, articleId);
-    }
   }
 
   getPublisherPass(articleId: string): PublisherPass | null {
