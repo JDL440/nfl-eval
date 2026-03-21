@@ -756,7 +756,8 @@ export function createApp(
           console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
           lastError = result.error;
           bus.emit({ type: 'stage_error', articleId: id, data: { stage: current.current_stage, error: result.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
-          if (current.current_stage === 5 && result.error?.includes('REVISE')) {
+          // Handle REVISE/PIVOT at stage 5 (action failed) or stage 6 (guard failed after editor wrote review)
+          if ((current.current_stage === 5 || current.current_stage === 6) && /REVISE|PIVOT|not APPROVED/i.test(result.error ?? '')) {
             try {
               engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');
               steps.push({
@@ -1128,7 +1129,7 @@ export function createApp(
           console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
           lastError = result.error;
           bus.emit({ type: 'stage_error', articleId: id, data: { stage: current.current_stage, error: result.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
-          if (current.current_stage === 5 && result.error?.includes('REVISE')) {
+          if ((current.current_stage === 5 || current.current_stage === 6) && /REVISE|PIVOT|not APPROVED/i.test(result.error ?? '')) {
             try {
               engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');
               steps.push({ from: current.current_stage, to: 4, action: 'Sent back to Stage 4 — Editor requested revisions', duration: result.duration });

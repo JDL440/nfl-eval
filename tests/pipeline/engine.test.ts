@@ -16,6 +16,7 @@ import {
   requireEditorApproval,
   requirePublisherPass,
   requireSubstackUrl,
+  extractVerdict,
 } from '../../src/pipeline/engine.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -191,6 +192,62 @@ describe('Guard functions', () => {
       repo.artifacts.put('multi-review', 'editor-review-2.md', '## Verdict: APPROVED\nSecond pass.');
       const result = requireEditorApproval(repo.artifacts, 'multi-review');
       expect(result.passed).toBe(true);
+    });
+
+    it('normalizes PIVOT REQUIRED to REVISE', () => {
+      repo.createArticle({ id: 'pivot', title: 'Test' });
+      repo.artifacts.put('pivot', 'editor-review.md', '### Verdict: 🔄 PIVOT REQUIRED\nNeed new angle.');
+      const result = requireEditorApproval(repo.artifacts, 'pivot');
+      expect(result.passed).toBe(false);
+      expect(result.reason).toContain('REVISE');
+    });
+
+    it('uses fallback keyword detection when no structured verdict', () => {
+      repo.createArticle({ id: 'fallback-revise', title: 'Test' });
+      repo.artifacts.put('fallback-revise', 'editor-review.md', 'This article needs major revisions before publishing. Rewrite the intro section.');
+      const result = requireEditorApproval(repo.artifacts, 'fallback-revise');
+      expect(result.passed).toBe(false);
+      expect(result.reason).toContain('REVISE');
+    });
+
+    it('uses fallback to detect APPROVED when no header', () => {
+      repo.createArticle({ id: 'fallback-approved', title: 'Test' });
+      repo.artifacts.put('fallback-approved', 'editor-review.md', 'Everything looks great. This article is APPROVED for publication.');
+      const result = requireEditorApproval(repo.artifacts, 'fallback-approved');
+      expect(result.passed).toBe(true);
+    });
+  });
+
+  // ── extractVerdict ────────────────────────────────────────────────────────
+
+  describe('extractVerdict', () => {
+    it('parses standard verdict headers', () => {
+      expect(extractVerdict('## Verdict: APPROVED')).toBe('APPROVED');
+      expect(extractVerdict('## Verdict: REVISE')).toBe('REVISE');
+      expect(extractVerdict('## Verdict: REJECT')).toBe('REJECT');
+    });
+
+    it('maps PIVOT REQUIRED to REVISE', () => {
+      expect(extractVerdict('### Verdict: 🔄 PIVOT REQUIRED')).toBe('REVISE');
+    });
+
+    it('maps NEEDS REVISION to REVISE', () => {
+      expect(extractVerdict('## Verdict: NEEDS REVISION')).toBe('REVISE');
+    });
+
+    it('handles bold verdict markers', () => {
+      expect(extractVerdict('**APPROVED**')).toBe('APPROVED');
+      expect(extractVerdict('**PIVOT REQUIRED**')).toBe('REVISE');
+    });
+
+    it('falls back to keyword scan for unstructured output', () => {
+      expect(extractVerdict('The article needs a rewrite. Major pivot needed.')).toBe('REVISE');
+      expect(extractVerdict('APPROVED for publication. Great work.')).toBe('APPROVED');
+      expect(extractVerdict('This article is rejected due to fabricated data.')).toBe('REJECT');
+    });
+
+    it('returns null when no signal at all', () => {
+      expect(extractVerdict('This is just some random text without any editorial signal.')).toBeNull();
     });
   });
 

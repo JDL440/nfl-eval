@@ -123,18 +123,31 @@ function editorReviewSortKey(name: string): number {
 }
 
 const VERDICT_PATTERNS: RegExp[] = [
-  /(?:##\s*)?(?:Final\s+)?Verdict[:\s]*[*_ 🟢🔴🟡✅❌]*\s*(APPROVED|REVISE|REJECT)/i,
-  /(?:Overall|Final)\s+(?:Verdict|Assessment)[:\s]*[*_ 🟢🔴🟡✅❌]*\s*(APPROVED|REVISE|REJECT)/i,
-  /###?\s*[🟢🔴🟡✅❌]+\s*(APPROVED|REVISE|REJECT)/i,
-  /\*\*(APPROVED|REVISE|REJECT)\*\*/i,
-  /(?:^|\n)\s*(?:✅|🟡|🔴)\s*(APPROVED|REVISE|REJECT)/i,
+  /(?:##\s*)?(?:Final\s+)?Verdict[:\s]*[*_ 🟢🔴🟡✅❌🔄]*\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
+  /(?:Overall|Final)\s+(?:Verdict|Assessment)[:\s]*[*_ 🟢🔴🟡✅❌🔄]*\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
+  /###?\s*[🟢🔴🟡✅❌🔄]+\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
+  /\*\*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT)\*\*/i,
+  /(?:^|\n)\s*(?:✅|🟡|🔴|🔄)\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT)/i,
 ];
 
-function extractVerdict(text: string): string | null {
+/** Normalize LLM verdict variations to canonical values. */
+function normalizeVerdict(raw: string): string {
+  const upper = raw.toUpperCase().trim();
+  if (upper === 'APPROVED') return 'APPROVED';
+  if (upper === 'REJECT') return 'REJECT';
+  // All non-APPROVED/REJECT verdicts map to REVISE
+  return 'REVISE';
+}
+
+export function extractVerdict(text: string): string | null {
   for (const pattern of VERDICT_PATTERNS) {
     const m = text.match(pattern);
-    if (m) return m[1].toUpperCase();
+    if (m) return normalizeVerdict(m[1]);
   }
+  // Fallback: scan for verdict-like keywords anywhere in the text
+  if (/\bAPPROVED\b/i.test(text) && !/\bREJECT|REVISE|PIVOT/i.test(text)) return 'APPROVED';
+  if (/\bREJECT(?:ED)?\b/i.test(text)) return 'REJECT';
+  if (/\b(?:REVISE|PIVOT|NEEDS?\s+REVISION|REWORK|REWRITE)\b/i.test(text)) return 'REVISE';
   return null;
 }
 
