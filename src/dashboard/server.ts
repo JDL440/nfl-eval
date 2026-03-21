@@ -746,11 +746,16 @@ export function createApp(
 
     while (current.current_stage < maxStage) {
       if (ctx) {
+        // Emit working status before starting the stage
+        const workingStageName = STAGE_NAMES[current.current_stage as Stage] ?? `Stage ${current.current_stage}`;
+        bus.emit({ type: 'stage_working', articleId: id, data: { stage: current.current_stage, stageName: workingStageName }, timestamp: new Date().toISOString() });
+
         // Full execution: run agent → write artifact → advance
         const result = await executeTransition(id, current.current_stage as Stage, ctx);
         if (!result.success) {
           console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
           lastError = result.error;
+          bus.emit({ type: 'stage_error', articleId: id, data: { stage: current.current_stage, error: result.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
           if (current.current_stage === 5 && result.error?.includes('REVISE')) {
             try {
               engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');
@@ -1115,10 +1120,14 @@ export function createApp(
 
     while (current.current_stage < maxStage) {
       if (ctx) {
+        const workingStageName = STAGE_NAMES[current.current_stage as Stage] ?? `Stage ${current.current_stage}`;
+        bus.emit({ type: 'stage_working', articleId: id, data: { stage: current.current_stage, stageName: workingStageName }, timestamp: new Date().toISOString() });
+
         const result = await executeTransition(id, current.current_stage as Stage, ctx);
         if (!result.success) {
           console.warn(`[auto-advance] Stage ${current.current_stage} failed: ${result.error}`);
           lastError = result.error;
+          bus.emit({ type: 'stage_error', articleId: id, data: { stage: current.current_stage, error: result.error ?? 'Unknown error' }, timestamp: new Date().toISOString() });
           if (current.current_stage === 5 && result.error?.includes('REVISE')) {
             try {
               engine.regress(id, current.current_stage as Stage, 4 as Stage, 'auto-advance', 'Editor requested revisions');

@@ -112,7 +112,7 @@ export class LLMGateway {
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const candidates = this.resolveCandidates(request);
 
-    let lastError: Error | undefined;
+    const errors: { model: string; error: Error }[] = [];
     for (const model of candidates) {
       const provider = this.findProviderForModel(model);
       if (!provider) continue;
@@ -121,12 +121,18 @@ export class LLMGateway {
         const enriched: ChatRequest = { ...request, model };
         return await provider.chat(enriched);
       } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
+        const error = err instanceof Error ? err : new Error(String(err));
+        errors.push({ model, error });
+        console.warn(`[gateway] Model "${model}" failed: ${error.message.slice(0, 200)}`);
       }
     }
 
-    if (lastError) {
-      throw lastError;
+    if (errors.length > 0) {
+      // Throw the first error with context about all failures
+      const summary = errors.map(e => `${e.model}: ${e.error.message.slice(0, 100)}`).join(' | ');
+      const combined = new Error(`All ${errors.length} model candidate(s) failed: ${summary}`);
+      (combined as any).cause = errors[0].error;
+      throw combined;
     }
     throw new NoProviderError(candidates[0] ?? request.model ?? 'unknown');
   }

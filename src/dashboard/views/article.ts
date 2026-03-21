@@ -217,25 +217,48 @@ export function renderArticleDetail(data: ArticleDetailData): string {
 function renderPipelineActivityBar(article: Article, autoAdvanceActive?: boolean): string {
   const stageName = STAGE_NAMES[article.current_stage] ?? 'Unknown';
   const active = autoAdvanceActive && article.current_stage < 7;
-  // Bar is shown via hx-indicator from SSE-triggered sections,
-  // or via .active class on initial auto-advance load
   return `
-    <div id="pipeline-activity" class="pipeline-activity${active ? ' active' : ''}">
+    <div id="pipeline-activity" class="pipeline-activity${active ? ' active' : ''}"
+      hx-swap-oob="true">
       <span class="spinner"></span>
       <span class="pipeline-activity-text">
         Pipeline working… Stage ${article.current_stage} — ${escapeHtml(stageName)}
       </span>
     </div>
-    ${active ? `<script>
+    <script>
       (function(){
-        // Remove .active after the first SSE-driven refresh settles
-        document.body.addEventListener('htmx:afterSettle', function handler() {
-          var bar = document.getElementById('pipeline-activity');
-          if (bar) bar.classList.remove('active');
-          document.body.removeEventListener('htmx:afterSettle', handler);
+        var bar = document.getElementById('pipeline-activity');
+        if (!bar) return;
+        var textEl = bar.querySelector('.pipeline-activity-text');
+
+        function parseSSE(e) {
+          try { var full = JSON.parse(e.detail?.data ?? '{}'); return full.data || full; }
+          catch(ex) { return {}; }
+        }
+
+        document.body.addEventListener('stage_working', function(e) {
+          var d = parseSSE(e);
+          bar.className = 'pipeline-activity active';
+          if (textEl) textEl.textContent = 'Pipeline working… Stage ' + (d.stage || '?') + ' — ' + (d.stageName || 'Processing');
+        });
+
+        document.body.addEventListener('stage_error', function(e) {
+          var d = parseSSE(e);
+          bar.className = 'pipeline-activity error';
+          if (textEl) textEl.textContent = '❌ Stage ' + (d.stage || '?') + ' failed: ' + (d.error || 'Unknown error').substring(0, 150);
+        });
+
+        document.body.addEventListener('stage_changed', function(e) {
+          var d = parseSSE(e);
+          bar.className = 'pipeline-activity active';
+          if (textEl) textEl.textContent = '✅ Advanced to Stage ' + (d.to || '?');
+          setTimeout(function() {
+            if (bar.classList.contains('active') && textEl && textEl.textContent.startsWith('✅'))
+              bar.classList.remove('active');
+          }, 3000);
         });
       })();
-    </script>` : ''}`;
+    </script>`;
 }
 
 // ── Partial renders for SSE-driven live updates ─────────────────────────────

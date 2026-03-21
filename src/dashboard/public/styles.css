@@ -1697,6 +1697,11 @@ a:hover { text-decoration: underline; }
 .pipeline-activity.active {
   opacity: 1; max-height: 3rem; padding: 0.6rem 1rem; margin-bottom: 1rem;
 }
+.pipeline-activity.error {
+  opacity: 1; max-height: 3rem; padding: 0.6rem 1rem; margin-bottom: 1rem;
+  background: var(--color-error, #dc2626); animation: none;
+}
+.pipeline-activity.error .spinner { display: none; }
 .pipeline-activity .spinner {
   width: 0.9rem; height: 0.9rem; flex-shrink: 0;
   border: 2px solid rgba(255,255,255,0.3);

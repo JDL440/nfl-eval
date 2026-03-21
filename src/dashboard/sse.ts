@@ -14,6 +14,8 @@ import type { Hono } from 'hono';
 export interface PipelineEvent {
   type:
     | 'stage_changed'
+    | 'stage_working'
+    | 'stage_error'
     | 'article_created'
     | 'article_published'
     | 'batch_started'
