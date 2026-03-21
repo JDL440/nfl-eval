@@ -81,7 +81,7 @@ export function renderArticleMetaDisplay(article: Article): string {
       ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
       ${teamsBadges}
       <div class="detail-meta">
-        ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
+        ${!teamsBadges && article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
         <span class="badge badge-stage badge-stage-${article.current_stage}">
           Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
         </span>
@@ -814,7 +814,7 @@ function renderArticleMetadata(article: Article): string {
       <dl class="info-list">
         <dt>ID</dt><dd><code>${escapeHtml(article.id)}</code></dd>
         ${article.primary_team ? `<dt>Team</dt><dd>${escapeHtml(article.primary_team)}</dd>` : ''}
-        ${teams.length > 0 ? `<dt>Teams</dt><dd>${teams.map(t => escapeHtml(t)).join(', ')}</dd>` : ''}
+        ${teams.length > 0 && teams.some(t => t !== article.primary_team) ? `<dt>Teams</dt><dd>${teams.map(t => escapeHtml(t)).join(', ')}</dd>` : ''}
         <dt>League</dt><dd>${escapeHtml(article.league)}</dd>
         <dt>Depth</dt><dd>${DEPTH_LABELS[article.depth_level] ?? article.depth_level}</dd>
         <dt>Status</dt><dd>${escapeHtml(article.status)}</dd>
