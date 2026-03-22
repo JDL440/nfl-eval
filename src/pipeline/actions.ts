@@ -16,6 +16,9 @@ import { extractVerdict } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ensureRosterContext, validatePlayerMentions } from './roster-context.js';
+import { extractClaims, totalClaimCount } from './claim-extractor.js';
+import { ensureFactCheckContext } from './fact-check-context.js';
+import { validateStatClaims, validateDraftClaims, buildValidationReport } from './validators.js';
 import { estimateCost } from '../llm/pricing.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -561,13 +564,34 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     // Run lightweight fact-check on panel discussion output (if available)
     const discussionArtifact = ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
     if (discussionArtifact) {
-      const factcheckContent = rosterCtx
-        ? discussionArtifact + '\n\n---\n\n' + rosterCtx
-        : discussionArtifact;
+      // Extract verifiable claims and build nflverse fact-check context
+      const panelTexts = [discussionArtifact];
+      // Also gather individual panel outputs for broader claim extraction
+      const allArtifacts = ctx.repo.artifacts.list(articleId);
+      for (const a of allArtifacts) {
+        if (a.name.startsWith('panel-') && a.name !== 'panel-factcheck.md' && a.name !== 'panel-composition.md') {
+          const content = ctx.repo.artifacts.get(articleId, a.name);
+          if (content) panelTexts.push(content);
+        }
+      }
+      const combinedPanelText = panelTexts.join('\n\n');
+      const claims = extractClaims(combinedPanelText);
+
+      // Build enriched fact-check context from nflverse if claims found
+      let factCheckCtxArtifact: string | null = null;
+      if (totalClaimCount(claims) > 0) {
+        const fctx = ensureFactCheckContext(ctx.repo, articleId, claims);
+        if (fctx) factCheckCtxArtifact = fctx.raw;
+      }
+
+      const factcheckParts = [discussionArtifact];
+      if (rosterCtx) factcheckParts.push(rosterCtx);
+      if (factCheckCtxArtifact) factcheckParts.push(factCheckCtxArtifact);
+      const factcheckContent = factcheckParts.join('\n\n---\n\n');
 
       const factCheckResult = await ctx.runner.run({
         agentName: 'lead',
-        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists. Cross-reference player-team assignments against the roster data provided. If a player is mentioned but not found in the roster, flag as ⚠️ CAUTION (the data updates daily — very recent transactions may not be reflected yet). Only flag as 🔴 ERROR if a player is clearly on a different team in the roster data.',
+        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists. Cross-reference player-team assignments against the roster data provided. Use the nflverse verification data (if included below) to compare claimed statistics against actual data — flag any discrepancies. If a player is mentioned but not found in the roster, flag as ⚠️ CAUTION (the data updates daily — very recent transactions may not be reflected yet). Only flag as 🔴 ERROR if a player is clearly on a different team in the roster data or if statistics are provably wrong per nflverse data.',
         skills: ['fact-checking'],
         articleContext: {
           slug: articleId,
@@ -659,6 +683,12 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       if (rosterCtx) {
         content = content + '\n\n---\n\n' + rosterCtx;
       }
+    }
+
+    // Inject fact-check context if available (built during writeDraft stage)
+    const factCheckArtifact = ctx.repo.artifacts.get(articleId, 'fact-check-context.md');
+    if (factCheckArtifact) {
+      content = content + '\n\n---\n\n' + factCheckArtifact;
     }
 
     const result = await ctx.runner.run({
@@ -755,6 +785,15 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
           }).join('\n');
           const validationArtifact = `## Pre-Publish Roster Validation\n\n${warnings}\n\n*${mentions.filter(m => m.status === 'confirmed').length} player names confirmed on roster.*`;
           ctx.repo.artifacts.put(articleId, 'roster-validation.md', validationArtifact);
+        }
+
+        // Run deterministic stat and draft claim validation
+        const claims = extractClaims(draftContent);
+        if (totalClaimCount(claims) > 0) {
+          const statResults = validateStatClaims(claims);
+          const draftResults = validateDraftClaims(claims);
+          const report = buildValidationReport(statResults, draftResults);
+          ctx.repo.artifacts.put(articleId, 'fact-validation.md', report);
         }
       }
     }
