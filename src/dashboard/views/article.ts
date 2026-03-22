@@ -580,11 +580,9 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           : ''}
         ${previewLink}
         <button class="btn btn-primary"
-          hx-post="/htmx/articles/${escapeHtml(article.id)}/advance"
+          hx-post="/htmx/articles/${escapeHtml(article.id)}/auto-advance"
           hx-target="#advance-result-${escapeHtml(article.id)}"
-          hx-swap="innerHTML"
-          hx-confirm="Advance to ${escapeHtml(STAGE_NAMES[nextStage])}?"
-          ${canAdvance ? '' : 'disabled'}>
+          hx-swap="innerHTML">
           Advance ▶ Stage ${nextStage}
         </button>
         ${retryButton}
