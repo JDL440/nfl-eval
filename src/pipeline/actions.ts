@@ -16,6 +16,7 @@ import { extractVerdict } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ensureRosterContext, validatePlayerMentions } from './roster-context.js';
+import { estimateCost } from '../llm/pricing.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,11 @@ export function recordAgentUsage(
   result: AgentRunResult,
 ): void {
   if (result.tokensUsed) {
+    const cost = estimateCost(
+      result.model,
+      result.tokensUsed.prompt,
+      result.tokensUsed.completion,
+    );
     ctx.repo.recordUsageEvent({
       articleId,
       stage,
@@ -91,6 +97,7 @@ export function recordAgentUsage(
       eventType: 'completed',
       promptTokens: result.tokensUsed.prompt,
       outputTokens: result.tokensUsed.completion,
+      costUsdEstimate: cost > 0 ? cost : null,
     });
   }
 }

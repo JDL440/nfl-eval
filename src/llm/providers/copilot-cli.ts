@@ -191,8 +191,13 @@ export class CopilotCLIProvider implements LLMProvider {
       content,
       model,
       provider: this.id,
-      // CLI doesn't expose token usage
-      usage: undefined,
+      // CLI doesn't expose token usage — estimate from character counts.
+      // ~4 characters per token is a standard approximation.
+      usage: {
+        promptTokens: Math.ceil(prompt.length / 4),
+        completionTokens: Math.ceil(content.length / 4),
+        totalTokens: Math.ceil(prompt.length / 4) + Math.ceil(content.length / 4),
+      },
       finishReason: 'stop',
     };
   }

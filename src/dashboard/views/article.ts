@@ -967,6 +967,7 @@ interface UsageSummary {
   totalRequests: number;
   byModel: Record<string, { tokens: number; cost: number; count: number }>;
   byStage: Record<number, { tokens: number; cost: number }>;
+  byProvider: Record<string, { tokens: number; cost: number; count: number }>;
 }
 
 function aggregateUsage(events: UsageEvent[]): UsageSummary {
@@ -978,6 +979,7 @@ function aggregateUsage(events: UsageEvent[]): UsageSummary {
     totalRequests: events.length,
     byModel: {},
     byStage: {},
+    byProvider: {},
   };
 
   for (const e of events) {
@@ -997,6 +999,12 @@ function aggregateUsage(events: UsageEvent[]): UsageSummary {
       summary.byStage[e.stage].tokens += (e.prompt_tokens ?? 0) + (e.output_tokens ?? 0);
       summary.byStage[e.stage].cost += e.cost_usd_estimate ?? 0;
     }
+
+    const provider = e.provider ?? 'unknown';
+    if (!summary.byProvider[provider]) summary.byProvider[provider] = { tokens: 0, cost: 0, count: 0 };
+    summary.byProvider[provider].tokens += (e.prompt_tokens ?? 0) + (e.output_tokens ?? 0);
+    summary.byProvider[provider].cost += e.cost_usd_estimate ?? 0;
+    summary.byProvider[provider].count += 1;
   }
 
   return summary;
@@ -1040,6 +1048,16 @@ export function renderUsagePanel(events: UsageEvent[]): string {
       </div>
     `).join('');
 
+  const providerRows = Object.entries(s.byProvider)
+    .sort(([, a], [, b]) => b.tokens - a.tokens)
+    .map(([provider, data]) => `
+      <div class="usage-row">
+        <span class="usage-provider">${escapeHtml(provider)}</span>
+        <span class="usage-tokens">${formatTokens(data.tokens)}</span>
+        <span class="usage-cost">$${data.cost.toFixed(4)}</span>
+      </div>
+    `).join('');
+
   return `
     <section class="detail-section">
       <h2>Token Usage</h2>
@@ -1059,6 +1077,7 @@ export function renderUsagePanel(events: UsageEvent[]): string {
       </div>
       ${s.totalCachedTokens > 0 ? `<div class="usage-cached">🟢 ${formatTokens(s.totalCachedTokens)} cached tokens (saved)</div>` : ''}
       ${modelRows ? `<div class="usage-breakdown"><h3>By Model</h3>${modelRows}</div>` : ''}
+      ${providerRows ? `<div class="usage-breakdown"><h3>By Provider</h3>${providerRows}</div>` : ''}
       ${stageRows ? `<div class="usage-breakdown"><h3>By Stage</h3>${stageRows}</div>` : ''}
     </section>`;
 }
