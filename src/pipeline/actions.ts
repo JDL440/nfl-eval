@@ -1073,10 +1073,14 @@ export async function autoAdvanceArticle(
         }
       }
 
-      // Auto-generate images after editor approves (stage 6 reached)
-      // Placed here instead of stage 5 to avoid regenerating on every revision cycle
-      if (current.current_stage === 6 && generateImages) {
-        await generateImages(articleId);
+      // Auto-generate images after editor approves (stage 6+)
+      // Placed here instead of stage 5 to avoid regenerating on every revision cycle.
+      // Also fires at stage 7 as a safety net if images are missing (e.g. after restart).
+      if (current.current_stage >= 6 && generateImages) {
+        const hasImages = repo.artifacts.get(articleId, 'images.json');
+        if (current.current_stage === 6 || !hasImages) {
+          await generateImages(articleId);
+        }
       }
     } else {
       // Lightweight mode (no agents): just check guards and advance

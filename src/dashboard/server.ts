@@ -201,7 +201,6 @@ export function createApp(
 
     autoAdvanceArticle(id, ctx, {
       maxStage: 7,
-      maxRevisions: 2,
       repo,
       engine,
       onStep: (step: AutoAdvanceStep) => emitStepEvents(id, step),
