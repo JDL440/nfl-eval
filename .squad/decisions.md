@@ -619,3 +619,86 @@ When one issue has multiple open PRs:
 1. choose one canonical `main`-based branch,
 2. close stacked or same-head duplicate PRs first,
 3. treat reused branches that carry merged-through-other-history commits as rebase or retarget candidates, not merge-ready work.
+
+### 2026-03-22T22:16:52Z: Scribe inbox merge — TLDR / retrospective / visibility
+- Merged the inbox notes for TLDR contract drift, retrospective logging, and revision/thinking visibility into the canonical decision threads already recorded above.
+- Consensus: keep `src/config/defaults/skills/substack-article.md` as the single article-skeleton source of truth, enforce TLDR deterministically in the pipeline, treat article retrospectives as post-stage artifacts with structured logging, and keep revision visibility separate from thinking/debug artifact surfacing.
+- The merged inbox files were deduplicated and removed after cross-checking against the existing decisions record.
+
+
+# Decision: Enforce TLDR draft contract between Writer and Editor
+
+**Status:** PROPOSED
+**Submitted by:** Code (🔧 Dev) and Lead (🏗️)
+**Date:** 2026-03-22
+**Source:** Merged from `code-writer-editor-tldr-mismatch.md` and `lead-tldr-misses.md`
+
+---
+
+## TLDR
+
+Treat TLDR as a deterministic draft-structure contract, not a reminder-only prompt convention.
+
+## Decision
+
+1. Canonicalize the TLDR requirement in the shared article-structure skill.
+2. Align Writer and Editor prompt assets so they state the same contract.
+3. Add a deterministic validator that fails drafts missing the required TLDR block.
+4. Reuse that validator in draft generation and the stage gate that advances drafts to Editor.
+5. Add regression tests for both the happy path and the missing-TLDR failure path.
+
+## Why
+
+- The current pipeline only checks draft existence and minimum word count.
+- Editor expectations already assume TLDR exists, so prompt-only enforcement is fragile.
+- A machine-enforced gate prevents silent drift in fixtures and generated drafts.
+# Decision: Revision visibility and thinking visibility should be tracked as separate dashboard seams
+
+**Status:** PROPOSED
+**Submitted by:** Research and UX
+**Date:** 2026-03-22
+**Source:** Merged from `research-investigation.md`, `ux-dashboard-investigation.md`, and `ux-revision-thinking-visibility-investigation.md`
+
+---
+
+## TLDR
+
+Revision history and thinking/debug artifact surfacing are related UX concerns, but they should remain separate implementation seams.
+
+## Decision
+
+1. Add a repository/server/view path for revision summaries and shared article conversations on article detail.
+2. Keep thinking traces modeled as artifacts, but widen artifact discovery so non-canonical debug sidecars are navigable.
+3. Treat the user-facing experience as one dashboard exploration surface if helpful, while keeping the underlying tracks distinct.
+
+## Why
+
+- Revision iterations are persisted in dedicated tables but are not hydrated into the dashboard.
+- Thinking traces already exist as `*.thinking.md` artifacts, so the gap there is discoverability and breadth of surfacing.
+- Keeping the seams separate avoids conflating iteration history with artifact/debug visibility.
+
+## Follow-up tracks
+
+- Revision history track: hydrate and render revision summaries/iterations on article detail.
+- Thinking/artifact track: surface persisted debug artifacts and keep inline thinking extraction where appropriate.
+# Decision: Post-revision article retrospectives should be post-stage artifacts with structured DB logging
+
+**Status:** PROPOSED
+**Submitted by:** Lead (🏗️)
+**Date:** 2026-03-22
+**Issue:** #108
+**Source:** Merged from `lead-retrospective-issue.md`
+
+---
+
+## TLDR
+
+Keep the retrospective as a post-stage artifact/process, not a new pipeline stage, and persist structured findings alongside the human-readable writeup.
+
+## Scope
+
+1. Trigger once per completed article when revision activity exists.
+2. Keep it eligible for force-approved articles that exhausted max revisions.
+3. Use a dedicated persistence surface instead of overloading `revision_summaries`.
+4. Store queryable findings such as churn causes, repeated issues, next-time actions, and process improvements.
+5. Leave cross-article ranking and proposal generation for follow-up work.

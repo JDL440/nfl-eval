@@ -77,6 +77,27 @@
 - The article detail UI renders `article.subtitle` only when present and otherwise omits the subtitle line; there is no TLDR-specific rendering in `src/dashboard/views/article.ts`.
 - Article metadata edit flows normalize blank subtitles to `null`, so the dashboard already treats subtitle as optional.
 - TLDR expectations live in editorial skill/checklist docs (`src/config/defaults/skills/editor-review.md`, `src/config/defaults/skills/publisher.md`) rather than in dashboard validation or article rendering code.
+- Article detail hydration in `src/dashboard/server.ts` reads stage transitions, editor reviews, usage events, stage runs, pinned agents, and artifact names, but does not read `revision_summaries`; iteration history exists in `src/pipeline/conversation.ts` and `src/db/schema.sql` only for agent handoff context right now.
+- Revision visibility and thinking visibility are different dashboard gaps: `*.thinking.md` artifacts already render through article artifact tabs in `src/dashboard/views/article.ts`, while revision iterations are persisted but unsurfaced in the UI.
+- The Advanced audit log already exposes regression reasons via `stage_transitions.notes`, so send-back rationale is visible there even though revision count/history is not.
+- Artifact surfacing is split between a canonical allowlist and raw artifact discovery: tabs are anchored to `ARTIFACT_FILES` plus `panel-*` in `src/dashboard/views/article.ts` / `src/dashboard/server.ts`, which leaves persisted artifacts like `publisher-pass.md`, `fact-validation.md`, and `roster-validation.md` partially or fully unsurfaced on the article page.
 ### 2026-03-22T22-07-35Z: Article TLDR/subtitle sync
 - Merged the dashboard subtitle/TLDR note into `.squad/decisions.md`.
 - Keep subtitles optional in the dashboard; enforce any stronger TLDR requirement in editorial/content validation instead.
+### 2026-03-22T22:45:00Z: Revision/thinking visibility investigation
+- Revision loop persistence is split: `src\pipeline\conversation.ts` writes shared turns into `article_conversations` and revision summaries into `revision_summaries`, while `src\pipeline\actions.ts` records writer/editor/publisher turns and editor `REVISE` summaries during stages 5-7.
+- Dashboard article detail (`src\dashboard\server.ts` → `src\dashboard\views\article.ts`) does not read or render `article_conversations` / `revision_summaries`; it only hydrates transitions, editor review rows, usage events, stage runs, artifact names, and pinned agents.
+- Thinking traces are persisted as companion `*.thinking.md` artifacts by `writeAgentResult()` in `src\pipeline\actions.ts`, plus `idea.thinking.md` in `src\dashboard\server.ts` for idea generation.
+- The article artifact route allows fixed pipeline artifacts plus `panel-*.md` and their `.thinking.md` companions, but `renderArtifactTabs()` only renders the fixed `ARTIFACT_FILES` tab set, so extra persisted artifacts such as `publisher-pass.md`, `panel-*`, `panel-factcheck.md`, `roster-validation.md`, and `fact-validation.md` are mostly unsurfaced on the article page.
+- `renderArtifactContent()` can reveal inline `<think>/<reasoning>` blocks inside an artifact, and preview/publish flows strip that thinking via `separateThinking()`, so debug visibility and article output cleanliness are already treated as separate UI concerns.
+- `editor_reviews` cards are rendered if DB rows exist, but the live pipeline path in `src\pipeline\actions.ts` writes `editor-review.md` and conversation turns without calling `recordEditorReview()`, so review summary cards rely on reconciliation/import paths instead of the main runtime write path.
+
+### 2026-03-22T22:16:52Z: Scribe inbox merge
+- Reconfirmed that article TLDR is a contract issue, not a dashboard subtitle rule.
+- Revision visibility and thinking/debug visibility remain separate dashboard seams; the dashboard should keep treating them as different fixes.
+- Inbox findings were merged into `.squad/decisions.md` and deduplicated.
+
+
+### 2026-03-22T22:18:04Z: Revision/thinking visibility investigation merge
+- Merged the revision/thinking visibility investigation into the canonical decision log.
+- Kept revision history hydration and thinking-artifact surfacing as separate dashboard seams.

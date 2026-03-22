@@ -43,6 +43,8 @@
 - Preserve the existing adv-stage/context-config behavior from #92 / PR #97; the follow-up should not reintroduce raw shared transcript injection or change stage routing.
 - Useful review anchors for this issue are `src/pipeline/conversation.ts` and `tests/pipeline/conversation.test.ts`, with `src/pipeline/actions.ts` only needing verification that the current editor-review artifact still flows through unchanged.
 - Issue #103 validated the safer prompt-history pattern for editor self-review: when limiting conversation history, query newest-first before applying the cap, then keep the formatter bounded and deterministic as a second guard.
+- Issue #108 should stay a post-stage retrospective artifact/process rather than becoming a new numbered pipeline stage; `src/types.ts` hard-codes stages `1..8`, so stage expansion would create avoidable cross-surface churn in the dashboard, scheduler, MCP layer, and tests.
+- For article-level retrospectives, keep the human-readable markdown separate from structured DB findings: store one article-linked retrospective plus queryable per-finding rows/records so later cross-article analysis can aggregate churn causes and next-time actions without parsing blobs.
 
 ### 2026-03-22T20:05:00Z: Issue #93 PR topology review
 
@@ -63,6 +65,7 @@
 - **Pattern:** Prefer deterministic code guards over LLM prompt instructions for non-negotiable format requirements (like TLDR blocks).
 - **Files:** `src/config/defaults/skills/substack-article.md` is the canonical source for article structure, but `writer.md` needs to explicitly reference key constraints to ensure compliance.
 - **Testing:** `tests/pipeline/engine.test.ts` is the place to verify pipeline transition logic.
+
 ### 2026-03-22T22-07-35Z: Issue #104 review sync
 - Approved the `issue-104-usage-history` patch and recorded the review in `.squad/decisions.md`.
 - The residual risk remains the SQLite autoincrement `id` tie-breaker for same-second rows, which is acceptable for the current single-writer pattern.
@@ -74,3 +77,21 @@
 ### 2026-03-22T22-11-23Z: TLDR enforcement follow-through
 - Reinforced the recommended fix: enforce structure at the deterministic stage guard/shared validator layer, not only in prompt text.
 - Charter updates and regression tests remain the right companion changes for durable coverage.
+
+### 2026-03-22T22:14:03Z: TLDR enforcement triage
+
+- Opened GitHub issue #107 (`Enforce TLDR article structure contract before editor approval`) for the durable fix path.
+- Confirmed the regression is normalized by fixtures today: `src/llm/providers/mock.ts` returns a TLDR-less draft and permissive editor approval, so current pipeline tests do not catch the missing structure.
+- Recommended implementation scope for Code: align Writer/Editor/Publisher references to `src/config/defaults/skills/substack-article.md`, add stage-level draft-structure validation plus targeted Writer retry/send-back behavior, and update mock/test coverage under `tests/pipeline/` and `tests/llm/`.
+
+### 2026-03-22T22:25:00Z: Dashboard revisions + thinking visibility triage
+
+- Opened GitHub issue #109 (`Dashboard article detail: surface revision history and persisted thinking traces`) for the durable article-detail follow-up.
+- Confirmed revision history is already persisted in `article_conversations` and `revision_summaries` (`src/pipeline/conversation.ts`), but the article detail page does not hydrate either store today.
+- Confirmed the current `Editor Reviews` section in `src/dashboard/views/article.ts` is backed by the legacy `editor_reviews` metadata table, while the live pipeline path in `src/pipeline/actions.ts` writes full writer/editor iteration content to the conversation tables instead.
+- Confirmed persisted `*.thinking.md` sidecars remain the authoritative current debug source (`writeAgentResult()` in `src/pipeline/actions.ts`), but `renderArtifactContent()` only extracts inline `<think>` / `<reasoning>` blocks and does not auto-pair the companion sidecar with the main artifact view.
+- Recommended implementation path: one article-detail observability pass across `src/dashboard/server.ts` and `src/dashboard/views/article.ts` that surfaces revision history from existing conversation data and restores clear, collapsible thinking visibility; treat historical per-iteration thinking as a separate follow-up only if versioned persistence is later required.
+
+### 2026-03-22T22:18:04Z: TLDR / retrospective decision merge
+- Merged the TLDR contract decision and the post-revision retrospective scope note into the canonical decision log.
+- Keep the TLDR gate deterministic and the retrospective post-stage with structured persistence.

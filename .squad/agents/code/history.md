@@ -26,3 +26,19 @@
 - 2026-03-22 — Debug visibility restore: the main article view should read companion `*.thinking.md` artifacts first, with inline extraction only as a fallback.
 - 2026-03-22 — Issue #85 static knowledge pass: keep authored assets under `src/config/defaults/` plus team-sheet artifacts; runtime loading stays deferred.
 - 2026-03-22 — Issue #93 history handling: keep the repository default bounded for callers that only need recent usage, and preserve the unbounded full-history path for UI history views.
+- 2026-03-22 — Revision/thinking persistence investigation: latest draft/review/pass artifacts are overwritten in `artifacts` via `writeAgentResult()` + `ArtifactStore.put()`, but durable iteration history lives in `article_conversations` and `revision_summaries`.
+- 2026-03-22 — Thinking/debug is a separate persistence path from revision history: `AgentRunner` strips thinking before conversation writes, so conversations store cleaned outputs only while debug survives as `*.thinking.md` sidecar artifacts.
+- 2026-03-22 — Dashboard article detail still does not read `article_conversations` or `revision_summaries`; only transient auto-advance SSE emits `revisionCount`.
+- 2026-03-22 — `publisher-pass.md` is persisted and included in context-config choices, but the article artifact tab set/allowlist does not surface it.
+- 2026-03-22 — Runtime revision history and dashboard revision cards use different stores: `runEditor()` writes `editor-review.md`, `article_conversations`, and `revision_summaries`, but the article page still renders `Editor Reviews` from legacy `editor_reviews`, which normal pipeline runs never populate.
+- 2026-03-22 — Issue #107 article contract drift: src/pipeline/engine.ts only gates on draft.md existence and word count, while src/config/defaults/skills/substack-article.md, editor assets, and publisher assets expect a TLDR block; src/llm/providers/mock.ts and current pipeline tests still permit TLDR-less drafts, so durable enforcement belongs in shared runtime/article-contract validation plus focused guard/action/mock regressions.
+
+### 2026-03-22T22:16:52Z: Scribe inbox merge
+- Confirmed the TLDR gap is still a deterministic pipeline-enforcement problem: Writer can omit the block because the validator is missing.
+- The retrospective request stays as post-stage artifact/logging work, not a new pipeline stage.
+- Inbox findings were merged into `.squad/decisions.md` and deduplicated.
+
+
+### 2026-03-22T22:18:04Z: TLDR contract decision merge
+- Merged the TLDR contract drift notes into the canonical decision log.
+- Keep the TLDR requirement as a deterministic draft-structure gate with regression coverage.
