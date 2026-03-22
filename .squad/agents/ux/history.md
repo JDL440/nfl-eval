@@ -26,9 +26,8 @@
 - Issue #93 token-usage path depends on persisted `usage_events`, not live recomputation: `src/llm/providers/copilot-cli.ts` estimates usage, `src/agents/runner.ts` maps it to `tokensUsed`, `src/pipeline/actions.ts` records it, and article surfaces in `src/dashboard/server.ts` / `src/dashboard/views/article.ts` must hydrate the full article history so older `copilot-cli` rows are not clipped out of detail or SSE sidebar views.
 - Issue #93 trace result: Copilot CLI usage is created in `src/llm/providers/copilot-cli.ts`, mapped by `src/agents/runner.ts`, and persisted by `src/pipeline/actions.ts`; the article-page gap came from `Repository.getUsageEvents()` defaulting to the newest 100 rows
 - Article detail and live-sidebar usage panels (`src/dashboard/server.ts` → `src/dashboard/views/article.ts`) should read full per-article usage history so early-provider rows like `copilot-cli` idea-generation calls are not dropped after heavy later activity
-- Current local candidate for issue #93 changes `src/db/repository.ts` so `getUsageEvents(articleId)` returns full history by default, while article detail (`src/dashboard/server.ts:348`) and live sidebar (`src/dashboard/server.ts:1164-1167`) continue to reuse that shared query path.
-- The same local diff also contains an unrelated artifact-thinking UX change: `src/dashboard/server.ts:1119-1123` now loads companion `*.thinking.md` files and `src/dashboard/views/article.ts:401-433` prefers persisted thinking traces over inline tags in the main artifact view.
-- Focused verification: `tests/db/repository.test.ts`, `tests/dashboard/server.test.ts`, and `tests/dashboard/wave2.test.ts` all pass locally, including coverage that proves the issue-93 behavior is a repository/query cap problem rather than missing persistence.
+- Issue #93 fix stayed scoped to the usage hydration seam: `src/db/repository.ts` now returns full per-article usage history by default, while article detail (`src/dashboard/server.ts`) and the HTMX live sidebar keep reusing the same query path unchanged.
+- Focused verification for #93: `tests/llm/provider-copilot-cli.test.ts`, `tests/pipeline/actions.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`, and `tests/db/repository.test.ts` pass locally, proving the break was the repository/query cap rather than missing provider estimation or persistence.
 
 ### 2026-03-22: Issue #70 Investigation Outcome
 
@@ -47,3 +46,8 @@
 
 - Merged the decision inbox entry for the article usage panel gap into `.squad/decisions.md`.
 - Recorded that the repository default must preserve full per-article usage history so early Copilot CLI rows stay visible in article detail panels.
+
+### 2026-03-22T12:10:00Z: Issue #93 scoped UX handoff
+
+- Re-verified the Copilot CLI token path end-to-end and kept the final change on the real article usage seam only: repository hydration.
+- Explicitly did **not** carry forward the rejected artifact-thinking/debug renderer change; the article page fix is just full-history usage hydration plus focused dashboard/repository regression coverage.
