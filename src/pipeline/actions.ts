@@ -631,10 +631,12 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const revisions = getRevisionHistory(ctx.repo, articleId);
     const conversationCtx = buildRevisionSummaryContext(revisions);
 
-    // Revisions still need the full current editor review as an explicit handoff artifact,
-    // even if upstream context overrides exclude it from the generic include list.
+    // Keep the shared handoff compact, but always give the writer the latest full
+    // editor-review artifact so revisions act on exact feedback instead of only the
+    // summarized revision history. Guard against duplication when upstream context
+    // already included editor-review.md.
     if (isRevision && editorReview && !content.includes(editorReview)) {
-      content = content + '\n\n## Editor Review (address every requested fix)\n' + editorReview;
+      content = content + '\n\n## Latest Editor Feedback (apply this directly)\n' + editorReview;
     }
 
     // If this is a revision and editor feedback exists, record it as a conversation turn

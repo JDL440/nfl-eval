@@ -381,6 +381,7 @@ describe('STAGE_ACTIONS', () => {
         '_config.json': JSON.stringify({ writeDraft: [] }, null, 2),
       });
       addConversationTurn(fixtures.repo, 'test-wd-handoff', 5, 'writer', 'assistant', 'WRITER_THREAD_SHOULD_NOT_APPEAR');
+      addConversationTurn(fixtures.repo, 'test-wd-handoff', 6, 'editor', 'assistant', 'OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
       addConversationTurn(fixtures.repo, 'test-wd-handoff', 7, 'publisher', 'assistant', 'PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
       addRevisionSummary(
         fixtures.repo,
@@ -402,6 +403,7 @@ describe('STAGE_ACTIONS', () => {
       expect(draft).toContain('Tighten the math.');
       expect(draft).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
       expect(draft).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
+      expect(draft).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
       expect(draft).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
     });
   });
