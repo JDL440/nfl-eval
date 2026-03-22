@@ -80,3 +80,12 @@
 - `recordAgentUsage()` in `src/pipeline/actions.ts` stores only article/stage/surface/provider/model/token totals/cost and does not attach `stageRunId`, `runId`, or `actor`, so `usage_events` are not strongly correlated to `stage_runs` even though the schema supports that join.
 - Dashboard debug visibility currently means artifact-level thinking inspection, not full request transparency: `src/dashboard/views/article.ts` restores companion `*.thinking.md` traces and `src/dashboard/views/runs.ts` shows stage-run status, duration, model, and tokens, but not prompts, context payloads, raw outputs, or per-request provenance.
 - Related backlog context already exists: GitHub issues `#81` and `#93` cover token-usage UX/persistence, issue `#88` added conversation/revision context plus dashboard observability for multi-pass articles, and `.squad/decisions.md` contains a separate implemented decision that debug visibility should read persisted thinking artifacts rather than hidden prompt context.
+- **2026-03-22 — TLDR prompt contract drift**
+  - Writer charter (`src/config/defaults/charters/nfl/writer.md`) does not explicitly require a TLDR block; it delegates structure to `substack-article.md`.
+  - TLDR is required downstream by the article skeleton skill (`src/config/defaults/skills/substack-article.md`), the editor checklist (`src/config/defaults/charters/nfl/editor.md`, `src/config/defaults/skills/editor-review.md`), and the publisher checklist (`src/config/defaults/skills/publisher.md`).
+  - Parser/test coverage already treats TLDR as a first-class article element (`src/services/prosemirror.ts`, `tests/services/prosemirror.test.ts`), so the safest fix is to centralize the structure contract in one canonical article template and keep charters as references.
+  - Runtime enforcement is still indirect: `src/pipeline/actions.ts` passes the template/skills/context into Writer, Editor, and Publisher, but it does not hard-fail drafts for missing TLDR; `src/services/prosemirror.ts` only helps recognize the block after the fact.
+  - This makes `src/config/defaults/skills/substack-article.md` the best canonical source for article skeleton policy, with role charters serving as role-specific expectations rather than duplicate contracts.
+### 2026-03-22T22-07-35Z: TLDR contract drift sync
+- Recorded the recommendation in `.squad/decisions/inbox/research-tldr-enforcement-investigation.md`.
+- Centralize TLDR and image-order requirements in `substack-article.md` so charters can reference one source of truth.

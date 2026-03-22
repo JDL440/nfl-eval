@@ -42,6 +42,7 @@
 - Issue #103 is a bounded follow-up to the #92 / PR #97 hybrid handoff design: only `buildEditorPreviousReviews()` should gain a cap, and the runtime shared handoff must stay newest-first and summary-only.
 - Preserve the existing adv-stage/context-config behavior from #92 / PR #97; the follow-up should not reintroduce raw shared transcript injection or change stage routing.
 - Useful review anchors for this issue are `src/pipeline/conversation.ts` and `tests/pipeline/conversation.test.ts`, with `src/pipeline/actions.ts` only needing verification that the current editor-review artifact still flows through unchanged.
+- Issue #103 validated the safer prompt-history pattern for editor self-review: when limiting conversation history, query newest-first before applying the cap, then keep the formatter bounded and deterministic as a second guard.
 
 ### 2026-03-22T20:05:00Z: Issue #93 PR topology review
 
@@ -55,3 +56,17 @@
 
 - The canonical PR choice for #93 should be recorded in the decisions inbox before board movement so future triage has a durable explanation for why stacked and reused branches were not treated as merge-ready.
 - When a reused branch still carries merged-through-other-history commits, the right triage action is retarget/rebase or close, not merge-by-default.
+
+### 2026-03-22T22:00:00Z: TLDR Enforcement Investigation
+
+- **Architecture:** `src/pipeline/engine.ts` is the strongest enforcement point for structural constraints (`requireDraft` guard).
+- **Pattern:** Prefer deterministic code guards over LLM prompt instructions for non-negotiable format requirements (like TLDR blocks).
+- **Files:** `src/config/defaults/skills/substack-article.md` is the canonical source for article structure, but `writer.md` needs to explicitly reference key constraints to ensure compliance.
+- **Testing:** `tests/pipeline/engine.test.ts` is the place to verify pipeline transition logic.
+### 2026-03-22T22-07-35Z: Issue #104 review sync
+- Approved the `issue-104-usage-history` patch and recorded the review in `.squad/decisions.md`.
+- The residual risk remains the SQLite autoincrement `id` tie-breaker for same-second rows, which is acceptable for the current single-writer pattern.
+
+### 2026-03-22T22-09-11Z: Issue #103 review follow-through
+- Approved the cap-only follow-up for editor previous reviews and kept the scope bounded to the newest-first path.
+- Lead context now reflects that the runtime prompt-assembly fetch cap belongs with the bounded review history change.

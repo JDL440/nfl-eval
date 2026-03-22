@@ -90,3 +90,16 @@
 - Did not land any issue-specific code changes.
 - Kept the work aligned with the latest lead/UX trace outcome: blocked / not reproducible.
 - **Issue #104 usage history follow-up:** `src/db/repository.ts` now treats article usage history reads as `ORDER BY created_at DESC, id DESC` so same-second `usage_events` stay deterministic without timing sleeps. The supporting schema index lives in `src/db/schema.sql` as `idx_usage_events_article_history` on `(article_id, created_at DESC, id DESC)`, and the focused regressions live in `tests/db/repository.test.ts` plus `tests/pipeline/actions.test.ts`.
+### 2026-03-22T22-07-35Z: Issue #104 decision sync
+- Merged the usage-history decision and lead approval into `.squad/decisions.md`.
+- Kept the regression anchored on deterministic `created_at DESC, id DESC` ordering plus the article-history index, matching the approved PR #106 branch.
+
+### 2026-03-22T22-20-00Z: TLDR enforcement investigation
+- Writer runtime instructions are assembled by `AgentRunner.composeSystemPrompt()` from the Writer charter plus the `substack-article` skill, while the Editor gets the Editor charter plus `editor-review` skill (`src/agents/runner.ts`, `src/pipeline/actions.ts`).
+- The article-shape contract is currently duplicated and drifting: `src/config/defaults/charters/nfl/writer.md` says no cover image in markdown, but `src/config/defaults/skills/substack-article.md` still requires a cover image above a TLDR block.
+- Artifact flow for the drafting stages is: `discussion-summary.md` → `draft.md` via `writeDraft`, then `draft.md` → `editor-review.md` via `runEditor`, then `draft.md` + `editor-review.md` → `publisher-pass.md` via `runPublisherPass`, with shared handoff summaries built in `src/pipeline/conversation.ts` and upstream artifact inclusion driven by `src/pipeline/context-config.ts`.
+- Durable enforcement gap: `src/pipeline/engine.ts` only guards stage progression (draft exists, editor verdict approved, publisher pass exists), `src/pipeline/validation.ts` only checks pipeline config consistency, and `src/pipeline/validators.ts` only validates roster/stat/draft claims. There is no runtime validator or regression test that requires TLDR / author line / boilerplate / next-article teaser, so those requirements remain prompt-only.
+
+### 2026-03-22T22-09-11Z: Issue #103 editor-review cap follow-up
+- Captured the approved bounded newest-first review scope and prompt-assembly fetch cap in the canonical decision log.
+- The code implementation for #103 is already reflected in the final PR #105 review context, so this pass only refreshed squad history.

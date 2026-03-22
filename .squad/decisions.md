@@ -4,6 +4,75 @@
 **Why:** User request — captured for team memory
 
 
+
+# Code decision — Issue #104 usage history follow-up
+
+- **By:** Code (🔧 Dev)
+- **Date:** 2026-03-22
+- **Issue:** #104
+
+## Decision
+
+Treat full article usage-history reads as a deterministic newest-first stream ordered by `created_at DESC, id DESC`, while keeping explicit `limit` arguments as the bounded path for callers that only need recent events.
+
+## Why
+
+`usage_events.created_at` is stored with second precision, so same-second inserts can otherwise reorder nondeterministically and make both the UI history and tests flaky. Pairing the stable `id` tie-breaker with a matching article-history index keeps the unbounded history path predictable without changing bounded caller behavior introduced in #93.
+
+## File touchpoints
+
+- `src/db/repository.ts`
+- `src/db/schema.sql`
+- `tests/db/repository.test.ts`
+- `tests/pipeline/actions.test.ts`
+
+---
+
+# Lead Review — Issue #104 Usage History Follow-up
+
+**Status:** APPROVED  
+**Date:** 2026-03-22  
+**Reviewer:** Lead (🏗️)
+
+## Decision
+
+Approve issue #104 follow-up on branch `issue-104-usage-history` at commit `897101434eadbc810701682a637d8344a3688a9a`.
+
+## Why
+
+- Repository usage-history reads now sort by `created_at DESC, id DESC`, which gives deterministic same-second ordering without changing the explicit `limit` behavior.
+- Schema adds a matching article-history index for those reads.
+- Regression coverage was tightened in both repository and pipeline tests, replacing timing-sensitive assumptions with fake-timer controlled same-second fixtures.
+
+## Residual Risk
+
+- The ordering guarantee depends on SQLite autoincrement `id` remaining the tie-breaker for rows sharing a timestamp, which is acceptable for the current single-writer repository pattern.
+
+---
+
+# Decision Note: TLDR Contract Drift in NFL Article Prompts
+
+**Status:** Proposed
+**Submitted by:** Research
+**Date:** 2026-03-22
+
+## TLDR
+
+The writer charter does not explicitly require a TLDR block, but the downstream article skill, editor checklist, and publisher checklist all assume one exists. The prompt contract should be made canonical in a single article-structure skill, with charters referencing that source instead of restating divergent image/structure rules.
+
+## Recommendation
+
+Use `src/config/defaults/skills/substack-article.md` as the single source of truth for article skeleton requirements, including TLDR placement and image ordering. Keep `writer.md`, `editor.md`, and `publisher.md` aligned by reference rather than duplicating structure policy in each charter.
+
+---
+
+# UX decision note — article TLDR / subtitle behavior
+
+- Article detail UI does **not** require a TLDR callout block.
+- The subtitle is optional in the dashboard and is hidden when absent.
+- Empty subtitle submissions are normalized to `null`; if a stronger TLDR requirement is desired, it should be enforced in editorial/content validation rather than the dashboard UI.
+
+
 ---
 
 # Decision: Split Issue #85 Into Active Build Scope and Deferred Follow-Up

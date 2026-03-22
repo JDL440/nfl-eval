@@ -44,3 +44,10 @@
 - Wrote orchestration and session logs for the usage-history follow-up pass.
 - Confirmed the issue #103 decision inbox was already canonical in decisions.md and removed the stale inbox artifact.
 - No decisions qualified for archiving because the remaining decision entries were current.
+### 2026-03-22T22-07-35Z: Issue #104 squad maintenance
+- Merged the inbox decisions into `.squad/decisions.md` and removed the inbox files.
+- Wrote orchestration logs and the session log for the approved usage-history follow-up.
+
+### 2026-03-22T22-09-11Z: Issue #103 maintenance pass
+- Wrote the current orchestration and session logs for the editor-review cap follow-up.
+- Confirmed the inbox decisions were already canonical and deleted the stale inbox artifacts without adding duplicate decision text.

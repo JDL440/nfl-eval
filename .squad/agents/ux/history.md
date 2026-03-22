@@ -72,3 +72,11 @@
 - Traced the provider -> runner -> persistence -> dashboard chain end to end.
 - Could not reproduce a Copilot-CLI-specific defect in the current code.
 - Kept the diagnosis scoped to the actual dashboard read path and left the issue blocked.
+
+### 2026-03-22: Article TLDR/subtitle UI review
+- The article detail UI renders `article.subtitle` only when present and otherwise omits the subtitle line; there is no TLDR-specific rendering in `src/dashboard/views/article.ts`.
+- Article metadata edit flows normalize blank subtitles to `null`, so the dashboard already treats subtitle as optional.
+- TLDR expectations live in editorial skill/checklist docs (`src/config/defaults/skills/editor-review.md`, `src/config/defaults/skills/publisher.md`) rather than in dashboard validation or article rendering code.
+### 2026-03-22T22-07-35Z: Article TLDR/subtitle sync
+- Merged the dashboard subtitle/TLDR note into `.squad/decisions.md`.
+- Keep subtitles optional in the dashboard; enforce any stronger TLDR requirement in editorial/content validation instead.
