@@ -208,28 +208,6 @@ Treat the new glossary files and team sheets as **validated static knowledge ass
 - Do not introduce a real YAML parser unless scope expands beyond docs/testing support
 - Keep bootstrap-memory compatibility intact; phases 1–3 should coexist with `bootstrap-memory.json`, not replace it
 
----
-
-# Decision — Issue #85 Proof-of-Concept Structure
-
-- **By:** Code (🔧 Dev)
-- **Date:** 2026-03-22
-- **Issue:** #85
-
-## Decision
-
-Use **JSON-compatible YAML** for the initial glossary seeds in `src/config/defaults/glossaries/` and a fixed markdown section template for proof-of-concept team sheets in `content/data/team-sheets/`.
-
-## Why
-
-- The repo does not currently ship a YAML parser dependency, and the approved scope explicitly limits this work to phases 1-3 plus docs/testing support.
-- JSON-compatible YAML keeps the file format valid for future YAML-aware runtime loading while allowing zero-dependency validation in Vitest today.
-- A fixed heading structure on team sheets makes the proof of concept easy to validate without prematurely locking in runtime injection behavior.
-
-## Scope Notes
-
-- This decision covers only the seed artifact structure and test strategy.
-- Runtime loading/injection and refresh automation remain deferred to the follow-up issue for phases 4-5.
 
 ---
 
@@ -464,17 +442,41 @@ Issue #92 can move from `go:needs-research` to **`go:yes`** once the recommendat
 
 ---
 
-# Diagnostic note — Issue #93 is query-layer, not persistence-layer
+# Decision — Issue #93 article usage panels must use full per-article usage history
 
-- **By:** UX (⚛️)
+- **By:** Lead / Code / UX
 - **Date:** 2026-03-22
 - **Issue:** #93
-- **Supplements:** "Issue #93 article usage panels must use full per-article usage history"
 
 ## Decision
 
-Treat the issue-93 failure specifically as a repository/query hydration problem on the dashboard surfaces — the Copilot CLI persistence path was already working correctly.
+Treat issue #93 as a repository/query hydration bug on the dashboard surfaces. `copilot-cli` usage emission, runner forwarding, and pipeline persistence already work; the failure is that article detail and live-sidebar usage panels were reading a capped history instead of the full per-article `usage_events` stream.
+
+## Why
+
+- `src/llm/providers/copilot-cli.ts` already emits estimated usage.
+- `src/agents/runner.ts` forwards that usage into `tokensUsed`.
+- `src/pipeline/actions.ts` persists `usage_events` whenever `tokensUsed` exists.
+- `src/dashboard/server.ts` and `src/dashboard/views/article.ts` hydrate article usage from `repo.getUsageEvents(articleId)`.
+- The default repository cap dropped older rows once later dashboard activity accumulated, so early Copilot CLI events disappeared from article views.
+
+## Validation
+
+- `tests/db/repository.test.ts` reproduces the cap-driven disappearance of an older usage row.
+- `tests/dashboard/server.test.ts` confirms the dashboard surfaces recover the missing history once the default limit is removed.
+- The repository still keeps an explicit `limit` parameter available for callers that truly need bounded history.
 
 ## Scope note
 
-The same working tree includes a separate artifact-thinking UI change (companion `*.thinking.md` loading in `src/dashboard/server.ts` and `src/dashboard/views/article.ts`) that is not required to explain or fix the token-usage bug. These are distinct concerns.
+The separate artifact-thinking UI change (companion `*.thinking.md` loading in `src/dashboard/server.ts` and `src/dashboard/views/article.ts`) is not required to explain or fix the token-usage bug. These are distinct concerns.
+
+### 2026-03-22T19:10:20Z: Issue #93 decision inbox sync
+
+- Merged the remaining Code, Lead, and UX inbox notes into the canonical #93 record.
+- Kept the issue summary aligned on the repository hydration default: article detail and live sidebar should read full per-article usage history unless a caller passes an explicit limit.
+- No extra provider, runner, or persistence changes were needed for the article-page regression.
+### 2026-03-22T19:13:43Z: Issue #93 regression safeguard
+
+- Keep the regression anchored on the real persistence chain: `copilot-cli` provider → runner → `recordAgentUsage()` → repository → article/live-sidebar.
+- Prefer a stage-action test that proves an older `usage_events` row survives hydration, rather than a seeded rendering-only check.
+- The debug/thinking renderer path remains out of scope for the token-usage bug.

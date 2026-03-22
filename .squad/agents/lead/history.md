@@ -75,6 +75,11 @@
 - `src/pipeline/actions.ts` gives Writer, Editor, Publisher the same article-wide history block; Editor also gets `buildEditorPreviousReviews()` creating double-anchoring risk
 - Hybrid summary/handoff approach keeps cross-agent continuity while narrowing shared unit from raw transcript to structured revision memory
 
+### 2026-03-22: Issue #92 implementation review complete
+- Approved PR #97 / commit 3380611 after confirming the hybrid summary swap stayed bounded and the regression coverage matched the recommendation.
+- Verified the implementation preserves fresh per-agent system prompts while narrowing cross-role exposure to the shared article summary/handoff log.
+- Marked the issue ready for implementation follow-through and kept the recommendation aligned with the bounded hybrid context model.
+
 **Target architecture details:**
 - Keep the per-agent system prompts fresh so charter precedence stays clear and testable.
 - Move the cross-role shared surface from full transcript to a compact structured summary that can carry verdict state, must-fix items, change deltas, and handoff notes.
@@ -107,3 +112,32 @@
 
 - Scribe completed decision inbox merge, archived old decision history, and logged session/orchestration notes
 - Active #85 record centered on static KB assets and validation surface; runtime integration remains deferred
+
+### 2026-03-22: Issue #93 — contradiction reconciled
+
+**By:** Lead (🏗️)
+
+**What:** Reconciled conflicting #93 findings by tracing the live Copilot CLI usage path and reviewing the local issue-93 candidate branches.
+
+**Verdict:**
+- The production regression for #93 is the repository hydration cap: `src/db/repository.ts` previously defaulted `getUsageEvents(articleId)` to the newest 100 rows, so older `copilot-cli` events disappeared from article detail and live-sidebar panels after enough later activity.
+- The Copilot CLI write path is already functioning for this issue: `src/llm/providers/copilot-cli.ts` returns estimated usage, `src/agents/runner.ts` maps it into `tokensUsed`, and `src/pipeline/actions.ts` persists rows whenever `tokensUsed` is present.
+- A separate observability seam remains in `recordAgentUsage()`: if any provider returns no `tokensUsed`, no `usage_events` row is written. That seam is real, but it is not the root cause of #93's Copilot-specific article-page failure.
+
+**Routing note:**
+- Bless the repository default-history fix for #93.
+- Treat the “missing persisted rows when tokensUsed is absent” behavior as follow-up telemetry hardening, not the issue-93 root fix.
+### 2026-03-22T19-13-43Z: Scribe sync — Issue #93 inbox merge
+- Recorded the approved repository-hydration fix in `.squad/decisions.md` and cleared the inbox files.
+- The fix stays scoped to the repository/query seam; provider and renderer logic did not need to change.
+
+### 2026-03-22T19:10:20Z: Issue #93 decision inbox sync
+
+- The Lead record now matches the merged decision path: repository hydration default, full per-article usage history, and explicit `limit` support for bounded reads.
+- The issue summary remains scoped away from any new provider or runner work.
+- Scribe completed the inbox merge into `.squad/decisions.md` and deleted the inbox files.
+### 2026-03-22T19:13:43Z: Issue #93 regression safeguard
+
+- The Lead record now emphasizes the real regression chain: provider usage must survive the repository hydration path and surface on article/live-sidebar views.
+- The safer test is persistence-plus-rendering coverage, not seeded UI-only coverage.
+- The thinking/debug renderer work remains outside #93 scope.

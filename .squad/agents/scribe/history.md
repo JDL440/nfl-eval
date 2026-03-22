@@ -22,3 +22,11 @@
 - UX inbox entry was a partial duplicate; merged only the unique diagnostic framing and scope note.
 - Summarized lead/history.md (was 13,682 bytes) into ## Core Context block.
 - No entries qualified for archiving (all decisions dated 2026-03-22, none >30 days old).
+
+### 2026-03-22T19:11:56Z: Issue #92 follow-up maintenance pass
+- Wrote orchestration logs for Code and Lead, plus a brief session log for the hybrid context implementation.
+- Merged the remaining issue #93 inbox notes into decisions.md with a single deduplicated repository-hydration decision.
+- Appended cross-agent history updates for the Code implementation and Lead review follow-through.
+### 2026-03-22T19-13-43Z: Issue #93 session record
+- Wrote orchestration logs for UX and Lead.
+- Merged the issue #93 decision inbox into `.squad/decisions.md` and deleted the inbox files.

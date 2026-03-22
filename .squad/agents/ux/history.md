@@ -28,6 +28,8 @@
 - Article detail and live-sidebar usage panels (`src/dashboard/server.ts` → `src/dashboard/views/article.ts`) should read full per-article usage history so early-provider rows like `copilot-cli` idea-generation calls are not dropped after heavy later activity
 - Issue #93 fix stayed scoped to the usage hydration seam: `src/db/repository.ts` now returns full per-article usage history by default, while article detail (`src/dashboard/server.ts`) and the HTMX live sidebar keep reusing the same query path unchanged.
 - Focused verification for #93: `tests/llm/provider-copilot-cli.test.ts`, `tests/pipeline/actions.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`, and `tests/db/repository.test.ts` pass locally, proving the break was the repository/query cap rather than missing provider estimation or persistence.
+- Issue #93 follow-up evidence showed the article UI already rendered correctly when `usage_events` rows existed; the safer regression anchor is the full provider → runner → `recordAgentUsage()` → repository → article/live-sidebar chain, not seeded dashboard-only rows.
+- For Copilot CLI usage regressions, prefer a stage-action test that runs against a provider reporting `provider: 'copilot-cli'` plus usage numbers, then assert both the persisted `usage_events` row and the article/live-sidebar HTML.
 
 ### 2026-03-22: Issue #70 Investigation Outcome
 
@@ -51,3 +53,17 @@
 
 - Re-verified the Copilot CLI token path end-to-end and kept the final change on the real article usage seam only: repository hydration.
 - Explicitly did **not** carry forward the rejected artifact-thinking/debug renderer change; the article page fix is just full-history usage hydration plus focused dashboard/repository regression coverage.
+### 2026-03-22T19-13-43Z: Scribe sync — Issue #93 inbox merge
+- Consolidated the issue #93 usage-history decision into `.squad/decisions.md`.
+- Article detail and live sidebar usage panels should keep reading full per-article history by default, with explicit limits reserved for bounded queries.
+
+### 2026-03-22T19:10:20Z: Issue #93 decision inbox sync
+
+- UX history now reflects the canonical outcome after merging the remaining inbox notes into `.squad/decisions.md`.
+- The article usage panels stay tied to the full per-article history by default so early Copilot CLI rows remain visible.
+- The rejected thinking/debug path stayed out of scope for the issue summary.
+### 2026-03-22T19:13:43Z: Issue #93 regression safeguard
+
+- UX now records the regression guard that validates the full Copilot CLI usage path through persistence and hydration.
+- The article detail and live sidebar views should continue to read the full per-article usage history by default.
+- The rejected thinking/debug renderer path stays out of scope.

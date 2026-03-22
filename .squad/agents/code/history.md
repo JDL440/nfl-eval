@@ -63,6 +63,11 @@
 - Standardized the proof-of-concept team sheets on YAML frontmatter plus fixed markdown headings (`Durable snapshot`, `Identity anchors`, `Roster-building and cap framing`, `Source guidance`).
 - Vitest coverage now parses the glossary YAML directly and validates team-sheet frontmatter/body structure without touching runtime prompt assembly.
 
+### 2026-03-22: Issue #92 hybrid context implementation
+- Implemented the bounded hybrid context swap on `code/issue-92-hybrid-context` in `src/pipeline/actions.ts` and `src/pipeline/conversation.ts`.
+- Added regression coverage in `tests/pipeline/actions.test.ts` and `tests/pipeline/conversation.test.ts`.
+- Opened PR #97 and posted the follow-up issue comment; the implementation keeps fresh per-agent prompts while replacing raw cross-role transcript exposure with compact shared summary/handoff context.
+
 ### 2026-03-22: Debug visibility restore
 
 **What:** Restored the collapsible artifact thinking/debug section on article artifact views by loading companion `*.thinking.md` artifacts when the main `*.md` artifact is rendered.
@@ -73,3 +78,9 @@
 
 **Validation:** `npm run v2:build` passed, and targeted Vitest coverage passed for `tests/dashboard/wave2.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/extract-thinking.test.ts`, and `tests/pipeline/write-agent-result.test.ts`.
 
+
+### 2026-03-22T19:10:20Z: Issue #93 decision inbox sync
+
+- Submitted the Code diagnosis note for #93 and kept the canonical decision aligned on repository hydration, not provider or runner behavior.
+- The issue record now reflects the full-history usage read default while preserving explicit bounded reads for callers that truly need them.
+- Scribe merged the remaining inbox notes into `.squad/decisions.md` and removed the inbox files.
