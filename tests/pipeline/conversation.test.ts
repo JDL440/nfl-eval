@@ -11,6 +11,7 @@ import {
   getRevisionHistory,
   getRevisionCount,
   buildConversationContext,
+  buildRevisionSummaryContext,
   buildEditorPreviousReviews,
   type ConversationTurn,
   type RevisionSummary,
@@ -225,6 +226,37 @@ describe('conversation', () => {
     });
   });
 
+  // ── buildRevisionSummaryContext ──────────────────────────────────────────
+
+  describe('buildRevisionSummaryContext', () => {
+    it('returns empty string when there are no revisions', () => {
+      expect(buildRevisionSummaryContext([])).toBe('');
+    });
+
+    it('formats a compact shared handoff without raw transcript turns', () => {
+      const revisions: RevisionSummary[] = [{
+        id: 1,
+        article_id: 'test',
+        iteration: 2,
+        from_stage: 6,
+        to_stage: 4,
+        agent_name: 'editor',
+        outcome: 'REVISE',
+        key_issues: JSON.stringify(['Fix stale cap number', 'Tighten conclusion']),
+        feedback_summary: 'Update the cap math and make the ending more decisive.',
+        created_at: '2025-01-01',
+      }];
+
+      const result = buildRevisionSummaryContext(revisions);
+      expect(result).toContain('## Shared Revision Handoff');
+      expect(result).toContain('Reference only.');
+      expect(result).toContain('Iteration 2');
+      expect(result).toContain('Fix stale cap number');
+      expect(result).not.toContain('Conversation Thread');
+      expect(result).not.toContain('[writer]');
+    });
+  });
+
   // ── buildEditorPreviousReviews ──────────────────────────────────────────
 
   describe('buildEditorPreviousReviews', () => {
@@ -304,6 +336,25 @@ describe('conversation', () => {
       expect(editorTurns).toHaveLength(2);
       const editorContext = buildEditorPreviousReviews(editorTurns);
       expect(editorContext).toContain('EPA is wrong');
+    });
+
+    it('supports hybrid shared summaries without cross-role transcript bleed', () => {
+      addConversationTurn(repo, 'test-article', 5, 'writer', 'assistant', 'Initial draft content');
+      addConversationTurn(repo, 'test-article', 6, 'editor', 'assistant', 'EPA is wrong. REVISE.');
+      addConversationTurn(repo, 'test-article', 7, 'publisher', 'assistant', 'Formatting pass complete.');
+      addRevisionSummary(repo, 'test-article', 1, 6, 4, 'editor', 'REVISE', ['EPA wrong'], 'Fix EPA');
+
+      const revisions = getRevisionHistory(repo, 'test-article');
+      const sharedSummary = buildRevisionSummaryContext(revisions);
+      expect(sharedSummary).toContain('Fix EPA');
+      expect(sharedSummary).not.toContain('Initial draft content');
+      expect(sharedSummary).not.toContain('Formatting pass complete.');
+
+      const editorTurns = getArticleConversation(repo, 'test-article', { agentName: 'editor' });
+      const editorContext = buildEditorPreviousReviews(editorTurns);
+      expect(editorContext).toContain('EPA is wrong');
+      expect(editorContext).not.toContain('Initial draft content');
+      expect(editorContext).not.toContain('Formatting pass complete.');
     });
   });
 });
