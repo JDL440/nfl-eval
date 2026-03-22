@@ -101,3 +101,14 @@
 ### 2026-03-22T22:18:04Z: Revision/thinking visibility investigation merge
 - Merged the revision/thinking visibility investigation into the canonical decision log.
 - Kept revision history hydration and thinking-artifact surfacing as separate dashboard seams.
+
+
+### 2026-03-22T22-21-16Z: Issue #109 dashboard observability pass
+- Confirmed the article-detail fix should be handled as one dashboard pass that still keeps revision-history and thinking/debug surfacing conceptually separate.
+- The article page should hydrate revision history from the existing pipeline persistence and keep debug traces exposed through artifact-aware UI.
+
+### 2026-03-22T22:32:05Z: Scribe orchestration sync — article visibility audit
+
+- Scribe recorded the dashboard visibility audit in `.squad/log/` and emitted orchestration logs for the spawned agents.
+- The audit still points at one article-detail observability pass, with revision history and persisted thinking traces treated as separate seams.
+- No inbox decisions were pending, so `.squad/decisions.md` stayed unchanged.

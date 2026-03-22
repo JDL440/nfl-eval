@@ -30,3 +30,9 @@
 - Confirmed the revision/thinking visibility investigation is canonical in .squad/decisions.md; no inbox files remained to merge.
 - No archive rollover was required, and the dashboard gap remains a discoverability/navigation seam rather than a persistence gap.
 
+### 2026-03-22T22:32:05Z: Scribe orchestration sync — article visibility audit
+
+- Scribe captured the research audit in the session log and wrote the orchestration log for the read-only architecture pass.
+- The durable recommendation remains to keep revision hydration and thinking-artifact surfacing separate in the dashboard layer.
+- The decisions inbox was empty, so there was nothing to merge or deduplicate.
+

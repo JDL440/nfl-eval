@@ -92,6 +92,12 @@
 - Confirmed persisted `*.thinking.md` sidecars remain the authoritative current debug source (`writeAgentResult()` in `src/pipeline/actions.ts`), but `renderArtifactContent()` only extracts inline `<think>` / `<reasoning>` blocks and does not auto-pair the companion sidecar with the main artifact view.
 - Recommended implementation path: one article-detail observability pass across `src/dashboard/server.ts` and `src/dashboard/views/article.ts` that surfaces revision history from existing conversation data and restores clear, collapsible thinking visibility; treat historical per-iteration thinking as a separate follow-up only if versioned persistence is later required.
 
+### 2026-03-22T22:32:05Z: Scribe orchestration sync — article visibility audit
+
+- Scribe recorded the lead triage and retry runs in `.squad/orchestration-log/` and captured the article visibility audit in `.squad/log/`.
+- No inbox files were present, so no decision merge or archive rollover was needed.
+- Keep the dashboard fix framed as one observability pass while preserving the revision-history and thinking/debug seams.
+
 ### 2026-03-22T22:18:04Z: TLDR / retrospective decision merge
 - Merged the TLDR contract decision and the post-revision retrospective scope note into the canonical decision log.
 - Keep the TLDR gate deterministic and the retrospective post-stage with structured persistence.

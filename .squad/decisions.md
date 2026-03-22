@@ -702,3 +702,54 @@ Keep the retrospective as a post-stage artifact/process, not a new pipeline stag
 3. Use a dedicated persistence surface instead of overloading `revision_summaries`.
 4. Store queryable findings such as churn causes, repeated issues, next-time actions, and process improvements.
 5. Leave cross-article ranking and proposal generation for follow-up work.
+
+
+---
+
+# Decision: Dashboard article-detail observability for revisions and thinking
+
+**Status:** PROPOSED
+**Submitted by:** Lead
+**Date:** 2026-03-22
+**Issue:** #109
+**Source:** Merged from `lead-dashboard-revisions-thinking.md`
+
+---
+
+## TLDR
+
+Treat the missing revision visibility and missing thinking visibility as **one article-detail observability pass** on the dashboard, while keeping the two seams conceptually separate.
+
+## Decision
+
+1. **Use existing persistence first**
+   - revisions already live in `src/pipeline/conversation.ts`
+   - current debug traces already live in companion `*.thinking.md` artifacts via `writeAgentResult()`
+
+2. **Redesign the article detail page, not the pipeline**
+   - hydrate revision history in `src/dashboard/server.ts`
+   - render a dedicated revision-history surface in `src/dashboard/views/article.ts`
+   - restore clear thinking/debug exposure in the main artifact renderer instead of relying on tiny side buttons
+
+3. **Keep current artifact tabs focused on latest state**
+   - the latest canonical artifact (`draft.md`, `editor-review.md`, etc.) remains the main artifact tab target
+   - historical writer/editor passes should appear in a dedicated revision-history panel rather than fake versioned tab names
+
+## Why
+
+- The pipeline already stores enough data to show multi-pass article history without new schema work.
+- The dashboard currently ignores that data and leans on the legacy `editor_reviews` metadata table, which is not the live source of full revision content.
+- Persisted thinking traces also already exist, but the article-detail renderer stopped treating them as the primary debug source.
+
+## Boundary
+
+Historical **revision text** is already available and should be shown now. Historical **thinking traces** are **not** versioned per iteration today because artifact sidecars are overwritten by filename. If Joe later wants exact per-revision thinking, that should be tracked as a separate persistence enhancement after the surfacing fix lands.
+
+## Primary file set
+
+- `src/dashboard/server.ts`
+- `src/dashboard/views/article.ts`
+- `src/pipeline/conversation.ts`
+- `src/pipeline/actions.ts`
+- `tests/dashboard/server.test.ts`
+- `tests/dashboard/wave2.test.ts`

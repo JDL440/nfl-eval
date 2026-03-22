@@ -60,3 +60,9 @@
 ### 2026-03-22T22:18:04Z: Scribe maintenance pass
 - Merged the current inbox decisions into the canonical decision log and removed duplicate inbox files.
 - Wrote orchestration/session logs for the UX investigation and confirmed no archive candidates were older than 30 days.
+
+
+### 2026-03-22T22-21-16Z: Issue #109 maintenance pass
+- Wrote the orchestration and session logs for the dashboard article-detail observability investigation.
+- Merged the inbox decision into the canonical decision log, then removed the inbox artifact.
+- Updated UX history to preserve the revision/thinking visibility context for future passes.
