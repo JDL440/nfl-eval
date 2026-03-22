@@ -2308,11 +2308,13 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     const gateway = new LLMGateway({ modelPolicy });
 
     // Register available LLM providers
+    // Priority: MOCK_LLM > explicit LLM_PROVIDER > copilot-cli (auto) > copilot API
+    const explicitProvider = process.env['LLM_PROVIDER'];
     if (process.env['MOCK_LLM'] === '1') {
       const mock = new MockProvider();
       gateway.registerProvider(mock);
       console.log('Mock LLM provider registered (testing mode)');
-    } else if (process.env['LLM_PROVIDER'] === 'lmstudio' || process.env['LMSTUDIO_URL']) {
+    } else if (explicitProvider === 'lmstudio' || process.env['LMSTUDIO_URL']) {
       const baseUrl = process.env['LMSTUDIO_URL'] ?? undefined;
       const defaultModel = process.env['LMSTUDIO_MODEL'] ?? undefined;
       const lmstudio = new LMStudioProvider({ baseUrl, defaultModel });
@@ -2326,26 +2328,41 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       } catch { /* LM Studio may not be running yet */ }
       gateway.registerProvider(lmstudio);
       console.log(`LM Studio provider registered (${lmstudio.baseUrl}, model: ${lmstudio.defaultModel})`);
-    } else if (process.env['LLM_PROVIDER'] === 'copilot-cli') {
-      const cliProvider = new CopilotCLIProvider({
-        defaultModel: process.env['COPILOT_MODEL'] ?? undefined,
-        copilotPath: process.env['COPILOT_PATH'] ?? undefined,
-      });
-      try {
-        const version = await cliProvider.verify();
-        gateway.registerProvider(cliProvider);
-        console.log(`Copilot CLI provider registered (${version}, model: ${cliProvider['defaultModel']})`);
-      } catch (err) {
-        console.log(`Copilot CLI not available: ${err instanceof Error ? err.message : err}`);
-      }
-    } else {
+    } else if (explicitProvider === 'copilot-api') {
+      // Explicit Copilot API (GitHub Models) — skip CLI auto-detection
       try {
         const copilot = new CopilotProvider();
-        copilot.resolveToken(); // Verify token is available before registering
+        copilot.resolveToken();
         gateway.registerProvider(copilot);
         console.log('Copilot Pro+ provider registered (GitHub Models API)');
       } catch (err) {
         console.log(`Copilot provider not available: ${err instanceof Error ? err.message : err}`);
+      }
+    } else {
+      // Default: try Copilot CLI first, fall back to API provider
+      let registered = false;
+      try {
+        const cliProvider = new CopilotCLIProvider({
+          defaultModel: process.env['COPILOT_MODEL'] ?? undefined,
+          copilotPath: process.env['COPILOT_PATH'] ?? undefined,
+        });
+        const version = await cliProvider.verify();
+        gateway.registerProvider(cliProvider);
+        console.log(`Copilot CLI provider registered (${version}, model: ${cliProvider['defaultModel']})`);
+        registered = true;
+      } catch (err) {
+        console.log(`Copilot CLI not available: ${err instanceof Error ? err.message : err}`);
+      }
+
+      if (!registered) {
+        try {
+          const copilot = new CopilotProvider();
+          copilot.resolveToken();
+          gateway.registerProvider(copilot);
+          console.log('Copilot Pro+ provider registered (GitHub Models API fallback)');
+        } catch (err) {
+          console.log(`Copilot API provider also not available: ${err instanceof Error ? err.message : err}`);
+        }
       }
     }
 
