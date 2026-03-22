@@ -12,7 +12,7 @@ This repository now centers on a real application stack:
 - **Multi-provider LLM gateway** with pluggable providers and stage-aware model routing
 - **Service integrations** for Substack, Twitter/X, image generation, and NFL data ingestion
 
-The original v1 markdown-first system has been preserved in **`archive/v1/`** for reference.
+The original v1 markdown-first system has been removed (available in git history for reference).
 
 ## Quick Start
 
@@ -172,7 +172,6 @@ src/
   services/     Substack, Twitter, image, markdown, data
 mcp/            Legacy/local MCP entrypoints and smoke tests
 tests/          Unit, integration, and e2e coverage
-archive/v1/     Archived v1 source and docs
 ```
 
 ## Services and MCP Tools
@@ -217,7 +216,7 @@ npx vitest run
 
 ## v1 Archive
 
-The original v1 implementation is preserved in **`archive/v1/`**.
+The original v1 implementation is available in git history for reference.
 
 Use it only as historical reference for:
 

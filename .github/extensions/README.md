@@ -109,7 +109,7 @@ For persistent access across all sessions (not just this repo), add to `~/.confi
 }
 ```
 
-For the older step-by-step Copilot CLI walkthrough, see the archived v1 guide at [`archive/v1/docs/copilot-cli-mcp-setup.md`](../../archive/v1/docs/copilot-cli-mcp-setup.md).
+For the older step-by-step Copilot CLI walkthrough, see the v1 setup guide in git history (removed with archive cleanup).
 
 ## Testing
 
@@ -205,7 +205,6 @@ Add test cases to `mcp/smoke-test.mjs` for your new tool.
 
 Add tool documentation to:
 - This README (Available Tools section)
-- `archive/v1/docs/mcp-server.md` for legacy MCP setup context (if appropriate)
 - Main `README.md` (if user-facing)
 
 ## Legacy: Native Copilot CLI Extensions
@@ -268,11 +267,7 @@ EXTENSION_ENV_DISABLED=1  # Set to disable .env loading (for safe tests)
 
 ## Related Documentation
 
-- **[Archived MCP Server Setup](../../archive/v1/docs/mcp-server.md)** - Legacy setup notes for Codex, Claude Code, OpenCode, and VS Code
-- **[Archived Copilot CLI Setup](../../archive/v1/docs/copilot-cli-mcp-setup.md)** - Legacy GitHub Copilot CLI setup notes
 - **[Main README](../../README.md#services-and-mcp-tools)** - Current v2 overview and MCP/service context
-
-The root `README.md` is now the source of truth for the active v2 application architecture; use the archived links above only for legacy MCP workflow history.
 
 ## Questions?
 
