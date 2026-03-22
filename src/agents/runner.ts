@@ -45,6 +45,8 @@ export interface AgentRunParams {
   responseFormat?: 'text' | 'json';
   /** Optional live roster context — injected into system prompt when provided. */
   rosterContext?: string;
+  /** Optional conversation history — injected as formatted context in the user message. */
+  conversationContext?: string;
 }
 
 // Map agent names to model-policy stage keys so the correct model tier is used
@@ -372,6 +374,11 @@ export class AgentRunner {
         contextParts.push(`\n---\n${articleContext.content}\n---`);
       }
       userMessage = contextParts.join('\n') + '\n\n' + task;
+    }
+
+    // 5b. Inject conversation context (revision history + prior agent interactions)
+    if (params.conversationContext) {
+      userMessage = params.conversationContext + '\n\n---\n\n' + userMessage;
     }
 
     // 6. Build messages
