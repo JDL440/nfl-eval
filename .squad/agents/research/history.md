@@ -89,3 +89,7 @@
 ### 2026-03-22T22-07-35Z: TLDR contract drift sync
 - Recorded the recommendation in `.squad/decisions/inbox/research-tldr-enforcement-investigation.md`.
 - Centralize TLDR and image-order requirements in `substack-article.md` so charters can reference one source of truth.
+
+### 2026-03-22T22-11-23Z: TLDR enforcement cross-check
+- Reconfirmed that TLDR is required downstream by the substack-article, editor-review, and publisher skills, plus the editor charter checklist.
+- The writer charter still delegates structure indirectly, so the contract gap remains runtime enforcement rather than source discovery.

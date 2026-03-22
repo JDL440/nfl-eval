@@ -70,3 +70,7 @@
 ### 2026-03-22T22-09-11Z: Issue #103 review follow-through
 - Approved the cap-only follow-up for editor previous reviews and kept the scope bounded to the newest-first path.
 - Lead context now reflects that the runtime prompt-assembly fetch cap belongs with the bounded review history change.
+
+### 2026-03-22T22-11-23Z: TLDR enforcement follow-through
+- Reinforced the recommended fix: enforce structure at the deterministic stage guard/shared validator layer, not only in prompt text.
+- Charter updates and regression tests remain the right companion changes for durable coverage.
