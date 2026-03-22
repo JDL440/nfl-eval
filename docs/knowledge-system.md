@@ -73,6 +73,7 @@ Each glossary file follows a flat, validation-friendly YAML structure:
 
 ```yaml
 schema_version: 1
+id: analytics-metrics
 glossary: analytics-metrics
 description: Core NFL analytics terms aligned to NFL Lab usage.
 entry_fields:
@@ -102,7 +103,7 @@ entries:
 - It is structured enough for deterministic validation tests.
 - It keeps every term tied to freshness and source-reference fields from day one.
 - It keeps the authoring contract focused on the entry-level factual fields that matter most for auditability.
-- It is easy for Code or Data to extend later and now parses cleanly in the validation tests.
+- It is easy for Code or Data to extend later and parses cleanly with the repo's lightweight test-only YAML validation.
 
 ### Team Identity Sheet Markdown Format
 
@@ -137,6 +138,7 @@ volatility:
 - The frontmatter makes freshness, source, and volatility expectations explicit.
 - The markdown body stays focused on durable identity, not volatile depth-chart detail.
 - The sections are stable enough for validation while staying readable to writers and researchers.
+- The proof-of-concept sheets intentionally cover only `SEA`, `KC`, and `BUF` so the repo can validate structure before any phase 4 runtime wiring.
 
 ## Layer 1: Charters
 

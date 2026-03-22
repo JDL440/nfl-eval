@@ -1,4 +1,5 @@
 schema_version: 1
+id: personnel-groupings
 glossary: personnel-groupings
 description: Standard offensive personnel labels used in team sheets, prompts, and article drafts.
 entry_fields:

@@ -1,4 +1,5 @@
 schema_version: 1
+id: cap-mechanics
 glossary: cap-mechanics
 description: Durable NFL salary-cap mechanics used in roster and contract analysis.
 entry_fields:

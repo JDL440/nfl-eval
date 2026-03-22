@@ -137,6 +137,8 @@ The repo also includes a proof-of-concept structured knowledge slice for issue #
 - Glossary seeds: `src/config/defaults/glossaries/`
 - Team identity sheets: `content/data/team-sheets/`
 
+Those files are source-controlled reference assets only for now; runtime glossary loading and automated refresh work were intentionally deferred to follow-up issue `#91`.
+
 ## Dashboard Pages
 
 The editorial dashboard includes:

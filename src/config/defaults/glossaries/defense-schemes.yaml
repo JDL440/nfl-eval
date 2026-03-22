@@ -1,4 +1,5 @@
 schema_version: 1
+id: defense-schemes
 glossary: defense-schemes
 description: Shared defensive coverage and pressure terminology for NFL Lab team and scheme analysis.
 entry_fields:

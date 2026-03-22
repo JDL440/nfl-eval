@@ -1,4 +1,5 @@
 schema_version: 1
+id: analytics-metrics
 glossary: analytics-metrics
 description: Core NFL analytics terms used across NFL Lab writing, editing, and analysis.
 entry_fields:
