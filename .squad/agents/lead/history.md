@@ -14,6 +14,14 @@
 - @copilot enabled with auto-assignment for well-scoped issues
 - Joe Robinson is the human Product Owner / Tech Lead with final decision authority
 
+### 2026-03-22: Issue #85 — Structured Domain Knowledge Scope Lock
+
+- Issue #85 is intentionally limited to static proof-of-concept assets plus docs/tests: glossary YAML files under `src/config/defaults/glossaries/` and initial team sheets under `content/data/team-sheets/`.
+- Keep #85 out of runtime code paths: no `src/agents/runner.ts`, `src/pipeline/actions.ts`, or refresh automation changes unless strictly needed for lightweight references or validation.
+- Treat `tests/config/` as the likely home for structure-validation tests, since this slice validates seeded/static knowledge assets rather than pipeline behavior.
+- The repo currently has no YAML dependency in `package.json`, so glossary structure should stay simple enough for lightweight validation without introducing runtime integration.
+- Deferred Phases 4-5 are now tracked in GitHub issue `#91` (runtime glossary/team-sheet injection plus refresh automation).
+
 ### 2025-07-19: Triage Round 1 — 5 non-article project issues
 
 **Closed as complete (already implemented in v2):**
@@ -66,5 +74,17 @@
 **Session context:** 7-agent spawn manifest completed. Code implemented 2 issues (#82 publish fix, #83 fact-check pipeline). Research/DevOps/UX completed investigations for issues #85, #83, #76, #70 — all labeled go:yes.
 
 **Issue #88 status:** Created and triaged. Awaiting architectural review and PO decision on 4-phase approach before assignment.
+
+### 2026-03-22: Issue #85 Scope Split — Runtime Integration and Refresh Deferred
+
+**By:** Lead (🏗️)
+
+**What:** Joe explicitly narrowed `#85` to Phases 1-3 plus docs/testing (Phase 6). Created follow-up issue `#91` to hold the deferred Phase 4 runtime integration work and Phase 5 monthly refresh automation.
+
+**Phases deferred to #91:**
+- **Phase 4:** Load glossaries in `src/agents/runner.ts`, generate/inject `team-identity.md` from `src/pipeline/actions.ts`, and route that artifact through `src/pipeline/context-config.ts` so runtime prompts actually receive the new knowledge assets.
+- **Phase 5:** Add `scripts/refresh-domain-knowledge.ts` plus scheduled workflow automation and refresh audit logging so glossary/index facts can be kept current without manual edits.
+
+**Pattern to reuse:** When a multi-phase architecture issue is intentionally narrowed midstream, keep the active issue tightly scoped to the approved phases, create a separate linked backlog issue for the deferred phases, and leave a short TL;DR comment on the parent issue so future implementers do not blur the boundaries.
 
 

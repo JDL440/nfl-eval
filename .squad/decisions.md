@@ -214,3 +214,213 @@ Build Phases 1–3 (glossaries + team sheets) as proof of concept; extend to Pha
 
 
 
+
+
+---
+
+# Decision: Per-Article Shared Conversation Context
+
+**Issue:** #88 — Pipeline Conversation Context
+**PR:** #90 (merged)
+**Status:** IMPLEMENTED (Phases 1-3)
+**Submitted by:** Code (🔧 Dev)
+**Date:** 2025-07-20
+
+---
+
+## TLDR
+
+All agents working on the same article share ONE conversation thread (not per-agent). Each turn is tagged with the agent name and pipeline stage. Context is injected as formatted markdown text in the user message.
+
+## Design Question Answered
+
+**Joe asked:** "Will all agents share one context window per article or have their own?"
+
+**Answer:** Per-article shared context. The thread is per-article, not per-agent. This way:
+- The editor sees what the writer did
+- The writer sees what the editor requested
+- The publisher sees the full revision history
+
+## Key Technical Decisions
+
+1. **Formatted markdown injection** (not multi-turn messages) — works uniformly across all LLM providers in the gateway
+2. **Truncation bounds** — conversation turns capped at 2000 chars, editor reviews at 1500 chars, to keep context manageable
+3. **Automatic revision summaries** — editor REVISE verdicts auto-create revision summary entries with feedback preview
+4. **Deduplication** — writer checks if editor feedback is already recorded before adding a duplicate turn
+5. **Additive to fact-checking** — the conversation system records turns alongside existing fact-check artifacts (#83), no conflicts
+
+## Schema
+
+- `article_conversations` — id, article_id, stage, agent_name, role, turn_number, content, token_count, created_at
+- `revision_summaries` — id, article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary, created_at
+
+## Future Work (Phase 4)
+
+- Token budget management (use token_count column to limit context window usage)
+- Native multi-turn message format optimization (if beneficial after markdown injection proves stable)
+- Conversation pruning for very long article histories
+
+
+---
+
+### 2026-03-22T18:05:59Z: User directive
+**By:** Joe Robinson (via Copilot)
+**What:** Update Squad agent model preferences so Squad coding agents use `gpt-5.4`, with Scribe pinned to `gpt-5.4-mini`.
+**Why:** User request — captured for team memory
+
+
+---
+
+# Decision: Split Issue #85 Into Active Build Scope and Deferred Follow-Up
+
+**Issue:** #85 — K6a │ Structured domain knowledge
+**Follow-up:** #91 — K6b │ Structured domain knowledge follow-up — runtime integration + refresh automation
+**Status:** ACCEPTED
+**Submitted by:** Lead (🏗️)
+**Date:** 2026-03-22
+
+---
+
+## TLDR
+
+Issue `#85` is intentionally limited to Phases 1-3 plus docs/testing (Phase 6). Deferred Phases 4-5 are now tracked separately in `#91` so runtime integration and monthly refresh automation do not expand the first implementation pass.
+
+## Decision
+
+Keep `#85` focused on foundational asset creation:
+- glossary schemas/examples and authored glossary files
+- team identity sheet content/templates
+- domain knowledge index/bootstrap organization
+- documentation and testing for that first pass
+
+Move the remaining cross-cutting runtime work into `#91`:
+- glossary loading/injection in `src/agents/runner.ts`
+- team-sheet artifact generation and routing in `src/pipeline/actions.ts` and `src/pipeline/context-config.ts`
+- monthly refresh automation, workflow scheduling, and audit logging
+
+## Rationale
+
+Phases 4-5 touch runtime prompt assembly, article context routing, scripts, and CI/workflow automation. Splitting them out keeps the first delivery focused on defining and authoring the structured knowledge assets, while preserving a clear backlog item for the deeper integration and freshness machinery.
+
+## Operational Rule
+
+When owner feedback narrows a multi-phase issue, the Lead should:
+1. restate the retained scope on the parent issue,
+2. create a linked follow-up for deferred phases with explicit in/out-of-scope language,
+3. leave a TL;DR comment on the parent issue to prevent scope drift.
+
+
+---
+
+# Decision: Issue #85 Scope Lock for Structured Domain Knowledge
+
+**Issue:** #85 — K6a │ Structured domain knowledge
+**Status:** APPROVED (Phases 1-3 + docs/testing only)
+**Submitted by:** Lead (🏗️)
+**Date:** 2026-03-22
+
+---
+
+## TLDR
+
+Code should treat #85 as a **static knowledge-asset proof of concept**, not a runtime integration project. Deliver the new glossary and team-sheet content structure, add focused validation/tests, update docs, and leave prompt injection plus refresh automation to follow-up issue **#91**.
+
+## Scope Boundaries
+
+### In scope for #85
+
+1. **Glossary asset scaffolding**
+   - Create `src/config/defaults/glossaries/`
+   - Add the first four glossary files:
+     - `analytics-metrics.yaml`
+     - `cap-mechanics.yaml`
+     - `defense-schemes.yaml`
+     - `personnel-groupings.yaml`
+
+2. **Team-sheet asset scaffolding**
+   - Create `content/data/team-sheets/`
+   - Add initial exemplar team sheets for the proof of concept:
+     - `SEA.md`
+     - `KC.md`
+     - `BUF.md`
+
+3. **Validation/tests for this slice only**
+   - Verify glossary YAML files are parseable and contain the agreed required fields
+   - Verify the initial team sheets exist and contain the expected markdown sections
+   - Prefer a dedicated config/static-asset test file under `tests/config/` rather than pipeline/runtime tests
+
+4. **Docs/light references**
+   - Update `docs/knowledge-system.md`
+   - Update only lightweight references that help explain or validate the new structure
+
+### Explicitly out of scope for #85
+
+- Loading glossaries in `src/agents/runner.ts`
+- Injecting team sheets in `src/pipeline/actions.ts`
+- Routing new artifacts through `src/pipeline/context-config.ts`
+- Monthly refresh jobs, cron workflows, or audit logging
+- Reworking `src/config/defaults/bootstrap-memory.json` into a new runtime index
+
+## Structure Decision
+
+For this proof of concept, **do not require all 32 team sheets**. Three authored exemplars (`SEA`, `KC`, `BUF`) are sufficient to validate structure, document the pattern, and keep scope aligned with Joe's “Phases 1-3 plus docs/testing” instruction.
+
+## Testing Decision
+
+The repo does **not** currently include a YAML parsing dependency. Keep the glossary format to a simple, consistent YAML subset and validate it with lightweight test-only parsing/shape checks instead of adding runtime glossary-loading code as part of #85.
+
+## Likely File Set for Code
+
+- `src/config/defaults/glossaries/analytics-metrics.yaml`
+- `src/config/defaults/glossaries/cap-mechanics.yaml`
+- `src/config/defaults/glossaries/defense-schemes.yaml`
+- `src/config/defaults/glossaries/personnel-groupings.yaml`
+- `content/data/team-sheets/SEA.md`
+- `content/data/team-sheets/KC.md`
+- `content/data/team-sheets/BUF.md`
+- `tests/config/structured-domain-knowledge.test.ts` (or equivalent focused static-asset test)
+- `docs/knowledge-system.md`
+
+## Follow-up
+
+Deferred runtime integration and refresh automation already exist as **issue #91**:
+- Phase 4 — runner/pipeline integration
+- Phase 5 — refresh automation
+
+
+---
+
+# Decision: Issue #85 Phase 1–3 asset layout and planning guardrails
+
+**Issue:** #85 — K6a │ Structured domain knowledge
+**Status:** PROPOSED
+**Submitted by:** Research (🔍)
+**Date:** 2026-03-22
+
+---
+
+## TLDR
+
+For the approved Phase 1–3 implementation, keep the work focused on authoring structured knowledge assets and documentation. Store glossary YAML and team identity markdown under `src/config/defaults/knowledge/`, and defer any runtime loading, artifact injection, or refresh automation to follow-up issue `#91`.
+
+## Proposed Working Layout
+
+- `src/config/defaults/knowledge/glossaries/analytics-metrics.yaml`
+- `src/config/defaults/knowledge/glossaries/cap-mechanics.yaml`
+- `src/config/defaults/knowledge/glossaries/defense-schemes.yaml`
+- `src/config/defaults/knowledge/glossaries/personnel-groupings.yaml`
+- `src/config/defaults/knowledge/team-identities/SEA.md`
+- `src/config/defaults/knowledge/team-identities/KC.md`
+- `src/config/defaults/knowledge/team-identities/BUF.md`
+- `docs/knowledge-system.md`
+
+## Why this layout
+
+`docs/knowledge-system.md` already frames seeded defaults under `src/config/defaults/` and runtime knowledge under the data directory. Keeping Phase 1–3 assets in the defaults tree preserves that architecture, avoids mixing authored knowledge with executable/query assets in `content/data/`, and gives Phase 4 a clean future path for seeding or runtime copying.
+
+## Guardrails for implementers
+
+1. **Do not pull Phases 4–5 back in.** No `runner.ts`, `actions.ts`, `context-config.ts`, cron, or refresh-job work belongs in this pass.
+2. **Normalize team keys before future lookup work.** `primary_team` values are inconsistent across the repo (`SEA` vs `seahawks` vs display names), so future runtime integration should use a single team-abbreviation mapper.
+3. **Keep team sheets stable.** Identity sheets should describe coaching, scheme identity, terminology, and organizational tendencies — not volatile roster snapshots already covered by `roster-context.ts`.
+4. **Prefer schema/content validation tests.** Phase 1–3 tests should verify file presence and structural integrity, not prompt-injection behavior.

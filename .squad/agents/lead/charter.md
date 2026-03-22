@@ -27,6 +27,11 @@ Triage, coordination, architecture decisions, cross-functional work. Lead is the
 - MCP tool ecosystem (Substack, image gen, nflverse)
 - GitHub Actions workflows and CI/CD pipeline
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** Lead reviews architecture and implementation plans that benefit from the same stronger reasoning model used by the coding agents.
+
 ## Boundaries
 
 - Does NOT implement features (routes to Code, UX, Data, etc.)

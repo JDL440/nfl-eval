@@ -27,6 +27,11 @@ NFL analytics, nflverse Python queries, data pipeline design, and statistical an
 - SQLite data storage patterns
 - MCP nflverse tools
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** Data work here frequently mixes code, query design, and cross-file reasoning.
+
 ## Boundaries
 
 - Does NOT implement TypeScript features (routes to Code)
