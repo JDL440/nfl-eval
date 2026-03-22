@@ -38,6 +38,7 @@ export interface GetConversationOptions {
   sinceStage?: number;
   agentName?: string;
   limit?: number;
+  newestFirst?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -115,7 +116,8 @@ export function getArticleConversation(
     params.push(options.agentName);
   }
 
-  let sql = `SELECT * FROM article_conversations WHERE ${conditions.join(' AND ')} ORDER BY turn_number ASC`;
+  const orderDirection = options?.newestFirst ? 'DESC' : 'ASC';
+  let sql = `SELECT * FROM article_conversations WHERE ${conditions.join(' AND ')} ORDER BY turn_number ${orderDirection}`;
 
   if (options?.limit != null) {
     sql += ' LIMIT ?';
@@ -199,6 +201,8 @@ const STAGE_LABELS: Record<number, string> = {
   8: 'Published',
 };
 
+export const MAX_EDITOR_PREVIOUS_REVIEWS = 10;
+
 function formatRevisionLines(revisions: RevisionSummary[]): string[] {
   const parts: string[] = [];
 
@@ -280,8 +284,12 @@ export function buildEditorPreviousReviews(
 ): string {
   if (editorTurns.length === 0) return '';
 
+  const boundedTurns = [...editorTurns]
+    .sort((a, b) => b.turn_number - a.turn_number)
+    .slice(0, MAX_EDITOR_PREVIOUS_REVIEWS);
+
   const parts: string[] = ['## Your Previous Reviews'];
-  for (const turn of editorTurns) {
+  for (const turn of boundedTurns) {
     const preview = turn.content.length > 1500
       ? turn.content.slice(0, 1500) + '\n[... truncated ...]'
       : turn.content;

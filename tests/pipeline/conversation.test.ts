@@ -13,6 +13,7 @@ import {
   buildConversationContext,
   buildRevisionSummaryContext,
   buildEditorPreviousReviews,
+  MAX_EDITOR_PREVIOUS_REVIEWS,
   type ConversationTurn,
   type RevisionSummary,
 } from '../../src/pipeline/conversation.js';
@@ -100,6 +101,12 @@ describe('conversation', () => {
       const turns = getArticleConversation(repo, 'test-article', { limit: 2 });
       expect(turns).toHaveLength(2);
       expect(turns[0].turn_number).toBe(1);
+    });
+
+    it('prefers newest turns when newestFirst is set', () => {
+      const turns = getArticleConversation(repo, 'test-article', { limit: 2, newestFirst: true });
+      expect(turns).toHaveLength(2);
+      expect(turns.map(turn => turn.turn_number)).toEqual([5, 4]);
     });
 
     it('combines filters', () => {
@@ -298,6 +305,34 @@ describe('conversation', () => {
 
       const result = buildEditorPreviousReviews(editorTurns);
       expect(result).toContain('[... truncated ...]');
+    });
+
+    it('caps to the newest reviews in deterministic order', () => {
+      const editorTurns: ConversationTurn[] = Array.from(
+        { length: MAX_EDITOR_PREVIOUS_REVIEWS + 2 },
+        (_, index) => ({
+          id: index + 1,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: index + 1,
+          content: `review-${String(index + 1).padStart(2, '0')}`,
+          token_count: 20,
+          created_at: '2025-01-01',
+        }),
+      ).reverse();
+
+      const result = buildEditorPreviousReviews(editorTurns);
+
+      expect(result.match(/### Review at Stage 6/g)).toHaveLength(MAX_EDITOR_PREVIOUS_REVIEWS);
+      expect(result).toContain(`review-${String(MAX_EDITOR_PREVIOUS_REVIEWS + 2).padStart(2, '0')}`);
+      expect(result).toContain(`review-${String(MAX_EDITOR_PREVIOUS_REVIEWS + 1).padStart(2, '0')}`);
+      expect(result).not.toContain('review-01');
+      expect(result).not.toContain('review-02');
+      expect(result.indexOf(`review-${String(MAX_EDITOR_PREVIOUS_REVIEWS + 2).padStart(2, '0')}`)).toBeLessThan(
+        result.indexOf(`review-${String(MAX_EDITOR_PREVIOUS_REVIEWS + 1).padStart(2, '0')}`),
+      );
     });
   });
 
