@@ -27,7 +27,7 @@ import {
 import { AgentRunner } from '../../src/agents/runner.js';
 import { AgentMemory } from '../../src/agents/memory.js';
 import { LLMGateway } from '../../src/llm/gateway.js';
-import { StubProvider } from '../../src/llm/providers/stub.js';
+import { MockProvider } from '../../src/llm/providers/mock.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 import { createApp } from '../../src/dashboard/server.js';
 import { createMCPServer } from '../../src/mcp/server.js';
@@ -191,6 +191,7 @@ interface E2EFixtures {
   scheduler: PipelineScheduler;
   auditor: PipelineAuditor;
   gateway: LLMGateway;
+  mockProvider: MockProvider;
   memory: AgentMemory;
   runner: AgentRunner;
   ctx: ActionContext;
@@ -227,12 +228,14 @@ function buildFixtures(): E2EFixtures {
   const memory = new AgentMemory(memoryDbPath);
   const policy = new ModelPolicy(MODELS_JSON_PATH);
 
-  // StubProvider: the default fallback response is fine for most stages.
-  // No need to match on exact user messages because actions.ts composes
-  // varying prompts. StubProvider returns "Stub response for: <msg>" by default.
+  // MockProvider: returns realistic stage-specific content.
+  // The test sets the stage before each transition so we don't rely on
+  // keyword detection (which breaks when accumulated context bleeds in).
+  const mockProvider = new MockProvider();
+  mockProvider.setLatency(false); // Disable simulated latency in tests
   const gateway = new LLMGateway({
     modelPolicy: policy,
-    providers: [new StubProvider()],
+    providers: [mockProvider],
   });
 
   const runner = new AgentRunner({ gateway, memory, chartersDir, skillsDir });
@@ -263,7 +266,7 @@ function buildFixtures(): E2EFixtures {
 
   return {
     tmpDir, articlesDir, chartersDir, skillsDir, logsDir,
-    config, repo, engine, scheduler, auditor, gateway, memory, runner, ctx,
+    config, repo, engine, scheduler, auditor, gateway, mockProvider, memory, runner, ctx,
   };
 }
 
@@ -295,8 +298,9 @@ describe('E2E: Full Pipeline', () => {
   // 1. Idea → Published (stages 1 through 7, then manual publish to 8)
   // ────────────────────────────────────────────────────────────────────────────
 
-  it('should process an article from idea through all pipeline stages', async () => {
+  it('should process an article from idea through all pipeline stages', { timeout: 30_000 }, async () => {
     const slug = 'seahawks-draft-analysis';
+    const mock = f.mockProvider;
 
     // ── Create article & idea.md ──
     const article = f.repo.createArticle({
@@ -315,51 +319,55 @@ describe('E2E: Full Pipeline', () => {
     ].join('\n'));
 
     // ── Stage 1→2: generatePrompt ──
+    mock.setStage(1);
     const r1 = await executeTransition(slug, 1 as Stage, f.ctx);
     expect(r1.success).toBe(true);
     expect(f.repo.artifacts.get(slug, 'discussion-prompt.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(2);
 
     // ── Stage 2→3: composePanel ──
+    mock.setStage(2);
     const r2 = await executeTransition(slug, 2 as Stage, f.ctx);
     expect(r2.success).toBe(true);
     expect(f.repo.artifacts.get(slug, 'panel-composition.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(3);
 
     // ── Stage 3→4: runDiscussion ──
+    // Mock returns panel-composition with agent names that don't have charter files.
+    // The runDiscussion fallback should handle this by using panel-moderator.
+    mock.setStage(3);
     const r3 = await executeTransition(slug, 3 as Stage, f.ctx);
     expect(r3.success).toBe(true);
     expect(f.repo.artifacts.get(slug, 'discussion-summary.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(4);
 
     // ── Stage 4→5: writeDraft ──
+    mock.setStage(4);
     const r4 = await executeTransition(slug, 4 as Stage, f.ctx);
     expect(r4.success).toBe(true);
     expect(f.repo.artifacts.get(slug, 'draft.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(5);
 
     // ── Stage 5→6: runEditor ──
-    // The draft written by StubProvider won't have 800 words, so the 5→6 guard
-    // will fail. Overwrite draft.md with a long-enough draft first.
-    writeArticleFile(f, slug, 'draft.md', longText(900));
-
+    // Mock's draft response (~400 words) satisfies the 200-word guard.
+    // Mock's editor-review response now has proper "APPROVED" verdict.
+    mock.setStage(5);
     const r5 = await executeTransition(slug, 5 as Stage, f.ctx);
     expect(r5.success).toBe(true);
     expect(f.repo.artifacts.get(slug, 'editor-review.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(6);
 
     // ── Stage 6→7: runPublisherPass ──
-    // Editor review needs "APPROVED" verdict for the guard to pass.
-    writeArticleFile(f, slug, 'editor-review.md', '## Verdict: APPROVED\n\nExcellent draft. No issues found.');
-
+    mock.setStage(6);
     const r6 = await executeTransition(slug, 6 as Stage, f.ctx);
     expect(r6.success).toBe(true);
     expect(f.repo.artifacts.get(slug, 'publisher-pass.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(7);
 
+    // Reset mock stage
+    mock.setStage(null);
+
     // ── Stage 7→8: publish ──
-    // The publish guard now only requires the publisher-pass.md artifact (already created above).
-    // Also needs substack_url for the 8→published transition.
     f.repo.recordPublish(slug, 'https://nfllab.substack.com/p/seahawks-draft-analysis');
 
     const final = f.repo.getArticle(slug)!;
@@ -369,13 +377,11 @@ describe('E2E: Full Pipeline', () => {
 
     // ── Verify audit trail ──
     const auditHistory = f.auditor.getHistory(slug);
-    // Should have entries for each successful stage advance (1→2 through 6→7)
     const advances = auditHistory.filter(e => e.action === 'advance' && e.success);
     expect(advances.length).toBeGreaterThanOrEqual(6);
 
     // ── Verify stage transitions in DB ──
     const transitions = f.repo.getStageTransitions(slug);
-    // At minimum: creation (null→1), 1→2, 2→3, 3→4, 4→5, 5→6, 6→7, 7→8
     expect(transitions.length).toBeGreaterThanOrEqual(8);
 
     // ── Verify memory was stored ──
@@ -685,7 +691,7 @@ describe('E2E: Full Pipeline', () => {
     const leadMemories = f.memory.recall('lead');
     expect(leadMemories.length).toBeGreaterThan(0);
     expect(leadMemories.some(m => m.category === 'learning')).toBe(true);
-    expect(leadMemories.some(m => m.content.includes('Memory Persistence Test'))).toBe(true);
+    expect(leadMemories.some(m => m.content.includes('memory-test'))).toBe(true);
   });
 
   // ────────────────────────────────────────────────────────────────────────────

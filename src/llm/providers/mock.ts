@@ -129,7 +129,8 @@ The blueprint is clear. The question is whether the front office has the discipl
 
   'editor-review': `# Editor Review
 
-## Verdict: PUBLISH
+## Verdict
+APPROVED
 
 ## Overall Assessment
 Strong analytical piece with clear thesis and solid statistical support. The writing is engaging and accessible to the target audience. Minor adjustments recommended below.
@@ -227,6 +228,8 @@ export class MockProvider implements LLMProvider {
   private _lastRequest: ChatRequest | null = null;
   private _overrideResponse: string | null = null;
   private _overrideError: Error | null = null;
+  private _currentStage: string | null = null;
+  private _latency = true;
 
   /** Number of chat() calls made since creation or last reset. */
   get callCount(): number {
@@ -241,6 +244,42 @@ export class MockProvider implements LLMProvider {
   /** Override the default response for all subsequent calls. Pass null to clear. */
   setResponse(content: string | null): void {
     this._overrideResponse = content;
+  }
+
+  /**
+   * Set the current pipeline stage so the mock returns the correct canned response
+   * without relying on fragile keyword detection. Pass null to revert to auto-detect.
+   *
+   * Valid stage keys: 'discussion-prompt', 'panel-composition', 'discussion-summary',
+   * 'draft', 'editor-review', 'publisher-pass'.
+   *
+   * Stage numbers are also accepted and mapped automatically:
+   * 1→discussion-prompt, 2→panel-composition, 3→discussion-summary,
+   * 4→draft, 5→editor-review, 6→publisher-pass
+   */
+  setStage(stage: string | number | null): void {
+    if (stage === null) {
+      this._currentStage = null;
+      return;
+    }
+    if (typeof stage === 'number') {
+      const stageMap: Record<number, string> = {
+        1: 'discussion-prompt',
+        2: 'panel-composition',
+        3: 'discussion-summary',
+        4: 'draft',
+        5: 'editor-review',
+        6: 'publisher-pass',
+      };
+      this._currentStage = stageMap[stage] ?? null;
+    } else {
+      this._currentStage = stage;
+    }
+  }
+
+  /** Enable or disable simulated latency (default: enabled). Disable for faster tests. */
+  setLatency(enabled: boolean): void {
+    this._latency = enabled;
   }
 
   /** Make all subsequent chat() calls throw this error. Pass null to clear. */
@@ -258,9 +297,11 @@ export class MockProvider implements LLMProvider {
     this._callCount++;
     this._lastRequest = request;
 
-    // Simulate realistic latency (200-500ms)
-    const delay = 200 + Math.random() * 300;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    // Simulate realistic latency (200-500ms) unless disabled
+    if (this._latency) {
+      const delay = 200 + Math.random() * 300;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
 
     // Simulate failure if configured
     if (this._overrideError) {
@@ -271,6 +312,9 @@ export class MockProvider implements LLMProvider {
     let content: string;
     if (this._overrideResponse !== null) {
       content = this._overrideResponse;
+    } else if (this._currentStage !== null) {
+      // Explicit stage set — bypass keyword detection entirely
+      content = MOCK_RESPONSES[this._currentStage] ?? `Mock response for stage '${this._currentStage}'.`;
     } else {
       const stage = detectStageContext(request.messages);
       content = MOCK_RESPONSES[stage] ?? `Mock response for request with ${request.messages.length} messages.`;

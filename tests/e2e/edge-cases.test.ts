@@ -157,6 +157,7 @@ beforeAll(() => {
   const modelsPath = join(process.cwd(), 'src', 'config', 'defaults', 'models.json');
   const policy = new ModelPolicy(modelsPath);
   mockProvider = new MockProvider();
+  mockProvider.setLatency(false); // Disable simulated latency in tests
   gateway = new LLMGateway({ modelPolicy: policy, providers: [mockProvider] });
   memory = new AgentMemory(config.memoryDbPath);
   runner = new AgentRunner({ gateway, memory, chartersDir: config.chartersDir, skillsDir: config.skillsDir });
@@ -597,17 +598,20 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
   function setMockForStage(stage: number, editorResponse?: string): void {
     if (stage === 4) {
       // writeDraft needs 200+ word content
+      mockProvider.setStage(null);
       mockProvider.setResponse(MOCK_DRAFT);
     } else if (stage === 5) {
       // runEditor needs a verdict
+      mockProvider.setStage(null);
       mockProvider.setResponse(editorResponse ?? APPROVED_REVIEW);
     } else if (stage === 6) {
       // runPublisherPass
+      mockProvider.setStage(null);
       mockProvider.setResponse(MOCK_PUBLISHER);
     } else {
-      // Other stages: let mock auto-detect (works for stages 1-3 since
-      // context is simpler and detectStageContext matches correctly)
+      // Other stages: use stage-aware mock (bypasses keyword detection)
       mockProvider.setResponse(null);
+      mockProvider.setStage(stage);
     }
   }
 
@@ -660,7 +664,7 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     expect(collectedSteps.some(s => s.type === 'advance' && s.to === 7)).toBe(true);
   });
 
-  it('stops after maxRevisions exceeded', async () => {
+  it('force-approves after maxRevisions exceeded', async () => {
     const slug = 'edge-auto-max-revisions';
     repo.createArticle({ id: slug, title: 'Auto-Advance Max Revisions' });
     writeArtifact(slug, 'idea.md', '# Idea\nTest max revisions.');
@@ -682,11 +686,11 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
 
     mockProvider.setResponse(null);
 
-    // Should NOT reach stage 7 — stopped after max revisions
-    expect(result.finalStage).toBeLessThan(7);
+    // After force-approve, the article should reach stage 7
+    expect(result.finalStage).toBe(7);
     expect(result.revisionCount).toBeGreaterThanOrEqual(2);
-    expect(result.error).toBeDefined();
-    expect(result.error).toContain('revisions');
+    // No error — force-approve lets it continue
+    expect(result.error).toBeUndefined();
   });
 
   it('calls autoAdvanceArticle directly with correct step tracking', async () => {

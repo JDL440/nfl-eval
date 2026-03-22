@@ -270,8 +270,8 @@ describe('STAGE_ACTIONS', () => {
       expect(fixtures.repo.artifacts.get('test-rd-partial', 'discussion-summary.md')).toBeTruthy();
     });
 
-    it('fails when all panelists fail', async () => {
-      // No charters for nonexistent agents
+    it('falls back to single-moderator when all panelists fail', async () => {
+      // No charters for nonexistent agents — fallback to panel-moderator
       createArticleWithStage(fixtures, 'test-rd-allfail', 3 as Stage, {
         'idea.md': '# Idea',
         'discussion-prompt.md': '# Prompt',
@@ -280,8 +280,9 @@ describe('STAGE_ACTIONS', () => {
 
       const result = await STAGE_ACTIONS.runDiscussion('test-rd-allfail', fixtures.ctx);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('All panelists failed');
+      expect(result.success).toBe(true);
+      // discussion-summary.md should still be produced via fallback
+      expect(fixtures.repo.artifacts.get('test-rd-allfail', 'discussion-summary.md')).toBeTruthy();
     });
 
     it('saves thinking traces for panelist artifacts', async () => {
@@ -825,8 +826,9 @@ describe('writeDraft fact-check preflight', () => {
     const result = await STAGE_ACTIONS.writeDraft('test-fc', fixtures.ctx);
 
     expect(result.success).toBe(true);
-    // Two runner calls: fact-check (lead) + draft (writer)
-    expect(runSpy).toHaveBeenCalledTimes(2);
+    // Three runner calls: fact-check (lead) + draft (writer) + word-count retry (writer)
+    // The retry fires because StubProvider returns <200 words.
+    expect(runSpy).toHaveBeenCalledTimes(3);
 
     const firstCall = runSpy.mock.calls[0][0];
     expect(firstCall.agentName).toBe('lead');
@@ -834,6 +836,9 @@ describe('writeDraft fact-check preflight', () => {
 
     const secondCall = runSpy.mock.calls[1][0];
     expect(secondCall.agentName).toBe('writer');
+
+    const thirdCall = runSpy.mock.calls[2][0];
+    expect(thirdCall.agentName).toBe('writer'); // word-count retry
 
     runSpy.mockRestore();
   });
