@@ -13,7 +13,12 @@ import { PipelineEngine } from '../../src/pipeline/engine.js';
 import { PipelineAuditor } from '../../src/pipeline/audit.js';
 import { AgentRunner } from '../../src/agents/runner.js';
 import { AgentMemory } from '../../src/agents/memory.js';
-import { LLMGateway } from '../../src/llm/gateway.js';
+import {
+  LLMGateway,
+  type ChatRequest,
+  type ChatResponse,
+  type LLMProvider,
+} from '../../src/llm/gateway.js';
 import { StubProvider } from '../../src/llm/providers/stub.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 import type { AppConfig } from '../../src/config/index.js';
@@ -63,6 +68,33 @@ interface TestFixtures {
   memory: AgentMemory;
   config: AppConfig;
   ctx: ActionContext;
+}
+
+class CopilotCliUsageProvider implements LLMProvider {
+  readonly id = 'copilot-cli';
+  readonly name = 'GitHub Copilot CLI';
+
+  chat(request: ChatRequest): Promise<ChatResponse> {
+    return Promise.resolve({
+      content: '# Prompt\n\nEstimated Copilot CLI output.',
+      model: request.model ?? 'gpt-5.4',
+      provider: this.id,
+      usage: {
+        promptTokens: 432,
+        completionTokens: 210,
+        totalTokens: 642,
+      },
+      finishReason: 'stop',
+    });
+  }
+
+  listModels(): string[] {
+    return ['gpt-5.4', 'gpt-5-mini'];
+  }
+
+  supportsModel(model: string): boolean {
+    return model.startsWith('gpt-5');
+  }
 }
 
 function createFixtures(): TestFixtures {
@@ -123,6 +155,21 @@ function createFixtures(): TestFixtures {
     tempDir, articlesDir, chartersDir, skillsDir, logsDir,
     repo, engine, auditor, runner, memory, config, ctx,
   };
+}
+
+function setRunnerProvider(fixtures: TestFixtures, provider: LLMProvider): void {
+  const gateway = new LLMGateway({
+    modelPolicy: loadPolicy(),
+    providers: [provider],
+  });
+  const runner = new AgentRunner({
+    gateway,
+    memory: fixtures.memory,
+    chartersDir: fixtures.chartersDir,
+    skillsDir: fixtures.skillsDir,
+  });
+  fixtures.runner = runner;
+  fixtures.ctx.runner = runner;
 }
 
 function createArticleWithStage(
@@ -743,6 +790,23 @@ describe('Token usage recording', () => {
     const promptEvent = events.find(e => e.surface === 'generatePrompt');
     expect(promptEvent).toBeDefined();
     expect(promptEvent!.stage).toBe(1);
+  });
+
+  it('persists estimated copilot-cli usage into usage_events', async () => {
+    setRunnerProvider(fixtures, new CopilotCliUsageProvider());
+    createArticleWithStage(fixtures, 'test-usage-copilot', 1 as Stage, {
+      'idea.md': '# Great Idea\nAnalyze the Seahawks draft.',
+    });
+
+    const result = await STAGE_ACTIONS.generatePrompt('test-usage-copilot', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const events = fixtures.repo.getUsageEvents('test-usage-copilot');
+    expect(events).toHaveLength(1);
+    expect(events[0].provider).toBe('copilot-cli');
+    expect(events[0].model_or_tool).toMatch(/^gpt-5/);
+    expect(events[0].prompt_tokens).toBe(432);
+    expect(events[0].output_tokens).toBe(210);
   });
 
   it('does not record usage when tokensUsed is undefined', () => {
