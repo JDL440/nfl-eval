@@ -389,3 +389,92 @@ volatility:
 ## Phase Boundary
 
 This decision covers only Phases 1–3 content authoring. It does **not** imply runtime loading, artifact injection, refresh automation, or source-provenance indexing; those remain follow-up implementation work.
+
+---
+
+# Decision: Issue #92 charter isolation should move to a hybrid context model
+
+**Issue:** #92 — Research: Validate charter isolation in shared article conversation context
+**Status:** PROPOSED
+**Submitted by:** Lead (🏗️)
+**Date:** 2026-03-22
+
+---
+
+## TLDR
+
+Keep the current per-agent fresh system-prompt model, but stop treating the full shared per-article transcript as the default cross-agent context surface. The safest next implementation step is a **hybrid** design: agent-local detailed history plus a compact shared revision summary / handoff log.
+
+## Recommendation
+
+Adopt a hybrid context contract for article revision loops:
+
+- **Keep:** fresh per-agent system prompt composition in `src/agents/runner.ts`
+- **Keep:** article-level revision continuity as a product goal
+- **Change:** cross-agent visibility from raw transcript sharing to structured handoff summaries by default
+- **Limit:** full prior-review exposure to the agent that actually needs it
+
+## Why
+
+### 1. Formal charter isolation is currently intact
+
+The implementation does **not** run Writer, Editor, and Publisher inside one provider-native chat thread. Each run rebuilds a fresh agent-specific system prompt from charter, skills, memory, and optional roster context, then prepends conversation history as markdown inside the user message.
+
+That means charter/system precedence still exists structurally.
+
+### 2. Practical role bleed is still a real risk
+
+Even with correct formal precedence, prior agent outputs are injected at high salience ahead of the active task. In realistic revision loops, that creates three avoidable risks:
+
+1. **Writer drift:** Writer starts mirroring Editor phrasing/checklist language instead of staying in the craft/house-voice role.
+2. **Editor anchoring:** Editor sees its own past reviews in both the shared history and the explicit `Your Previous Reviews` block, which increases the risk of repetitive or over-anchored review behavior.
+3. **Publisher relapse:** Publisher sees more editorial journey than it needs and may begin re-running editorial judgment instead of staying in publication-readiness mode.
+
+### 3. Full per-agent isolation is safer but too lossy
+
+Per-agent-per-article threads would reduce bleed the most, but they also throw away valuable revision continuity unless the system immediately rebuilds that continuity through explicit handoff artifacts. That means the product would pay orchestration cost without actually escaping the need for shared summaries.
+
+## Decision
+
+Use a **hybrid summary model** as the target architecture for the next implementation pass:
+
+### Shared article-level data
+
+Every downstream agent may see a compact, structured article summary containing only:
+
+- latest revision iteration and verdict
+- key must-fix items still open
+- what changed since the previous draft
+- publish-readiness state
+- explicit handoff notes intended for downstream roles
+
+### Agent-local detailed history
+
+- **Writer:** may keep Writer-local draft/revision continuity plus a distilled editor handoff
+- **Editor:** may keep Editor-local review history, but should avoid duplicated self-history blocks unless proven necessary
+- **Publisher:** should receive only the compact shared summary plus the current publish task/artifacts, not the full editorial transcript by default
+
+## Proposed next step
+
+Open a Code implementation pass that defines the minimum shared summary schema and prompt contract for Writer, Editor, and Publisher, then updates the pipeline so raw shared transcript injection becomes opt-in/debug-oriented rather than the normal runtime path.
+
+## Label/status implication
+
+Issue #92 can move from `go:needs-research` to **`go:yes`** once the recommendation comment is posted, because the design question is sufficiently narrowed for an implementation issue or PR.
+
+---
+
+# Diagnostic note — Issue #93 is query-layer, not persistence-layer
+
+- **By:** UX (⚛️)
+- **Date:** 2026-03-22
+- **Issue:** #93
+- **Supplements:** "Issue #93 article usage panels must use full per-article usage history"
+
+## Decision
+
+Treat the issue-93 failure specifically as a repository/query hydration problem on the dashboard surfaces — the Copilot CLI persistence path was already working correctly.
+
+## Scope note
+
+The same working tree includes a separate artifact-thinking UI change (companion `*.thinking.md` loading in `src/dashboard/server.ts` and `src/dashboard/views/article.ts`) that is not required to explain or fix the token-usage bug. These are distinct concerns.

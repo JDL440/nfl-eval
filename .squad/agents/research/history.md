@@ -56,7 +56,8 @@
 
 - Implemented the Phase 1–3 content layer using the user-requested paths: glossary YAML under `src/config/defaults/glossaries/` and team sheets under `content/data/team-sheets/`.
 - Standardized glossary files around a flat schema: `schema_version`, glossary id, description, entry field contract, refresh guidance, and per-term freshness/source fields.
-- Standardized team sheets around frontmatter metadata plus durable body sections: Durable snapshot, Identity anchors (Offense/Defense), Roster-building and cap framing, and Source guidance.
+- Aligned team sheets to an H1-first markdown layout with the exact sections Code expects: Snapshot, Team Identity, Offensive Identity, Defensive Identity, Roster Construction Signals, and Writing Cues.
+- Added an explicit top-level `id` field to each glossary so Code can validate file identity without traversing nested YAML.
 - Updated `docs/knowledge-system.md` to distinguish the existing runtime prompt system from the new structured KB defaults and to state clearly that Phases 4–5 remain deferred.
 - Added validation coverage focused on asset presence and format integrity rather than runtime injection behavior.
 
@@ -71,3 +72,11 @@
 - Inbox decisions were merged into `.squad/decisions.md`; the older pre-2026 decision history was archived to `.squad/decisions-archive.md`.
 - The canonical Phase 1-3 asset shape remains the static glossary + team-sheet content layer, with runtime integration still deferred.
 - Keep future planning aligned to docs/testing scope unless the follow-up runtime issue explicitly expands scope.
+
+### 2026-03-22: LLM observability research
+
+- Current LLM observability is split across three narrow surfaces: `usage_events` / `stage_runs` in `src/db/schema.sql`, pipeline audit logging in `src/pipeline/audit.ts`, and persisted `*.thinking.md` artifacts written by `writeAgentResult()` in `src/pipeline/actions.ts`.
+- `src/agents/runner.ts` composes the full system prompt and article context in memory, but it does not persist prompts, message payloads, raw provider responses, finish reasons, or request timestamps; providers in `src/llm/providers/*.ts` call APIs/CLI directly and only return normalized content plus optional usage.
+- `recordAgentUsage()` in `src/pipeline/actions.ts` stores only article/stage/surface/provider/model/token totals/cost and does not attach `stageRunId`, `runId`, or `actor`, so `usage_events` are not strongly correlated to `stage_runs` even though the schema supports that join.
+- Dashboard debug visibility currently means artifact-level thinking inspection, not full request transparency: `src/dashboard/views/article.ts` restores companion `*.thinking.md` traces and `src/dashboard/views/runs.ts` shows stage-run status, duration, model, and tokens, but not prompts, context payloads, raw outputs, or per-request provenance.
+- Related backlog context already exists: GitHub issues `#81` and `#93` cover token-usage UX/persistence, issue `#88` added conversation/revision context plus dashboard observability for multi-pass articles, and `.squad/decisions.md` contains a separate implemented decision that debug visibility should read persisted thinking artifacts rather than hidden prompt context.
