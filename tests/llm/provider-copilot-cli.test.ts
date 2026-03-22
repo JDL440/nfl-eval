@@ -231,7 +231,7 @@ describe('CopilotCLIProvider', () => {
   // -- chat() — response parsing ------------------------------------------
 
   describe('chat — response parsing', () => {
-    it('returns trimmed content with provider id', async () => {
+    it('returns trimmed content with provider id and estimated usage', async () => {
       stubExecFile('  Hello back!  \n');
 
       const provider = new CopilotCLIProvider();
@@ -241,7 +241,11 @@ describe('CopilotCLIProvider', () => {
       expect(res.provider).toBe('copilot-cli');
       expect(res.model).toBe('claude-sonnet-4');
       expect(res.finishReason).toBe('stop');
-      expect(res.usage).toBeUndefined();
+      // Token estimation: ~4 chars per token
+      expect(res.usage).toBeDefined();
+      expect(res.usage!.promptTokens).toBeGreaterThan(0);
+      expect(res.usage!.completionTokens).toBe(Math.ceil('Hello back!'.length / 4));
+      expect(res.usage!.totalTokens).toBe(res.usage!.promptTokens + res.usage!.completionTokens);
     });
 
     it('throws on empty response', async () => {

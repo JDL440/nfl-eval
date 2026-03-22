@@ -30,3 +30,6 @@ export { OpenAIProvider } from './providers/openai.js';
 export { GeminiProvider } from './providers/gemini.js';
 export { LocalProvider } from './providers/local.js';
 export { CopilotCLIProvider } from './providers/copilot-cli.js';
+
+// Pricing
+export { estimateCost, getModelPricing, listPricedModels, type ModelPricing } from './pricing.js';

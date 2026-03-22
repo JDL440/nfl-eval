@@ -288,6 +288,17 @@ describe('renderUsagePanel', () => {
     expect(html).toContain('Stage 6');
     expect(html).toContain('By Stage');
   });
+
+  it('shows provider breakdown', () => {
+    const events = [
+      makeUsageEvent({ provider: 'anthropic', prompt_tokens: 5000, output_tokens: 2000, cost_usd_estimate: 0.02 }),
+      makeUsageEvent({ id: 2, provider: 'copilot-cli', prompt_tokens: 3000, output_tokens: 1000, cost_usd_estimate: 0.01 }),
+    ];
+    const html = renderUsagePanel(events);
+    expect(html).toContain('anthropic');
+    expect(html).toContain('copilot-cli');
+    expect(html).toContain('By Provider');
+  });
 });
 
 // ── Stage runs panel unit tests ─────────────────────────────────────────────
