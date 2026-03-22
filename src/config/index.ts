@@ -25,6 +25,7 @@ export interface AppConfig {
   skillsDir: string;
   memoryDbPath: string;
   logsDir: string;
+  cacheDir: string;
   port: number;
   env: 'development' | 'production';
 }
@@ -211,6 +212,7 @@ export function loadConfig(overrides?: Partial<AppConfig>): AppConfig {
     skillsDir: join(dataDir, 'agents', 'skills'),
     memoryDbPath: join(dataDir, 'agents', 'memory.db'),
     logsDir: join(dataDir, 'logs'),
+    cacheDir: join(dataDir, 'leagues', league, 'data-cache'),
     port,
     env,
     ...overrides,

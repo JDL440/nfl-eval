@@ -10,6 +10,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cachedQuery, TTL } from "./mcp-cache.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -82,12 +83,11 @@ export const queryPlayerStatsTool = {
 
 export async function handleQueryPlayerStats(args) {
     const { player, season } = args;
-    const { data, error } = await runPythonQuery("query_player_epa.py", [
-        "--player", player,
-        "--season", String(season),
-    ]);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
-    return { textResultForLlm: jsonToMarkdown(data, `${player} — ${season} Stats`), resultType: "success" };
+    const cacheKey = `player-stats:${player.toLowerCase().replace(/\s+/g, "-")}:${season}`;
+    return cachedQuery(cacheKey, TTL.playerStats,
+        () => runPythonQuery("query_player_epa.py", ["--player", player, "--season", String(season)]),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, `${player} — ${season} Stats`), resultType: "success" }),
+    );
 }
 
 // ─── Tool 2: query_team_efficiency ────────────────────────────────────────────
@@ -114,12 +114,11 @@ export const queryTeamEfficiencyTool = {
 
 export async function handleQueryTeamEfficiency(args) {
     const { team, season } = args;
-    const { data, error } = await runPythonQuery("query_team_efficiency.py", [
-        "--team", team,
-        "--season", String(season),
-    ]);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
-    return { textResultForLlm: jsonToMarkdown(data, `${team} — ${season} Efficiency`), resultType: "success" };
+    const cacheKey = `team-efficiency:${team.toUpperCase()}:${season}`;
+    return cachedQuery(cacheKey, TTL.teamStats,
+        () => runPythonQuery("query_team_efficiency.py", ["--team", team, "--season", String(season)]),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, `${team} — ${season} Efficiency`), resultType: "success" }),
+    );
 }
 
 // ─── Tool 3: query_positional_rankings ────────────────────────────────────────
@@ -161,9 +160,11 @@ export async function handleQueryPositionalRankings(args) {
         "--season", String(season),
     ];
     if (top) cmdArgs.push("--top", String(top));
-    const { data, error } = await runPythonQuery("query_positional_comparison.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
-    return { textResultForLlm: jsonToMarkdown(data, `Top ${top || 20} ${position}s by ${metric} — ${season}`), resultType: "success" };
+    const cacheKey = `rankings:${position}:${metric}:${season}:${top || 20}`;
+    return cachedQuery(cacheKey, TTL.rankings,
+        () => runPythonQuery("query_positional_comparison.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, `Top ${top || 20} ${position}s by ${metric} — ${season}`), resultType: "success" }),
+    );
 }
 
 // ─── Tool 4: query_snap_counts ────────────────────────────────────────────────
@@ -212,10 +213,14 @@ export async function handleQuerySnapCounts(args) {
     } else {
         return { textResultForLlm: "❌ Must specify --team or --player", resultType: "failure" };
     }
-    const { data, error } = await runPythonQuery("query_snap_usage.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const cacheKey = player
+        ? `snaps:player:${player.toLowerCase().replace(/\s+/g, "-")}:${season}`
+        : `snaps:${team.toUpperCase()}:${season}:${position_group || "all"}:${top || 20}`;
     const title = player ? `${player} — ${season} Snap Counts` : `${team} Snap Counts — ${season}`;
-    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+    return cachedQuery(cacheKey, TTL.snapCounts,
+        () => runPythonQuery("query_snap_usage.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
 }
 
 // ─── Tool 5: query_draft_history ──────────────────────────────────────────────
@@ -266,10 +271,12 @@ export async function handleQueryDraftHistory(args) {
         return { textResultForLlm: "❌ Must specify --player, --position, or --pick-range", resultType: "failure" };
     }
     if (since) cmdArgs.push("--since", String(since));
-    const { data, error } = await runPythonQuery("query_draft_value.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const cacheKey = `draft-history:${cmdArgs.join(":")}`;
     const title = player ? `${player} — Draft History` : position ? `${position} Draft Hit Rates` : `Picks ${pick_range} Value`;
-    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+    return cachedQuery(cacheKey, TTL.draftHistory,
+        () => runPythonQuery("query_draft_value.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
 }
 
 // ─── Tool 6: query_ngs_passing ────────────────────────────────────────────────
@@ -313,10 +320,12 @@ export async function handleQueryNgsPassing(args) {
     } else {
         return { textResultForLlm: "❌ Must specify --player or --top", resultType: "failure" };
     }
-    const { data, error } = await runPythonQuery("query_ngs_passing.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const cacheKey = `ngs-passing:${cmdArgs.join(":")}`;
     const title = player ? `${player} — ${season} NGS Passing` : `Top ${top} QBs by ${metric || "avg_time_to_throw"} — ${season}`;
-    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+    return cachedQuery(cacheKey, TTL.ngsPassing,
+        () => runPythonQuery("query_ngs_passing.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
 }
 
 // ─── Tool 7: query_combine_profile ────────────────────────────────────────────
@@ -361,10 +370,12 @@ export async function handleQueryCombineProfile(args) {
     } else {
         return { textResultForLlm: "❌ Must specify --player or --position", resultType: "failure" };
     }
-    const { data, error } = await runPythonQuery("query_combine_comps.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const cacheKey = `combine:${cmdArgs.join(":")}`;
     const title = player ? `${player} — Combine Profile` : `Top ${top || 20} ${position} by ${metric || "forty"}`;
-    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+    return cachedQuery(cacheKey, TTL.combine,
+        () => runPythonQuery("query_combine_comps.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
 }
 
 // ─── Tool 8: query_pfr_defense ────────────────────────────────────────────────
@@ -414,14 +425,16 @@ export async function handleQueryPfrDefense(args) {
         return { textResultForLlm: "❌ Must specify --player, --team, or --position", resultType: "failure" };
     }
     if (top) cmdArgs.push("--top", String(top));
-    const { data, error } = await runPythonQuery("query_pfr_defense.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const cacheKey = `pfr-defense:${cmdArgs.join(":")}`;
     const title = player
         ? `${player} — ${season} PFR Defense`
         : team
           ? `${team} Defense — ${season}`
           : `Top ${top || 20} ${position}s — ${season} Defense`;
-    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+    return cachedQuery(cacheKey, TTL.pfrDefense,
+        () => runPythonQuery("query_pfr_defense.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
 }
 
 // ─── Tool 9: query_historical_comps ───────────────────────────────────────────
@@ -462,9 +475,11 @@ export async function handleQueryHistoricalComps(args) {
     ];
     if (seasons_back) cmdArgs.push("--seasons-back", String(seasons_back));
     if (top) cmdArgs.push("--top", String(top));
-    const { data, error } = await runPythonQuery("query_historical_comps.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
-    return { textResultForLlm: jsonToMarkdown(data, `Historical Comps for ${player} (${season})`), resultType: "success" };
+    const cacheKey = `historical-comps:${player.toLowerCase().replace(/\s+/g, "-")}:${season}:${seasons_back || 5}:${top || 10}`;
+    return cachedQuery(cacheKey, TTL.historicalComps,
+        () => runPythonQuery("query_historical_comps.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, `Historical Comps for ${player} (${season})`), resultType: "success" }),
+    );
 }
 
 // ─── Tool 10: query_rosters ───────────────────────────────────────────────────
@@ -508,12 +523,14 @@ export async function handleQueryRosters(args) {
         return { textResultForLlm: "❌ Must specify --team or --player", resultType: "failure" };
     }
     if (status) cmdArgs.push("--status", status);
-    const { data, error } = await runPythonQuery("query_rosters.py", cmdArgs);
-    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const cacheKey = `roster:${cmdArgs.join(":")}`;
     const title = player
         ? `${player} — Roster Lookup (${season})`
         : `${team} Roster (${season})${status ? ` [${status}]` : ""}`;
-    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+    return cachedQuery(cacheKey, TTL.roster,
+        () => runPythonQuery("query_rosters.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
 }
 
 // ─── Tool 11: refresh_nflverse_cache ──────────────────────────────────────────

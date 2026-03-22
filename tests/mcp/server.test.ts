@@ -68,6 +68,7 @@ describe('MCP Server', () => {
     skillsDir: '',
     memoryDbPath: '',
     logsDir: '',
+    cacheDir: '',
     port: 3456,
     env: 'development',
   };

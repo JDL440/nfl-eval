@@ -112,6 +112,7 @@ function createFixtures(): TestFixtures {
     skillsDir,
     memoryDbPath,
     logsDir,
+    cacheDir: join(tempDir, 'data-cache'),
     port: 3456,
     env: 'development',
   };

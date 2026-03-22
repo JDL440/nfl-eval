@@ -37,6 +37,7 @@ function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
     skillsDir: '/tmp/test-runs/skills',
     memoryDbPath: '/tmp/test-runs/memory.db',
     logsDir: '/tmp/test-runs/logs',
+    cacheDir: '/tmp/test/data-cache',
     port: 3457,
     env: 'development',
     ...overrides,

@@ -14,6 +14,10 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  getGlobalCache, DEFAULT_TTL,
+  rosterCacheKey, snapsCacheKey, pythonQueryCacheKey,
+} from '../cache/index.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,32 +86,40 @@ function runPythonQuery(scriptName: string, args: string[]): string | null {
 
 /** Query the official nflverse roster for a team. */
 function queryRoster(team: string, season: number): RosterPlayer[] {
-  const raw = runPythonQuery('query_rosters.py', [
-    '--team', team,
-    '--season', String(season),
-  ]);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as RosterPlayer[];
-  } catch {
-    return [];
-  }
+  const cache = getGlobalCache();
+  const key = rosterCacheKey(team, season);
+  return cache.getOrFetch<RosterPlayer[]>(key, () => {
+    const raw = runPythonQuery('query_rosters.py', [
+      '--team', team,
+      '--season', String(season),
+    ]);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as RosterPlayer[];
+    } catch {
+      return null;
+    }
+  }, DEFAULT_TTL.roster) ?? [];
 }
 
 /** Query snap counts for supplementary usage data. */
 function querySnaps(team: string, season: number, group: string, top: number): SnapPlayer[] {
-  const raw = runPythonQuery('query_snap_usage.py', [
-    '--team', team,
-    '--season', String(season),
-    '--position-group', group,
-    '--top', String(top),
-  ]);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as SnapPlayer[];
-  } catch {
-    return [];
-  }
+  const cache = getGlobalCache();
+  const key = snapsCacheKey(team, season, group, top);
+  return cache.getOrFetch<SnapPlayer[]>(key, () => {
+    const raw = runPythonQuery('query_snap_usage.py', [
+      '--team', team,
+      '--season', String(season),
+      '--position-group', group,
+      '--top', String(top),
+    ]);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as SnapPlayer[];
+    } catch {
+      return null;
+    }
+  }, DEFAULT_TTL.snapCounts) ?? [];
 }
 
 // ---------------------------------------------------------------------------
@@ -430,18 +442,22 @@ function extractPlayerNames(text: string): Set<string> {
 
 /** Look up which team a player is on (if any). Returns team abbreviation or null. */
 function queryPlayerTeam(playerName: string, season: number): string | null {
-  const raw = runPythonQuery('query_rosters.py', [
-    '--player', playerName,
-    '--season', String(season),
-  ]);
-  if (!raw) return null;
-  try {
-    const data = JSON.parse(raw) as RosterPlayer[];
-    if (data.length > 0) return data[0].team;
-    return null;
-  } catch {
-    return null;
-  }
+  const cache = getGlobalCache();
+  const key = pythonQueryCacheKey('query_rosters_player', [playerName.toLowerCase(), String(season)]);
+  return cache.getOrFetch<string>(key, () => {
+    const raw = runPythonQuery('query_rosters.py', [
+      '--player', playerName,
+      '--season', String(season),
+    ]);
+    if (!raw) return null;
+    try {
+      const data = JSON.parse(raw) as RosterPlayer[];
+      if (data.length > 0) return data[0].team;
+      return null;
+    } catch {
+      return null;
+    }
+  }, DEFAULT_TTL.roster);
 }
 
 const NON_PLAYER_PHRASES = new Set([

@@ -86,6 +86,7 @@ import { CopilotCLIProvider } from '../llm/providers/copilot-cli.js';
 import { MockProvider } from '../llm/providers/mock.js';
 import { LMStudioProvider } from '../llm/providers/lmstudio.js';
 import { EventBus, registerSSE } from '../dashboard/sse.js';
+import { initGlobalCache, FileCacheProvider } from '../cache/index.js';
 import {
   renderAgentsPage,
   renderCharterDetail,
@@ -2271,6 +2272,15 @@ export function createApp(
 export async function startServer(overrides?: Partial<AppConfig>): Promise<void> {
   const config = loadConfig(overrides);
   initDataDir(config.dataDir, config.league);
+
+  // Initialize query cache (file-based, survives restarts)
+  const cacheProvider = new FileCacheProvider(config.cacheDir);
+  const queryCache = initGlobalCache(cacheProvider);
+  const purged = queryCache.purgeExpired();
+  if (purged > 0) console.log(`[cache] Purged ${purged} expired entries`);
+  const cacheStats = queryCache.stats();
+  console.log(`[cache] File cache ready: ${cacheStats.entries} entries, ${((cacheStats.size ?? 0) / 1024).toFixed(1)} KB`);
+
   const repo = new Repository(config.dbPath);
 
   // ── Startup recovery: clean up orphaned runs from previous unclean shutdown ──

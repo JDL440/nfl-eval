@@ -254,6 +254,7 @@ function buildFixtures(): E2EFixtures {
     skillsDir,
     memoryDbPath,
     logsDir,
+    cacheDir: join(tmpDir, 'data-cache'),
     port: 0,
     env: 'development',
   };
