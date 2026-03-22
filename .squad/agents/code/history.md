@@ -11,6 +11,7 @@
 ## Learnings
 
 - Team initialized 2025-07-18
+- Issue #92 writer revisions should receive the full latest `editor-review.md` artifact in `articleContext` while keeping `conversationContext` limited to the compact revision handoff. That preserves anti-role-bleed for writer/editor/publisher without hiding exact editor instructions from the writer.
 - 47 article pipeline agents live in `src/config/defaults/charters/nfl/` — these are SEPARATE from Squad agents
 - Dashboard runs on port 3456 (Hono + HTMX)
 - **Issue #92 hybrid context follow-up:** `src/pipeline/actions.ts` should pass only `buildRevisionSummaryContext()` as shared `conversationContext` to Writer/Publisher and combine that summary with `buildEditorPreviousReviews()` for Editor. Writer revisions still need the full current `editor-review.md` artifact as an explicit handoff, even when per-article upstream overrides strip generic includes. Keep `buildConversationContext()` available for debug/full-history use, but not as the default runtime prompt surface for writer/editor/publisher role handoffs.
