@@ -666,6 +666,41 @@ a:hover { text-decoration: underline; }
   overflow-y: auto;
 }
 
+/* ── Advanced Collapsible Section ─────────────────────────────────────────── */
+.advanced-section { width: 100%; }
+.advanced-section > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+  color: var(--color-text-muted);
+  list-style: none;
+}
+.advanced-section > summary::-webkit-details-marker { display: none; }
+.advanced-section > summary::before {
+  content: '▶ ';
+  font-size: 0.75rem;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.advanced-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+.advanced-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+.advanced-subsection h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ── Audit Log ───────────────────────────────────────────────────────────── */
 .audit-log {
   display: flex;
@@ -1272,6 +1307,7 @@ a:hover { text-decoration: underline; }
 .stage-run-completed { border-left-color: #10b981; }
 .stage-run-failed { border-left-color: #ef4444; }
 .stage-run-started { border-left-color: #f59e0b; }
+.stage-run-interrupted { border-left-color: #8b5cf6; }
 
 .stage-run-header {
   display: flex;

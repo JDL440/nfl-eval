@@ -209,6 +209,25 @@ export class AgentMemory {
     return Number(result.changes);
   }
 
+  /** Check whether decay should run (throttle to once per cooldown period). */
+  shouldDecay(cooldownMs: number = 3_600_000): boolean {
+    const row = this.db.prepare(
+      `SELECT value FROM memory_meta WHERE key = 'last_decay_at'`,
+    ).get() as { value: string } | undefined;
+    if (!row) return true;
+    // SQLite datetime('now') returns 'YYYY-MM-DD HH:MM:SS' — parse as UTC
+    const val = row.value;
+    const last = new Date(val.includes('T') ? val : val.replace(' ', 'T') + 'Z');
+    return Date.now() - last.getTime() > cooldownMs;
+  }
+
+  /** Record that decay was performed. */
+  recordDecay(): void {
+    this.db.prepare(
+      `INSERT OR REPLACE INTO memory_meta (key, value) VALUES ('last_decay_at', datetime('now'))`,
+    ).run();
+  }
+
   /** Prune expired or low-relevance memories. Returns count deleted. */
   prune(options?: PruneOptions): number {
     const maxAge = options?.maxAge ?? 90;

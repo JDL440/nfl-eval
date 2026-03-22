@@ -204,9 +204,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           hx-indicator="#pipeline-activity">
           ${renderUsagePanel(usageEvents ?? [])}
           ${renderStageRunsPanel(stageRuns ?? [])}
-          ${renderAuditLog(transitions)}
-          ${renderArticleMetadata(article, pinnedAgents)}
-          ${renderContextConfigShell(article.id)}
+          ${renderAdvancedSection(article, transitions, pinnedAgents)}
         </div>
       </div>
     </div>`;
@@ -297,9 +295,7 @@ export function renderLiveArtifacts(article: Article, artifactNames?: string[]):
 export function renderLiveSidebar(article: Article, usageEvents: UsageEvent[], stageRuns: StageRun[], transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
   return renderUsagePanel(usageEvents)
     + renderStageRunsPanel(stageRuns)
-    + renderAuditLog(transitions)
-    + renderArticleMetadata(article, pinnedAgents)
-    + renderContextConfigShell(article.id);
+    + renderAdvancedSection(article, transitions, pinnedAgents);
 }
 
 // ── Stage timeline ───────────────────────────────────────────────────────────
@@ -721,17 +717,33 @@ function renderEditorReviews(reviews: EditorReview[]): string {
 
 // ── Audit Log ────────────────────────────────────────────────────────────────
 
+// ── Advanced collapsible section ─────────────────────────────────────────────
+
+function renderAdvancedSection(article: Article, transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
+  return `
+    <section class="detail-section">
+      <details class="advanced-section">
+        <summary>⚙️ Advanced</summary>
+        <div class="advanced-content">
+          ${renderAuditLog(transitions)}
+          ${renderArticleMetadata(article, pinnedAgents)}
+          ${renderContextConfigInner(article.id)}
+        </div>
+      </details>
+    </section>`;
+}
+
 function renderAuditLog(transitions: StageTransition[]): string {
   if (transitions.length === 0) {
-    return `<section class="detail-section">
-      <h2>Audit Log</h2>
+    return `<div class="advanced-subsection">
+      <h3>Audit Log</h3>
       <p class="empty-state">No stage transitions recorded</p>
-    </section>`;
+    </div>`;
   }
 
   return `
-    <section class="detail-section">
-      <h2>Audit Log</h2>
+    <div class="advanced-subsection">
+      <h3>Audit Log</h3>
       <div class="audit-log">
         ${transitions.map(t => `
           <div class="audit-entry">
@@ -748,10 +760,23 @@ function renderAuditLog(transitions: StageTransition[]): string {
           </div>
         `).join('')}
       </div>
-    </section>`;
+    </div>`;
 }
 
 // ── Agent context settings ───────────────────────────────────────────────────
+
+function renderContextConfigInner(articleId: string): string {
+  return `
+    <div class="advanced-subsection">
+      <h3>Agent Context Settings</h3>
+      <div id="context-config-panel"
+        hx-get="/htmx/articles/${escapeHtml(articleId)}/context-config"
+        hx-trigger="load"
+        hx-swap="innerHTML">
+        <p class="empty-state">Loading…</p>
+      </div>
+    </div>`;
+}
 
 export function renderContextConfigShell(articleId: string): string {
   return `
@@ -848,8 +873,8 @@ function renderArticleMetadata(article: Article, pinnedAgents?: Array<{ agent_na
     ? `<dt>Pinned Agents</dt><dd>${pinnedAgents.map(a => escapeHtml(a.agent_name.replace(/-/g, ' '))).join(', ')}</dd>`
     : '';
   return `
-    <section class="detail-section">
-      <h2>Article Metadata</h2>
+    <div class="advanced-subsection">
+      <h3>Article Metadata</h3>
       <dl class="info-list">
         <dt>ID</dt><dd><code>${escapeHtml(article.id)}</code></dd>
         ${article.primary_team ? `<dt>Team</dt><dd>${escapeHtml(article.primary_team)}</dd>` : ''}
@@ -865,7 +890,7 @@ function renderArticleMetadata(article: Article, pinnedAgents?: Array<{ agent_na
         <dt>Updated</dt><dd>${formatDate(article.updated_at)}</dd>
         ${article.published_at ? `<dt>Published</dt><dd>${formatDate(article.published_at)}</dd>` : ''}
       </dl>
-    </section>`;
+    </div>`;
 }
 
 // ── Usage Panel ──────────────────────────────────────────────────────────────
@@ -989,7 +1014,7 @@ export function renderStageRunsPanel(runs: StageRun[]): string {
       <h2>Stage Runs</h2>
       <div class="stage-runs">
         ${runs.map(r => {
-          const statusIcon = r.status === 'completed' ? '✅' : r.status === 'failed' ? '❌' : r.status === 'started' ? '🔄' : '⏹';
+          const statusIcon = r.status === 'completed' ? '✅' : r.status === 'failed' ? '❌' : r.status === 'started' ? '🔄' : r.status === 'interrupted' ? '⚡' : '⏹';
           const duration = r.completed_at && r.started_at
             ? formatDuration(new Date(r.completed_at).getTime() - new Date(r.started_at).getTime())
             : '';

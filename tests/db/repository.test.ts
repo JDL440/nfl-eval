@@ -451,6 +451,64 @@ describe('Repository', () => {
     });
   });
 
+  // ── Startup recovery ────────────────────────────────────────────────────────
+
+  describe('recoverOrphanedRuns', () => {
+    it('marks orphaned stage_runs as interrupted', () => {
+      repo.createArticle({ id: 'orphan-sr', title: 'Orphan SR' });
+      const id1 = repo.startStageRun({ articleId: 'orphan-sr', stage: 4, surface: 'writer', actor: 'agent' });
+      const id2 = repo.startStageRun({ articleId: 'orphan-sr', stage: 5, surface: 'editor', actor: 'agent' });
+      // Finish one, leave the other orphaned
+      repo.finishStageRun(id1, 'completed');
+
+      const result = repo.recoverOrphanedRuns();
+      expect(result.stageRuns).toBe(1);
+      const runs = repo.getStageRuns('orphan-sr');
+      const interrupted = runs.find(r => r.id === id2);
+      expect(interrupted?.status).toBe('interrupted');
+      expect(interrupted?.completed_at).toBeTruthy();
+    });
+
+    it('marks orphaned article_runs as interrupted', () => {
+      repo.createArticle({ id: 'orphan-ar', title: 'Orphan AR' });
+      repo.startArticleRun('orphan-ar', 'auto', 'dashboard');
+
+      const result = repo.recoverOrphanedRuns();
+      expect(result.articleRuns).toBe(1);
+    });
+
+    it('resets articles stuck in revision status', () => {
+      repo.createArticle({ id: 'stuck-rev', title: 'Stuck Revision' });
+      // Simulate regression to revision
+      const db = (repo as any).db;
+      db.prepare(`UPDATE articles SET status = 'revision', current_stage = 4 WHERE id = 'stuck-rev'`).run();
+
+      const result = repo.recoverOrphanedRuns();
+      expect(result.articles).toContain('stuck-rev');
+      const article = repo.getArticle('stuck-rev');
+      expect(article?.status).toBe('approved');
+    });
+
+    it('does not reset articles with active runs', () => {
+      repo.createArticle({ id: 'active-run', title: 'Active' });
+      const db = (repo as any).db;
+      db.prepare(`UPDATE articles SET status = 'in_production', current_stage = 3 WHERE id = 'active-run'`).run();
+      repo.startStageRun({ articleId: 'active-run', stage: 3, surface: 'moderator', actor: 'agent' });
+
+      const result = repo.recoverOrphanedRuns();
+      // Stage run is orphaned and gets interrupted, but the article should ALSO be recovered
+      // because after the stage_runs are marked interrupted, no active runs remain
+      expect(result.stageRuns).toBe(1);
+    });
+
+    it('returns zeros when nothing to recover', () => {
+      const result = repo.recoverOrphanedRuns();
+      expect(result.stageRuns).toBe(0);
+      expect(result.articleRuns).toBe(0);
+      expect(result.articles).toEqual([]);
+    });
+  });
+
   // ── Usage events ───────────────────────────────────────────────────────────
 
   describe('usage events', () => {

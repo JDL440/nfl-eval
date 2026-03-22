@@ -2256,6 +2256,23 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
   initDataDir(config.dataDir, config.league);
   const repo = new Repository(config.dbPath);
 
+  // ── Startup recovery: clean up orphaned runs from previous unclean shutdown ──
+  try {
+    const recovery = repo.recoverOrphanedRuns();
+    const parts: string[] = [];
+    if (recovery.stageRuns > 0) parts.push(`${recovery.stageRuns} stage runs`);
+    if (recovery.articleRuns > 0) parts.push(`${recovery.articleRuns} article runs`);
+    if (recovery.articles.length > 0) parts.push(`${recovery.articles.length} stuck articles`);
+    if (parts.length > 0) {
+      console.log(`[recovery] Cleaned up from previous shutdown: ${parts.join(', ')}`);
+      for (const id of recovery.articles) {
+        console.log(`[recovery]   Reset article: ${id}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[recovery] Startup recovery failed: ${err instanceof Error ? err.message : err}`);
+  }
+
   // Build ActionContext for agent-powered auto-advance (optional)
   let actionContext: ActionContext | undefined;
   let memory: AgentMemory | undefined;
@@ -2327,16 +2344,21 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Image service not available: ${err instanceof Error ? err.message : err}`);
   }
 
-  // Periodic relevance decay — run once at startup
+  // Periodic relevance decay — throttled to once per hour
   if (memory) {
     try {
-      const agentStats = memory.stats();
-      let totalDecayed = 0;
-      for (const s of agentStats) {
-        totalDecayed += memory.decay(s.agentName, 0.95);
-      }
-      if (totalDecayed > 0) {
-        console.log(`[memory] Decayed ${totalDecayed} entries across ${agentStats.length} agents (×0.95)`);
+      if (memory.shouldDecay(3_600_000)) {
+        const agentStats = memory.stats();
+        let totalDecayed = 0;
+        for (const s of agentStats) {
+          totalDecayed += memory.decay(s.agentName, 0.95);
+        }
+        memory.recordDecay();
+        if (totalDecayed > 0) {
+          console.log(`[memory] Decayed ${totalDecayed} entries across ${agentStats.length} agents (×0.95)`);
+        }
+      } else {
+        console.log('[memory] Decay skipped — last decay was less than 1 hour ago');
       }
     } catch (err) {
       console.warn(`[memory] Startup decay skipped: ${err instanceof Error ? err.message : err}`);

@@ -491,6 +491,53 @@ export class Repository {
     stmt.run(status, notes, artifactPath, nowISO(), stageRunId);
   }
 
+  // ── Startup recovery ────────────────────────────────────────────────────────
+
+  /**
+   * Recover from unclean shutdown: mark orphaned stage_runs and article_runs
+   * as 'interrupted', and reset articles stuck in transient 'revision' status
+   * with no active runs. Returns summary of recovered items.
+   */
+  recoverOrphanedRuns(): { stageRuns: number; articleRuns: number; articles: string[] } {
+    const now = nowISO();
+
+    // 1. Mark orphaned stage_runs (started but never finished)
+    const stageResult = this.db.prepare(
+      `UPDATE stage_runs SET status = 'interrupted', notes = 'Server restarted before completion', completed_at = ?
+       WHERE status = 'started'`,
+    ).run(now);
+
+    // 2. Mark orphaned article_runs
+    const articleRunResult = this.db.prepare(
+      `UPDATE article_runs SET status = 'interrupted', completed_at = ?
+       WHERE status = 'started'`,
+    ).run(now);
+
+    // 3. Find articles stuck in 'revision' or 'in_production' with no active runs
+    const stuckArticles = this.db.prepare(
+      `SELECT DISTINCT a.id FROM articles a
+       WHERE a.status IN ('revision', 'in_production')
+       AND NOT EXISTS (
+         SELECT 1 FROM stage_runs sr
+         WHERE sr.article_id = a.id AND sr.status = 'started'
+       )`,
+    ).all() as Array<{ id: string }>;
+
+    // Reset stuck articles to 'active' equivalent based on their stage
+    const resetStmt = this.db.prepare(
+      `UPDATE articles SET status = 'approved', updated_at = ? WHERE id = ?`,
+    );
+    for (const row of stuckArticles) {
+      resetStmt.run(now, row.id);
+    }
+
+    return {
+      stageRuns: Number(stageResult.changes),
+      articleRuns: Number(articleRunResult.changes),
+      articles: stuckArticles.map(r => r.id),
+    };
+  }
+
   // ── Usage events ───────────────────────────────────────────────────────────
 
   private insertUsageEvent(p: UsageEventParams): void {

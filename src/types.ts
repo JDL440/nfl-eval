@@ -15,7 +15,7 @@ export const STAGE_NAMES: Record<Stage, string> = {
 
 export type ArticleStatus = 'proposed' | 'approved' | 'in_production' | 'in_discussion' | 'published' | 'archived' | 'revision';
 export type EditorVerdict = 'APPROVED' | 'REVISE' | 'REJECT';
-export type RunStatus = 'started' | 'completed' | 'failed' | 'cancelled';
+export type RunStatus = 'started' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
 export type UsageEventType = 'planned' | 'started' | 'completed' | 'updated' | 'failed' | 'skipped' | 'stage_transition';
 export type DepthLevel = 1 | 2 | 3 | 4;
 export type DepthName = 'casual_fan' | 'the_beat' | 'deep_dive';
@@ -100,7 +100,7 @@ export const VALID_VERDICTS: readonly EditorVerdict[] = [
 ] as const;
 
 export const VALID_RUN_STATUSES: readonly RunStatus[] = [
-  'started', 'completed', 'failed', 'cancelled',
+  'started', 'completed', 'failed', 'cancelled', 'interrupted',
 ] as const;
 
 export const VALID_USAGE_EVENT_TYPES: readonly UsageEventType[] = [

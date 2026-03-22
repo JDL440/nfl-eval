@@ -182,6 +182,22 @@ describe('AgentMemory', () => {
     it('returns 0 for unknown agent', () => {
       expect(mem.decay('nonexistent')).toBe(0);
     });
+
+    it('shouldDecay returns true when no prior decay', () => {
+      expect(mem.shouldDecay()).toBe(true);
+    });
+
+    it('shouldDecay returns false within cooldown', () => {
+      mem.recordDecay();
+      expect(mem.shouldDecay(3_600_000)).toBe(false);
+    });
+
+    it('shouldDecay returns true after cooldown', () => {
+      // Manually set an old timestamp to simulate expired cooldown
+      const db = (mem as any).db;
+      db.prepare(`INSERT OR REPLACE INTO memory_meta (key, value) VALUES ('last_decay_at', datetime('now', '-2 hours'))`).run();
+      expect(mem.shouldDecay(3_600_000)).toBe(true);
+    });
   });
 
   // ── Prune ──────────────────────────────────────────────────────────────────
