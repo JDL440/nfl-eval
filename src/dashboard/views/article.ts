@@ -527,10 +527,11 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             : ''}
           ${previewLink}
           <button class="btn btn-publish"
-            hx-post="/htmx/articles/${escapeHtml(article.id)}/advance"
+            hx-post="/api/articles/${escapeHtml(article.id)}/publish"
             hx-target="#advance-result-${escapeHtml(article.id)}"
             hx-swap="innerHTML"
             hx-confirm="Publish this article to Substack?"
+            hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 2000); }"
             ${canAdvance ? '' : 'disabled'}>
             Publish to Substack
           </button>

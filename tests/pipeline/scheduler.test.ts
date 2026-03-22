@@ -61,7 +61,7 @@ describe('PipelineScheduler', () => {
 
     it('skips stage-8 articles', () => {
       repo.createArticle({ id: 'published', title: 'Published' });
-      // Manually advance to stage 8 through DB
+      // Manually advance to stage 7 through the engine
       repo.artifacts.put('published', 'idea.md', '# Idea');
       engine.advance('published', 1 as Stage);
       repo.artifacts.put('published', 'discussion-prompt.md', 'prompt');
@@ -75,7 +75,8 @@ describe('PipelineScheduler', () => {
       repo.artifacts.put('published', 'editor-review.md', '## Verdict: APPROVED\nLGTM.');
       engine.advance('published', 6 as Stage);
       repo.artifacts.put('published', 'publisher-pass.md', '# Publisher Pass\nAll good.');
-      engine.advance('published', 7 as Stage);
+      // Stage 7→8 uses recordPublish (the real publish path), not engine.advance
+      repo.recordPublish('published', 'https://example.substack.com/p/published', 'test');
 
       const ready = scheduler.findReady();
       expect(ready).toHaveLength(0);

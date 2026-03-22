@@ -409,12 +409,24 @@ describe('PipelineEngine', () => {
       expect(check.allowed).toBe(false);
     });
 
-    it('allows 7→8 when publisher pass artifact exists', () => {
+    it('allows 7→8 when publisher pass artifact exists and substack_url is set', () => {
       repo.createArticle({ id: 'test-article', title: 'Test' });
       repo.artifacts.put('test-article', 'publisher-pass.md', '# Publisher Pass\nAll good.');
+      // substack_url must be set (defense-in-depth: real publish uses recordPublish)
+      repo.recordPublish('test-article', 'https://example.substack.com/p/test', 'test');
+      // recordPublish already sets stage 8 — reset to 7 to test the guard
+      repo.advanceStage('test-article', null, 7, 'test-setup');
       const check = engine.canAdvance('test-article', 7 as Stage);
       expect(check.allowed).toBe(true);
       expect(check.nextStage).toBe(8);
+    });
+
+    it('blocks 7→8 when publisher pass exists but substack_url is missing', () => {
+      repo.createArticle({ id: 'test-article', title: 'Test' });
+      repo.artifacts.put('test-article', 'publisher-pass.md', '# Publisher Pass\nAll good.');
+      const check = engine.canAdvance('test-article', 7 as Stage);
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('substack_url');
     });
 
     it('rejects advance from stage 8 (no transition)', () => {

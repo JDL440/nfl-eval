@@ -227,12 +227,16 @@ describe('Full lifecycle: Stage 1 → 8', () => {
     expect(await res.text()).toContain('Publisher pass review has not been run yet');
   });
 
-  it('advances 7→8 with publisher-pass.md artifact', async () => {
+  it('htmx advance rejects 7→8 without substack_url (defense-in-depth)', async () => {
     repo.artifacts.put(slug, 'publisher-pass.md', '# Publisher Pass\nAll checks passed.');
 
     const res = await htmxAdvance(slug);
-    expect(res.status).toBe(200);
-    expect(await res.text()).toContain('Stage 8');
+    expect(res.status).toBe(422);
+    expect(await res.text()).toContain('substack_url not set');
+  });
+
+  it('advances 7→8 via recordPublish (real publish path)', async () => {
+    repo.recordPublish(slug, 'https://example.substack.com/p/lifecycle-happy-path', 'test');
 
     const article = await getArticle(slug);
     expect(article.current_stage).toBe(8);
@@ -442,12 +446,17 @@ describe('Publisher pass artifact guard', () => {
     expect(html).toContain('Publisher pass review has not been run yet');
   });
 
-  it('allows 7→8 when publisher-pass.md artifact exists', async () => {
+  it('allows 7→8 when publisher-pass.md artifact exists (via recordPublish)', async () => {
     writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nAll checks passed.');
+    // htmx advance is blocked by substack_url guard (defense-in-depth)
     const res = await htmxAdvance(slug);
-    expect(res.status).toBe(200);
-    const html = await res.text();
-    expect(html).toContain('Stage 8');
+    expect(res.status).toBe(422);
+    expect(await res.text()).toContain('substack_url not set');
+
+    // Real publish path sets substack_url and advances to 8
+    repo.recordPublish(slug, 'https://example.substack.com/p/publisher-checks', 'test');
+    const article = await getArticle(slug);
+    expect(article.current_stage).toBe(8);
   });
 });
 

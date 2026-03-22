@@ -270,7 +270,11 @@ export const TRANSITION_MAP: TransitionDef[] = [
     from: 7 as Stage,
     to: 8 as Stage,
     action: 'publish',
-    guard: (store, id) => requirePublisherPass(store, id),
+    guard: (store, id, repo) => {
+      const passResult = requirePublisherPass(store, id);
+      if (!passResult.passed) return passResult;
+      return requireSubstackUrl(repo, id);
+    },
   },
 ];
 
