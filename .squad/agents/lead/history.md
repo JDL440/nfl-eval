@@ -39,6 +39,10 @@
 
 ## Learnings
 
+- Issue #103 is a bounded follow-up to the #92 / PR #97 hybrid handoff design: only `buildEditorPreviousReviews()` should gain a cap, and the runtime shared handoff must stay newest-first and summary-only.
+- Preserve the existing adv-stage/context-config behavior from #92 / PR #97; the follow-up should not reintroduce raw shared transcript injection or change stage routing.
+- Useful review anchors for this issue are `src/pipeline/conversation.ts` and `tests/pipeline/conversation.test.ts`, with `src/pipeline/actions.ts` only needing verification that the current editor-review artifact still flows through unchanged.
+
 ### 2026-03-22T20:05:00Z: Issue #93 PR topology review
 
 - For issue-board triage, combine GitHub PR metadata with local `git worktree list`, `git branch -vv`, `git merge-base`, and `git cherry` before treating competing PRs as independent options.

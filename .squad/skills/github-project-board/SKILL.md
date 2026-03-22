@@ -135,6 +135,15 @@ If a PR has already been reviewed and verified:
 2. Merge it, then move the linked issue/project item to `Done` if the work is actually complete.
 3. If the review or merge reveals additional work, create or confirm a follow-up GitHub issue so the queue stays explicit.
 
+### Canonical PR chosen from a competing cluster
+
+If several PRs exist for one issue and a clear winner is now merge-ready:
+
+1. Merge the canonical PR.
+2. Close the redundant or superseded PRs immediately with a short `TLDR:` explanation.
+3. Convert any non-blocking review notes from the winning PR into tracked follow-up issues instead of leaving them buried in PR comments.
+4. Re-check issue and PR state before each action because another sweep or user action may already have merged or closed one of them.
+
 ## Labels
 
 | Label | Purpose |

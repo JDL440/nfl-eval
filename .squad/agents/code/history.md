@@ -89,3 +89,4 @@
 - Reviewed the rejected debug-visibility diff and confirmed it did not address issue #93.
 - Did not land any issue-specific code changes.
 - Kept the work aligned with the latest lead/UX trace outcome: blocked / not reproducible.
+- **Issue #104 usage history follow-up:** `src/db/repository.ts` now treats article usage history reads as `ORDER BY created_at DESC, id DESC` so same-second `usage_events` stay deterministic without timing sleeps. The supporting schema index lives in `src/db/schema.sql` as `idx_usage_events_article_history` on `(article_id, created_at DESC, id DESC)`, and the focused regressions live in `tests/db/repository.test.ts` plus `tests/pipeline/actions.test.ts`.
