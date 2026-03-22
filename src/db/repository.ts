@@ -164,7 +164,14 @@ export class Repository {
     return stmt.all(articleId) as unknown as EditorReview[];
   }
 
-  getUsageEvents(articleId: string, limit = 100): UsageEvent[] {
+  getUsageEvents(articleId: string, limit?: number): UsageEvent[] {
+    if (limit == null) {
+      const stmt = this.db.prepare(
+        'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC',
+      );
+      return stmt.all(articleId) as unknown as UsageEvent[];
+    }
+
     const stmt = this.db.prepare(
       'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC LIMIT ?',
     );

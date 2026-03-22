@@ -95,6 +95,42 @@ describe('Dashboard Server', () => {
       expect(html).toContain('/htmx/articles/detail-test/context-config');
     });
 
+    it('article detail usage panel keeps older copilot-cli usage after many later events', async () => {
+      repo.createArticle({ id: 'detail-usage-history', title: 'Detail Usage History' });
+      repo.recordUsageEvent({
+        articleId: 'detail-usage-history',
+        stage: 1,
+        surface: 'ideaGeneration',
+        provider: 'copilot-cli',
+        modelOrTool: 'gpt-5.4',
+        promptTokens: 1200,
+        outputTokens: 300,
+        costUsdEstimate: 0.01,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      for (let i = 0; i < 110; i++) {
+        repo.recordUsageEvent({
+          articleId: 'detail-usage-history',
+          stage: 5,
+          surface: `panel-${i}`,
+          provider: 'anthropic',
+          modelOrTool: 'claude-sonnet-4',
+          promptTokens: 500 + i,
+          outputTokens: 200 + i,
+          costUsdEstimate: 0.02,
+        });
+      }
+
+      const res = await app.request('/articles/detail-usage-history');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('copilot-cli');
+      expect(html).toContain('gpt-5.4');
+    });
+
     it('article detail returns 404 for missing article', async () => {
       const res = await app.request('/articles/nonexistent');
       expect(res.status).toBe(404);
@@ -338,6 +374,42 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('Stage Htmx');
       expect(html).toContain('Idea Generation');
+    });
+
+    it('GET /htmx/articles/:id/live-sidebar keeps older copilot-cli usage visible', async () => {
+      repo.createArticle({ id: 'live-usage-history', title: 'Live Usage History' });
+      repo.recordUsageEvent({
+        articleId: 'live-usage-history',
+        stage: 1,
+        surface: 'ideaGeneration',
+        provider: 'copilot-cli',
+        modelOrTool: 'gpt-5.4',
+        promptTokens: 1400,
+        outputTokens: 350,
+        costUsdEstimate: 0.01,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      for (let i = 0; i < 110; i++) {
+        repo.recordUsageEvent({
+          articleId: 'live-usage-history',
+          stage: 5,
+          surface: `panel-${i}`,
+          provider: 'anthropic',
+          modelOrTool: 'claude-sonnet-4',
+          promptTokens: 400 + i,
+          outputTokens: 150 + i,
+          costUsdEstimate: 0.02,
+        });
+      }
+
+      const res = await app.request('/htmx/articles/live-usage-history/live-sidebar');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('copilot-cli');
+      expect(html).toContain('gpt-5.4');
     });
   });
 

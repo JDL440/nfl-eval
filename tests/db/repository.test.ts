@@ -531,6 +531,40 @@ describe('Repository', () => {
       expect(events[0].prompt_tokens).toBe(1000);
     });
 
+    it('returns full article usage history by default', async () => {
+      repo.createArticle({ id: 'ue-history', title: 'Usage History Test' });
+      repo.recordUsageEvent({
+        articleId: 'ue-history',
+        stage: 1,
+        surface: 'ideaGeneration',
+        provider: 'copilot-cli',
+        modelOrTool: 'gpt-5.4',
+        promptTokens: 900,
+        outputTokens: 100,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      for (let i = 0; i < 110; i++) {
+        repo.recordUsageEvent({
+          articleId: 'ue-history',
+          stage: 5,
+          surface: `panel-${i}`,
+          provider: 'anthropic',
+          modelOrTool: 'claude-sonnet-4',
+          promptTokens: 100 + i,
+          outputTokens: 50 + i,
+        });
+      }
+
+      const allEvents = repo.getUsageEvents('ue-history');
+      const limitedEvents = repo.getUsageEvents('ue-history', 100);
+
+      expect(allEvents).toHaveLength(111);
+      expect(allEvents.some((event) => event.provider === 'copilot-cli')).toBe(true);
+      expect(limitedEvents).toHaveLength(100);
+    });
+
     it('rejects nonexistent article', () => {
       expect(() =>
         repo.recordUsageEvent({
