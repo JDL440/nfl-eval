@@ -122,6 +122,9 @@ CREATE TABLE IF NOT EXISTS usage_events (
 CREATE INDEX IF NOT EXISTS idx_usage_events_article_stage
     ON usage_events(article_id, stage, created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_usage_events_article_history
+    ON usage_events(article_id, created_at DESC, id DESC);
+
 CREATE INDEX IF NOT EXISTS idx_usage_events_stage_run
     ON usage_events(stage_run_id, created_at DESC);
 

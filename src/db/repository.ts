@@ -167,13 +167,13 @@ export class Repository {
   getUsageEvents(articleId: string, limit?: number): UsageEvent[] {
     if (limit == null) {
       const stmt = this.db.prepare(
-        'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC',
+        'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC, id DESC',
       );
       return stmt.all(articleId) as unknown as UsageEvent[];
     }
 
     const stmt = this.db.prepare(
-      'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC LIMIT ?',
+      'SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
     );
     return stmt.all(articleId, limit) as unknown as UsageEvent[];
   }
