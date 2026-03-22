@@ -12,7 +12,7 @@ This repository now centers on a real application stack:
 - **Multi-provider LLM gateway** with pluggable providers and stage-aware model routing
 - **Service integrations** for Substack, Twitter/X, image generation, and NFL data ingestion
 
-The original v1 markdown-first system has been preserved in **`archive/v1/`** for reference.
+The original v1 markdown-first system has been removed (available in git history for reference).
 
 ## Quick Start
 
@@ -170,9 +170,10 @@ src/
   migration/    v1 -> v2 migration support
   pipeline/     Engine, scheduler, actions, audit
   services/     Substack, Twitter, image, markdown, data
+.squad/         Squad team config, agent charters, decisions, skills
 mcp/            Legacy/local MCP entrypoints and smoke tests
 tests/          Unit, integration, and e2e coverage
-archive/v1/     Archived v1 source and docs
+ralph-watch.ps1 Local Ralph outer loop (PowerShell)
 ```
 
 ## Services and MCP Tools
@@ -215,15 +216,124 @@ Run the full suite with:
 npx vitest run
 ```
 
-## v1 Archive
+## Squad — AI Team Coordination
 
-The original v1 implementation is preserved in **`archive/v1/`**.
+This project uses [Squad](https://github.com/features/copilot) to coordinate a team of AI agents that manage the issue backlog, write code, and move the project board.
 
-Use it only as historical reference for:
+### Team Roster
 
-- legacy dashboard files
-- older MCP setup docs
-- archived article and workflow experiments
-- migration context while validating v2 behavior
+| Agent | Role | Scope |
+|-------|------|-------|
+| **Lead** | Triage & architecture | Coordination, cross-functional work, design decisions |
+| **Code** | Core developer | TypeScript, Hono, vitest, code reviews, refactoring |
+| **Data** | Data engineer | nflverse queries, Python, NFL analytics, statistical analysis |
+| **Publisher** | Content distribution | Substack publishing, Twitter/X, Markdown→HTML |
+| **Research** | Documentation & analysis | Tech research, knowledge management, reports |
+| **DevOps** | Infrastructure | GitHub Actions, CI/CD, MCP tools, `.github/extensions/` |
+| **UX** | Dashboard & frontend | HTMX views, SSE, CSS, user experience |
+| **Ralph** | Work monitor | Issue queue scanning, project board automation, heartbeat |
+| **Scribe** | Session logger | Decisions, meeting notes, cross-agent context |
 
-All active development should target the v2 TypeScript application in `src/`.
+Agent charters live in `.squad/agents/*/charter.md`. Routing rules are in `.squad/routing.md`.
+
+> **Note:** These Squad agents handle _project coordination_. The 47 article pipeline agents in `src/config/defaults/charters/nfl/` are a separate system loaded by the pipeline engine for content production.
+
+### GitHub Issues + Project Board
+
+Issues are the task system. Create an issue with the `squad` label and the team handles the rest.
+
+**Project board:** [github.com/users/JDL440/projects/1](https://github.com/users/JDL440/projects/1)
+
+| Status | Meaning |
+|--------|---------|
+| **Todo** | New work ready to start |
+| **In Progress** | Agent actively working on it |
+| **Pending User** | Needs human decision or input |
+| **Blocked** | Cannot proceed (blocker in comments) |
+| **For Review** | PR created, ready for review |
+| **Done** | Completed and merged |
+
+**Labels for routing:**
+
+| Label | Routes to |
+|-------|-----------|
+| `squad` | General — Lead triages |
+| `squad:code` | Code agent |
+| `squad:data` | Data agent |
+| `squad:publisher` | Publisher agent |
+| `squad:research` | Research agent |
+| `squad:devops` | DevOps agent |
+| `squad:ux` | UX agent |
+| `squad:ralph` | Ralph (work monitor) |
+| `squad:lead` | Lead agent |
+| `squad:scribe` | Scribe agent |
+
+### Talking With Your Squad
+
+Every agent writes comments on the issue thread — analysis, questions, progress updates. Each comment starts with a **TLDR** so you can skim.
+
+Workflow:
+1. Read the TLDR
+2. Reply with instructions or guidance in the issue comments
+3. Set status back to "Todo" if more work is needed
+4. The agent picks it up on the next Ralph cycle
+
+### The Ralph Loop
+
+Ralph watches the issue queue and spawns agents for actionable work. Two modes:
+
+**Local (PowerShell):**
+
+```powershell
+.\ralph-watch.ps1
+```
+
+- Runs every 5 minutes with a system-wide mutex guard (single instance)
+- Pulls latest code before each round
+- Spawns `copilot --agent squad` with a parallelism-maximizing prompt
+- Structured logging to `~/.squad/ralph-watch.log`
+- Heartbeat file at `~/.squad/ralph-heartbeat.json`
+
+**GitHub Actions:**
+
+The `squad-heartbeat.yml` workflow runs on a cron schedule (`*/30 * * * *`) to scan for untriaged issues, auto-route to agents, and reconcile the pipeline.
+
+### Creating Tasks
+
+Create an issue with:
+- A descriptive title
+- The `squad` label (or a specific `squad:*` label for direct routing)
+- Optionally: `priority:p0` / `priority:p1` / `priority:p2`
+- Optionally: `type:bug` / `type:feature` / `type:chore` / `type:docs`
+
+That's it. Ralph picks it up, assigns the right agent, moves the board, and reports back.
+
+### Squad File Layout
+
+```text
+.squad/
+  team.md              Team roster (parsed by workflows for label routing)
+  routing.md           Keyword → agent routing rules
+  decisions.md         Append-only decision ledger
+  ceremonies.md        Team rituals and cadences
+  agents/
+    lead/charter.md    Agent identity, scope, and behavior rules
+    code/charter.md
+    data/charter.md
+    devops/charter.md
+    publisher/charter.md
+    research/charter.md
+    ux/charter.md
+    ralph/charter.md
+    scribe/charter.md
+  skills/
+    github-project-board/SKILL.md   Project board status workflow + IDs
+  casting/             Agent creation/retirement registry
+  identity/            Team identity state
+  log/                 Append-only activity log
+  orchestration-log/   Cross-agent coordination log
+```
+
+## History
+
+The original v1 implementation has been removed from the working tree (available in git history for reference). All active development targets the v2 TypeScript application in `src/`.

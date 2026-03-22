@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "assignments": [
+    {
+      "assignment_id": "nfl-eval-init-2025-07-18",
+      "universe": "functional",
+      "created_at": "2025-07-18",
+      "note": "Functional role names chosen by owner. No fictional universe.",
+      "agents": ["Lead", "Code", "Data", "Publisher", "Research", "DevOps", "UX", "Ralph", "Scribe"]
+    }
+  ]
+}

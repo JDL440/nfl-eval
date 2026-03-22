@@ -10,7 +10,7 @@
 
 An AI-powered NFL content intelligence platform that uses a network of specialized agents to produce expert-grade football analysis at scale. Each agent has deep domain knowledge, persistent memory, and a defined role — and they argue with each other to produce better analysis than any single writer could.
 
-**Current state:** v2 is now a TypeScript + Hono + SQLite platform with a live dashboard, multi-provider LLM routing, 47 agent charters loaded into the new runtime, and published proof-of-concept output. The original v1 implementation now lives in `archive/v1/` as historical reference.
+**Current state:** v2 is now a TypeScript + Hono + SQLite platform with a live dashboard, multi-provider LLM routing, 47 agent charters loaded into the new runtime, and published proof-of-concept output. The original v1 implementation is available in git history.
 
 **End state:** A 32-team autonomous content network producing daily analysis for every NFL franchise, with minimal human oversight.
 
