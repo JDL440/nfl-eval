@@ -296,7 +296,7 @@ export function createApp(
   // ── HTML pages ────────────────────────────────────────────────────────────
 
   app.get('/', (c) => {
-    const articles = repo.getAllArticles();
+    const articles = repo.getAllArticles().filter(a => a.status !== 'archived');
     const teams = repo.getDistinctTeams();
     return c.html(
       renderHome({
@@ -841,6 +841,51 @@ export function createApp(
     }
   });
 
+  // ── API: Archive / Unarchive / Delete article ────────────────────────────
+
+  app.post('/api/articles/:id/archive', (c) => {
+    const id = c.req.param('id');
+    try {
+      const updated = repo.archiveArticle(id);
+      bus.emit({ type: 'stage_changed', articleId: id, data: { status: 'archived' }, timestamp: new Date().toISOString() });
+      c.header('HX-Redirect', '/');
+      return c.json(updated);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.json({ error: message }, 400);
+    }
+  });
+
+  app.post('/api/articles/:id/unarchive', (c) => {
+    const id = c.req.param('id');
+    try {
+      const updated = repo.unarchiveArticle(id);
+      bus.emit({ type: 'stage_changed', articleId: id, data: { status: updated.status }, timestamp: new Date().toISOString() });
+      c.header('HX-Redirect', '/');
+      return c.json(updated);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.json({ error: message }, 400);
+    }
+  });
+
+  app.delete('/api/articles/:id', (c) => {
+    const id = c.req.param('id');
+    const confirm = c.req.query('confirm');
+    if (confirm !== 'true') {
+      return c.json({ error: 'Deletion requires ?confirm=true' }, 400);
+    }
+    try {
+      const result = repo.deleteArticle(id);
+      bus.emit({ type: 'stage_changed', articleId: id, data: { deleted: true }, timestamp: new Date().toISOString() });
+      c.header('HX-Redirect', '/');
+      return c.json(result);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return c.json({ error: message }, 400);
+    }
+  });
+
   // ── API: Auto-advance article through pipeline ───────────────────────────
 
   app.post('/api/articles/:id/auto-advance', async (c) => {
@@ -862,33 +907,34 @@ export function createApp(
     const stageStr = c.req.query('stage');
     const team = c.req.query('team') || undefined;
     const depthStr = c.req.query('depth');
+    const includeArchived = c.req.query('include_archived') === '1';
 
     const stage = stageStr ? parseInt(stageStr, 10) : undefined;
     const depthLevel = depthStr ? parseInt(depthStr, 10) : undefined;
 
     // Only query if at least one filter is active
-    if (!search && stage == null && !team && depthLevel == null) {
+    if (!search && stage == null && !team && depthLevel == null && !includeArchived) {
       return c.html('');
     }
 
-    const articles = repo.listArticles({ search, stage, team, depthLevel, limit: 50 });
+    const articles = repo.listArticles({ search, stage, team, depthLevel, limit: 50, excludeArchived: !includeArchived });
     return c.html(renderFilteredArticles(articles));
   });
 
   app.get('/htmx/pipeline-summary', (c) => {
-    const articles = repo.getAllArticles();
+    const articles = repo.getAllArticles().filter(a => a.status !== 'archived');
     return c.html(renderPipelineSummary(buildPipelineSummary(articles)));
   });
 
   app.get('/htmx/ready-to-publish', (c) => {
     return c.html(
-      renderReadyToPublish(repo.getAllArticles().filter(a => a.current_stage === 7)),
+      renderReadyToPublish(repo.getAllArticles().filter(a => a.current_stage === 7 && a.status !== 'archived')),
     );
   });
 
   app.get('/htmx/recent-ideas', (c) => {
     return c.html(
-      renderRecentIdeas(repo.getAllArticles().filter(a => a.current_stage === 1)),
+      renderRecentIdeas(repo.getAllArticles().filter(a => a.current_stage === 1 && a.status !== 'archived')),
     );
   });
 

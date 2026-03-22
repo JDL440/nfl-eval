@@ -483,7 +483,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             : ''}
           ${previewLink}
         </div>
-      </section>`;
+      </section>
+      ${renderDangerZone(article)}`;
   }
 
   const nextStage = Math.min(article.current_stage + 1, 8) as Stage;
@@ -552,7 +553,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         ${renderGuardStatus(canAdvance, guardReason)}
         ${stageRunErrorHtml}
         <div id="advance-result-${escapeHtml(article.id)}"></div>
-      </section>`;
+      </section>
+      ${renderDangerZone(article)}`;
   }
 
   // Other stages — advance flow + retry button
@@ -607,7 +609,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
       ${stageRunErrorHtml}
       <div id="advance-result-${escapeHtml(article.id)}"></div>
       <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
-    </section>`;
+    </section>
+    ${renderDangerZone(article)}`;
 }
 
 function renderGuardStatus(canAdvance: boolean, reason: string): string {
@@ -615,6 +618,44 @@ function renderGuardStatus(canAdvance: boolean, reason: string): string {
   const cls = canAdvance ? 'guard-pass' : 'guard-fail';
   const icon = canAdvance ? '✅' : '⚠️';
   return `<div class="guard-status ${cls}">${icon} ${escapeHtml(reason)}</div>`;
+}
+
+function renderDangerZone(article: Article): string {
+  const id = escapeHtml(article.id);
+  const isArchived = article.status === 'archived';
+  const isPublished = article.current_stage === 8 || article.status === 'published';
+
+  const archiveBtn = !isArchived && !isPublished
+    ? `<button class="btn btn-danger-outline"
+        hx-post="/api/articles/${id}/archive"
+        hx-confirm="Archive this article? It will be hidden from the dashboard.">
+        📦 Archive
+      </button>`
+    : '';
+
+  const unarchiveBtn = isArchived
+    ? `<button class="btn btn-secondary"
+        hx-post="/api/articles/${id}/unarchive"
+        hx-confirm="Restore this article from the archive?">
+        📤 Unarchive
+      </button>`
+    : '';
+
+  const deleteBtn = `<button class="btn btn-danger"
+      hx-delete="/api/articles/${id}?confirm=true"
+      hx-confirm="Permanently delete this article and all its data? This cannot be undone.">
+      🗑 Delete
+    </button>`;
+
+  return `
+    <section class="detail-section danger-zone" style="border-top:2px solid #dc2626;margin-top:1.5rem;padding-top:1rem;">
+      <h2 style="color:#dc2626;font-size:0.95rem;">⚠️ Danger Zone</h2>
+      <div class="action-bar" style="gap:0.5rem;">
+        ${archiveBtn}
+        ${unarchiveBtn}
+        ${deleteBtn}
+      </div>
+    </section>`;
 }
 
 // ── Image Section ────────────────────────────────────────────────────────────

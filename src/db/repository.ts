@@ -245,11 +245,14 @@ export class Repository {
     return stmt.all(articleId) as unknown as StageTransition[];
   }
 
-  listArticles(filters?: { stage?: number; status?: string; team?: string; depthLevel?: number; search?: string; limit?: number }): Article[] {
+  listArticles(filters?: { stage?: number; status?: string; team?: string; depthLevel?: number; search?: string; limit?: number; excludeArchived?: boolean }): Article[] {
     let sql = 'SELECT * FROM articles';
     const params: (string | number)[] = [];
     const conditions: string[] = [];
 
+    if (filters?.excludeArchived) {
+      conditions.push("status != 'archived'");
+    }
     if (filters?.stage != null) {
       conditions.push('current_stage = ?');
       params.push(filters.stage);
@@ -1089,5 +1092,77 @@ export class Repository {
     return this.db.prepare(
       `SELECT id, edited_at, content FROM charter_history WHERE agent_name = ? ORDER BY edited_at DESC LIMIT ?`,
     ).all(agentName, limit) as Array<{ id: number; edited_at: string; content: string }>;
+  }
+
+  // ── Archive / Delete ────────────────────────────────────────────────────────
+
+  /** Soft-archive an article (works from any stage). */
+  archiveArticle(articleId: string): Article {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+    const stmt = this.db.prepare(
+      'UPDATE articles SET status = ?, updated_at = ? WHERE id = ?',
+    );
+    stmt.run('archived', nowISO(), articleId);
+    return this.getArticle(articleId)!;
+  }
+
+  /** Restore an archived article to a status matching its current stage. */
+  unarchiveArticle(articleId: string): Article {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+    if (article.status !== 'archived') {
+      throw new Error(`Article '${articleId}' is not archived (status=${article.status})`);
+    }
+
+    const STATUS_BY_STAGE: Record<number, ArticleStatus> = {
+      1: 'proposed',
+      2: 'in_production',
+      3: 'in_production',
+      4: 'in_discussion',
+      5: 'in_production',
+      6: 'in_production',
+      7: 'in_production',
+      8: 'published',
+    };
+    const restored = STATUS_BY_STAGE[article.current_stage] ?? 'proposed';
+
+    const stmt = this.db.prepare(
+      'UPDATE articles SET status = ?, updated_at = ? WHERE id = ?',
+    );
+    stmt.run(restored, nowISO(), articleId);
+    return this.getArticle(articleId)!;
+  }
+
+  /** Hard-delete an article and all related data (irreversible). */
+  deleteArticle(articleId: string): { deleted: true } {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found in pipeline.db`);
+    }
+
+    // Delete artifacts from the DB-backed store
+    const allArtifacts = this.artifacts.list(articleId);
+    for (const artifact of allArtifacts) {
+      this.artifacts.delete(articleId, artifact.name);
+    }
+
+    // Delete from all related tables (no ON DELETE CASCADE in schema)
+    this.db.prepare('DELETE FROM usage_events WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM stage_runs WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM article_runs WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM stage_transitions WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM editor_reviews WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM publisher_pass WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM article_panels WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM notes WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM discussion_prompts WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM articles WHERE id = ?').run(articleId);
+
+    return { deleted: true };
   }
 }

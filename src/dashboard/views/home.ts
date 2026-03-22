@@ -61,6 +61,13 @@ export function renderHome(data: HomeData): string {
             <option value="2">2 — The Beat</option>
             <option value="3">3 — Deep Dive</option>
           </select>
+          <label class="filter-checkbox" style="display:flex;align-items:center;gap:0.25rem;font-size:0.85rem;cursor:pointer;">
+            <input type="checkbox" name="include_archived" value="1"
+              hx-get="/htmx/filtered-articles" hx-trigger="change"
+              hx-target="#filtered-results" hx-swap="innerHTML"
+              hx-include=".filter-bar" />
+            Include archived
+          </label>
         </div>
         <div id="filtered-results"></div>
       </section>
