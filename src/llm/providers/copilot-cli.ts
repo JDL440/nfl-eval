@@ -17,7 +17,7 @@
  */
 
 import { exec, execFile, type ExecFileException } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -111,12 +111,20 @@ export class CopilotCLIProvider implements LLMProvider {
   private readonly defaultModel: string;
   private readonly timeoutMs: number;
   private readonly extraFlags: string[];
+  private readonly sandboxDir: string;
 
   constructor(options?: CopilotCLIProviderOptions) {
     this.copilotPath = options?.copilotPath ?? 'copilot';
     this.defaultModel = options?.defaultModel ?? DEFAULT_MODEL;
     this.timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT;
     this.extraFlags = options?.extraFlags ?? [];
+
+    // Run CLI from an empty sandbox dir so it has no repo context to browse.
+    // This prevents the agent from wasting minutes reading/writing repo files.
+    this.sandboxDir = join(tmpdir(), 'nfl-lab-copilot-sandbox');
+    if (!existsSync(this.sandboxDir)) {
+      mkdirSync(this.sandboxDir, { recursive: true });
+    }
   }
 
   // -- Preflight -----------------------------------------------------------
@@ -279,6 +287,7 @@ export class CopilotCLIProvider implements LLMProvider {
         this.copilotPath,
         args,
         {
+          cwd: this.sandboxDir,
           timeout: this.timeoutMs,
           maxBuffer: 10 * 1024 * 1024, // 10MB
           encoding: 'utf-8',
@@ -310,6 +319,7 @@ export class CopilotCLIProvider implements LLMProvider {
       exec(
         command,
         {
+          cwd: this.sandboxDir,
           timeout: this.timeoutMs,
           maxBuffer: 10 * 1024 * 1024,
           encoding: 'utf-8',
