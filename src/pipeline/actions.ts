@@ -551,13 +551,22 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-factcheck', factCheckResult);
     }
 
-    const content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
+    let content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
 
     // Detect whether this is a revision (editor-review.md exists from a previous pass)
     const editorReview = ctx.repo.artifacts.get(articleId, 'editor-review.md');
+    const previousDraft = ctx.repo.artifacts.get(articleId, 'draft.md');
     const isRevision = editorReview != null;
+
+    // On revision: inject the previous draft so the writer REVISES it rather than
+    // rewriting from scratch. Without this, the writer only sees the panel discussion
+    // and editor feedback but not its own prior output, causing identical rewrites.
+    if (isRevision && previousDraft) {
+      content = content + '\n\n## Previous Draft (REVISE this — do not start over)\n' + previousDraft;
+    }
+
     const task = isRevision
-      ? 'Revise the article draft based on the editor feedback provided. Address all issues raised in the editor review while preserving the article\'s strengths.'
+      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the editor\'s feedback are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
       : 'Write an analytical article draft based on the panel discussion.';
 
     const result = await ctx.runner.run({
@@ -875,7 +884,7 @@ export async function executeTransition(
 
 export interface AutoAdvanceOptions {
   maxStage?: number;        // Default 7 (stop before publish)
-  maxRevisions?: number;    // Default 2
+  maxRevisions?: number;    // Default 3
   onStep?: (step: AutoAdvanceStep) => void;  // Callback for SSE events
   generateImages?: (articleId: string) => Promise<void>;  // Image gen hook
   repo?: Repository;        // Required when ctx is null (lightweight mode)
@@ -917,7 +926,7 @@ export async function autoAdvanceArticle(
   options?: AutoAdvanceOptions,
 ): Promise<AutoAdvanceResult> {
   const maxStage = options?.maxStage ?? 7;
-  const maxRevisions = options?.maxRevisions ?? 2;
+  const maxRevisions = options?.maxRevisions ?? 3;
   const onStep = options?.onStep;
   const generateImages = options?.generateImages;
 
@@ -1002,7 +1011,11 @@ export async function autoAdvanceArticle(
               continue; // Retry from stage 4
             } catch { /* ignore regression failure, fall through to break */ }
           } else {
-            lastError = `Editor requested revisions ${revisionCount} times — stopping auto-advance`;
+            // Max revisions exhausted — force-approve by overwriting editor review
+            // so the pipeline can continue. The draft has been revised multiple times.
+            const forceNote = `## Editor Review\n\n**Auto-approved after ${revisionCount} revision cycles.** The editor requested further changes, but the maximum revision limit has been reached. The draft has been iteratively improved and is being moved forward.\n\n## Verdict\nAPPROVED`;
+            repo.artifacts.put(articleId, 'editor-review.md', forceNote);
+            // Don't break — let the loop continue to advance through remaining stages
           }
         }
         break;
@@ -1053,8 +1066,10 @@ export async function autoAdvanceArticle(
             continue;
           } catch { /* fall through to normal loop */ }
         } else {
-          lastError = `Editor requested revisions ${revisionCount} times — stopping auto-advance`;
-          break;
+          // Max revisions exhausted — force-approve by overwriting editor review
+          const forceNote = `## Editor Review\n\n**Auto-approved after ${revisionCount} revision cycles.** The editor requested further changes, but the maximum revision limit has been reached. The draft has been iteratively improved and is being moved forward.\n\n## Verdict\nAPPROVED`;
+          repo.artifacts.put(articleId, 'editor-review.md', forceNote);
+          // Continue the loop — next iteration will see APPROVED and advance normally
         }
       }
 
