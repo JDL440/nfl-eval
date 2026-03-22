@@ -23,29 +23,58 @@ tools: [gh]
 Before starting work on an issue:
 ```bash
 # Move to "In Progress"
-gh project item-edit --project-id PROJECT_ID --id ITEM_ID --field-id STATUS_FIELD_ID --single-select-option-id IN_PROGRESS_ID
+gh project item-edit --project-id PVT_kwHOADzUCs4BScCq --id ITEM_ID --field-id PVTSSF_lAHOADzUCs4BScCqzg_-OBk --single-select-option-id d4a8378c
 ```
 
 After completing work:
 ```bash
 # Move to "Done"
-gh project item-edit --project-id PROJECT_ID --id ITEM_ID --field-id STATUS_FIELD_ID --single-select-option-id DONE_ID
+gh project item-edit --project-id PVT_kwHOADzUCs4BScCq --id ITEM_ID --field-id PVTSSF_lAHOADzUCs4BScCqzg_-OBk --single-select-option-id d094e37d
 ```
 
 When blocked or needing user input:
 ```bash
-# Move to "Blocked" or "Pending User"
-gh project item-edit --project-id PROJECT_ID --id ITEM_ID --field-id STATUS_FIELD_ID --single-select-option-id BLOCKED_ID
+# Move to "Blocked"
+gh project item-edit --project-id PVT_kwHOADzUCs4BScCq --id ITEM_ID --field-id PVTSSF_lAHOADzUCs4BScCqzg_-OBk --single-select-option-id e435344d
+
+# Move to "Pending User"
+gh project item-edit --project-id PVT_kwHOADzUCs4BScCq --id ITEM_ID --field-id PVTSSF_lAHOADzUCs4BScCqzg_-OBk --single-select-option-id b138f68b
 ```
 
-## Discovering Project & Field IDs
+## Project IDs (JDL440/nfl-eval)
+
+| Resource | ID |
+|----------|-----|
+| **Project** | `PVT_kwHOADzUCs4BScCq` (number: 1) |
+| **Status field** | `PVTSSF_lAHOADzUCs4BScCqzg_-OBk` |
+| Todo | `56d4a149` |
+| In Progress | `d4a8378c` |
+| Pending User | `b138f68b` |
+| Blocked | `e435344d` |
+| For Review | `b2dbea29` |
+| Done | `d094e37d` |
+
+## Example Commands
 
 ```bash
-# List projects for the repo
-gh project list --owner JDL440 --format json
+# Move issue item to "In Progress"
+gh project item-edit --project-id PVT_kwHOADzUCs4BScCq --id ITEM_ID --field-id PVTSSF_lAHOADzUCs4BScCqzg_-OBk --single-select-option-id d4a8378c
 
-# Get project fields (find the Status field ID and option IDs)
-gh project field-list PROJECT_NUMBER --owner JDL440 --format json
+# Move to "Done"
+gh project item-edit --project-id PVT_kwHOADzUCs4BScCq --id ITEM_ID --field-id PVTSSF_lAHOADzUCs4BScCqzg_-OBk --single-select-option-id d094e37d
+
+# Add issue to project (returns ITEM_ID)
+gh project item-add 1 --owner JDL440 --url https://github.com/JDL440/nfl-eval/issues/NUMBER --format json
+```
+
+## Discovering Item IDs
+
+```bash
+# List items in the project
+gh project item-list 1 --owner JDL440 --format json
+
+# Or get a specific issue's project item
+gh project field-list 1 --owner JDL440 --format json
 ```
 
 ## Rules
