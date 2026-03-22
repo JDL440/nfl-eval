@@ -551,17 +551,23 @@ describe('Guard failures', () => {
     expect(html).toContain('Publisher pass review');
   });
 
-  it('allows advance from stage 7 when publisher-pass.md artifact exists', async () => {
+  it('blocks htmx advance from stage 7 even with publisher-pass.md (substack_url guard)', async () => {
     const slug = 'edge-guard-has-publisher';
     repo.createArticle({ id: slug, title: 'Guard Has Publisher Pass' });
     advanceToStage(slug, 7 as Stage);
 
     writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nReview complete.');
 
+    // htmx advance is blocked by substack_url defense-in-depth guard
     const res = await htmxPost(`/htmx/articles/${slug}/advance`);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(422);
     const html = await res.text();
-    expect(html).toContain('Stage 8');
+    expect(html).toContain('substack_url not set');
+
+    // Real publish path works
+    repo.recordPublish(slug, 'https://example.substack.com/p/edge-guard', 'test');
+    const article = repo.getArticle(slug);
+    expect(article!.current_stage).toBe(8);
   });
 });
 
