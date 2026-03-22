@@ -483,8 +483,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             : ''}
           ${previewLink}
         </div>
-      </section>
-      ${renderDangerZone(article)}`;
+        ${renderDangerZone(article)}
+      </section>`;
   }
 
   const nextStage = Math.min(article.current_stage + 1, 8) as Stage;
@@ -553,8 +553,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         ${renderGuardStatus(canAdvance, guardReason)}
         ${stageRunErrorHtml}
         <div id="advance-result-${escapeHtml(article.id)}"></div>
-      </section>
-      ${renderDangerZone(article)}`;
+        ${renderDangerZone(article)}
+      </section>`;
   }
 
   // Other stages — advance flow + retry button
@@ -609,8 +609,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
       ${stageRunErrorHtml}
       <div id="advance-result-${escapeHtml(article.id)}"></div>
       <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
-    </section>
-    ${renderDangerZone(article)}`;
+      ${renderDangerZone(article)}
+    </section>`;
 }
 
 function renderGuardStatus(canAdvance: boolean, reason: string): string {
@@ -625,38 +625,42 @@ function renderDangerZone(article: Article): string {
   const isArchived = article.status === 'archived';
   const isPublished = article.current_stage === 8 || article.status === 'published';
 
+  const iconStyle = 'background:none;border:1px solid #555;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.75rem;color:#888;opacity:0.7;transition:all 0.15s;';
+
   const archiveBtn = !isArchived && !isPublished
-    ? `<button class="btn btn-danger-outline"
+    ? `<button title="Archive article"
+        style="${iconStyle}"
+        onmouseover="this.style.opacity='1';this.style.borderColor='#dc2626';this.style.color='#dc2626'"
+        onmouseout="this.style.opacity='0.7';this.style.borderColor='#555';this.style.color='#888'"
         hx-post="/api/articles/${id}/archive"
-        hx-confirm="Archive this article? It will be hidden from the dashboard.">
-        📦 Archive
-      </button>`
+        hx-confirm="Archive this article? It will be hidden from the dashboard.">📦</button>`
     : '';
 
   const unarchiveBtn = isArchived
-    ? `<button class="btn btn-secondary"
+    ? `<button title="Restore from archive"
+        style="${iconStyle}"
+        onmouseover="this.style.opacity='1';this.style.borderColor='#3b82f6';this.style.color='#3b82f6'"
+        onmouseout="this.style.opacity='0.7';this.style.borderColor='#555';this.style.color='#888'"
         hx-post="/api/articles/${id}/unarchive"
-        hx-confirm="Restore this article from the archive?">
-        📤 Unarchive
-      </button>`
+        hx-confirm="Restore this article from the archive?">📤</button>`
     : '';
 
-  const deleteBtn = `<button class="btn btn-danger"
+  const deleteBtn = `<button title="Permanently delete"
+      style="${iconStyle}"
+      onmouseover="this.style.opacity='1';this.style.borderColor='#dc2626';this.style.color='#dc2626'"
+      onmouseout="this.style.opacity='0.7';this.style.borderColor='#555';this.style.color='#888'"
       hx-delete="/api/articles/${id}?confirm=true"
-      hx-confirm="Permanently delete this article and all its data? This cannot be undone.">
-      🗑 Delete
-    </button>`;
+      hx-confirm="Permanently delete this article and all its data? This cannot be undone.">🗑</button>`;
 
   return `
-    <section class="detail-section danger-zone" style="border-top:2px solid #dc2626;margin-top:1.5rem;padding-top:1rem;">
-      <h2 style="color:#dc2626;font-size:0.95rem;">⚠️ Danger Zone</h2>
-      <div class="action-bar" style="gap:0.5rem;">
-        ${archiveBtn}
-        ${unarchiveBtn}
-        ${deleteBtn}
-      </div>
-    </section>`;
+    <div style="display:flex;align-items:center;gap:6px;margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid #333;">
+      <span style="font-size:0.65rem;color:#555;letter-spacing:0.03em;">article:</span>
+      ${archiveBtn}
+      ${unarchiveBtn}
+      ${deleteBtn}
+    </div>`;
 }
+
 
 // ── Image Section ────────────────────────────────────────────────────────────
 
