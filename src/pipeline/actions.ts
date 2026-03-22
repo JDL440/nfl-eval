@@ -1013,6 +1013,35 @@ export async function autoAdvanceArticle(
 
       current = updated;
 
+      // Handle REVISE outcome from a successful action (e.g., editor returned
+      // REVISE but the action itself succeeded). Regress immediately instead of
+      // letting the next stage's guard catch it.
+      if (result.outcome === 'REVISE') {
+        revisionCount++;
+        if (revisionCount <= maxRevisions) {
+          try {
+            engine.regress(articleId, current.current_stage as Stage, 4 as Stage, 'auto-advance', `Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`);
+            repo.clearArtifactsAfterStage(articleId, 4);
+
+            const regressStep: AutoAdvanceStep = {
+              type: 'regress',
+              from: current.current_stage,
+              to: 4,
+              action: `Sent back to Stage 4 — Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`,
+              duration: result.duration,
+            };
+            steps.push(regressStep);
+            onStep?.(regressStep);
+
+            current = repo.getArticle(articleId)!;
+            continue;
+          } catch { /* fall through to normal loop */ }
+        } else {
+          lastError = `Editor requested revisions ${revisionCount} times — stopping auto-advance`;
+          break;
+        }
+      }
+
       // Auto-generate images after draft is written (stage 5 reached)
       if (current.current_stage === 5 && generateImages) {
         await generateImages(articleId);
