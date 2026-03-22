@@ -57,3 +57,24 @@
 - Decision inbox merge completed for the static knowledge-asset pass, and older decision history moved to the archive file.
 - The planning record now emphasizes the proof-of-concept content layer plus validation/docs, not runner or pipeline integration.
 - Continue treating runtime injection and refresh automation as deferred follow-up work.
+
+### 2026-03-22T19-10-00Z: Issue #85 structure validation completion
+- Standardized the glossary seeds on a shared YAML shape with explicit `id`, `glossary`, freshness metadata, and entry-level source refs.
+- Standardized the proof-of-concept team sheets on YAML frontmatter plus fixed markdown headings (`Durable snapshot`, `Identity anchors`, `Roster-building and cap framing`, `Source guidance`).
+- Vitest coverage now parses the glossary YAML directly and validates team-sheet frontmatter/body structure without touching runtime prompt assembly.
+
+### 2026-03-22: Debug visibility restore
+
+**What:** Restored the collapsible artifact thinking/debug section on article artifact views by loading companion `*.thinking.md` artifacts when the main `*.md` artifact is rendered.
+
+**Why:** The historical inline `<think>` collapse UI survived, but Issue #88-era pipeline changes persist thinking separately via `writeAgentResult()` in `src/pipeline/actions.ts`, so normal artifact views stopped showing the debug section unless you clicked the dedicated 💭 tab.
+
+**Key implementation choice:** Treat persisted `*.thinking.md` files as the authoritative debug source for the main artifact view, fall back to inline token extraction only for legacy artifacts, and avoid conversation logs because they store cleaned assistant outputs rather than full thinking traces.
+
+**Validation:** `npm run v2:build` passed, and targeted Vitest coverage passed for `tests/dashboard/wave2.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/extract-thinking.test.ts`, and `tests/pipeline/write-agent-result.test.ts`.
+
+### 2026-03-22: Issue #93 Copilot CLI token-usage trace
+
+- I could not reproduce a runtime rendering bug on current `main`: the article detail page and HTMX live sidebar already render `usage_events` rows for `copilot-cli` the same way they do for other providers.
+- The real gap was regression coverage across the full chain: provider `usage` → `AgentRunner.tokensUsed` → `recordAgentUsage()` persistence → article-page/live-sidebar rendering.
+- Added focused tests in `tests/agents/runner.test.ts`, `tests/pipeline/actions.test.ts`, and `tests/dashboard/server.test.ts` to lock down the Copilot CLI path and confirm `copilot-cli` appears in the provider breakdown when usage rows exist.

@@ -11,7 +11,7 @@
  *   + Access to all Copilot-supported models via --model flag
  *   + Built-in tool use, context, and safety features
  *   - Higher latency (~5-10s overhead per call for CLI startup)
- *   - No streaming, no token usage stats
+ *   - No streaming or exact token usage stats (returns estimates instead)
  *   - No structured output (response_format: json is best-effort)
  *   - Output is plain text (may include markdown formatting)
  */
@@ -191,7 +191,7 @@ export class CopilotCLIProvider implements LLMProvider {
       content,
       model,
       provider: this.id,
-      // CLI doesn't expose token usage — estimate from character counts.
+      // CLI doesn't expose exact token usage — estimate from character counts.
       // ~4 characters per token is a standard approximation.
       usage: {
         promptTokens: Math.ceil(prompt.length / 4),

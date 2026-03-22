@@ -95,6 +95,29 @@ describe('Dashboard Server', () => {
       expect(html).toContain('/htmx/articles/detail-test/context-config');
     });
 
+    it('article detail page shows copilot-cli provider usage when usage rows exist', async () => {
+      repo.createArticle({ id: 'detail-copilot', title: 'Detail Copilot Article' });
+      repo.recordUsageEvent({
+        articleId: 'detail-copilot',
+        stage: 5,
+        surface: 'writeDraft',
+        provider: 'copilot-cli',
+        eventType: 'completed',
+        modelOrTool: 'gpt-5.4',
+        promptTokens: 4321,
+        outputTokens: 987,
+        costUsdEstimate: 0.02,
+      });
+
+      const res = await app.request('/articles/detail-copilot');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('By Provider');
+      expect(html).toContain('copilot-cli');
+      expect(html).toContain('5.3k');
+    });
+
     it('article detail returns 404 for missing article', async () => {
       const res = await app.request('/articles/nonexistent');
       expect(res.status).toBe(404);
@@ -250,6 +273,29 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('Pub Ready');
       expect(html).toContain('card-ready');
+    });
+
+    it('GET /htmx/articles/:id/live-sidebar matches copilot-cli usage state', async () => {
+      repo.createArticle({ id: 'sidebar-copilot', title: 'Sidebar Copilot Article' });
+      repo.recordUsageEvent({
+        articleId: 'sidebar-copilot',
+        stage: 6,
+        surface: 'runEditor',
+        provider: 'copilot-cli',
+        eventType: 'completed',
+        modelOrTool: 'gpt-5.4',
+        promptTokens: 4000,
+        outputTokens: 1200,
+        costUsdEstimate: 0.018,
+      });
+
+      const res = await app.request('/htmx/articles/sidebar-copilot/live-sidebar');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('By Provider');
+      expect(html).toContain('copilot-cli');
+      expect(html).toContain('5.2k');
     });
 
     it('GET /htmx/recent-ideas returns HTML fragment', async () => {

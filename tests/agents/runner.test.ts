@@ -9,7 +9,12 @@ import {
   type AgentRunParams,
 } from '../../src/agents/runner.js';
 import { AgentMemory, type MemoryEntry } from '../../src/agents/memory.js';
-import { LLMGateway } from '../../src/llm/gateway.js';
+import {
+  LLMGateway,
+  type ChatRequest,
+  type ChatResponse,
+  type LLMProvider,
+} from '../../src/llm/gateway.js';
 import { StubProvider } from '../../src/llm/providers/stub.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 
@@ -104,6 +109,33 @@ function createTempFixtures() {
   writeFileSync(join(skillsDir, 'data-visualization.md'), DATA_VIZ_SKILL);
 
   return { tempDir, chartersDir, skillsDir, dbPath };
+}
+
+class CopilotCliUsageProvider implements LLMProvider {
+  readonly id = 'copilot-cli';
+  readonly name = 'GitHub Copilot CLI';
+
+  chat(request: ChatRequest): Promise<ChatResponse> {
+    return Promise.resolve({
+      content: 'Estimated usage response',
+      model: request.model ?? 'gpt-5.4',
+      provider: this.id,
+      usage: {
+        promptTokens: 321,
+        completionTokens: 123,
+        totalTokens: 444,
+      },
+      finishReason: 'stop',
+    });
+  }
+
+  listModels(): string[] {
+    return ['gpt-5.4', 'gpt-5-mini'];
+  }
+
+  supportsModel(model: string): boolean {
+    return model.startsWith('gpt-5');
+  }
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -613,6 +645,28 @@ describe('AgentRunner', () => {
       expect(result.tokensUsed).toBeDefined();
       expect(result.tokensUsed!.prompt).toBe(0);
       expect(result.tokensUsed!.completion).toBe(0);
+    });
+
+    it('maps estimated copilot-cli usage into tokensUsed', async () => {
+      const copilotGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [new CopilotCliUsageProvider()],
+      });
+      const copilotRunner = new AgentRunner({
+        gateway: copilotGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      const result = await copilotRunner.run({
+        agentName: 'writer',
+        task: 'Write a short piece',
+      });
+
+      expect(result.provider).toBe('copilot-cli');
+      expect(result.model).toMatch(/^gpt-5/);
+      expect(result.tokensUsed).toEqual({ prompt: 321, completion: 123 });
     });
   });
 });
