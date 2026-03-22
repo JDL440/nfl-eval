@@ -273,6 +273,45 @@ ORDER BY
     a.time_sensitive DESC,
     a.target_publish_date ASC NULLS LAST;
 
+-- ─────────────────────────────────────────────
+-- ARTICLE CONVERSATIONS
+-- Per-article conversation thread shared by all agents.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS article_conversations (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id      TEXT NOT NULL,
+    stage           INTEGER NOT NULL,
+    agent_name      TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'assistant',
+    turn_number     INTEGER NOT NULL,
+    content         TEXT NOT NULL,
+    token_count     INTEGER,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_conversations_article
+    ON article_conversations(article_id, turn_number);
+
+-- ─────────────────────────────────────────────
+-- REVISION SUMMARIES
+-- High-level tracking of each revision iteration.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS revision_summaries (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id      TEXT NOT NULL,
+    iteration       INTEGER NOT NULL,
+    from_stage      INTEGER NOT NULL,
+    to_stage        INTEGER NOT NULL,
+    agent_name      TEXT NOT NULL,
+    outcome         TEXT NOT NULL,
+    key_issues      TEXT,
+    feedback_summary TEXT,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_revision_summaries_article
+    ON revision_summaries(article_id, iteration);
+
 -- ── Charter edit history ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS charter_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -20,6 +20,15 @@ import { extractClaims, totalClaimCount } from './claim-extractor.js';
 import { ensureFactCheckContext } from './fact-check-context.js';
 import { validateStatClaims, validateDraftClaims, buildValidationReport } from './validators.js';
 import { estimateCost } from '../llm/pricing.js';
+import {
+  addConversationTurn,
+  getArticleConversation,
+  addRevisionSummary,
+  getRevisionHistory,
+  getRevisionCount,
+  buildConversationContext,
+  buildEditorPreviousReviews,
+} from './conversation.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -618,6 +627,21 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       content = content + '\n\n## Previous Draft (REVISE this — do not start over)\n' + previousDraft;
     }
 
+    // Build conversation context: revision history + prior agent interactions
+    const conversationTurns = getArticleConversation(ctx.repo, articleId);
+    const revisions = getRevisionHistory(ctx.repo, articleId);
+    const conversationCtx = buildConversationContext(conversationTurns, revisions);
+
+    // If this is a revision and editor feedback exists, record it as a conversation turn
+    // (only if not already recorded — check by looking for recent editor turns)
+    if (isRevision && editorReview) {
+      const recentEditorTurns = getArticleConversation(ctx.repo, articleId, { agentName: 'editor', limit: 1 });
+      const lastEditorContent = recentEditorTurns.length > 0 ? recentEditorTurns[recentEditorTurns.length - 1].content : null;
+      if (lastEditorContent !== editorReview) {
+        addConversationTurn(ctx.repo, articleId, 6, 'editor', 'assistant', editorReview);
+      }
+    }
+
     const task = isRevision
       ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the editor\'s feedback are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
       : 'Write an analytical article draft based on the panel discussion.';
@@ -626,6 +650,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       agentName: 'writer',
       task,
       skills: ['substack-article'],
+      conversationContext: conversationCtx || undefined,
       articleContext: {
         slug: articleId,
         title: article.title,
@@ -637,6 +662,9 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     writeAgentResult(ctx.repo, articleId, 'draft.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft', result);
 
+    // Record writer output as a conversation turn
+    addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', result.content);
+
     // Self-heal: if draft is under 200 words, retry once with explicit length instruction.
     // This prevents the pipeline from getting stuck at the 5→6 guard.
     const wordCount = (result.content ?? '').split(/\s+/).filter(Boolean).length;
@@ -646,6 +674,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         agentName: 'writer',
         task: `Your previous draft was only ${wordCount} words. The minimum is 800 words. Write a complete, detailed analytical article — NOT a summary or outline. Include specific data, quotes, analysis sections, and a conclusion. Output the full article text.`,
         skills: ['substack-article'],
+        conversationContext: conversationCtx || undefined,
         articleContext: {
           slug: articleId,
           title: article.title,
@@ -655,6 +684,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       });
       writeAgentResult(ctx.repo, articleId, 'draft.md', retryResult);
       recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-retry', retryResult);
+      addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', retryResult.content);
     }
 
     return { success: true, duration: Date.now() - start };
@@ -691,10 +721,19 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       content = content + '\n\n---\n\n' + factCheckArtifact;
     }
 
+    // Build conversation context: full article history + editor's own previous reviews
+    const conversationTurns = getArticleConversation(ctx.repo, articleId);
+    const revisions = getRevisionHistory(ctx.repo, articleId);
+    const conversationCtx = buildConversationContext(conversationTurns, revisions);
+    const editorTurns = getArticleConversation(ctx.repo, articleId, { agentName: 'editor' });
+    const editorPreviousReviews = buildEditorPreviousReviews(editorTurns);
+    const fullConversationCtx = [conversationCtx, editorPreviousReviews].filter(Boolean).join('\n\n---\n\n') || undefined;
+
     const result = await ctx.runner.run({
       agentName: 'editor',
       task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
       skills: ['editor-review'],
+      conversationContext: fullConversationCtx,
       articleContext: {
         slug: articleId,
         title: article.title,
@@ -705,6 +744,9 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     writeAgentResult(ctx.repo, articleId, 'editor-review.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor', result);
+
+    // Record editor review as a conversation turn
+    addConversationTurn(ctx.repo, articleId, article.current_stage, 'editor', 'assistant', result.content);
 
     // Extract semantic verdict from the editor review content
     let verdict = extractVerdict(result.content);
@@ -729,6 +771,17 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       writeAgentResult(ctx.repo, articleId, 'editor-review.md', { ...result, content: combined });
       recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor-retry', retryResult);
       verdict = extractVerdict(combined);
+    }
+
+    // If editor returns REVISE, create a revision summary
+    if (verdict === 'REVISE') {
+      const iteration = getRevisionCount(ctx.repo, articleId) + 1;
+      const feedbackPreview = result.content.slice(0, 300);
+      addRevisionSummary(
+        ctx.repo, articleId, iteration,
+        article.current_stage, 4,  // editor → writer
+        'editor', 'REVISE', null, feedbackPreview,
+      );
     }
 
     return {
@@ -759,11 +812,17 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
       ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
       : null;
 
+    // Build conversation context so the publisher sees the full revision journey
+    const conversationTurns = getArticleConversation(ctx.repo, articleId);
+    const revisions = getRevisionHistory(ctx.repo, articleId);
+    const conversationCtx = buildConversationContext(conversationTurns, revisions) || undefined;
+
     const result = await ctx.runner.run({
       agentName: 'publisher',
       task: 'Run the publisher pass to prepare the article for publication.',
       skills: ['publisher'],
       rosterContext: rosterCtx ?? undefined,
+      conversationContext: conversationCtx,
       articleContext: {
         slug: articleId,
         title: article.title,
@@ -800,6 +859,9 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     writeAgentResult(ctx.repo, articleId, 'publisher-pass.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runPublisherPass', result);
+
+    // Record publisher output as a conversation turn
+    addConversationTurn(ctx.repo, articleId, article.current_stage, 'publisher', 'assistant', result.content);
 
     // Ensure publisher_pass DB row exists for the interactive checklist UI.
     // The LLM's review goes into the artifact; the human ticks off checks.

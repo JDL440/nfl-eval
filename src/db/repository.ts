@@ -133,6 +133,11 @@ export class Repository {
     this.db.exec(sql);
   }
 
+  /** Expose the underlying database for extension modules (conversation, etc.). */
+  getDb(): DatabaseSync {
+    return this.db;
+  }
+
   close(): void {
     this.db.close();
   }
