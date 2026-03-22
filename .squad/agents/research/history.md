@@ -25,3 +25,8 @@
 - 2026-03-22 — Revision / thinking visibility: revision history belongs to a dedicated hydration path, while debug artifacts need broader discoverability.
 - 2026-03-22 — Scribe inbox merge: confirmed the TLDR enforcement, retrospective logging, and dashboard visibility notes align with the existing canonical decisions.
 
+
+### 2026-03-22T22-20-49Z: Scribe maintenance — revision/thinking visibility
+- Confirmed the revision/thinking visibility investigation is canonical in .squad/decisions.md; no inbox files remained to merge.
+- No archive rollover was required, and the dashboard gap remains a discoverability/navigation seam rather than a persistence gap.
+
