@@ -1,20 +1,19 @@
-# Decision — Issue #85 Proof-of-Concept Structure
-
-- **By:** Code (🔧 Dev)
-- **Date:** 2026-03-22
-- **Issue:** #85
-
-## Decision
-
-Use a shared glossary YAML schema built around `schema_version`, `id`, `glossary`, `description`, `entry_fields`, `refresh_guidance`, and `entries`, plus a fixed markdown section template for proof-of-concept team sheets in `content/data/team-sheets/`.
-
-## Why
-
-- The approved scope explicitly limits this work to phases 1-3 plus docs/testing support, so the seed schema needed to be explicit and durable without implying runtime loading already exists.
-- The glossary structure makes term requirements explicit (`definition`, `source`, `verified_date`, `ttl_days`) while staying easy to validate in Vitest.
-- Frontmatter plus a fixed heading structure on team sheets makes the proof of concept easy to validate without prematurely locking in runtime injection behavior.
-
-## Scope Notes
-
-- This decision covers only the seed artifact structure and test strategy.
-- Runtime loading/injection and refresh automation remain deferred to the follow-up phases 4-5 issue.
+# Decision — Issue #85 proof-of-concept asset structure
+
+- **By:** Code (🔧 Dev)
+- **Date:** 2026-03-22
+- **Issue:** #85
+
+## Decision
+
+Use parsed YAML validation for glossary seeds and YAML frontmatter plus fixed markdown headings for the initial team sheets.
+
+## Why
+
+- The approved issue scope is limited to static assets, docs, and validation, so the safest proof of concept is a human-readable format with deterministic tests.
+- A shared glossary schema with explicit IDs, freshness fields, and source refs gives Research/Data authored content a stable contract before any runtime loader exists.
+- Team-sheet frontmatter provides future automation hooks while keeping the body durable and editorially readable.
+
+## Scope guard
+
+This decision does not add runtime glossary injection, team-sheet artifact routing, or refresh automation. Those remain deferred to issue #91.

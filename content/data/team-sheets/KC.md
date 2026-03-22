@@ -1,9 +1,22 @@
-# Kansas City Chiefs (KC) Team Identity Sheet
+---
+team: KC
+team_name: Kansas City Chiefs
+verified_date: 2026-03-22
+ttl_days: 30
+sources:
+  - https://www.chiefs.com/team/front-office-roster/
+  - https://www.chiefs.com/team/coaches-roster/andy-reid
+  - https://www.chiefs.com/stadium/
+  - https://www.nfl.com/teams/kansas-city-chiefs/
+volatility:
+  leadership: 30
+  team_identity: 120
+  venue_and_division: 365
+---
 
-**Verified date:** 2026-03-22
-**Primary sources:** Chiefs.com leadership pages, NFL.com team profile, Arrowhead stadium page, query_team_efficiency --team KC --season 2025, query_snap_usage --team KC --season 2025
+# Kansas City Chiefs
 
-## Snapshot
+## Durable snapshot
 
 - **Conference / division:** AFC West
 - **Home stadium:** GEHA Field at Arrowhead Stadium (Kansas City, Missouri)
@@ -11,32 +24,25 @@
 - **Head coach:** Andy Reid
 - **Lead football executive:** Brett Veach, General Manager
 
-## Team Identity
+## Identity anchors
 
-- **Franchise lens:** Kansas City is still best framed through the Mahomes contention window and the organization's comfort adjusting the roster around that reality.
-- **Durable identity cue:** The offense remains quarterback-driven and adaptive, while the defense is best described as aggressive and game-plan specific.
-- **2025 efficiency cue:** KC posted +0.033 offensive EPA/play and +0.012 defensive EPA/play, which supports a contender frame with thinner week-to-week margins than the brand suggests.
+### Offense
 
-## Offensive Identity
+- Kansas City's most durable offensive framing is an Andy Reid, quarterback-centered spread / West Coast blend built on motion, spacing, and matchup creation.
+- Avoid tying the identity to one receiver mix or one season's efficiency profile without a fresh data check.
 
-- **Base framing:** Use Patrick Mahomes, spacing, formation variation, and matchup creation as the offensive shorthand before reaching for volume-based labels.
-- **Strength cue:** Kansas City's red-zone rate (52.2%) remained a better quick-hit signal than raw third-down rate.
-- **Caution:** A 36.8% third-down conversion rate is a useful warning against describing the offense as automatic.
+### Defense
 
-## Defensive Identity
+- The durable defensive framing is aggressive, disguise-oriented, and game-plan specific rather than passive shell football.
+- Avoid locking the unit into one coverage family unless current film or coaching evidence clearly supports it.
 
-- **Base framing:** Emphasize disguise, pressure design, and situational flexibility instead of one pure shell family.
-- **Strength cue:** Chris Jones, Trent McDuffie, Nick Bolton, and George Karlaftis III remain the safest identity anchors.
-- **Caution:** The 2025 defensive efficiency output was closer to average than the defense's reputation, so article framing should avoid overstating dominance.
+## Roster-building and cap framing
 
-## Roster Construction Signals
+- Kansas City is best framed as a contender that keeps solving around the quarterback window with veteran patching and draft replenishment.
+- Any claim about cap strain, rollover, or future venue implications should be refreshed from current reporting before publication.
 
-- **Premium positions:** Quarterback, interior offensive line stability, and coverage-plus-pass-rush support remain the core construction themes.
-- **Roster pillars:** Patrick Mahomes, Travis Kelce, Creed Humphrey, Chris Jones, Trent McDuffie, and Nick Bolton are the safest durable names.
-- **Volatile areas:** Receiver hierarchy, backfield usage, and specific defensive role labels should be refreshed with current usage data.
+## Source guidance
 
-## Writing Cues
-
-- **Preferred framing:** Kansas City stories work best when they explain how the team preserves the quarterback edge instead of assuming inevitability.
-- **Preferred framing:** Defensive copy should focus on aggression and disguise rather than generic two-high or single-high branding.
-- **Avoid:** Do not turn short-term roster churn into a claim that the franchise identity has fundamentally changed.
+- Use Chiefs.com or NFL.com for ownership, coaching, front-office, stadium, and division facts.
+- Use current nflverse efficiency or charting data before making seasonal balance or usage claims.
+- Arrowhead remains the durable current venue fact until an official move becomes active.

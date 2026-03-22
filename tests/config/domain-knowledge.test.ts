@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse } from 'yaml';
 
 describe('Structured domain knowledge proof of concept', () => {
   const repoRoot = join(__dirname, '..', '..');
@@ -18,24 +19,48 @@ describe('Structured domain knowledge proof of concept', () => {
       ]);
     });
 
-    it('uses the shared glossary schema and entry fields', () => {
+    it('uses the shared glossary schema and content fields', () => {
       for (const file of glossaryFiles) {
         const content = readFileSync(join(glossaryDir, file), 'utf-8');
+        const parsed = parse(content) as {
+          schema_version: number;
+          glossary: string;
+          description: string;
+          entry_fields: {
+            required: string[];
+            optional: string[];
+          };
+          refresh_guidance: string[];
+          entries: Array<{
+            term: string;
+            definition: string;
+            source: { refs: string[] };
+            verified_date: string;
+            ttl_days: number;
+          }>;
+        };
 
-        expect(content).toContain('schema_version: 1');
-        expect(content).toMatch(/^id:\s[\w-]+/m);
-        expect(content).toContain('glossary:');
-        expect(content).toContain('description:');
-        expect(content).toContain('entry_fields:');
-        expect(content).toContain('refresh_guidance:');
-        expect(content).toContain('entries:');
+        expect(parsed.schema_version).toBe(1);
+        expect(parsed.glossary).toBe(file.replace('.yaml', ''));
+        expect(parsed.description.length).toBeGreaterThan(0);
+        expect(parsed.entry_fields.required).toEqual([
+          'term',
+          'definition',
+          'source',
+          'verified_date',
+          'ttl_days',
+        ]);
+        expect(parsed.entry_fields.optional).toEqual(['notes', 'examples']);
+        expect(parsed.refresh_guidance.length).toBeGreaterThanOrEqual(1);
+        expect(parsed.entries.length).toBeGreaterThanOrEqual(5);
 
-        const entryCount = (content.match(/^\s+- term:/gm) ?? []).length;
-        expect(entryCount).toBeGreaterThanOrEqual(6);
-        expect((content.match(/^\s+definition:/gm) ?? []).length).toBe(entryCount);
-        expect((content.match(/^\s+source:/gm) ?? []).length).toBe(entryCount);
-        expect((content.match(/^\s+verified_date:/gm) ?? []).length).toBe(entryCount);
-        expect((content.match(/^\s+ttl_days:/gm) ?? []).length).toBe(entryCount);
+        for (const entry of parsed.entries) {
+          expect(entry.term.length).toBeGreaterThan(0);
+          expect(entry.definition.length).toBeGreaterThan(0);
+          expect(entry.source.refs.length).toBeGreaterThanOrEqual(1);
+          expect(entry.verified_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          expect(entry.ttl_days).toBeGreaterThan(0);
+        }
       }
     });
   });
@@ -44,32 +69,38 @@ describe('Structured domain knowledge proof of concept', () => {
     const teamSheetsDir = join(repoRoot, 'content', 'data', 'team-sheets');
     const expectedTeams = ['BUF', 'KC', 'SEA'];
     const requiredSections = [
-      '## Snapshot',
-      '## Team Identity',
-      '## Offensive Identity',
-      '## Defensive Identity',
-      '## Roster Construction Signals',
-      '## Writing Cues',
+      '## Durable snapshot',
+      '## Identity anchors',
+      '### Offense',
+      '### Defense',
+      '## Roster-building and cap framing',
+      '## Source guidance',
     ];
 
     it('includes the initial proof-of-concept team sheets', () => {
       for (const team of expectedTeams) {
-        expect(existsSync(join(teamSheetsDir, ${team}.md))).toBe(true);
+        expect(existsSync(join(teamSheetsDir, team + '.md'))).toBe(true);
       }
     });
 
-    it('ensures each proof-of-concept team sheet includes an H1 and the expected sections', () => {
+    it('ensures each proof-of-concept team sheet includes frontmatter and the durable layout', () => {
       for (const team of expectedTeams) {
-        const content = readFileSync(join(teamSheetsDir, ${team}.md), 'utf-8');
+        const content = readFileSync(join(teamSheetsDir, team + '.md'), 'utf-8');
+        const normalized = content.replace(/^\uFEFF/, '').trimStart();
 
-        expect(content.startsWith('# ')).toBe(true);
-        expect(content).toContain(() Team Identity Sheet);
-        expect(content).toContain('**Verified date:** 2026-03-22');
-        expect(content).toContain('**Primary sources:**');
+        expect(normalized.startsWith('---')).toBe(true);
+        expect(normalized).toMatch(/^team:\s[A-Z]{2,3}$/m);
+        expect(normalized).toMatch(/^team_name:\s.+$/m);
+        expect(normalized).toMatch(/^verified_date:\s\d{4}-\d{2}-\d{2}$/m);
+        expect(normalized).toMatch(/^ttl_days:\s\d+$/m);
+        expect(normalized).toContain('sources:');
+        expect(normalized).toContain('volatility:');
 
         for (const section of requiredSections) {
-          expect(content).toContain(section);
+          expect(normalized).toContain(section);
         }
+
+        expect((normalized.match(/^- \*\*/gm) ?? []).length).toBeGreaterThanOrEqual(4);
       }
     });
   });

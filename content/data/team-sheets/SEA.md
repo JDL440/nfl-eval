@@ -1,42 +1,48 @@
-# Seattle Seahawks (SEA) Team Identity Sheet
+---
+team: SEA
+team_name: Seattle Seahawks
+verified_date: 2026-03-22
+ttl_days: 30
+sources:
+  - https://www.seahawks.com/team/front-office-roster/
+  - https://www.seahawks.com/team/coaches-roster/mike-macdonald
+  - https://www.lumenfield.com/
+  - https://www.nfl.com/teams/seattle-seahawks/
+volatility:
+  leadership: 30
+  team_identity: 120
+  venue_and_division: 365
+---
 
-**Verified date:** 2026-03-22
-**Primary sources:** Seahawks.com leadership pages, NFL.com team profile, Lumen Field site, query_team_efficiency --team SEA --season 2025, query_snap_usage --team SEA --season 2025
+# Seattle Seahawks
 
-## Snapshot
+## Durable snapshot
 
 - **Conference / division:** NFC West
 - **Home stadium:** Lumen Field (Seattle, Washington)
-- **Ownership:** Paul G. Allen Estate / Seattle Seahawks Ownership Trust; Jody Allen is listed as chair.
+- **Ownership:** Paul G. Allen Estate / Seattle Seahawks Ownership Trust; Jody Allen is the listed chair.
 - **Head coach:** Mike Macdonald
 - **Lead football executive:** John Schneider, President of Football Operations / General Manager
 
-## Team Identity
+## Identity anchors
 
-- **Franchise lens:** Seattle is easiest to frame as a defense-first team that still chases explosive offense instead of pure grind-it-out balance.
-- **Durable identity cue:** Macdonald gives the club a stable identity around disguise, flexibility, and matchup-dependent fronts rather than one static front label.
-- **2025 efficiency cue:** SEA posted +0.032 offensive EPA/play and -0.121 defensive EPA/play, so the proof-of-concept sheet should treat the defense as the cleaner differentiator.
+### Offense
 
-## Offensive Identity
+- Seattle is safest to frame as a pass-first efficiency offense rather than a run-defined identity team.
+- Keep specific coordinator, target-share, or backfield hierarchy claims on a short leash unless current-season data supports them.
 
-- **Base framing:** Treat Seattle as a pass-efficiency offense before assigning a rigid scheme family label.
-- **Strength cue:** 2025 passing EPA/play (+0.142) was the cleanest story starter for how the offense created value.
-- **Caution:** Rushing EPA/play (-0.073) warns against describing the offense as broadly efficient without splitting pass and run performance.
+### Defense
 
-## Defensive Identity
+- The durable defensive shorthand is multiplicity, disguise, and matchup-driven flexibility under Macdonald rather than one rigid shell label.
+- Versatility in the secondary and front is a better writing cue than hard role labels.
 
-- **Base framing:** Emphasize multiplicity, disguise, and pressure-package flexibility instead of a single coverage slogan.
-- **Strength cue:** The defense allowed a 42.5% success rate, recorded 47 sacks, and forced 18 interceptions in the 2025 team-efficiency output.
-- **Player-fit cue:** Versatility in the secondary and front is a better writing cue than rigid role labels.
+## Roster-building and cap framing
 
-## Roster Construction Signals
+- Seattle still invests like a team that values tackle, receiver, corner, and pass-rush talent.
+- Any article that leans on cap flexibility, coordinator titles, or depth-chart certainty should refresh those claims against current reporting first.
 
-- **Premium positions:** Seattle repeatedly invests in tackle, receiver, corner, and pass-rush talent.
-- **Roster pillars:** Devon Witherspoon, Leonard Williams, Ernest Jones, Jaxon Smith-Njigba, Charles Cross, and Abraham Lucas are safe anchor names.
-- **Volatile areas:** Any hard claim about coordinators, starting guards, or backfield hierarchy should be refreshed before publication.
+## Source guidance
 
-## Writing Cues
-
-- **Preferred framing:** Separate Seattle's passing efficiency from its run-game inconsistency instead of flattening the offense into one summary.
-- **Preferred framing:** On defense, write about flexibility, disguise, and coverage communication.
-- **Avoid:** Do not overstate cap flexibility or scheme certainty without fresh OTC or coaching-source verification.
+- Use Seahawks.com or NFL.com for ownership, coach, front-office, stadium, and division facts.
+- Use current nflverse efficiency, snap, or charting data before making seasonal performance claims.
+- Leadership items stay short-TTL because coaching and executive titles change faster than venue or division facts.

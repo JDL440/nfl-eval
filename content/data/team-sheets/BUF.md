@@ -1,9 +1,21 @@
-# Buffalo Bills (BUF) Team Identity Sheet
+---
+team: BUF
+team_name: Buffalo Bills
+verified_date: 2026-03-22
+ttl_days: 30
+sources:
+  - https://www.buffalobills.com/team/front-office-roster/
+  - https://www.buffalobills.com/stadium/
+  - https://www.nfl.com/teams/buffalo-bills/
+volatility:
+  leadership: 30
+  team_identity: 120
+  venue_and_division: 365
+---
 
-**Verified date:** 2026-03-22
-**Primary sources:** Bills.com leadership pages, NFL.com team profile, Highmark Stadium page, query_team_efficiency --team BUF --season 2025, query_snap_usage --team BUF --season 2025
+# Buffalo Bills
 
-## Snapshot
+## Durable snapshot
 
 - **Conference / division:** AFC East
 - **Home stadium:** Highmark Stadium (Orchard Park, New York)
@@ -11,32 +23,25 @@
 - **Head coach:** Sean McDermott
 - **Lead football executive:** Brandon Beane, President of Football Operations / General Manager
 
-## Team Identity
+## Identity anchors
 
-- **Franchise lens:** Buffalo is easiest to frame through Josh Allen's championship window and the need to convert elite offense into January leverage.
-- **Durable identity cue:** The organization still behaves like a contender willing to shape the roster around quarterback ceiling rather than regular-season comfort.
-- **2025 efficiency cue:** BUF posted +0.133 offensive EPA/play and +0.024 defensive EPA/play, making the offense the clear headline unit.
+### Offense
 
-## Offensive Identity
+- Buffalo is easiest to frame through Josh Allen's championship window and a quarterback-driven explosive offense.
+- Refresh exact run-pass balance, target hierarchy, and efficiency claims with current-season data before publication.
 
-- **Base framing:** Treat Buffalo as a quarterback-driven explosive offense before calling it balanced or run-first.
-- **Strength cue:** Passing EPA/play (+0.196) gives the cleanest shorthand for why the offense remains one of the league's most dangerous units.
-- **Caution:** The offense is efficient enough that surrounding pieces should be judged by whether they preserve Allen's ceiling, not just whether they add touches.
+### Defense
 
-## Defensive Identity
+- Keep the durable framing broad: nickel-oriented, zone-aware, and dependent on coverage depth plus front disruption.
+- Avoid overcommitting to exact coverage-family labels without fresh coordinator or film support.
 
-- **Base framing:** Use nickel-heavy, zone-aware, front-four-dependent language unless a story has fresher coordinator or film support.
-- **Strength cue:** Christian Benford, Gregory Rousseau, Terrel Bernard, Taron Johnson, and Joey Bosa are the safest identity anchors from the 2025 roster and usage picture.
-- **Caution:** A +0.024 defensive EPA/play figure is solid but not dominant, so the defense should be framed as supportive rather than the entire team identity.
+## Roster-building and cap framing
 
-## Roster Construction Signals
+- Buffalo continues to build around quarterback support, offensive line stability, coverage talent, and pass-rush support.
+- Any article that mentions cap strain, restructures, or extension timing should use a fresh OTC check rather than this sheet alone.
 
-- **Premium positions:** Buffalo continues to invest in quarterback support, offensive line stability, coverage talent, and front disruption.
-- **Roster pillars:** Josh Allen, James Cook, Khalil Shakir, Dion Dawkins, Christian Benford, and Gregory Rousseau are stable article anchors.
-- **Volatile areas:** Cap-strain claims, exact pass-catcher hierarchy, and coordinator-specific scheme language should be refreshed before publication.
+## Source guidance
 
-## Writing Cues
-
-- **Preferred framing:** Buffalo stories should connect roster moves back to whether they raise or lower the team's playoff ceiling around Allen.
-- **Preferred framing:** Defensive writing should talk about adequacy, support, and matchup survival more than inevitability.
-- **Avoid:** Do not let one stretch of offensive efficiency flatten the team into a no-questions-asked juggernaut.
+- Use Bills.com or NFL.com for ownership, coach, front-office, stadium, and division facts.
+- Use current nflverse efficiency, snap, or charting data before making seasonal identity claims.
+- Leadership stays short-TTL here because coaching and executive facts can move faster than venue or division facts.
