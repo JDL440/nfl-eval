@@ -54,6 +54,30 @@ const CLI_MODELS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Model aliases — maps canonical/API-style names to CLI equivalents so the
+// pipeline can use provider-agnostic model names in models.json and switch
+// between Copilot CLI ↔ API ↔ LMStudio without config changes.
+// ---------------------------------------------------------------------------
+
+const CLI_MODEL_ALIASES: Record<string, string> = {
+  // GPT-5 family: API uses unversioned names, CLI needs versioned
+  'gpt-5':            'gpt-5.4',
+  'gpt-5-chat':       'gpt-5.4',
+  'gpt-5-nano':       'gpt-5.4-mini',   // nano doesn't exist on CLI → use mini
+  // GPT-4 family
+  'gpt-4o':           'gpt-4.1',
+  'gpt-4o-mini':      'gpt-4.1',
+  'gpt-4.1-mini':     'gpt-4.1',        // CLI only has gpt-4.1
+  'gpt-4.1-nano':     'gpt-4.1',
+  // Reasoning models → nearest CLI equivalents
+  'o4-mini':          'gpt-5.4-mini',
+  'o3':               'gpt-5.4',
+  'o3-mini':          'gpt-5.4-mini',
+  'o1':               'gpt-5.4',
+  'o1-mini':          'gpt-5.4-mini',
+};
+
+// ---------------------------------------------------------------------------
 // Options
 // ---------------------------------------------------------------------------
 
@@ -105,23 +129,26 @@ export class CopilotCLIProvider implements LLMProvider {
   // -- LLMProvider interface -----------------------------------------------
 
   listModels(): string[] {
-    return [...CLI_MODELS];
+    return [...CLI_MODELS, ...Object.keys(CLI_MODEL_ALIASES)];
   }
 
   supportsModel(model: string): boolean {
     return (
       CLI_MODELS.includes(model as (typeof CLI_MODELS)[number]) ||
+      model in CLI_MODEL_ALIASES ||
       model.startsWith('claude-') ||
       model.startsWith('gpt-') ||
-      model.startsWith('gemini-') ||
-      model.startsWith('o1') ||
-      model.startsWith('o3') ||
-      model.startsWith('o4')
+      model.startsWith('gemini-')
     );
   }
 
+  /** Translate canonical/API model names to CLI-compatible names. */
+  private resolveModel(model: string): string {
+    return CLI_MODEL_ALIASES[model] ?? model;
+  }
+
   async chat(request: ChatRequest): Promise<ChatResponse> {
-    const model = request.model ?? this.defaultModel;
+    const model = this.resolveModel(request.model ?? this.defaultModel);
 
     // ── Build the prompt string ──────────────────────────────────────────
     // The CLI takes a single prompt (-p) or stdin. We combine the
