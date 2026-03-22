@@ -203,6 +203,7 @@ describe('STAGE_ACTIONS', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     fixtures.memory.close();
     fixtures.repo.close();
     rmSync(fixtures.tempDir, { recursive: true, force: true });
@@ -915,6 +916,38 @@ describe('Token usage recording', () => {
     expect(events[0].model_or_tool).toMatch(/^gpt-5/);
     expect(events[0].prompt_tokens).toBe(432);
     expect(events[0].output_tokens).toBe(210);
+  });
+
+  it('keeps same-second usage history deterministic without timing sleeps', () => {
+    fixtures.repo.createArticle({ id: 'test-usage-order', title: 'Usage Order Test' });
+
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-03-22T00:00:00Z'));
+      for (const [surface, promptTokens] of [
+        ['generatePrompt', 100],
+        ['composePanel', 200],
+        ['runDiscussion', 300],
+      ] as const) {
+        recordAgentUsage(fixtures.ctx, 'test-usage-order', 1, surface, {
+          content: 'test',
+          thinking: null,
+          model: 'gpt-4o',
+          provider: 'openai',
+          agentName: 'writer',
+          memoriesUsed: 0,
+          tokensUsed: { prompt: promptTokens, completion: 25 },
+        });
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(fixtures.repo.getUsageEvents('test-usage-order').map((event) => event.surface)).toEqual([
+      'runDiscussion',
+      'composePanel',
+      'generatePrompt',
+    ]);
   });
 
   it('does not record usage when tokensUsed is undefined', () => {

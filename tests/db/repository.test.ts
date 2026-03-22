@@ -574,6 +574,48 @@ describe('Repository', () => {
       expect(limitedEvents.some((event) => event.provider === 'copilot-cli')).toBe(false);
     });
 
+    it('orders article usage history deterministically when timestamps tie', () => {
+      repo.createArticle({ id: 'ue-tie', title: 'Usage Tie Test' });
+
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-03-22T00:00:00Z'));
+        for (const surface of ['first', 'second', 'third']) {
+          repo.recordUsageEvent({
+            articleId: 'ue-tie',
+            stage: 5,
+            surface,
+            provider: 'anthropic',
+            modelOrTool: 'claude-sonnet-4',
+            promptTokens: 100,
+            outputTokens: 50,
+          });
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(repo.getUsageEvents('ue-tie').map((event) => event.surface)).toEqual([
+        'third',
+        'second',
+        'first',
+      ]);
+      expect(repo.getUsageEvents('ue-tie', 2).map((event) => event.surface)).toEqual([
+        'third',
+        'second',
+      ]);
+    });
+
+    it('uses the article history index for full usage history reads', () => {
+      const plan = repo.getDb().prepare(
+        'EXPLAIN QUERY PLAN SELECT * FROM usage_events WHERE article_id = ? ORDER BY created_at DESC, id DESC',
+      ).all('ue-history') as Array<{ detail: string }>;
+
+      expect(
+        plan.some((row) => row.detail.includes('idx_usage_events_article_history')),
+      ).toBe(true);
+    });
+
     it('rejects nonexistent article', () => {
       expect(() =>
         repo.recordUsageEvent({
