@@ -96,7 +96,7 @@ export interface CopilotCLIProviderOptions {
 // Provider
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TIMEOUT = 300_000; // 5 minutes — Opus with long context needs room
+const DEFAULT_TIMEOUT = 600_000; // 10 minutes — draft writing with Opus + full context is slow
 const DEFAULT_MODEL = 'claude-sonnet-4';
 
 // Node's execFile on Windows uses CreateProcessW (32K char limit), not cmd.exe

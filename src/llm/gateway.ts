@@ -124,6 +124,11 @@ export class LLMGateway {
         const error = err instanceof Error ? err : new Error(String(err));
         errors.push({ model, error });
         console.warn(`[gateway] Model "${model}" failed: ${error.message.slice(0, 200)}`);
+
+        // Don't cascade to next candidate on timeout — same provider will timeout again
+        if (/timed?\s*out/i.test(error.message)) {
+          break;
+        }
       }
     }
 
