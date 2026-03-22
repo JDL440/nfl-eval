@@ -34,4 +34,4 @@ tools: [view, rg, vitest]
 
 - Issue `#92` kept `article_conversations` and `revision_summaries` intact.
 - `buildRevisionSummaryContext()` became the default shared handoff in `src/pipeline/conversation.ts`.
-- `src/pipeline/actions.ts` switched Writer and Publisher to summary-only handoffs, while Editor receives the shared summary plus `buildEditorPreviousReviews()`.
+- `src/pipeline/actions.ts` switched Publisher to summary-only handoffs, kept Writer `conversationContext` summary-only, and gave Writer revisions the explicit current editor-review artifact while Editor receives the shared summary plus `buildEditorPreviousReviews()`.

@@ -631,6 +631,12 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const revisions = getRevisionHistory(ctx.repo, articleId);
     const conversationCtx = buildRevisionSummaryContext(revisions);
 
+    // Revisions still need the full current editor review as an explicit handoff artifact,
+    // even if upstream context overrides exclude it from the generic include list.
+    if (isRevision && editorReview && !content.includes(editorReview)) {
+      content = content + '\n\n## Editor Review (address every requested fix)\n' + editorReview;
+    }
+
     // If this is a revision and editor feedback exists, record it as a conversation turn
     // (only if not already recorded — check by looking for recent editor turns)
     if (isRevision && editorReview) {
@@ -642,7 +648,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     }
 
     const task = isRevision
-      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the editor\'s feedback are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
+      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
       : 'Write an analytical article draft based on the panel discussion.';
 
     const result = await ctx.runner.run({

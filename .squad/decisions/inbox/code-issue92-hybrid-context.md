@@ -11,13 +11,14 @@
 
 ## TLDR
 
-Keep storing full per-article conversation history, but stop injecting that raw shared transcript into Writer, Editor, and Publisher by default. Runtime handoffs should use a compact revision-summary block, with Editor additionally receiving only its own previous reviews.
+Keep storing full per-article conversation history, but stop injecting that raw shared transcript into Writer, Editor, and Publisher by default. Runtime handoffs should use a compact revision-summary block, with Editor additionally receiving only its own previous reviews and Writer revisions still receiving the current `editor-review.md` artifact as an explicit handoff.
 
 ## Decision
 
 Use `buildRevisionSummaryContext()` in `src/pipeline/conversation.ts` as the default shared cross-role prompt surface:
 
 - **Writer:** shared revision summary only
+- **Writer revisions:** explicit current `editor-review.md` handoff + previous draft + shared revision summary
 - **Editor:** shared revision summary + `buildEditorPreviousReviews()`
 - **Publisher:** shared revision summary only
 
