@@ -80,6 +80,7 @@ import { AgentRunner, separateThinking } from '../agents/runner.js';
 import { AgentMemory } from '../agents/memory.js';
 import { PipelineAuditor } from '../pipeline/audit.js';
 import { CopilotProvider } from '../llm/providers/copilot.js';
+import { CopilotCLIProvider } from '../llm/providers/copilot-cli.js';
 import { MockProvider } from '../llm/providers/mock.js';
 import { LMStudioProvider } from '../llm/providers/lmstudio.js';
 import { EventBus, registerSSE } from '../dashboard/sse.js';
@@ -2299,6 +2300,18 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       } catch { /* LM Studio may not be running yet */ }
       gateway.registerProvider(lmstudio);
       console.log(`LM Studio provider registered (${lmstudio.baseUrl}, model: ${lmstudio.defaultModel})`);
+    } else if (process.env['LLM_PROVIDER'] === 'copilot-cli') {
+      const cliProvider = new CopilotCLIProvider({
+        defaultModel: process.env['COPILOT_MODEL'] ?? undefined,
+        copilotPath: process.env['COPILOT_PATH'] ?? undefined,
+      });
+      try {
+        const version = await cliProvider.verify();
+        gateway.registerProvider(cliProvider);
+        console.log(`Copilot CLI provider registered (${version}, model: ${cliProvider['defaultModel']})`);
+      } catch (err) {
+        console.log(`Copilot CLI not available: ${err instanceof Error ? err.message : err}`);
+      }
     } else {
       try {
         const copilot = new CopilotProvider();
