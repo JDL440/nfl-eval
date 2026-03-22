@@ -1,4 +1,4 @@
 # Now — NFL Lab
 
-**Focus:** Ralph queue reconciliation — restored #92 to For Review after verifying PR #97 still honors adv-stage context config; #93 remains Pending User awaiting PR selection among competing fixes.
+**Focus:** Ralph queue reconciliation — #92 is back in For Review, #102 was cleaned up and moved through the queue, and #93/#84 remain blocked pending the next human action.
 **Last updated:** 2026-03-22T22:00:00Z
