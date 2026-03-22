@@ -976,8 +976,16 @@ export async function autoAdvanceArticle(
           revisionCount++;
           if (revisionCount <= maxRevisions) {
             try {
+              // Preserve editor feedback so the writer can address it on re-draft
+              const editorFeedback = repo.artifacts.get(articleId, 'editor-review.md');
+
               engine.regress(articleId, current.current_stage as Stage, 4 as Stage, 'auto-advance', `Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`);
               repo.clearArtifactsAfterStage(articleId, 4);
+
+              // Restore editor review — writeDraft context includes editor-review.md
+              if (editorFeedback) {
+                repo.artifacts.put(articleId, 'editor-review.md', editorFeedback);
+              }
 
               const regressStep: AutoAdvanceStep = {
                 type: 'regress',
@@ -1020,8 +1028,16 @@ export async function autoAdvanceArticle(
         revisionCount++;
         if (revisionCount <= maxRevisions) {
           try {
+            // Preserve editor feedback so the writer can address it on re-draft
+            const editorFeedback = repo.artifacts.get(articleId, 'editor-review.md');
+
             engine.regress(articleId, current.current_stage as Stage, 4 as Stage, 'auto-advance', `Editor requested revisions (attempt ${revisionCount}/${maxRevisions})`);
             repo.clearArtifactsAfterStage(articleId, 4);
+
+            // Restore editor review — writeDraft context includes editor-review.md
+            if (editorFeedback) {
+              repo.artifacts.put(articleId, 'editor-review.md', editorFeedback);
+            }
 
             const regressStep: AutoAdvanceStep = {
               type: 'regress',
@@ -1042,8 +1058,9 @@ export async function autoAdvanceArticle(
         }
       }
 
-      // Auto-generate images after draft is written (stage 5 reached)
-      if (current.current_stage === 5 && generateImages) {
+      // Auto-generate images after editor approves (stage 6 reached)
+      // Placed here instead of stage 5 to avoid regenerating on every revision cycle
+      if (current.current_stage === 6 && generateImages) {
         await generateImages(articleId);
       }
     } else {
