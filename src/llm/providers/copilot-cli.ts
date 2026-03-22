@@ -16,7 +16,7 @@
  *   - Output is plain text (may include markdown formatting)
  */
 
-import { execFile, type ExecFileException } from 'node:child_process';
+import { exec, execFile, type ExecFileException } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -96,8 +96,12 @@ export interface CopilotCLIProviderOptions {
 // Provider
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TIMEOUT = 120_000; // 2 minutes
+const DEFAULT_TIMEOUT = 300_000; // 5 minutes — Opus with long context needs room
 const DEFAULT_MODEL = 'claude-sonnet-4';
+
+// Node's execFile on Windows uses CreateProcessW (32K char limit), not cmd.exe
+// (8K limit). We only fall back to file-based approach for truly huge prompts.
+const EXEC_FILE_CHAR_LIMIT = 30_000;
 
 export class CopilotCLIProvider implements LLMProvider {
   readonly id = 'copilot-cli';
@@ -156,14 +160,14 @@ export class CopilotCLIProvider implements LLMProvider {
     const prompt = this.buildPrompt(request);
 
     // ── Decide delivery method ───────────────────────────────────────────
-    // Short prompts (<7500 chars) go via -p flag.
-    // Longer prompts go via a temp file piped to stdin to avoid shell
-    // argument length limits (Windows cmd limit is ~8191 chars).
-    const useStdin = prompt.length > 7500;
+    // Node's execFile uses CreateProcessW on Windows (~32K char limit),
+    // NOT cmd.exe (~8K limit). Use -p flag for most prompts. Only fall
+    // back to file-based approach for truly massive prompts.
+    const useFile = prompt.length > EXEC_FILE_CHAR_LIMIT;
 
     let output: string;
-    if (useStdin) {
-      output = await this.execViaStdin(prompt, model);
+    if (useFile) {
+      output = await this.execViaFile(prompt, model);
     } else {
       output = await this.execViaFlag(prompt, model);
     }
@@ -233,9 +237,8 @@ export class CopilotCLIProvider implements LLMProvider {
     return this.exec(args);
   }
 
-  /** Run copilot with prompt via stdin (for longer prompts). */
-  private async execViaStdin(prompt: string, model: string): Promise<string> {
-    // Write prompt to a temp file and pipe it — avoids shell escaping issues
+  /** Run copilot with prompt via temp file (for very long prompts). */
+  private async execViaFile(prompt: string, model: string): Promise<string> {
     const tmpDir = join(tmpdir(), 'nfl-lab-copilot');
     if (!existsSync(tmpDir)) {
       await mkdir(tmpDir, { recursive: true });
@@ -245,11 +248,13 @@ export class CopilotCLIProvider implements LLMProvider {
     try {
       await writeFile(tmpFile, prompt, 'utf-8');
 
-      // Use shell redirection to pipe the file content to stdin
-      const args = ['-s', '--no-ask-user', '--model', model, ...this.extraFlags];
-      return await this.execWithStdin(args, prompt);
+      // Use shell to read the file into -p: copilot -p @file or via
+      // Get-Content pipe. The safest cross-platform approach is to use
+      // the shell to pass the file contents.
+      return await this.execShell(
+        `"${this.copilotPath}" -s --no-ask-user --model "${model}" ${this.extraFlags.map(f => `"${f}"`).join(' ')} < "${tmpFile}"`,
+      );
     } finally {
-      // Clean up temp file
       try {
         await unlink(tmpFile);
       } catch {
@@ -290,12 +295,11 @@ export class CopilotCLIProvider implements LLMProvider {
     });
   }
 
-  /** Execute copilot CLI with data piped to stdin. */
-  private execWithStdin(args: string[], stdinData: string): Promise<string> {
+  /** Execute a shell command string (for file-based stdin redirection). */
+  private execShell(command: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = execFile(
-        this.copilotPath,
-        args,
+      exec(
+        command,
         {
           timeout: this.timeoutMs,
           maxBuffer: 10 * 1024 * 1024,
@@ -318,12 +322,6 @@ export class CopilotCLIProvider implements LLMProvider {
           resolve(stdout);
         },
       );
-
-      // Write prompt data to stdin and close
-      if (child.stdin) {
-        child.stdin.write(stdinData);
-        child.stdin.end();
-      }
     });
   }
 }

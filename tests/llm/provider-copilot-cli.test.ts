@@ -213,30 +213,18 @@ describe('CopilotCLIProvider', () => {
       expect(args[modelIdx + 1]).toBe('gpt-5.4');
     });
 
-    it('uses stdin for very long prompts (>7500 chars)', async () => {
-      // For stdin delivery, execFile is called with stdin writing
-      let stdinData = '';
-      mockExecFile.mockImplementation(
-        ((_file: string, _args: string[], _opts: unknown, cb: Function) => {
-          const mockStdin = {
-            write: (data: string) => { stdinData = data; },
-            end: () => {},
-          };
-          process.nextTick(() => cb(null, 'Response from stdin', ''));
-          return { stdin: mockStdin } as any;
-        }) as any,
-      );
-
+    it('uses -p flag for prompts under 30K chars (execFile limit)', async () => {
+      stubExecFile('Long prompt response');
       const provider = new CopilotCLIProvider();
       const longContent = 'A'.repeat(8000);
       await provider.chat(
         req({ messages: [{ role: 'user', content: longContent }] }),
       );
 
-      // Should NOT have -p flag (stdin mode)
+      // Should still use -p flag — execFile (CreateProcessW) supports ~32K
       const args = (mockExecFile.mock.calls[0] as any[])[1] as string[];
-      expect(args).not.toContain('-p');
-      expect(stdinData).toContain(longContent);
+      expect(args).toContain('-p');
+      expect(args[args.indexOf('-p') + 1]).toContain(longContent);
     });
   });
 
