@@ -20,6 +20,15 @@
 - Dashboard preview (`src/dashboard/views/preview.ts`) has no OG meta tag rendering — opportunity to add social preview card to Publisher view
 - Platform cropping varies: Twitter/X crops to 2:1, LinkedIn to 1.91:1 — center-weight critical visual elements in cover images
 - Substack API may support a separate `cover_image` field in draft payload (not yet implemented in our SubstackService)
+- LLM observability is split across article detail (`src/dashboard/views/article.ts`), run history (`src/dashboard/views/runs.ts`), config (`src/dashboard/views/config.ts`), and agent/artifact views (`src/dashboard/views/agents.ts`); the artifact viewer is the main place where persisted thinking traces are exposed
+- Article detail correlates article/stage/agent/provider/model/token data through stage runs, usage events, audit log, and SSE-driven live partials; raw request/response envelopes and retry internals are not shown in the dashboard
+- `src/pipeline/actions.ts` persists agent thinking as `*.thinking.md` artifacts with agent/model headers, while `src/dashboard/server.ts` only surfaces cleaned article bodies in preview/publish flows
+- Issue #93 token-usage path depends on persisted `usage_events`, not live recomputation: `src/llm/providers/copilot-cli.ts` estimates usage, `src/agents/runner.ts` maps it to `tokensUsed`, `src/pipeline/actions.ts` records it, and article surfaces in `src/dashboard/server.ts` / `src/dashboard/views/article.ts` must hydrate the full article history so older `copilot-cli` rows are not clipped out of detail or SSE sidebar views.
+- Issue #93 trace result: Copilot CLI usage is created in `src/llm/providers/copilot-cli.ts`, mapped by `src/agents/runner.ts`, and persisted by `src/pipeline/actions.ts`; the article-page gap came from `Repository.getUsageEvents()` defaulting to the newest 100 rows
+- Article detail and live-sidebar usage panels (`src/dashboard/server.ts` → `src/dashboard/views/article.ts`) should read full per-article usage history so early-provider rows like `copilot-cli` idea-generation calls are not dropped after heavy later activity
+- Current local candidate for issue #93 changes `src/db/repository.ts` so `getUsageEvents(articleId)` returns full history by default, while article detail (`src/dashboard/server.ts:348`) and live sidebar (`src/dashboard/server.ts:1164-1167`) continue to reuse that shared query path.
+- The same local diff also contains an unrelated artifact-thinking UX change: `src/dashboard/server.ts:1119-1123` now loads companion `*.thinking.md` files and `src/dashboard/views/article.ts:401-433` prefers persisted thinking traces over inline tags in the main artifact view.
+- Focused verification: `tests/db/repository.test.ts`, `tests/dashboard/server.test.ts`, and `tests/dashboard/wave2.test.ts` all pass locally, including coverage that proves the issue-93 behavior is a repository/query cap problem rather than missing persistence.
 
 ### 2026-03-22: Issue #70 Investigation Outcome
 
@@ -27,4 +36,14 @@
 
 **Technical findings:** Substack API may support separate \cover_image\ field (opportunity for future enhancement).
 
+### 2026-03-22: Issue #93 Outcome
 
+**Status:** Fixed in repository hydration path.
+
+**Technical findings:** Copilot CLI estimated usage was already being created in `src/llm/providers/copilot-cli.ts` and persisted through `recordAgentUsage()` into `usage_events`. The article detail page and HTMX live sidebar were losing older Copilot CLI rows because `Repository.getUsageEvents()` silently defaulted to `LIMIT 100`, so later stage activity could push early Copilot usage out of the dashboard query window.
+
+
+### 2026-03-22T19:02:18Z: Issue #93 token usage history fix
+
+- Merged the decision inbox entry for the article usage panel gap into `.squad/decisions.md`.
+- Recorded that the repository default must preserve full per-article usage history so early Copilot CLI rows stay visible in article detail panels.

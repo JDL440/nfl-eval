@@ -57,3 +57,37 @@
 - Decision inbox merge completed for the static knowledge-asset pass, and older decision history moved to the archive file.
 - The planning record now emphasizes the proof-of-concept content layer plus validation/docs, not runner or pipeline integration.
 - Continue treating runtime injection and refresh automation as deferred follow-up work.
+
+### 2026-03-22T19-10-00Z: Issue #85 structure validation completion
+- Standardized the glossary seeds on a shared YAML shape with explicit `id`, `glossary`, freshness metadata, and entry-level source refs.
+- Standardized the proof-of-concept team sheets on YAML frontmatter plus fixed markdown headings (`Durable snapshot`, `Identity anchors`, `Roster-building and cap framing`, `Source guidance`).
+- Vitest coverage now parses the glossary YAML directly and validates team-sheet frontmatter/body structure without touching runtime prompt assembly.
+
+### 2026-03-22: Debug visibility restore
+
+**What:** Restored the collapsible artifact thinking/debug section on article artifact views by loading companion `*.thinking.md` artifacts when the main `*.md` artifact is rendered.
+
+**Why:** The historical inline `<think>` collapse UI survived, but Issue #88-era pipeline changes persist thinking separately via `writeAgentResult()` in `src/pipeline/actions.ts`, so normal artifact views stopped showing the debug section unless you clicked the dedicated 💭 tab.
+
+**Key implementation choice:** Treat persisted `*.thinking.md` files as the authoritative debug source for the main artifact view, fall back to inline token extraction only for legacy artifacts, and avoid conversation logs because they store cleaned assistant outputs rather than full thinking traces.
+
+**Validation:** `npm run v2:build` passed, and targeted Vitest coverage passed for `tests/dashboard/wave2.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/extract-thinking.test.ts`, and `tests/pipeline/write-agent-result.test.ts`.
+
+### 2026-03-22: LLM observability audit
+
+- Provider request construction is centralized in `src/agents/runner.ts` and `src/pipeline/actions.ts`, while normalization happens in `src/llm/gateway.ts` and each provider under `src/llm/providers/`.
+- Current persistence captures token/cost summaries via `usage_events`, per-article turns via `article_conversations`, and revision notes via `revision_summaries`; it does not store full request envelopes, raw provider payloads, retry metadata, finish reasons, temperatures, max token settings, or structured-output parse failures.
+- Article/stage/agent identity flows through `agentName`, `stageKey`, `articleContext`, `surface`, `provider`, and `modelOrTool`; the main gap is that this metadata is not linked to the full request/response body for postmortems.
+- The existing #88/#92 context means reasoning visibility is split: persisted `*.thinking.md` files solve artifact-level debug visibility, but they do not provide request-level transparency or instruction-isolation tracing.
+
+- **Issue #93 diagnosis:** The Copilot CLI provider already returns estimated `usage` in `src/llm/providers/copilot-cli.ts`, `AgentRunner.run()` maps that to `tokensUsed` in `src/agents/runner.ts`, and `recordAgentUsage()` persists rows only when `tokensUsed` exists in `src/pipeline/actions.ts`. The article-page bug was the default 100-row cap in `Repository.getUsageEvents()` (`src/db/repository.ts`) hiding older `copilot-cli` rows after many later events; `tests/pipeline/actions.test.ts` still intentionally proves that `tokensUsed: undefined` writes no `usage_events` row, so that seam is separate from the #93 rendering failure.
+
+
+- Follow-up review confirmed the persisted `*.thinking.md` companion file is the canonical source for the debug section; conversation history stores cleaned outputs and should not be used for this UI.
+- Keep inline `<think>` / `<reasoning>` parsing only as a legacy fallback for older artifacts.
+
+### 2026-03-22: Issue #93 implementation validation
+
+- Kept the fix at the repository seam: `Repository.getUsageEvents(articleId)` now returns full history by default, while explicit callers can still pass a limit for bounded reads.
+- Focused regression coverage lives in `tests/db/repository.test.ts` and `tests/dashboard/server.test.ts`, with `tests/pipeline/actions.test.ts` still guarding the separate "no tokens, no row" persistence behavior.
+- Validation for the issue used `npm run v2:test -- tests/db/repository.test.ts tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts tests/llm/provider-copilot-cli.test.ts`, `npm run v2:test -- tests/pipeline/actions.test.ts`, and `npm run v2:build`.
