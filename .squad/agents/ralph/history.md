@@ -18,3 +18,12 @@
 - 2026-03-22: Verified PRs should be merged as soon as they are reviewed, and any extra work discovered during the merge should become a tracked issue immediately.
 - 2026-03-22: When board state reflects stale momentum instead of the next real action, Ralph should move the item to `In Progress` or `Pending User` so the project board stays aligned with current blockers.
 - 2026-03-22: For issue #93, keep a single canonical `main`-based PR and treat stacked or reused branches as retarget/rebase/close candidates; the board should not advance until that choice is explicit.
+### 2026-03-22T14:46:42Z: Ralph queue reconciliation pass
+- Reconciled queue state for #92 and #102, including the reported comment, board move to For Review, label cleanup, project add, and board move on #102.
+- Confirmed #93 and #84 remain blockers, so the board should keep them in a blocked / human-decision state rather than review-ready.
+- Refreshed Ralph's current-focus note to match the active queue picture after the GitHub sweep.
+
+### 2026-03-22T21:47:24Z: Ralph scribe pass
+- Recorded the triage cleanup pass for #93, including the canonical PR-topology decision and the kept-clean decisions inbox.
+- Logged the pass in the orchestration and work-loop trails so future reconciliation has a durable audit line.
+
