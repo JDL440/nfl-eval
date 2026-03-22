@@ -55,8 +55,8 @@
 ### 2026-03-22: Issue #85 content pass completed
 
 - Implemented the Phase 1–3 content layer using the user-requested paths: glossary YAML under `src/config/defaults/glossaries/` and team sheets under `content/data/team-sheets/`.
-- Standardized glossary files around `schema_version`, glossary metadata, section blocks, and term-level fields (`definition`, `why_it_matters`, `when_to_use`, optional thresholds, cautions, related_terms).
-- Standardized team sheets around six stable sections: Snapshot, Team Identity, Offensive Identity, Defensive Identity, Roster Construction Signals, and Writing Cues.
+- Standardized glossary files around a flat schema: `schema_version`, glossary id, description, entry field contract, refresh guidance, and per-term freshness/source fields.
+- Standardized team sheets around frontmatter metadata plus durable body sections: Durable snapshot, Identity anchors (Offense/Defense), Roster-building and cap framing, and Source guidance.
 - Updated `docs/knowledge-system.md` to distinguish the existing runtime prompt system from the new structured KB defaults and to state clearly that Phases 4–5 remain deferred.
 - Added validation coverage focused on asset presence and format integrity rather than runtime injection behavior.
 
@@ -66,3 +66,8 @@
   - Merged the POC structure decision into `.squad/decisions.md` and removed the inbox file.
   - Canonical phase 1–3 asset layout stays under `src/config/defaults/`, with lowercase team sheet stems (`sea.md`, `buf.md`, `kc.md`, `wsh.md`) and per-article `team-sheet.md` artifacts.
   - This keeps the feature aligned with seeded defaults, keeps `content/articles/{slug}/` reserved for runtime article artifacts, and leaves refresh automation for the deferred follow-up issue.
+
+### 2026-03-22T18-23-26Z: Issue #85 decision sync
+- Inbox decisions were merged into `.squad/decisions.md`; the older pre-2026 decision history was archived to `.squad/decisions-archive.md`.
+- The canonical Phase 1-3 asset shape remains the static glossary + team-sheet content layer, with runtime integration still deferred.
+- Keep future planning aligned to docs/testing scope unless the follow-up runtime issue explicitly expands scope.

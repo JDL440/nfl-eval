@@ -53,3 +53,7 @@
 - Writer deduplicates editor feedback recording (checks last editor turn content)
 - 1336 total tests passing (21 new)
 
+### 2026-03-22T18-23-26Z: Issue #85 decision sync
+- Decision inbox merge completed for the static knowledge-asset pass, and older decision history moved to the archive file.
+- The planning record now emphasizes the proof-of-concept content layer plus validation/docs, not runner or pipeline integration.
+- Continue treating runtime injection and refresh automation as deferred follow-up work.

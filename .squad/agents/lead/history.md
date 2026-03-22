@@ -87,4 +87,7 @@
 
 **Pattern to reuse:** When a multi-phase architecture issue is intentionally narrowed midstream, keep the active issue tightly scoped to the approved phases, create a separate linked backlog issue for the deferred phases, and leave a short TL;DR comment on the parent issue so future implementers do not blur the boundaries.
 
-
+### 2026-03-22T18-23-26Z: Issue #85 decision sync
+- Scribe completed the decision inbox merge, archived old decision history, and logged the session/orchestration notes.
+- The active #85 record now stays centered on static KB assets and their validation surface.
+- Deferred runtime integration remains outside the current scope boundary.
