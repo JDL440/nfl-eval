@@ -1,9 +1,12 @@
 /**
  * roster-context.ts — Builds a concise current-roster context string for a
- * team by querying nflverse snap count and player stat data.
+ * team by querying the **official nflverse roster** (primary) supplemented
+ * with snap count data for usage context.
  *
- * This injects *ground-truth* roster data into agent prompts so LLMs don't
- * rely on potentially stale training data for player-team assignments.
+ * The official roster includes all players (starters, backups, IR, practice
+ * squad) — unlike snap counts which only show who actually played.  This
+ * catches backup QBs, recent signings, and traded-away players that snap
+ * counts alone would miss.
  *
  * Called at key pipeline stages: idea→prompt, factcheck, editor review.
  */
@@ -16,6 +19,19 @@ import { join } from 'node:path';
 // Types
 // ---------------------------------------------------------------------------
 
+interface RosterPlayer {
+  full_name: string;
+  position: string;
+  depth_chart_position?: string;
+  status: string;
+  status_label?: string;
+  jersey_number?: number;
+  years_exp?: number;
+  team: string;
+  season: number;
+  roster_week?: number;
+}
+
 interface SnapPlayer {
   player: string;
   position: string;
@@ -25,28 +41,10 @@ interface SnapPlayer {
   defense_pct?: number;
 }
 
-interface PlayerStat {
-  player_display_name?: string;
-  player_name?: string;
-  position?: string;
-  completions?: number;
-  attempts?: number;
-  passing_yards?: number;
-  passing_tds?: number;
-  interceptions?: number;
-  rushing_yards?: number;
-  rushing_tds?: number;
-  receptions?: number;
-  receiving_yards?: number;
-  receiving_tds?: number;
-  targets?: number;
-}
-
 // ---------------------------------------------------------------------------
 // Script paths (relative to repo root)
 // ---------------------------------------------------------------------------
 
-// Fallback: use cwd-based approach for CJS compatibility
 function findScriptDir(): string {
   const candidates = [
     join(process.cwd(), 'content', 'data'),
@@ -82,6 +80,21 @@ function runPythonQuery(scriptName: string, args: string[]): string | null {
   }
 }
 
+/** Query the official nflverse roster for a team. */
+function queryRoster(team: string, season: number): RosterPlayer[] {
+  const raw = runPythonQuery('query_rosters.py', [
+    '--team', team,
+    '--season', String(season),
+  ]);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as RosterPlayer[];
+  } catch {
+    return [];
+  }
+}
+
+/** Query snap counts for supplementary usage data. */
 function querySnaps(team: string, season: number, group: string, top: number): SnapPlayer[] {
   const raw = runPythonQuery('query_snap_usage.py', [
     '--team', team,
@@ -97,21 +110,6 @@ function querySnaps(team: string, season: number, group: string, top: number): S
   }
 }
 
-function queryPlayerStats(player: string, season: number): PlayerStat | null {
-  const raw = runPythonQuery('query_player_epa.py', [
-    '--player', player,
-    '--season', String(season),
-  ]);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    // Could be array or object depending on script
-    return Array.isArray(parsed) ? parsed[0] ?? null : parsed;
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Context builder
 // ---------------------------------------------------------------------------
@@ -119,95 +117,172 @@ function queryPlayerStats(player: string, season: number): PlayerStat | null {
 /** Current NFL season — offseason articles reference the previous season's data. */
 function currentSeason(): number {
   const now = new Date();
-  // NFL season spans Sep-Feb. If we're in Jan-Aug, use previous year's season.
   return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
+}
+
+/** Position display order */
+const OFF_POS_ORDER = ['QB', 'RB', 'FB', 'WR', 'TE', 'T', 'G', 'C', 'OL'];
+const DEF_POS_ORDER = ['DE', 'DT', 'NT', 'DL', 'OLB', 'ILB', 'MLB', 'LB', 'CB', 'SS', 'FS', 'S', 'DB'];
+const ST_POS_ORDER = ['K', 'P', 'LS'];
+
+function isOffensivePos(pos: string): boolean {
+  return OFF_POS_ORDER.includes(pos);
+}
+function isDefensivePos(pos: string): boolean {
+  return DEF_POS_ORDER.includes(pos);
 }
 
 /**
  * Build a concise roster context string for a team.
  * Returns null if data isn't available (graceful degradation).
+ *
+ * Uses the official nflverse roster (primary) + snap counts (supplementary).
  */
 export function buildTeamRosterContext(team: string): string | null {
   const season = currentSeason();
   const teamUpper = team.toUpperCase();
 
-  // Fetch offensive and defensive starters by snap counts
-  const offense = querySnaps(teamUpper, season, 'offense', 15);
-  const defense = querySnaps(teamUpper, season, 'defense', 15);
+  // Primary: official roster
+  const roster = queryRoster(teamUpper, season);
 
-  if (offense.length === 0 && defense.length === 0) {
-    return null; // No data available
+  // Supplementary: snap counts for usage context
+  const offSnaps = querySnaps(teamUpper, season, 'offense', 20);
+  const defSnaps = querySnaps(teamUpper, season, 'defense', 20);
+
+  // Build snap lookup: player name → pct
+  const snapPct = new Map<string, number>();
+  for (const s of offSnaps) {
+    if (s.offense_pct != null) snapPct.set(s.player, s.offense_pct);
+  }
+  for (const s of defSnaps) {
+    if (s.defense_pct != null) snapPct.set(s.player, s.defense_pct);
   }
 
+  // Fall back to snap-only if roster query unavailable
+  if (roster.length === 0 && offSnaps.length === 0 && defSnaps.length === 0) {
+    return null;
+  }
+
+  // If official roster is empty but snap data exists, use legacy snap-only format
+  if (roster.length === 0) {
+    return buildSnapOnlyContext(teamUpper, season, offSnaps, defSnaps);
+  }
+
+  const rosterWeek = roster[0]?.roster_week ?? '?';
   const parts: string[] = [];
-  parts.push(`## Current ${teamUpper} Roster Context (${season} Season Data)`);
+  parts.push(`## Current ${teamUpper} Official Roster (${season} Season, Week ${rosterWeek})`);
   parts.push('');
   parts.push('> ⚠️ USE THIS DATA as ground truth for player-team assignments.');
   parts.push('> Do NOT rely on training data — rosters change frequently via trades, cuts, and signings.');
+  parts.push('> Players NOT listed here are NOT on this team.');
   parts.push('');
 
-  // Offense
-  if (offense.length > 0) {
-    parts.push('### Offensive Starters (by snap count)');
-    // Group by position
-    const byPos = new Map<string, SnapPlayer[]>();
-    for (const p of offense) {
-      const pos = p.position || 'UNK';
-      if (!byPos.has(pos)) byPos.set(pos, []);
-      byPos.get(pos)!.push(p);
-    }
+  // Group by position
+  const byPos = new Map<string, RosterPlayer[]>();
+  for (const p of roster) {
+    const pos = p.position || 'UNK';
+    if (!byPos.has(pos)) byPos.set(pos, []);
+    byPos.get(pos)!.push(p);
+  }
 
-    const posOrder = ['QB', 'RB', 'WR', 'TE', 'T', 'G', 'C', 'OL', 'FB'];
-    for (const pos of posOrder) {
-      const players = byPos.get(pos);
-      if (!players) continue;
-      const lines = players.map(p =>
-        `- **${p.player}** (${pos}) — ${p.offense_pct?.toFixed(0) ?? '?'}% snaps`
-      );
-      parts.push(...lines);
-    }
-    // Any remaining positions
-    for (const [pos, players] of byPos) {
-      if (posOrder.includes(pos)) continue;
-      const lines = players.map(p =>
-        `- **${p.player}** (${pos}) — ${p.offense_pct?.toFixed(0) ?? '?'}% snaps`
-      );
-      parts.push(...lines);
+  // Offense
+  const offPositions = OFF_POS_ORDER.filter(p => byPos.has(p));
+  if (offPositions.length > 0) {
+    parts.push('### Offense');
+    for (const pos of offPositions) {
+      const players = byPos.get(pos)!;
+      for (const p of players) {
+        parts.push(formatRosterLine(p, snapPct));
+      }
     }
     parts.push('');
   }
 
   // Defense
-  if (defense.length > 0) {
-    parts.push('### Defensive Starters (by snap count)');
-    const byPos = new Map<string, SnapPlayer[]>();
-    for (const p of defense) {
-      const pos = p.position || 'UNK';
-      if (!byPos.has(pos)) byPos.set(pos, []);
-      byPos.get(pos)!.push(p);
-    }
-
-    const posOrder = ['DE', 'DT', 'OLB', 'ILB', 'LB', 'CB', 'SS', 'FS', 'S', 'DB'];
-    for (const pos of posOrder) {
-      const players = byPos.get(pos);
-      if (!players) continue;
-      const lines = players.map(p =>
-        `- **${p.player}** (${pos}) — ${p.defense_pct?.toFixed(0) ?? '?'}% snaps`
-      );
-      parts.push(...lines);
-    }
-    for (const [pos, players] of byPos) {
-      if (posOrder.includes(pos)) continue;
-      const lines = players.map(p =>
-        `- **${p.player}** (${pos}) — ${p.defense_pct?.toFixed(0) ?? '?'}% snaps`
-      );
-      parts.push(...lines);
+  const defPositions = DEF_POS_ORDER.filter(p => byPos.has(p));
+  if (defPositions.length > 0) {
+    parts.push('### Defense');
+    for (const pos of defPositions) {
+      const players = byPos.get(pos)!;
+      for (const p of players) {
+        parts.push(formatRosterLine(p, snapPct));
+      }
     }
     parts.push('');
   }
 
-  parts.push(`*Data source: nflverse ${season} season. Snap counts reflect actual game participation.*`);
+  // Special teams
+  const stPositions = ST_POS_ORDER.filter(p => byPos.has(p));
+  if (stPositions.length > 0) {
+    parts.push('### Special Teams');
+    for (const pos of stPositions) {
+      const players = byPos.get(pos)!;
+      for (const p of players) {
+        parts.push(formatRosterLine(p, snapPct));
+      }
+    }
+    parts.push('');
+  }
 
+  // Any remaining positions not in the predefined orders
+  const allKnown = new Set([...OFF_POS_ORDER, ...DEF_POS_ORDER, ...ST_POS_ORDER]);
+  const otherPositions = [...byPos.keys()].filter(p => !allKnown.has(p));
+  if (otherPositions.length > 0) {
+    parts.push('### Other');
+    for (const pos of otherPositions) {
+      const players = byPos.get(pos)!;
+      for (const p of players) {
+        parts.push(formatRosterLine(p, snapPct));
+      }
+    }
+    parts.push('');
+  }
+
+  parts.push(`*Data source: nflverse official roster (week ${rosterWeek}) + snap counts (${season} season).*`);
+  parts.push('*Official roster is authoritative for who is on the team. Snap %% shows game usage.*');
+
+  return parts.join('\n');
+}
+
+/** Format a single roster line with optional snap context. */
+function formatRosterLine(p: RosterPlayer, snapPct: Map<string, number>): string {
+  const pos = p.depth_chart_position || p.position || '?';
+  const status = p.status === 'ACT' ? '' : ` [${p.status_label || p.status}]`;
+  const pct = snapPct.get(p.full_name);
+  const snapInfo = pct != null ? ` — ${pct.toFixed(0)}% snaps` : '';
+  return `- **${p.full_name}** (${pos})${status}${snapInfo}`;
+}
+
+/** Legacy fallback: build context from snap counts only when roster is unavailable. */
+function buildSnapOnlyContext(
+  teamUpper: string, season: number,
+  offense: SnapPlayer[], defense: SnapPlayer[],
+): string {
+  const parts: string[] = [];
+  parts.push(`## Current ${teamUpper} Roster Context (${season} Season Data)`);
+  parts.push('');
+  parts.push('> ⚠️ USE THIS DATA as ground truth for player-team assignments.');
+  parts.push('> Do NOT rely on training data — rosters change frequently via trades, cuts, and signings.');
+  parts.push('> Note: This is snap-count data only — backups with 0 snaps may not appear.');
+  parts.push('');
+
+  if (offense.length > 0) {
+    parts.push('### Offensive Starters (by snap count)');
+    for (const p of offense) {
+      parts.push(`- **${p.player}** (${p.position}) — ${p.offense_pct?.toFixed(0) ?? '?'}% snaps`);
+    }
+    parts.push('');
+  }
+
+  if (defense.length > 0) {
+    parts.push('### Defensive Starters (by snap count)');
+    for (const p of defense) {
+      parts.push(`- **${p.player}** (${p.position}) — ${p.defense_pct?.toFixed(0) ?? '?'}% snaps`);
+    }
+    parts.push('');
+  }
+
+  parts.push(`*Data source: nflverse ${season} season snap counts only (official roster unavailable).*`);
   return parts.join('\n');
 }
 
