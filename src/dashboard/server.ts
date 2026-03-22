@@ -63,11 +63,13 @@ import {
   CHECKLIST_ITEMS,
 } from './views/publish.js';
 import { markdownToProseMirror } from '../services/prosemirror.js';
+import { markdownToHtml } from '../services/markdown.js';
 import { renderArticlePreview, parseImageManifest } from './views/preview.js';
 import type { SubstackService } from '../services/substack.js';
 import type { TwitterService } from '../services/twitter.js';
 import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
+import { buildTeamRosterContext } from '../pipeline/roster-context.js';
 import {
   CONTEXT_CONFIG,
   getArticleContextOverrides,
@@ -686,6 +688,9 @@ export function createApp(
         };
 
         // Use AgentRunner with Lead charter + idea-generation skill
+        // Inject roster context so the LLM doesn't reference stale player data
+        const rosterCtx = teams.length > 0 ? buildTeamRosterContext(teams[0]) : null;
+
         const task = [
           'Generate a structured article idea from the following prompt.',
           `\nTeam context: ${teamContext}`,
@@ -700,6 +705,7 @@ export function createApp(
           agentName: 'lead',
           task,
           skills: ['idea-generation'],
+          rosterContext: rosterCtx ?? undefined,
         });
 
         ideaContent = result.content;
@@ -924,6 +930,16 @@ export function createApp(
 
     return Array.from(new Set(combined)).sort();
   }
+
+  // ── Roster panel (htmx) ──────────────────────────────────────────────────
+  app.get('/htmx/roster/:team', (c) => {
+    const team = c.req.param('team').toUpperCase();
+    const rosterCtx = buildTeamRosterContext(team);
+    if (!rosterCtx) {
+      return c.html('<p class="empty-state">Roster data unavailable</p>');
+    }
+    return c.html(`<div class="roster-content" style="max-height:400px;overflow-y:auto;font-size:0.85rem;">${markdownToHtml(rosterCtx)}</div>`);
+  });
 
   app.get('/htmx/articles/:id/context-config', (c) => {
     const id = c.req.param('id');

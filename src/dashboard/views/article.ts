@@ -725,12 +725,33 @@ function renderAdvancedSection(article: Article, transitions: StageTransition[],
       <details class="advanced-section">
         <summary>⚙️ Advanced</summary>
         <div class="advanced-content">
+          ${renderRosterPanel(article)}
           ${renderAuditLog(transitions)}
           ${renderArticleMetadata(article, pinnedAgents)}
           ${renderContextConfigInner(article.id)}
         </div>
       </details>
     </section>`;
+}
+
+function renderRosterPanel(article: Article): string {
+  if (!article.primary_team) {
+    return `<div class="advanced-subsection">
+      <h3>🏈 Team Roster</h3>
+      <p class="empty-state">No primary team set</p>
+    </div>`;
+  }
+
+  return `
+    <div class="advanced-subsection">
+      <h3>🏈 Team Roster</h3>
+      <div id="roster-panel"
+        hx-get="/htmx/roster/${escapeHtml(article.primary_team)}"
+        hx-trigger="load"
+        hx-swap="innerHTML">
+        <p class="empty-state">Loading roster…</p>
+      </div>
+    </div>`;
 }
 
 function renderAuditLog(transitions: StageTransition[]): string {

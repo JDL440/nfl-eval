@@ -32,6 +32,7 @@ import {
     queryCombineProfileTool, handleQueryCombineProfile,
     queryPfrDefenseTool, handleQueryPfrDefense,
     queryHistoricalCompsTool, handleQueryHistoricalComps,
+    queryRostersTool, handleQueryRosters,
     refreshNflverseCacheTool, handleRefreshNflverseCache,
 } from "../.github/extensions/nflverse-query/tool.mjs";
 
@@ -223,6 +224,16 @@ server.registerTool(queryHistoricalCompsTool.name, {
         top: z.number().int().optional().describe(queryHistoricalCompsTool.parameters.properties.top.description),
     },
 }, async (args) => runWithNormalization(handleQueryHistoricalComps, args));
+
+server.registerTool(queryRostersTool.name, {
+    description: queryRostersTool.description,
+    inputSchema: {
+        team: z.string().optional().describe(queryRostersTool.parameters.properties.team.description),
+        player: z.string().optional().describe(queryRostersTool.parameters.properties.player.description),
+        season: z.number().int().describe(queryRostersTool.parameters.properties.season.description),
+        status: z.string().optional().describe(queryRostersTool.parameters.properties.status.description),
+    },
+}, async (args) => runWithNormalization(handleQueryRosters, args));
 
 server.registerTool(refreshNflverseCacheTool.name, {
     description: refreshNflverseCacheTool.description,

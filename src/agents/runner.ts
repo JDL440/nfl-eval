@@ -43,6 +43,8 @@ export interface AgentRunParams {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: 'text' | 'json';
+  /** Optional live roster context — injected into system prompt when provided. */
+  rosterContext?: string;
 }
 
 // Map agent names to model-policy stage keys so the correct model tier is used
@@ -269,11 +271,12 @@ export class AgentRunner {
       .sort();
   }
 
-  /** Compose a system prompt from charter sections, skills, and memories. */
+  /** Compose a system prompt from charter sections, skills, memories, and optional roster. */
   composeSystemPrompt(
     charter: AgentCharter,
     skills: AgentSkill[],
     memories: MemoryEntry[],
+    rosterContext?: string,
   ): string {
     const parts: string[] = [];
 
@@ -302,6 +305,11 @@ export class AgentRunner {
     if (memories.length > 0) {
       const memLines = memories.map((m) => `- [${m.category}] ${m.content}`);
       parts.push('## Relevant Context\n' + memLines.join('\n'));
+    }
+
+    // Roster context (live data)
+    if (rosterContext) {
+      parts.push('## Current Team Roster\n' + rosterContext);
     }
 
     // Boundaries
@@ -346,7 +354,7 @@ export class AgentRunner {
     const memories = this.memory.recall(agentName, { limit: 10 });
 
     // 4. Compose system prompt
-    const systemPrompt = this.composeSystemPrompt(charter, skills, memories);
+    const systemPrompt = this.composeSystemPrompt(charter, skills, memories, params.rosterContext);
 
     // 5. Build user message
     let userMessage = task;

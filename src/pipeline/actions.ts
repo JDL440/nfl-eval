@@ -15,7 +15,7 @@ import type { AppConfig } from '../config/index.js';
 import { extractVerdict } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ensureRosterContext } from './roster-context.js';
+import { ensureRosterContext, validatePlayerMentions } from './roster-context.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -378,6 +378,11 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const prompt = readArtifact(ctx.repo, articleId, 'discussion-prompt.md');
     const panel = readArtifact(ctx.repo, articleId, 'panel-composition.md');
 
+    // Inject roster context for panel discussion accuracy
+    const rosterCtx = article.primary_team
+      ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
+      : null;
+
     // Try to parse individual panelists for parallel execution
     const panelists = parsePanelComposition(panel);
 
@@ -385,15 +390,19 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       // Fallback: single-moderator approach when composition can't be parsed
       console.warn(`[runDiscussion] Could not parse panel-composition.md for '${articleId}', falling back to single-moderator`);
 
+      const contentParts = [`## Discussion Prompt\n${prompt}\n\n## Panel\n${panel}`];
+      if (rosterCtx) contentParts.push(`\n\n---\n\n${rosterCtx}`);
+
       const result = await ctx.runner.run({
         agentName: 'panel-moderator',
         task: 'Moderate the panel discussion and produce a summary.',
         skills: ['article-discussion'],
+        rosterContext: rosterCtx ?? undefined,
         articleContext: {
           slug: articleId,
           title: article.title,
           stage: article.current_stage,
-          content: `## Discussion Prompt\n${prompt}\n\n## Panel\n${panel}`,
+          content: contentParts.join(''),
         },
       });
 
@@ -402,13 +411,14 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       return { success: true, duration: Date.now() - start };
     }
 
-    // Run each panelist in parallel
+    // Run each panelist in parallel — each gets roster context in system prompt
     const panelResults = await Promise.all(
       panelists.map(async (panelist) => {
         try {
           const result = await ctx.runner.run({
             agentName: panelist.agentName,
             task: `You are participating in a panel discussion.\n\nYour assigned lane: ${panelist.role}\n\nDiscussion prompt:\n${prompt}\n\nProvide your expert analysis from your specific perspective. Be direct, cite specific data points, and don't hedge. If you disagree with conventional wisdom, say so.`,
+            rosterContext: rosterCtx ?? undefined,
             articleContext: {
               title: article.title,
               slug: articleId,
@@ -448,6 +458,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       agentName: 'panel-moderator',
       task: `Synthesize these panel contributions into a coherent discussion summary. Preserve disagreements and tension — don't smooth over conflicts.\n\n${individualContributions}`,
       skills: ['article-discussion'],
+      rosterContext: rosterCtx ?? undefined,
       articleContext: {
         title: article.title,
         slug: articleId,
@@ -596,10 +607,16 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     const content = gatherContext(ctx.repo, articleId, 'runPublisherPass', ctx.config);
 
+    // Inject roster context for publisher agent
+    const rosterCtx = article.primary_team
+      ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
+      : null;
+
     const result = await ctx.runner.run({
       agentName: 'publisher',
       task: 'Run the publisher pass to prepare the article for publication.',
       skills: ['publisher'],
+      rosterContext: rosterCtx ?? undefined,
       articleContext: {
         slug: articleId,
         title: article.title,
@@ -607,6 +624,23 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
         content,
       },
     });
+
+    // Run deterministic pre-publish player mention validation
+    if (article.primary_team) {
+      const draftContent = ctx.repo.artifacts.get(articleId, 'draft.md');
+      if (draftContent) {
+        const mentions = validatePlayerMentions(draftContent, article.primary_team);
+        const issues = mentions.filter(m => m.status !== 'confirmed');
+        if (issues.length > 0) {
+          const warnings = issues.map(m => {
+            const icon = m.status === 'wrong_team' ? '🔴' : '⚠️';
+            return `- ${icon} **${m.name}**: ${m.detail ?? m.status}`;
+          }).join('\n');
+          const validationArtifact = `## Pre-Publish Roster Validation\n\n${warnings}\n\n*${mentions.filter(m => m.status === 'confirmed').length} player names confirmed on roster.*`;
+          ctx.repo.artifacts.put(articleId, 'roster-validation.md', validationArtifact);
+        }
+      }
+    }
 
     writeAgentResult(ctx.repo, articleId, 'publisher-pass.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runPublisherPass', result);

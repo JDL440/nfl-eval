@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildTeamRosterContext, ensureRosterContext } from '../../src/pipeline/roster-context.js';
+import {
+  buildTeamRosterContext,
+  ensureRosterContext,
+  getRosterArtifactAgeDays,
+  validatePlayerMentions,
+  bootstrapRosterKnowledge,
+} from '../../src/pipeline/roster-context.js';
 import * as childProcess from 'node:child_process';
 
 // ---------------------------------------------------------------------------
@@ -245,6 +251,128 @@ describe('roster-context', () => {
 
       expect(result).toBeNull();
       expect(mockRepo.artifacts.put).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getRosterArtifactAgeDays', () => {
+    it('returns Infinity when artifact does not exist', () => {
+      const mockRepo = {
+        artifacts: {
+          get: vi.fn().mockReturnValue(null),
+        },
+      };
+      expect(getRosterArtifactAgeDays(mockRepo, 'test')).toBe(Infinity);
+    });
+
+    it('returns 0 when artifact exists but no getMeta', () => {
+      const mockRepo = {
+        artifacts: {
+          get: vi.fn().mockReturnValue('some roster data'),
+        },
+      };
+      expect(getRosterArtifactAgeDays(mockRepo, 'test')).toBe(0);
+    });
+
+    it('uses getMeta for actual age when available', () => {
+      const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+      const mockRepo = {
+        artifacts: {
+          get: vi.fn(),
+          getMeta: vi.fn().mockReturnValue({ updated_at: twoDaysAgo }),
+        },
+      };
+      const age = getRosterArtifactAgeDays(mockRepo, 'test');
+      expect(age).toBeGreaterThan(1.9);
+      expect(age).toBeLessThan(2.1);
+    });
+  });
+
+  describe('validatePlayerMentions', () => {
+    it('confirms players found on team roster', () => {
+      // Mock: roster query returns SEA roster, then no further lookups needed
+      mockAllThreeQueries(); // Pre-warm for buildTeamRosterContext if needed
+      mockExecFileSync.mockReturnValueOnce(ROSTER_DATA as any); // validatePlayerMentions roster query
+
+      const text = 'The **Sam Darnold** era begins. **Kenneth Walker III** leads the backfield.';
+      const results = validatePlayerMentions(text, 'SEA');
+
+      const confirmed = results.filter(r => r.status === 'confirmed');
+      expect(confirmed.length).toBe(2);
+      expect(confirmed.map(r => r.name)).toContain('Sam Darnold');
+      expect(confirmed.map(r => r.name)).toContain('Kenneth Walker III');
+    });
+
+    it('flags player on wrong team', () => {
+      // Roster for SEA doesn't include Geno Smith
+      mockExecFileSync.mockReturnValueOnce(ROSTER_DATA as any); // validatePlayerMentions roster query
+      // queryPlayerTeam lookup finds Geno on LV
+      mockExecFileSync.mockReturnValueOnce(JSON.stringify([
+        { full_name: 'Geno Smith', position: 'QB', team: 'LV', season: 2025 },
+      ]) as any);
+
+      const text = '**Geno Smith** under center gives the Seahawks...';
+      const results = validatePlayerMentions(text, 'SEA');
+
+      const wrongTeam = results.find(r => r.name === 'Geno Smith');
+      expect(wrongTeam).toBeDefined();
+      expect(wrongTeam!.status).toBe('wrong_team');
+      expect(wrongTeam!.rosterTeam).toBe('LV');
+    });
+
+    it('flags not-found player as not_found', () => {
+      mockExecFileSync.mockReturnValueOnce(ROSTER_DATA as any); // roster
+      mockExecFileSync.mockReturnValueOnce(JSON.stringify([]) as any); // player lookup empty
+
+      const text = '**John Fictitious** makes an impact.';
+      const results = validatePlayerMentions(text, 'SEA');
+
+      const notFound = results.find(r => r.name === 'John Fictitious');
+      expect(notFound).toBeDefined();
+      expect(notFound!.status).toBe('not_found');
+    });
+
+    it('returns empty when no roster data available', () => {
+      mockExecFileSync.mockImplementation(() => { throw new Error('no data'); });
+
+      const results = validatePlayerMentions('**Some Player** does things.', 'SEA');
+      expect(results).toEqual([]);
+    });
+
+    it('detects position-annotated player names', () => {
+      mockExecFileSync.mockReturnValueOnce(ROSTER_DATA as any); // roster
+
+      const text = 'Sam Darnold (QB) is the starter.';
+      const results = validatePlayerMentions(text, 'SEA');
+
+      expect(results.some(r => r.name === 'Sam Darnold' && r.status === 'confirmed')).toBe(true);
+    });
+  });
+
+  describe('bootstrapRosterKnowledge', () => {
+    it('stores roster summaries for each team and agent', () => {
+      // Mock enough data for one team
+      mockAllThreeQueries();
+
+      const storeFn = vi.fn().mockReturnValue(1);
+      const mockMemory = { store: storeFn };
+
+      const count = bootstrapRosterKnowledge(mockMemory, ['SEA'], ['lead', 'analytics']);
+
+      expect(count).toBe(1);
+      expect(storeFn).toHaveBeenCalledTimes(2); // one per agent
+      expect(storeFn).toHaveBeenCalledWith(expect.objectContaining({
+        category: 'domain_knowledge',
+        sourceSession: 'roster_bootstrap',
+      }));
+    });
+
+    it('returns 0 when no data available', () => {
+      mockExecFileSync.mockImplementation(() => { throw new Error('no data'); });
+
+      const mockMemory = { store: vi.fn() };
+      const count = bootstrapRosterKnowledge(mockMemory, ['SEA']);
+      expect(count).toBe(0);
+      expect(mockMemory.store).not.toHaveBeenCalled();
     });
   });
 });

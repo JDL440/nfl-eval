@@ -11,12 +11,14 @@ import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Repository } from '../db/repository.js';
 import type { PipelineEngine } from './engine.js';
 import { autoAdvanceArticle, type ActionContext } from './actions.js';
+import { ensureRosterContext, getRosterArtifactAgeDays } from './roster-context.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
 export interface SchedulerConfig {
   maxConcurrent?: number;   // Max articles to process at once (default 5)
   dryRun?: boolean;         // Log actions without executing (default false)
+  rosterMaxAgeDays?: number; // Force-refresh roster context older than this (default 7)
 }
 
 // ── Result types ────────────────────────────────────────────────────────────
@@ -58,6 +60,7 @@ export class PipelineScheduler {
     this.config = {
       maxConcurrent: config?.maxConcurrent ?? 5,
       dryRun: config?.dryRun ?? false,
+      rosterMaxAgeDays: config?.rosterMaxAgeDays ?? 7,
     };
   }
 
@@ -119,6 +122,14 @@ export class PipelineScheduler {
     }
 
     if (actionContext) {
+      // Force-refresh stale roster context before advancing
+      if (article.primary_team) {
+        const ageDays = getRosterArtifactAgeDays(this.repo, articleId);
+        if (ageDays > this.config.rosterMaxAgeDays) {
+          ensureRosterContext(this.repo, articleId, article.primary_team, /* forceRefresh */ true);
+        }
+      }
+
       // Full execution with REVISE handling via autoAdvanceArticle
       const result = await autoAdvanceArticle(articleId, actionContext, {
         maxStage: (article.current_stage + 1) as number, // advance one step only

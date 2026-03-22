@@ -467,7 +467,56 @@ export async function handleQueryHistoricalComps(args) {
     return { textResultForLlm: jsonToMarkdown(data, `Historical Comps for ${player} (${season})`), resultType: "success" };
 }
 
-// ─── Tool 10: refresh_nflverse_cache ──────────────────────────────────────────
+// ─── Tool 10: query_rosters ───────────────────────────────────────────────────
+
+export const queryRostersTool = {
+    name: "query_rosters",
+    description:
+        "Query official NFL roster data from nflverse. Returns players with position, status (ACT/RES/INA/DEV), jersey number, and experience. Supports team rosters and individual player lookup.",
+    parameters: {
+        type: "object",
+        properties: {
+            team: {
+                type: "string",
+                description: "Team abbreviation (e.g., SEA, KC, BUF). Returns full team roster.",
+            },
+            player: {
+                type: "string",
+                description: "Player name for individual lookup. Overrides team.",
+            },
+            season: {
+                type: "integer",
+                description: "Season year (e.g., 2025).",
+            },
+            status: {
+                type: "string",
+                description: "Filter by status: ACT (active), RES (reserve/IR), INA (inactive), DEV (practice squad).",
+            },
+        },
+        required: ["season"],
+    },
+};
+
+export async function handleQueryRosters(args) {
+    const { team, player, season, status } = args;
+    const cmdArgs = ["--season", String(season)];
+    if (player) {
+        cmdArgs.push("--player", player);
+    } else if (team) {
+        cmdArgs.push("--team", team);
+    } else {
+        return { textResultForLlm: "❌ Must specify --team or --player", resultType: "failure" };
+    }
+    if (status) cmdArgs.push("--status", status);
+    const { data, error } = await runPythonQuery("query_rosters.py", cmdArgs);
+    if (error) return { textResultForLlm: `❌ ${error}`, resultType: "failure" };
+    const title = player
+        ? `${player} — Roster Lookup (${season})`
+        : `${team} Roster (${season})${status ? ` [${status}]` : ""}`;
+    return { textResultForLlm: jsonToMarkdown(data, title), resultType: "success" };
+}
+
+// ─── Tool 11: refresh_nflverse_cache ──────────────────────────────────────────
 
 export const refreshNflverseCacheTool = {
     name: "refresh_nflverse_cache",

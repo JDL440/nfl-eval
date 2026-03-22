@@ -373,6 +373,39 @@ describe('AgentRunner', () => {
       expect(idxSkill).toBeLessThan(idxMem);
       expect(idxMem).toBeLessThan(idxBound);
     });
+
+    it('includes roster context when provided', () => {
+      const charter: AgentCharter = {
+        name: 'Test',
+        identity: 'Test agent.',
+        responsibilities: [],
+        knowledge: [],
+        boundaries: ['No fabrication'],
+      };
+
+      const rosterCtx = '## Current SEA Roster\n- **Sam Darnold** (QB) — 96% snaps';
+      const prompt = runner.composeSystemPrompt(charter, [], [], rosterCtx);
+
+      expect(prompt).toContain('## Current Team Roster');
+      expect(prompt).toContain('Sam Darnold');
+      // Roster should come before boundaries
+      const rosterIdx = prompt.indexOf('Current Team Roster');
+      const boundIdx = prompt.indexOf('## Boundaries');
+      expect(rosterIdx).toBeLessThan(boundIdx);
+    });
+
+    it('omits roster section when not provided', () => {
+      const charter: AgentCharter = {
+        name: 'Test',
+        identity: 'Test agent.',
+        responsibilities: [],
+        knowledge: [],
+        boundaries: [],
+      };
+
+      const prompt = runner.composeSystemPrompt(charter, [], []);
+      expect(prompt).not.toContain('Current Team Roster');
+    });
   });
 
   // ── Run Method ──────────────────────────────────────────────────────────

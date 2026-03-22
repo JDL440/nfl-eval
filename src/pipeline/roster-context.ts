@@ -313,3 +313,190 @@ export function ensureRosterContext(
   }
   return context;
 }
+
+// ---------------------------------------------------------------------------
+// Artifact age utility
+// ---------------------------------------------------------------------------
+
+/**
+ * Return the age in days of a roster-context.md artifact, or Infinity if
+ * not present. Used by the scheduler to decide whether to force-refresh.
+ */
+export function getRosterArtifactAgeDays(
+  repo: { artifacts: { getMeta?(id: string, name: string): { updated_at: string } | null; get(id: string, name: string): string | null } },
+  articleId: string,
+): number {
+  // Try metadata-based age first (requires getMeta support)
+  if (typeof (repo.artifacts as any).getMeta === 'function') {
+    const meta = (repo.artifacts as any).getMeta(articleId, 'roster-context.md') as { updated_at: string } | null;
+    if (meta?.updated_at) {
+      return (Date.now() - new Date(meta.updated_at).getTime()) / 86_400_000;
+    }
+  }
+  // Fallback: if artifact exists at all, assume 0 (we can't determine age)
+  const exists = repo.artifacts.get(articleId, 'roster-context.md');
+  return exists ? 0 : Infinity;
+}
+
+// ---------------------------------------------------------------------------
+// Pre-publish validation — deterministic player mention scan
+// ---------------------------------------------------------------------------
+
+export interface PlayerMention {
+  name: string;
+  status: 'confirmed' | 'wrong_team' | 'not_found';
+  rosterTeam?: string;
+  detail?: string;
+}
+
+/**
+ * Scan article text for player names and cross-reference against roster data.
+ * Returns warnings for unrecognized or wrong-team mentions.
+ *
+ * Uses a lightweight approach: extracts bold names (**Name**) and names in
+ * "Player Name (POS)" patterns, then checks against the roster.
+ */
+export function validatePlayerMentions(
+  articleText: string,
+  team: string,
+): PlayerMention[] {
+  const season = currentSeason();
+  const teamUpper = team.toUpperCase();
+
+  // Get roster for the target team
+  const roster = queryRoster(teamUpper, season);
+  if (roster.length === 0) return []; // Can't validate without data
+
+  const teamNames = new Set(roster.map(p => p.full_name.toLowerCase()));
+
+  // Extract candidate player names from the article
+  const candidates = extractPlayerNames(articleText);
+  if (candidates.size === 0) return [];
+
+  const results: PlayerMention[] = [];
+
+  for (const name of candidates) {
+    const lower = name.toLowerCase();
+
+    if (teamNames.has(lower)) {
+      results.push({ name, status: 'confirmed' });
+      continue;
+    }
+
+    // Check if this player is on a DIFFERENT team (strong signal of error)
+    const allTeams = queryPlayerTeam(name, season);
+    if (allTeams) {
+      results.push({
+        name,
+        status: 'wrong_team',
+        rosterTeam: allTeams,
+        detail: `Listed on ${allTeams}, not ${teamUpper}`,
+      });
+    } else {
+      results.push({
+        name,
+        status: 'not_found',
+        detail: `Not found in nflverse roster data`,
+      });
+    }
+  }
+
+  return results;
+}
+
+/** Extract player-like names from article text using common patterns. */
+function extractPlayerNames(text: string): Set<string> {
+  const names = new Set<string>();
+
+  // Pattern 1: Bold names — **First Last** (also handles Jr., Sr., III, IV, etc.)
+  const boldPattern = /\*\*([A-Z][a-z]+(?:\s+(?:[A-Z][a-z'-]+|[IVX]+|[JS]r\.?))+)\*\*/g;
+  let match;
+  while ((match = boldPattern.exec(text)) !== null) {
+    const name = match[1].trim();
+    // Skip common non-player bold phrases
+    if (name.length > 5 && name.length < 40 && !NON_PLAYER_PHRASES.has(name.toLowerCase())) {
+      names.add(name);
+    }
+  }
+
+  // Pattern 2: Name (POSITION) — e.g., "Sam Darnold (QB)", "Kenneth Walker III (RB)"
+  const posPattern = /([A-Z][a-z]+(?:\s+(?:[A-Z][a-z'-]+|[IVX]+|[JS]r\.?))+)\s+\((?:QB|RB|WR|TE|OL|DL|LB|CB|S|K|P|DE|DT|OT|OG|C|SS|FS|NT|ILB|OLB|MLB|FB|LS)\)/g;
+  while ((match = posPattern.exec(text)) !== null) {
+    names.add(match[1].trim());
+  }
+
+  return names;
+}
+
+/** Look up which team a player is on (if any). Returns team abbreviation or null. */
+function queryPlayerTeam(playerName: string, season: number): string | null {
+  const raw = runPythonQuery('query_rosters.py', [
+    '--player', playerName,
+    '--season', String(season),
+  ]);
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw) as RosterPlayer[];
+    if (data.length > 0) return data[0].team;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const NON_PLAYER_PHRASES = new Set([
+  'super bowl', 'pro bowl', 'all pro', 'first team', 'second team',
+  'free agent', 'trade deadline', 'salary cap', 'dead money',
+  'snap count', 'game plan', 'red zone', 'third down',
+  'play action', 'run defense', 'pass rush',
+]);
+
+// ---------------------------------------------------------------------------
+// Knowledge bootstrap — store roster data as domain_knowledge entries
+// ---------------------------------------------------------------------------
+
+interface MemoryStore {
+  store(entry: {
+    agentName: string;
+    category: 'domain_knowledge';
+    content: string;
+    sourceSession?: string;
+    relevanceScore?: number;
+  }): number;
+}
+
+/**
+ * Bootstrap roster knowledge for specific teams into the agent memory system.
+ * Stores a summary for each team as a domain_knowledge entry so agents have
+ * roster grounding even before any article triggers a fetch.
+ *
+ * Returns the number of teams successfully bootstrapped.
+ */
+export function bootstrapRosterKnowledge(
+  memory: MemoryStore,
+  teams: string[],
+  agentNames: string[] = ['lead'],
+): number {
+  let count = 0;
+  for (const team of teams) {
+    const ctx = buildTeamRosterContext(team);
+    if (!ctx) continue;
+
+    // Build a compact summary (first 20 players) to keep memory entries small
+    const lines = ctx.split('\n').filter(l => l.startsWith('- **'));
+    const summary = lines.slice(0, 25).join('\n');
+    const content = `[${team.toUpperCase()} Roster] ${summary}\n\n(${lines.length} total players — see roster-context.md for full list)`;
+
+    for (const agent of agentNames) {
+      memory.store({
+        agentName: agent,
+        category: 'domain_knowledge',
+        content,
+        sourceSession: 'roster_bootstrap',
+        relevanceScore: 0.8,
+      });
+    }
+    count++;
+  }
+  return count;
+}
