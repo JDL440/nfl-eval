@@ -36,3 +36,18 @@
 - Re-reviewed the issue after the rejected debug-visibility diff and concluded the wrong bug had been targeted.
 - Enforced reassignment away from the prior hydration diagnosis because the current codebase did not reproduce a Copilot-CLI-specific defect.
 - No issue-specific code changes landed.
+
+## Learnings
+
+### 2026-03-22T20:05:00Z: Issue #93 PR topology review
+
+- For issue-board triage, combine GitHub PR metadata with local `git worktree list`, `git branch -vv`, `git merge-base`, and `git cherry` before treating competing PRs as independent options.
+- Direct, clean branches for this batch were backed by dedicated local worktrees: `C:\github\nfl-eval-issue92` (`code/issue-92-hybrid-context`), `C:\github\nfl-eval\worktrees\issue93-token-usage` (`code/issue-93-token-usage`), `C:\github\nfl-eval\.worktrees\issue93-clean` (`code/issue-93-article-usage-fix`), and `C:\github\nfl-eval\.worktrees\issue93` (`code/issue-93-article-page-usage`).
+- The repo root worktree `C:\github\nfl-eval` is on the reused branch `ux/issue-93-copilot-usage`, which is ahead of `origin/ux/issue-93-copilot-usage` by local maintenance commits and shares the same remote head across PRs #98 and #100.
+- Same-head multi-base PRs are a strong warning sign: #100 was explicitly stacked on `code/issue-85-structured-knowledge`, while #98 pointed the same head at `main`, dragging duplicate #85 ancestry because #85 merged to `main` through different commit history.
+- Practical Lead heuristic: when one issue has several open PRs, prefer a single canonical PR that is `main`-based, mergeable clean, and backed by a dedicated worktree; retarget or close reused/stale head branches and narrower superseded alternatives.
+
+### 2026-03-22T21:46:04Z: Issue #93 PR topology decision
+
+- The canonical PR choice for #93 should be recorded in the decisions inbox before board movement so future triage has a durable explanation for why stacked and reused branches were not treated as merge-ready.
+- When a reused branch still carries merged-through-other-history commits, the right triage action is retarget/rebase or close, not merge-by-default.

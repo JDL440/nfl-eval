@@ -480,3 +480,73 @@ The separate artifact-thinking UI change (companion `*.thinking.md` loading in `
 - Lead re-ran the review after the rejected debug-visibility diff and concluded the wrong bug had been targeted.
 - UX traced the provider -> runner -> persistence -> dashboard chain and could not reproduce a Copilot-CLI-specific code defect in the current codebase.
 - No issue-specific code changes landed; treat #93 as blocked / not reproducible unless a concrete repro is produced.
+
+---
+
+# Decision: Ralph should merge verified PRs and log follow-up work as issues
+
+- **By:** Joe Robinson (via Ralph)
+- **Date:** 2026-03-22
+
+## TLDR
+
+Once a PR has been reviewed and verified, Ralph should commit or merge it instead of waiting for another nudge. Any follow-up work discovered during review or merge should be captured as a tracked GitHub issue, not left as an undocumented note.
+
+## Decision
+
+1. Treat reviewed and verified PRs as merge-ready work during Ralph sweeps unless there is a real blocker.
+2. Do not leave merge-ready PRs sitting in `For Review` just because no additional prompt was given.
+3. If review, merge, or a post-merge check reveals new work, create or confirm a GitHub issue for it before closing the loop.
+
+## Why
+
+- This keeps the board moving and avoids idle queue buildup after verification is already complete.
+- It also ensures follow-up work stays visible, prioritized, and reviewable instead of disappearing into comments or memory.
+
+---
+
+# Decision: Ralph board-state corrections for blocked review and investigation-only issues
+
+- **By:** Ralph (🔄 Monitor)
+- **Date:** 2026-03-22
+
+## TLDR
+
+Ralph should not leave issues in `For Review` or `In Progress` when the next real action is a human or author decision. In this repo, owner follow-up questions reopen review work, and investigation-only tickets without a chosen implementation slice should move to `Pending User`.
+
+## Decision
+
+1. If an owner comment introduces a new blocking question on an issue or PR that was already in `For Review`, move the project item back to `In Progress` and leave a TLDR comment explaining the state change.
+2. If an issue has research or investigation recorded but no narrowed implementation slice and no active PR, move the project item from `In Progress` to `Pending User` until Joe chooses the first shippable slice.
+
+## Why
+
+- The board should reflect the next required action, not stale historical momentum.
+- Leaving those items in `For Review` or `In Progress` hides real blockers and makes the queue look healthier than it is.
+
+---
+
+# Decision — Issue #93 PR topology triage
+
+- **By:** Lead (🏗️)
+- **Date:** 2026-03-22
+- **Issue:** #93
+
+## Decision
+
+Treat the issue #93 PR set as a competing-PR fan-out, not six equally valid merge candidates. Keep one canonical `main`-based PR for the fix, and close or retarget stacked or reused branches before moving the board item forward.
+
+## Why
+
+- PR `#100` is explicitly stacked on `code/issue-85-structured-knowledge`, not the repo default branch.
+- PRs `#98` and `#100` share the same head branch (`ux/issue-93-copilot-usage`), which indicates branch reuse rather than independent implementations.
+- Local git topology shows that the reused UX branch still contains the old issue #85 commit chain, so targeting it to `main` makes duplicate or superseded work appear in the PR even though issue #85 is already merged.
+- PRs `#99` and `#101` are both clean `main`-based candidates, while `#96` is also `main`-based but narrower and functionally subsumed by the broader issue #93 fix branches.
+
+## Operational rule
+
+When one issue has multiple open PRs:
+
+1. choose one canonical `main`-based branch,
+2. close stacked or same-head duplicate PRs first,
+3. treat reused branches that carry merged-through-other-history commits as rebase or retarget candidates, not merge-ready work.
