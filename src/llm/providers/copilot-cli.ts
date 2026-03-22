@@ -201,6 +201,15 @@ export class CopilotCLIProvider implements LLMProvider {
   private buildPrompt(request: ChatRequest): string {
     const parts: string[] = [];
 
+    // Prevent the CLI agent from using tools (file read/write/apply_patch).
+    // Without this, the CLI acts as a full agent and spends minutes browsing
+    // the repo instead of returning generated text directly.
+    parts.push(
+      '<constraint>Output the requested content directly as text. ' +
+      'Do NOT read files, create files, run commands, or use any tools. ' +
+      'Just generate and output the text.</constraint>',
+    );
+
     const systemMsgs = request.messages.filter((m) => m.role === 'system');
     const conversationMsgs = request.messages.filter((m) => m.role !== 'system');
 
