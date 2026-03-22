@@ -84,3 +84,8 @@
 - Submitted the Code diagnosis note for #93 and kept the canonical decision aligned on repository hydration, not provider or runner behavior.
 - The issue record now reflects the full-history usage read default while preserving explicit bounded reads for callers that truly need them.
 - Scribe merged the remaining inbox notes into `.squad/decisions.md` and removed the inbox files.
+
+### 2026-03-22T19:14:56Z: Issue #93 off-target diff review
+- Reviewed the rejected debug-visibility diff and confirmed it did not address issue #93.
+- Did not land any issue-specific code changes.
+- Kept the work aligned with the latest lead/UX trace outcome: blocked / not reproducible.

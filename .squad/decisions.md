@@ -470,13 +470,13 @@ Treat issue #93 as a repository/query hydration bug on the dashboard surfaces. `
 
 The separate artifact-thinking UI change (companion `*.thinking.md` loading in `src/dashboard/server.ts` and `src/dashboard/views/article.ts`) is not required to explain or fix the token-usage bug. These are distinct concerns.
 
-### 2026-03-22T19:10:20Z: Issue #93 decision inbox sync
-
-- Merged the remaining Code, Lead, and UX inbox notes into the canonical #93 record.
-- Kept the issue summary aligned on the repository hydration default: article detail and live sidebar should read full per-article usage history unless a caller passes an explicit limit.
-- No extra provider, runner, or persistence changes were needed for the article-page regression.
 ### 2026-03-22T19:13:43Z: Issue #93 regression safeguard
 
 - Keep the regression anchored on the real persistence chain: `copilot-cli` provider → runner → `recordAgentUsage()` → repository → article/live-sidebar.
 - Prefer a stage-action test that proves an older `usage_events` row survives hydration, rather than a seeded rendering-only check.
 - The debug/thinking renderer path remains out of scope for the token-usage bug.
+### 2026-03-22T19:14:56Z: Issue #93 blocked / not reproducible follow-up
+
+- Lead re-ran the review after the rejected debug-visibility diff and concluded the wrong bug had been targeted.
+- UX traced the provider -> runner -> persistence -> dashboard chain and could not reproduce a Copilot-CLI-specific code defect in the current codebase.
+- No issue-specific code changes landed; treat #93 as blocked / not reproducible unless a concrete repro is produced.

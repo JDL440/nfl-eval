@@ -53,17 +53,22 @@
 
 - Re-verified the Copilot CLI token path end-to-end and kept the final change on the real article usage seam only: repository hydration.
 - Explicitly did **not** carry forward the rejected artifact-thinking/debug renderer change; the article page fix is just full-history usage hydration plus focused dashboard/repository regression coverage.
+
+### 2026-03-22T19:07:48.2253500Z: Issue #93 decision sync
+
+- Confirmed the issue #93 decision record is now canonical in `.squad/decisions.md` and the inbox files were removed.
+- Kept the UX finding aligned on the repository query cap: article detail and live usage panels should read full per-article usage history by default.
 ### 2026-03-22T19-13-43Z: Scribe sync — Issue #93 inbox merge
 - Consolidated the issue #93 usage-history decision into `.squad/decisions.md`.
 - Article detail and live sidebar usage panels should keep reading full per-article history by default, with explicit limits reserved for bounded queries.
 
-### 2026-03-22T19:10:20Z: Issue #93 decision inbox sync
-
-- UX history now reflects the canonical outcome after merging the remaining inbox notes into `.squad/decisions.md`.
-- The article usage panels stay tied to the full per-article history by default so early Copilot CLI rows remain visible.
-- The rejected thinking/debug path stayed out of scope for the issue summary.
 ### 2026-03-22T19:13:43Z: Issue #93 regression safeguard
 
 - UX now records the regression guard that validates the full Copilot CLI usage path through persistence and hydration.
 - The article detail and live sidebar views should continue to read the full per-article usage history by default.
 - The rejected thinking/debug renderer path stays out of scope.
+
+### 2026-03-22T19:14:56Z: Issue #93 blocked / not reproducible follow-up
+- Traced the provider -> runner -> persistence -> dashboard chain end to end.
+- Could not reproduce a Copilot-CLI-specific defect in the current code.
+- Kept the diagnosis scoped to the actual dashboard read path and left the issue blocked.

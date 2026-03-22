@@ -30,3 +30,8 @@
 ### 2026-03-22T19-13-43Z: Issue #93 session record
 - Wrote orchestration logs for UX and Lead.
 - Merged the issue #93 decision inbox into `.squad/decisions.md` and deleted the inbox files.
+
+### 2026-03-22T19:14:56Z: Issue #93 maintenance pass
+- Merged the remaining issue #93 decision material and updated the official decision record.
+- Logged the team outcome as blocked / not reproducible after lead, UX, and code review converged.
+- Removed the inbox artifact after folding its content into the decision log.
