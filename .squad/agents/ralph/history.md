@@ -17,3 +17,4 @@
 - 2026-03-22: New squad issues can get duplicate `squad:*` labels when issue triage and heartbeat overlap. Ralph should collapse the issue back to the intended domain label, add any missing project card, and leave a TLDR note with the resulting board status.
 - 2026-03-22: Verified PRs should be merged as soon as they are reviewed, and any extra work discovered during the merge should become a tracked issue immediately.
 - 2026-03-22: When board state reflects stale momentum instead of the next real action, Ralph should move the item to `In Progress` or `Pending User` so the project board stays aligned with current blockers.
+- 2026-03-22: For issue #93, keep a single canonical `main`-based PR and treat stacked or reused branches as retarget/rebase/close candidates; the board should not advance until that choice is explicit.
