@@ -107,6 +107,35 @@ Saved to `content/articles/{slug}/panel-factcheck.md` after panel outputs are re
 **Next step:** Writer proceeds to draft using verified claims and addressing flagged items.
 ```
 
+## Roster Verification (Critical)
+
+**LLMs frequently hallucinate player-team assignments** because training data goes stale quickly — trades, cuts, and free-agent signings happen constantly. This is one of the most common and embarrassing error types in sports content.
+
+### How It Works
+
+The pipeline automatically generates a `roster-context.md` artifact from live nflverse data before fact-checking runs. This artifact contains current offensive and defensive starters with snap-count percentages.
+
+### What to Check
+
+1. **Every player mentioned in panel outputs** — confirm they appear in the roster context for the team being discussed
+2. **Positional accuracy** — if an analyst says "their starting QB is X", verify X is listed as QB in the roster
+3. **Departed players** — if a player is mentioned but NOT in the roster context, flag immediately as 🔴 Halt. Common causes:
+   - Player was traded (e.g., "Geno Smith is the Seahawks QB" — he was traded to LV)
+   - Player was cut or released
+   - Player retired
+   - Player signed with another team in free agency
+4. **Name spelling** — verify exact spelling matches the roster (e.g., "Riq Woolen" not "Jalen Woolen")
+
+### Flagging Format
+
+```markdown
+## Roster Discrepancies 🔴
+
+- **Claim:** "Geno Smith under center gives the Seahawks..."
+- **Roster Context:** Sam Darnold is listed as SEA QB (96% snaps). Geno Smith does NOT appear on SEA roster.
+- **Action:** 🔴 HALT — Article premise is based on a player no longer on the team. Requires idea revision.
+```
+
 ## Execution Workflow
 
 ### Step 1 — Panel Output Collection
@@ -126,15 +155,17 @@ For **high-risk categories only** (no need to verify every claim):
 | **Injury timelines** | Safety-critical; recovery windows are specific | "4–6 weeks" / "Out for season" / "Week 1 return likely" |
 | **Draft facts** | Prospect rankings, combine data, draft order | "Projected first round" / "40-time was 4.6" |
 | **Team facts** | Coaching staff, recent transactions, depth chart | "Coach X is in year N" / "Player Y was cut" |
+| **Player-team assignments** | Rosters change via trades, cuts, signings — stale data is common | "Player X is their QB" / "X and Y anchor the secondary" |
 | **Direct quotes** | Agent claims someone said something | "Agent told us..." / "Coach said in interview..." |
 
 ### Step 3 — Cross-Reference (Lightweight)
 
 For each high-risk claim:
 1. **Check source within panel outputs:** Does the agent cite where they got it? (e.g., "OTC shows", "Spotrac lists", "PFR data")
-2. **Flag if missing source:** Mark as ⚠️ Unverified, not ❌ Wrong
-3. **Identify conflicts:** If two agents claim different numbers (e.g., Cap says $15M space, Team says $12M space), note and recommend source resolution
-4. **Check against known errors:** Is this a known hallucination risk? (e.g., invented combine times, hallucinated stat lines)
+2. **Verify player-team assignments against roster context:** If a `roster-context.md` artifact is available, cross-reference every player mentioned to confirm they are actually on the team being discussed. Flag any player who appears in the article but NOT in the roster context — they may have been traded, cut, or signed elsewhere.
+3. **Flag if missing source:** Mark as ⚠️ Unverified, not ❌ Wrong
+4. **Identify conflicts:** If two agents claim different numbers (e.g., Cap says $15M space, Team says $12M space), note and recommend source resolution
+5. **Check against known errors:** Is this a known hallucination risk? (e.g., invented combine times, hallucinated stat lines, players on wrong teams)
 
 ### Step 4 — Safe-to-Publish Assessment
 
@@ -192,6 +223,7 @@ The `panel-factcheck.md` artifact can be referenced manually in discussion summa
 ## Phase 1 Scope (Non-Scope)
 
 ✅ **IN SCOPE:**
+- **Player-team roster verification** against live nflverse data (roster-context.md)
 - Lightweight cross-reference of high-risk claims in panel outputs
 - Identifying contradictions between panelists
 - Flagging missing sources
@@ -200,7 +232,6 @@ The `panel-factcheck.md` artifact can be referenced manually in discussion summa
 
 ❌ **OUT OF SCOPE (Editor's job, Stage 6):**
 - Full fact-check of final article prose
-- Player name verification (that's part of editorial review)
 - Grammar / style review
 - Substack formatting validation
 
