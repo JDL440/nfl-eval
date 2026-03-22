@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Repository } from '../../src/db/repository.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,9 +16,39 @@ describe('Repository', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     repo.close();
     rmSync(tempDir, { recursive: true, force: true });
   });
+
+  function seedOlderCopilotUsage(articleId: string): void {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-22T00:00:00Z'));
+    repo.recordUsageEvent({
+      articleId,
+      stage: 1,
+      surface: 'ideaGeneration',
+      provider: 'copilot-cli',
+      modelOrTool: 'gpt-5.4',
+      promptTokens: 900,
+      outputTokens: 100,
+    });
+
+    for (let i = 0; i < 110; i++) {
+      vi.setSystemTime(new Date(`2026-03-22T00:${String(Math.floor((i + 1) / 60)).padStart(2, '0')}:${String((i + 1) % 60).padStart(2, '0')}Z`));
+      repo.recordUsageEvent({
+        articleId,
+        stage: 5,
+        surface: `panel-${i}`,
+        provider: 'anthropic',
+        modelOrTool: 'claude-sonnet-4',
+        promptTokens: 100 + i,
+        outputTokens: 50 + i,
+      });
+    }
+
+    vi.useRealTimers();
+  }
 
   // ── Article CRUD ───────────────────────────────────────────────────────────
 
@@ -529,6 +559,19 @@ describe('Repository', () => {
       expect(events).toHaveLength(1);
       expect(events[0].surface).toBe('writer');
       expect(events[0].prompt_tokens).toBe(1000);
+    });
+
+    it('returns full article usage history by default', () => {
+      repo.createArticle({ id: 'ue-history', title: 'Usage History Test' });
+      seedOlderCopilotUsage('ue-history');
+
+      const allEvents = repo.getUsageEvents('ue-history');
+      const limitedEvents = repo.getUsageEvents('ue-history', 100);
+
+      expect(allEvents).toHaveLength(111);
+      expect(allEvents.some((event) => event.provider === 'copilot-cli')).toBe(true);
+      expect(limitedEvents).toHaveLength(100);
+      expect(limitedEvents.some((event) => event.provider === 'copilot-cli')).toBe(false);
     });
 
     it('rejects nonexistent article', () => {

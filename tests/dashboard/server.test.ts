@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -50,9 +50,41 @@ describe('Dashboard Server', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     repo.close();
     rmSync(tempDir, { recursive: true, force: true });
   });
+
+  function seedOlderCopilotUsage(articleId: string): void {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-22T00:00:00Z'));
+    repo.recordUsageEvent({
+      articleId,
+      stage: 1,
+      surface: 'ideaGeneration',
+      provider: 'copilot-cli',
+      modelOrTool: 'gpt-5.4',
+      promptTokens: 1200,
+      outputTokens: 300,
+      costUsdEstimate: 0.01,
+    });
+
+    for (let i = 0; i < 110; i++) {
+      vi.setSystemTime(new Date(`2026-03-22T00:${String(Math.floor((i + 1) / 60)).padStart(2, '0')}:${String((i + 1) % 60).padStart(2, '0')}Z`));
+      repo.recordUsageEvent({
+        articleId,
+        stage: 5,
+        surface: `panel-${i}`,
+        provider: 'anthropic',
+        modelOrTool: 'claude-sonnet-4',
+        promptTokens: 500 + i,
+        outputTokens: 200 + i,
+        costUsdEstimate: 0.02,
+      });
+    }
+
+    vi.useRealTimers();
+  }
 
   // ── HTML pages ──────────────────────────────────────────────────────────────
 
@@ -93,6 +125,18 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Audit Log');
       expect(html).toContain('Agent Context Settings');
       expect(html).toContain('/htmx/articles/detail-test/context-config');
+    });
+
+    it('article detail usage panel keeps older copilot-cli usage after many later events', async () => {
+      repo.createArticle({ id: 'detail-usage-history', title: 'Detail Usage History' });
+      seedOlderCopilotUsage('detail-usage-history');
+
+      const res = await app.request('/articles/detail-usage-history');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('copilot-cli');
+      expect(html).toContain('gpt-5.4');
     });
 
     it('article detail returns 404 for missing article', async () => {
@@ -231,6 +275,18 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Idea Generation');
       // Should be a fragment, not a full page
       expect(html).not.toContain('<!DOCTYPE html>');
+    });
+
+    it('GET /htmx/articles/:id/live-sidebar keeps older copilot-cli usage visible', async () => {
+      repo.createArticle({ id: 'live-usage-history', title: 'Live Usage History' });
+      seedOlderCopilotUsage('live-usage-history');
+
+      const res = await app.request('/htmx/articles/live-usage-history/live-sidebar');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('copilot-cli');
+      expect(html).toContain('gpt-5.4');
     });
 
     it('GET /htmx/ready-to-publish returns HTML fragment', async () => {
