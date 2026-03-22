@@ -15,6 +15,7 @@ import type { AppConfig } from '../config/index.js';
 import { extractVerdict } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ensureRosterContext } from './roster-context.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -266,15 +267,25 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const idea = readArtifact(ctx.repo, articleId, 'idea.md');
 
+    // Inject current roster data so the LLM doesn't use stale training data
+    const team = article.primary_team;
+    let ideaWithRoster = idea;
+    if (team) {
+      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team);
+      if (rosterCtx) {
+        ideaWithRoster = idea + '\n\n---\n\n' + rosterCtx;
+      }
+    }
+
     const result = await ctx.runner.run({
       agentName: 'lead',
-      task: 'Generate a discussion prompt from the following idea.',
+      task: 'Generate a discussion prompt from the following idea. IMPORTANT: Cross-reference all player names and team assignments against the roster context provided. Flag or correct any players who are no longer on the team.',
       skills: ['discussion-prompt'],
       articleContext: {
         slug: articleId,
         title: article.title,
         stage: article.current_stage,
-        content: idea,
+        content: ideaWithRoster,
       },
     });
 
@@ -465,18 +476,29 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
+    // Ensure roster context is available for factcheck and writer
+    const team = article.primary_team;
+    let rosterCtx: string | null = null;
+    if (team) {
+      rosterCtx = ensureRosterContext(ctx.repo, articleId, team);
+    }
+
     // Run lightweight fact-check on panel discussion output (if available)
     const discussionArtifact = ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
     if (discussionArtifact) {
+      const factcheckContent = rosterCtx
+        ? discussionArtifact + '\n\n---\n\n' + rosterCtx
+        : discussionArtifact;
+
       const factCheckResult = await ctx.runner.run({
         agentName: 'lead',
-        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists.',
+        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists. CRITICAL: Verify all player-team assignments against the current roster data provided. Flag any players mentioned who are no longer on this team.',
         skills: ['fact-checking'],
         articleContext: {
           slug: articleId,
           title: article.title,
           stage: article.current_stage,
-          content: discussionArtifact,
+          content: factcheckContent,
         },
       });
       writeAgentResult(ctx.repo, articleId, 'panel-factcheck.md', factCheckResult);
@@ -523,11 +545,20 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
+    let content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
+
+    // Inject current roster data for fact-checking player-team assignments
+    const team = article.primary_team;
+    if (team) {
+      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team);
+      if (rosterCtx) {
+        content = content + '\n\n---\n\n' + rosterCtx;
+      }
+    }
 
     const result = await ctx.runner.run({
       agentName: 'editor',
-      task: 'Review the article draft and provide editorial feedback.',
+      task: 'Review the article draft and provide editorial feedback. CRITICAL: Use the current roster context to verify all player names and team assignments. Any player mentioned who is NOT on the current roster must be flagged as a 🔴 ERROR. Check for traded, cut, or retired players referenced as if still on the team.',
       skills: ['editor-review'],
       articleContext: {
         slug: articleId,
