@@ -279,7 +279,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const result = await ctx.runner.run({
       agentName: 'lead',
-      task: 'Generate a discussion prompt from the following idea. IMPORTANT: Cross-reference all player names and team assignments against the roster context provided. Flag or correct any players who are no longer on the team.',
+      task: 'Generate a discussion prompt from the following idea. Cross-reference player names and team assignments against the roster context provided. If the roster data shows a player on a different team, correct the premise. If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
       skills: ['discussion-prompt'],
       articleContext: {
         slug: articleId,
@@ -492,7 +492,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
 
       const factCheckResult = await ctx.runner.run({
         agentName: 'lead',
-        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists. CRITICAL: Verify all player-team assignments against the current roster data provided. Flag any players mentioned who are no longer on this team.',
+        task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists. Cross-reference player-team assignments against the roster data provided. If a player is mentioned but not found in the roster, flag as ⚠️ CAUTION (the data updates daily — very recent transactions may not be reflected yet). Only flag as 🔴 ERROR if a player is clearly on a different team in the roster data.',
         skills: ['fact-checking'],
         articleContext: {
           slug: articleId,
@@ -558,7 +558,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     const result = await ctx.runner.run({
       agentName: 'editor',
-      task: 'Review the article draft and provide editorial feedback. CRITICAL: Use the current roster context to verify all player names and team assignments. Any player mentioned who is NOT on the current roster must be flagged as a 🔴 ERROR. Check for traded, cut, or retired players referenced as if still on the team.',
+      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data.',
       skills: ['editor-review'],
       articleContext: {
         slug: articleId,

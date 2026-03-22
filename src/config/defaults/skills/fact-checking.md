@@ -107,33 +107,50 @@ Saved to `content/articles/{slug}/panel-factcheck.md` after panel outputs are re
 **Next step:** Writer proceeds to draft using verified claims and addressing flagged items.
 ```
 
-## Roster Verification (Critical)
+## Roster Verification (Important)
 
 **LLMs frequently hallucinate player-team assignments** because training data goes stale quickly — trades, cuts, and free-agent signings happen constantly. This is one of the most common and embarrassing error types in sports content.
 
+### Data Freshness Caveat
+
+The roster data comes from nflverse, which updates **approximately once daily**. During active transaction periods (free agency, trade deadline, roster cuts), there may be a **24-48 hour lag** between a reported transaction and its appearance in the data. Additionally, nflverse tracks official NFL transactions — rumored or reported-but-not-confirmed deals may not appear at all.
+
+**Calibrate your confidence accordingly:**
+- Player listed on a **different team** in roster data → high confidence the article is wrong (🔴 Error)
+- Player **not found** in roster data → could be stale data OR could be wrong — flag as ⚠️ Caution, not 🔴 Error
+- Player listed on the **correct team** → confirmed ✅
+
 ### How It Works
 
-The pipeline automatically generates a `roster-context.md` artifact from live nflverse data before fact-checking runs. This artifact contains current offensive and defensive starters with snap-count percentages.
+The pipeline automatically generates a `roster-context.md` artifact from nflverse data before fact-checking runs. This artifact contains the official roster plus snap-count percentages where available.
 
 ### What to Check
 
-1. **Every player mentioned in panel outputs** — confirm they appear in the roster context for the team being discussed
+1. **Every player mentioned in panel outputs** — look them up in the roster context for the team being discussed
 2. **Positional accuracy** — if an analyst says "their starting QB is X", verify X is listed as QB in the roster
-3. **Departed players** — if a player is mentioned but NOT in the roster context, flag immediately as 🔴 Halt. Common causes:
-   - Player was traded (e.g., "Geno Smith is the Seahawks QB" — he was traded to LV)
-   - Player was cut or released
-   - Player retired
+3. **Departed players** — if a player is mentioned but appears on a **different team** in the roster data, flag as 🔴 Error. Common causes:
+   - Player was traded (e.g., "Geno Smith is the Seahawks QB" — roster shows him on LV)
    - Player signed with another team in free agency
-4. **Name spelling** — verify exact spelling matches the roster (e.g., "Riq Woolen" not "Jalen Woolen")
+4. **Missing players** — if a player is mentioned but NOT found anywhere in the roster data, flag as ⚠️ Caution (not 🔴 Error). The player may be:
+   - A very recent signing not yet reflected in daily data updates
+   - A free agent whose signing was reported but not yet processed
+   - A draft pick or UDFA not yet in the system
+5. **Name spelling** — verify exact spelling matches the roster (e.g., "Riq Woolen" not "Jalen Woolen")
 
 ### Flagging Format
 
 ```markdown
-## Roster Discrepancies 🔴
+## Roster Discrepancies
 
+### 🔴 Error — Player on Different Team
 - **Claim:** "Geno Smith under center gives the Seahawks..."
-- **Roster Context:** Sam Darnold is listed as SEA QB (96% snaps). Geno Smith does NOT appear on SEA roster.
-- **Action:** 🔴 HALT — Article premise is based on a player no longer on the team. Requires idea revision.
+- **Roster Context:** Geno Smith is listed on LV (Raiders), NOT on SEA roster. Sam Darnold is SEA QB (96% snaps).
+- **Action:** 🔴 ERROR — Article premise references a player confirmed on a different team.
+
+### ⚠️ Caution — Player Not Found in Data
+- **Claim:** "New signing John Doe bolsters the defensive line..."
+- **Roster Context:** John Doe does not appear in nflverse roster data (last updated: {date}).
+- **Action:** ⚠️ CAUTION — Player not found in data. May be a very recent transaction. Verify independently before publishing.
 ```
 
 ## Execution Workflow

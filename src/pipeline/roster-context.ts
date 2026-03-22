@@ -172,9 +172,11 @@ export function buildTeamRosterContext(team: string): string | null {
   const parts: string[] = [];
   parts.push(`## Current ${teamUpper} Official Roster (${season} Season, Week ${rosterWeek})`);
   parts.push('');
-  parts.push('> ⚠️ USE THIS DATA as ground truth for player-team assignments.');
+  parts.push('> ⚠️ USE THIS DATA as the best available reference for player-team assignments.');
   parts.push('> Do NOT rely on training data — rosters change frequently via trades, cuts, and signings.');
-  parts.push('> Players NOT listed here are NOT on this team.');
+  parts.push('> NOTE: This data updates daily from nflverse. Very recent transactions (last 24-48 hours)');
+  parts.push('> may not yet be reflected. If a player is missing but has been publicly reported as signed/traded');
+  parts.push('> to this team, note the discrepancy but do not treat it as an error.');
   parts.push('');
 
   // Group by position
@@ -239,7 +241,7 @@ export function buildTeamRosterContext(team: string): string | null {
   }
 
   parts.push(`*Data source: nflverse official roster (week ${rosterWeek}) + snap counts (${season} season).*`);
-  parts.push('*Official roster is authoritative for who is on the team. Snap %% shows game usage.*');
+  parts.push('*Updates daily. Very recent signings, trades, or cuts (last 24-48h) may not appear yet.*');
 
   return parts.join('\n');
 }
@@ -261,9 +263,10 @@ function buildSnapOnlyContext(
   const parts: string[] = [];
   parts.push(`## Current ${teamUpper} Roster Context (${season} Season Data)`);
   parts.push('');
-  parts.push('> ⚠️ USE THIS DATA as ground truth for player-team assignments.');
+  parts.push('> ⚠️ USE THIS DATA as the best available reference for player-team assignments.');
   parts.push('> Do NOT rely on training data — rosters change frequently via trades, cuts, and signings.');
   parts.push('> Note: This is snap-count data only — backups with 0 snaps may not appear.');
+  parts.push('> Data updates daily; very recent transactions may not yet be reflected.');
   parts.push('');
 
   if (offense.length > 0) {

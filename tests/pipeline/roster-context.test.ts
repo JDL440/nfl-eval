@@ -88,7 +88,7 @@ describe('roster-context', () => {
       expect(result).toContain('Jaxon Smith-Njigba');
       expect(result).toContain('Devon Witherspoon');
       expect(result).toContain('Riq Woolen');
-      expect(result).toContain('ground truth');
+      expect(result).toContain('best available reference');
     });
 
     it('includes backup players that have zero snaps', () => {
@@ -121,12 +121,14 @@ describe('roster-context', () => {
       expect(result).toContain('Special Teams');
     });
 
-    it('shows NOT listed warning', () => {
+    it('shows data freshness caveat', () => {
       mockAllThreeQueries();
 
       const result = buildTeamRosterContext('SEA')!;
 
-      expect(result).toContain('Players NOT listed here are NOT on this team');
+      expect(result).toContain('recent transactions');
+      expect(result).toContain('24-48');
+      expect(result).not.toContain('ground truth');
     });
 
     it('returns null when no data available', () => {
