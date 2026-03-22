@@ -24,4 +24,29 @@
 
 **Related work:** Lead created issue #88 (Pipeline Conversation Context) proposing 4-phase architecture for persistent per-article conversation history. Affects all agent prompts (runner.ts) and pipeline actions (actions.ts). Pending architectural review before Code assignment.
 
+### 2025-07-20: Issue #88 Implementation (Phases 1-3) — PR #90 merged
+
+**What:** Implemented per-article shared conversation context and revision history tracking.
+
+**Key design decision:** All agents share ONE conversation thread per article (not per-agent). Each turn is tagged with agent name and pipeline stage. Context is injected as formatted markdown text in the user message (compatible with all LLM providers — no multi-turn message format needed).
+
+**New files:**
+- `src/pipeline/conversation.ts` — addConversationTurn, getArticleConversation, addRevisionSummary, getRevisionHistory, getRevisionCount, buildConversationContext, buildEditorPreviousReviews
+- `tests/pipeline/conversation.test.ts` — 21 tests
+
+**Schema additions (schema.sql):**
+- `article_conversations` table — per-article conversation thread
+- `revision_summaries` table — iteration tracking with outcomes and key issues
+
+**Modified files:**
+- `src/agents/runner.ts` — Added `conversationContext?: string` to AgentRunParams, injected before user message
+- `src/db/repository.ts` — Added `getDb()` accessor for conversation module
+- `src/pipeline/actions.ts` — Wired conversation recording/loading into writeDraft, runEditor, runPublisherPass
+
+**Technical notes:**
+- Token count estimation uses ~4 chars/token (same as copilot-cli provider)
+- Long conversation turns are truncated to 2000 chars in context; editor reviews to 1500 chars
+- Editor REVISE verdicts auto-create revision summary entries
+- Writer deduplicates editor feedback recording (checks last editor turn content)
+- 1336 total tests passing (21 new)
 
