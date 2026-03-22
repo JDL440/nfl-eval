@@ -109,15 +109,45 @@ export function recordAgentUsage(
 export function parsePanelComposition(content: string): PanelMember[] {
   const members: PanelMember[] = [];
   const lines = content.split('\n');
+  const seen = new Set<string>();
 
   for (const line of lines) {
-    // Match: - **AgentName** — role   or   - **AgentName** - role   or   - **AgentName**: role
-    const match = line.match(/^[-*]\s+\*\*([^*]+)\*\*\s*(?:—|--|:|-)\s*(.+)$/);
-    if (match) {
-      const agentName = match[1].trim().toLowerCase();
-      const role = match[2].trim();
-      if (agentName && role) {
-        members.push({ agentName, role });
+    let agentName: string | null = null;
+    let role = '';
+
+    // Pattern 1: - **AgentName** — role  (original)
+    const m1 = line.match(/^[-*]\s+\*\*([^*]+)\*\*\s*(?:—|--|:|-)\s*(.+)$/);
+    if (m1) { agentName = m1[1]; role = m1[2]; }
+
+    // Pattern 2: Numbered list — 1. **AgentName** — role
+    if (!agentName) {
+      const m2 = line.match(/^\d+[.)]\s+\*\*([^*]+)\*\*\s*(?:—|--|:|-)\s*(.+)$/);
+      if (m2) { agentName = m2[1]; role = m2[2]; }
+    }
+
+    // Pattern 3: Non-bold — - AgentName — role  or  - AgentName: role
+    if (!agentName) {
+      const m3 = line.match(/^[-*]\s+([A-Za-z][\w-]+)\s*(?:—|--|:)\s*(.+)$/);
+      if (m3) { agentName = m3[1]; role = m3[2]; }
+    }
+
+    // Pattern 4: Numbered non-bold — 1. AgentName — role
+    if (!agentName) {
+      const m4 = line.match(/^\d+[.)]\s+([A-Za-z][\w-]+)\s*(?:—|--|:)\s*(.+)$/);
+      if (m4) { agentName = m4[1]; role = m4[2]; }
+    }
+
+    // Pattern 5: Backtick-wrapped — - `agent-name` — role
+    if (!agentName) {
+      const m5 = line.match(/^[-*\d.)\s]+`([^`]+)`\s*(?:—|--|:|-)\s*(.+)$/);
+      if (m5) { agentName = m5[1]; role = m5[2]; }
+    }
+
+    if (agentName) {
+      const normalized = agentName.trim().toLowerCase().replace(/\s+/g, '-');
+      if (normalized && role.trim() && !seen.has(normalized)) {
+        seen.add(normalized);
+        members.push({ agentName: normalized, role: role.trim() });
       }
     }
   }
@@ -342,6 +372,11 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       '- Select agents whose expertise matches the article topic',
       '- Panel size must respect the depth level limits',
       '- Each panelist should have a distinct analytical lane',
+      '',
+      '⚠️ CRITICAL OUTPUT FORMAT: List each panelist as a markdown bullet with bold agent name, em-dash, and role. Example:',
+      '- **sea** — Seattle Seahawks team analyst providing cap and roster context',
+      '- **cap** — Salary cap specialist analyzing contract structures',
+      'Use exactly this format. Do not use numbered lists or other formats.',
     ].filter(Boolean).join('\n');
 
     const result = await ctx.runner.run({
@@ -569,7 +604,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     const result = await ctx.runner.run({
       agentName: 'editor',
-      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data.',
+      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
       skills: ['editor-review'],
       articleContext: {
         slug: articleId,

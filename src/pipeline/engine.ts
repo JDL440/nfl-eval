@@ -120,11 +120,20 @@ function editorReviewSortKey(name: string): number {
 }
 
 const VERDICT_PATTERNS: RegExp[] = [
+  // Structured heading patterns
   /(?:##\s*)?(?:Final\s+)?Verdict[:\s]*[*_ 🟢🔴🟡✅❌🔄]*\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
-  /(?:Overall|Final)\s+(?:Verdict|Assessment)[:\s]*[*_ 🟢🔴🟡✅❌🔄]*\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
+  /(?:Overall|Final)\s+(?:Verdict|Assessment|Recommendation)[:\s]*[*_ 🟢🔴🟡✅❌🔄]*\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
   /###?\s*[🟢🔴🟡✅❌🔄]+\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT|NEEDS\s+REVISION|NEEDS\s+REVISIONS)/i,
+  // Bold verdict keyword
   /\*\*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT)\*\*/i,
+  // Emoji + verdict at line start
   /(?:^|\n)\s*(?:✅|🟡|🔴|🔄)\s*(APPROVED|REVISE|REJECT|PIVOT\s+REQUIRED|PIVOT)/i,
+  // "Verdict:" or "Decision:" on its own line followed by the word on next line
+  /(?:^|\n)\s*(?:##?\s*)?(?:Verdict|Decision|Recommendation)\s*:?\s*\n+\s*\*{0,2}(APPROVED|REVISE|REJECT)\*{0,2}/im,
+  // Verdict embedded in sentence: "my verdict is APPROVED" / "I recommend REVISE"
+  /(?:verdict|decision|recommendation)\s+(?:is|:|—)\s*\*{0,2}(APPROVED|REVISE|REJECT)\*{0,2}/i,
+  // Backtick-wrapped verdict: `APPROVED`
+  /`(APPROVED|REVISE|REJECT)`/,
 ];
 
 /** Normalize LLM verdict variations to canonical values. */
@@ -141,10 +150,25 @@ export function extractVerdict(text: string): string | null {
     const m = text.match(pattern);
     if (m) return normalizeVerdict(m[1]);
   }
-  // Fallback: scan for verdict-like keywords anywhere in the text
-  if (/\bAPPROVED\b/i.test(text) && !/\bREJECT|REVISE|PIVOT/i.test(text)) return 'APPROVED';
-  if (/\bREJECT(?:ED)?\b/i.test(text)) return 'REJECT';
-  if (/\b(?:REVISE|PIVOT|NEEDS?\s+REVISION|REWORK|REWRITE)\b/i.test(text)) return 'REVISE';
+
+  // Fallback: scan for verdict-like keywords anywhere in the text.
+  // Check the last ~500 chars first (verdicts are usually at the end)
+  const tail = text.slice(-500);
+  const searchText = tail || text;
+
+  // Strong signals (standalone keywords)
+  if (/\bAPPROVED\b/i.test(searchText) && !/\bREJECT|REVISE|PIVOT/i.test(searchText)) return 'APPROVED';
+  if (/\bREJECT(?:ED)?\b/i.test(searchText)) return 'REJECT';
+  if (/\b(?:REVISE|PIVOT|NEEDS?\s+REVISION|REWORK|REWRITE)\b/i.test(searchText)) return 'REVISE';
+
+  // Weaker signals — natural language verdicts (check full text)
+  if (/ready\s+(?:to|for)\s+publish/i.test(text) && !/not\s+ready/i.test(text)) return 'APPROVED';
+  if (/publish[\s-]+ready/i.test(text) && !/not\s+publish/i.test(text)) return 'APPROVED';
+  if (/approve[sd]?\s+(?:for|to)\s+publish/i.test(text)) return 'APPROVED';
+  if (/(?:recommend|suggest)(?:s|ing)?\s+(?:revision|revis(?:e|ing)|rework)/i.test(text)) return 'REVISE';
+  if (/(?:send(?:ing)?\s+back|return(?:ing)?)\s+(?:for|to)\s+revis/i.test(text)) return 'REVISE';
+  if (/(?:cannot|can't|should\s+not)\s+(?:be\s+)?publish/i.test(text)) return 'REVISE';
+
   return null;
 }
 
