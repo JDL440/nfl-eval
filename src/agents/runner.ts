@@ -127,9 +127,14 @@ function parseCharter(raw: string, fileName: string): AgentCharter {
       case 'boundaries':
         charter.boundaries = parseBulletList(body);
         break;
-      case 'model':
-        charter.model = body.trim() || undefined;
+      case 'model': {
+        // Normalize: charters may use "- Preferred: auto" or just "auto"
+        let modelVal = body.trim();
+        // Strip leading bullet prefix and optional "Preferred:" / "Default:" labels
+        modelVal = modelVal.replace(/^[-*]\s*/, '').replace(/^(?:preferred|default)\s*:\s*/i, '').trim();
+        charter.model = modelVal || undefined;
         break;
+      }
     }
   }
 
