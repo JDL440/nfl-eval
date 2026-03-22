@@ -26,7 +26,7 @@ import {
   addRevisionSummary,
   getRevisionHistory,
   getRevisionCount,
-  buildConversationContext,
+  buildRevisionSummaryContext,
   buildEditorPreviousReviews,
 } from './conversation.js';
 
@@ -627,10 +627,17 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       content = content + '\n\n## Previous Draft (REVISE this — do not start over)\n' + previousDraft;
     }
 
-    // Build conversation context: revision history + prior agent interactions
-    const conversationTurns = getArticleConversation(ctx.repo, articleId);
+    // Shared handoff stays summary-only so the writer does not inherit raw cross-role transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
-    const conversationCtx = buildConversationContext(conversationTurns, revisions);
+    const conversationCtx = buildRevisionSummaryContext(revisions);
+
+    // Keep the shared handoff compact, but always give the writer the latest full
+    // editor-review artifact so revisions act on exact feedback instead of only the
+    // summarized revision history. Guard against duplication when upstream context
+    // already included editor-review.md.
+    if (isRevision && editorReview && !content.includes(editorReview)) {
+      content = content + '\n\n## Latest Editor Feedback (apply this directly)\n' + editorReview;
+    }
 
     // If this is a revision and editor feedback exists, record it as a conversation turn
     // (only if not already recorded — check by looking for recent editor turns)
@@ -643,7 +650,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     }
 
     const task = isRevision
-      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the editor\'s feedback are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
+      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
       : 'Write an analytical article draft based on the panel discussion.';
 
     const result = await ctx.runner.run({
@@ -721,10 +728,9 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       content = content + '\n\n---\n\n' + factCheckArtifact;
     }
 
-    // Build conversation context: full article history + editor's own previous reviews
-    const conversationTurns = getArticleConversation(ctx.repo, articleId);
+    // Editor gets compact shared handoff plus its own prior reviews, not the raw cross-role transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
-    const conversationCtx = buildConversationContext(conversationTurns, revisions);
+    const conversationCtx = buildRevisionSummaryContext(revisions);
     const editorTurns = getArticleConversation(ctx.repo, articleId, { agentName: 'editor' });
     const editorPreviousReviews = buildEditorPreviousReviews(editorTurns);
     const fullConversationCtx = [conversationCtx, editorPreviousReviews].filter(Boolean).join('\n\n---\n\n') || undefined;
@@ -812,10 +818,9 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
       ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
       : null;
 
-    // Build conversation context so the publisher sees the full revision journey
-    const conversationTurns = getArticleConversation(ctx.repo, articleId);
+    // Publisher only needs the shared handoff, not the raw editorial transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
-    const conversationCtx = buildConversationContext(conversationTurns, revisions) || undefined;
+    const conversationCtx = buildRevisionSummaryContext(revisions) || undefined;
 
     const result = await ctx.runner.run({
       agentName: 'publisher',

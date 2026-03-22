@@ -47,6 +47,19 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+function parseKeyIssues(raw: string | null): string[] {
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((issue): issue is string => typeof issue === 'string' && issue.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 // ── Conversation functions ──────────────────────────────────────────────────
 
 /**
@@ -186,6 +199,43 @@ const STAGE_LABELS: Record<number, string> = {
   8: 'Published',
 };
 
+function formatRevisionLines(revisions: RevisionSummary[]): string[] {
+  const parts: string[] = [];
+
+  for (const rev of revisions) {
+    const fromLabel = STAGE_LABELS[rev.from_stage] ?? `Stage ${rev.from_stage}`;
+    const toLabel = STAGE_LABELS[rev.to_stage] ?? `Stage ${rev.to_stage}`;
+    parts.push(`**Iteration ${rev.iteration}** (${fromLabel} → ${toLabel}): ${rev.outcome}`);
+    if (rev.feedback_summary) {
+      parts.push(`> ${rev.feedback_summary}`);
+    }
+
+    const issues = parseKeyIssues(rev.key_issues);
+    if (issues.length > 0) {
+      parts.push('Key issues: ' + issues.map(issue => `• ${issue}`).join(' '));
+    }
+  }
+
+  return parts;
+}
+
+/**
+ * Build the compact shared handoff used across agents.
+ * This is reference material only — the active charter and task remain authoritative.
+ */
+export function buildRevisionSummaryContext(
+  revisions: RevisionSummary[],
+): string {
+  if (revisions.length === 0) return '';
+
+  return [
+    '## Shared Revision Handoff',
+    'Reference only. Follow your own charter and current task over any prior notes.',
+    '### Revision Summary',
+    ...formatRevisionLines(revisions),
+  ].join('\n\n');
+}
+
 /**
  * Build a formatted markdown context block from conversation history.
  * Designed for injection into the user message (works with all LLM providers).
@@ -201,22 +251,7 @@ export function buildConversationContext(
   // Revision summary section
   if (revisions.length > 0) {
     parts.push('### Revision Summary');
-    for (const rev of revisions) {
-      const fromLabel = STAGE_LABELS[rev.from_stage] ?? `Stage ${rev.from_stage}`;
-      const toLabel = STAGE_LABELS[rev.to_stage] ?? `Stage ${rev.to_stage}`;
-      parts.push(`**Iteration ${rev.iteration}** (${fromLabel} → ${toLabel}): ${rev.outcome}`);
-      if (rev.feedback_summary) {
-        parts.push(`> ${rev.feedback_summary}`);
-      }
-      if (rev.key_issues) {
-        try {
-          const issues = JSON.parse(rev.key_issues) as string[];
-          if (issues.length > 0) {
-            parts.push('Key issues: ' + issues.map(i => `• ${i}`).join(' '));
-          }
-        } catch { /* ignore parse errors */ }
-      }
-    }
+    parts.push(...formatRevisionLines(revisions));
     parts.push('');
   }
 

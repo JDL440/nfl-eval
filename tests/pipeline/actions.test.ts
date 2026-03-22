@@ -28,6 +28,10 @@ import {
   type ActionContext,
   type PanelMember,
 } from '../../src/pipeline/actions.js';
+import {
+  addConversationTurn,
+  addRevisionSummary,
+} from '../../src/pipeline/conversation.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -365,6 +369,43 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-wd', 'draft.md')).toBeTruthy();
     });
+
+    it('keeps writer conversation handoff summary-only while still providing the full current editor review', async () => {
+      createArticleWithStage(fixtures, 'test-wd-handoff', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+        'draft.md': '# Draft\nCURRENT DRAFT BODY',
+        'editor-review.md': 'FULL_EDITOR_FEEDBACK_SHOULD_APPEAR\n- Fix the cap table\n- Rewrite the lede',
+        '_config.json': JSON.stringify({ writeDraft: [] }, null, 2),
+      });
+      addConversationTurn(fixtures.repo, 'test-wd-handoff', 5, 'writer', 'assistant', 'WRITER_THREAD_SHOULD_NOT_APPEAR');
+      addConversationTurn(fixtures.repo, 'test-wd-handoff', 6, 'editor', 'assistant', 'OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
+      addConversationTurn(fixtures.repo, 'test-wd-handoff', 7, 'publisher', 'assistant', 'PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
+      addRevisionSummary(
+        fixtures.repo,
+        'test-wd-handoff',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        ['Fix EPA'],
+        'Tighten the math.',
+      );
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-handoff', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const draft = fixtures.repo.artifacts.get('test-wd-handoff', 'draft.md') ?? '';
+      expect(draft).toContain('## Shared Revision Handoff');
+      expect(draft).toContain('Tighten the math.');
+      expect(draft).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
+      expect(draft).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
+      expect(draft).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
+      expect(draft).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
+    });
   });
 
   // ── runEditor (5→6) ──────────────────────────────────────────────────────
@@ -383,6 +424,40 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-re', 'editor-review.md')).toBeTruthy();
+    });
+
+    it('passes shared summary plus editor self-history, not raw cross-role transcript', async () => {
+      createArticleWithStage(fixtures, 'test-re-handoff', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': longText(1000),
+      });
+      addConversationTurn(fixtures.repo, 'test-re-handoff', 5, 'writer', 'assistant', 'WRITER_THREAD_SHOULD_NOT_APPEAR');
+      addConversationTurn(fixtures.repo, 'test-re-handoff', 6, 'editor', 'assistant', 'EDITOR_PREVIOUS_REVIEW_SHOULD_APPEAR');
+      addConversationTurn(fixtures.repo, 'test-re-handoff', 7, 'publisher', 'assistant', 'PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
+      addRevisionSummary(
+        fixtures.repo,
+        'test-re-handoff',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        ['Fix EPA'],
+        'Tighten the math.',
+      );
+
+      const result = await STAGE_ACTIONS.runEditor('test-re-handoff', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const review = fixtures.repo.artifacts.get('test-re-handoff', 'editor-review.md') ?? '';
+      expect(review).toContain('## Shared Revision Handoff');
+      expect(review).toContain('## Your Previous Reviews');
+      expect(review).toContain('EDITOR_PREVIOUS_REVIEW_SHOULD_APPEAR');
+      expect(review).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
+      expect(review).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
     });
   });
 
@@ -403,6 +478,39 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-rp', 'publisher-pass.md')).toBeTruthy();
+    });
+
+    it('passes summary-only handoff to publisher', async () => {
+      createArticleWithStage(fixtures, 'test-rp-handoff', 6 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': longText(1000),
+        'editor-review.md': '## Verdict\nAPPROVED',
+      });
+      addConversationTurn(fixtures.repo, 'test-rp-handoff', 5, 'writer', 'assistant', 'WRITER_THREAD_SHOULD_NOT_APPEAR');
+      addConversationTurn(fixtures.repo, 'test-rp-handoff', 6, 'editor', 'assistant', 'EDITOR_THREAD_SHOULD_NOT_APPEAR');
+      addRevisionSummary(
+        fixtures.repo,
+        'test-rp-handoff',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        ['Fix EPA'],
+        'Tighten the math.',
+      );
+
+      const result = await STAGE_ACTIONS.runPublisherPass('test-rp-handoff', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const publisherPass = fixtures.repo.artifacts.get('test-rp-handoff', 'publisher-pass.md') ?? '';
+      expect(publisherPass).toContain('## Shared Revision Handoff');
+      expect(publisherPass).toContain('Tighten the math.');
+      expect(publisherPass).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
+      expect(publisherPass).not.toContain('EDITOR_THREAD_SHOULD_NOT_APPEAR');
     });
   });
 
