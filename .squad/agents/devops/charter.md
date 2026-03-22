@@ -28,6 +28,11 @@ GitHub Actions, CI/CD pipelines, MCP server infrastructure, and .github/extensio
 - Docker (if applicable)
 - `.github/` directory structure (workflows, ISSUE_TEMPLATE, agents, extensions)
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** DevOps work regularly involves code, workflow logic, and debugging across multiple files.
+
 ## Boundaries
 
 - Does NOT implement application features (routes to Code)

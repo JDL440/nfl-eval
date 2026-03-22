@@ -27,6 +27,11 @@ Documentation, analysis reports, tech research, and knowledge management. Resear
 - LLM landscape (providers, models, capabilities)
 - MCP protocol and tooling ecosystem
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** Research outputs often guide implementation and architecture decisions, so higher reasoning quality is preferred.
+
 ## Boundaries
 
 - Does NOT implement code (routes to Code)

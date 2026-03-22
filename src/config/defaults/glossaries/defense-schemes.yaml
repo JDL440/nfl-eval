@@ -1,0 +1,83 @@
+schema_version: 1
+glossary: defense-schemes
+description: Shared defensive coverage and pressure terminology for NFL Lab team and scheme analysis.
+entry_fields:
+  required:
+    - term
+    - definition
+    - source
+    - verified_date
+    - ttl_days
+  optional:
+    - notes
+    - examples
+refresh_guidance:
+  - Keep definitions league-standard and conceptual rather than coach-specific.
+  - Re-check examples if a future team sheet starts depending on coordinator-specific language.
+entries:
+  - term: Cover 2
+    definition: Cover 2 is a two-high coverage shell with the deep field split into two halves, usually paired with five underneath defenders.
+    notes:
+      - Do not use Cover 2 as a synonym for every two-high look.
+    examples:
+      - "Classic Cover 2 protects the sidelines with two safeties while stressing the middle seam."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/defense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Tampa 2
+    definition: Tampa 2 is a Cover 2 variation in which the middle linebacker runs deep to help protect the middle of the field.
+    notes:
+      - It is a subtype of Cover 2, not a blanket synonym.
+    examples:
+      - "A defense dropping the MIKE deep is using Tampa 2 rules rather than generic Cover 2."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/defense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Cover 3
+    definition: Cover 3 uses a single-high safety structure with three deep defenders and four underneath defenders.
+    notes:
+      - Teams can play Cover 3 as spot drop or with match principles.
+    examples:
+      - "Cover 3 remains a clean shorthand for many single-high structures."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/defense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Quarters
+    definition: Quarters, or Cover 4, divides the deep field into four quarter zones and often uses pattern-match rules.
+    notes:
+      - Modern quarter-based coverage is often more match-oriented than static spot-drop zone.
+    examples:
+      - "A two-high defense may live in quarter-based coverage language."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/defense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Cover 6
+    definition: Cover 6 is a quarter-quarter-half coverage that plays quarters to one side and Cover 2-style half-field technique to the other.
+    notes:
+      - It helps defenses treat the two sides of the formation differently.
+    examples:
+      - "Cover 6 lets a defense mix quarter and half-field support in one call."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/defense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Simulated pressure
+    definition: Simulated pressure presents blitz intent before the snap but rushes only four defenders after the snap, dropping an expected rusher into coverage.
+    notes:
+      - It stresses protection rules without paying the full coverage cost of a true blitz.
+    examples:
+      - "A defense can show six-man pressure, rush four, and still create a simulated-pressure look."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/defense.md
+    verified_date: 2026-03-22
+    ttl_days: 365

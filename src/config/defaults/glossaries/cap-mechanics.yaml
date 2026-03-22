@@ -1,0 +1,89 @@
+schema_version: 1
+glossary: cap-mechanics
+description: Durable NFL salary-cap mechanics used in roster and contract analysis.
+entry_fields:
+  required:
+    - term
+    - definition
+    - source
+    - verified_date
+    - ttl_days
+  optional:
+    - notes
+    - examples
+refresh_guidance:
+  - Keep these entries focused on mechanics, not league-year cap totals.
+  - Verify disputed contract details against Over The Cap before publication.
+entries:
+  - term: Hard cap
+    definition: The NFL uses a hard salary cap, so teams cannot legally exceed the cap during the league year.
+    notes:
+      - NFL teams do not have soft-cap exceptions that allow routine overspending.
+    examples:
+      - "A restructure can move cap charges, but it does not remove the hard-cap limit."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/cap.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Signing bonus proration
+    definition: A signing bonus is paid up front to the player but can be spread across the contract for cap purposes, up to five seasons.
+    notes:
+      - Proration lowers the present cap hit while moving charges into future years.
+    examples:
+      - "A signing bonus can create lower early cap hits than the same cash paid as base salary."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/cap.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Dead money
+    definition: Dead money is cap charge that remains after a player leaves the roster, usually from unamortized bonus proration or guaranteed salary.
+    notes:
+      - Dead money reflects past commitments, not new roster value.
+    examples:
+      - "A team can save cash while still carrying dead money on the cap."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/cap.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Void years
+    definition: Void years are extra contract seasons added for cap accounting rather than real football control.
+    notes:
+      - They create future dead money once the contract voids.
+    examples:
+      - "Void years can create short-term space while pushing cap cost forward."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/cap.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Post-June 1 designation
+    definition: A post-June 1 designation lets a team split dead-money acceleration across two league years instead of taking it all immediately.
+    notes:
+      - It changes timing, not total obligation.
+    examples:
+      - "A post-June 1 designation can lower the current-year cap hit of a release."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/cap.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Top-51 rule
+    definition: During the offseason, only the 51 largest cap charges count against the salary cap.
+    notes:
+      - Offseason cap-space figures often rely on Top-51 accounting and will differ from in-season accounting.
+    examples:
+      - "A depth signing may not count immediately if it does not crack the Top 51."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/cap.md
+    verified_date: 2026-03-22
+    ttl_days: 365

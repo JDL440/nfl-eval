@@ -28,6 +28,11 @@ Dashboard UI, HTMX views, SSE (server-sent events), user experience, and fronten
 - Editorial dashboard domain (article management, pipeline status, agent monitoring)
 - Server-sent events for real-time UI updates
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** UX work in this repo usually spans frontend code, server rendering, and interaction flow changes together.
+
 ## Boundaries
 
 - Does NOT implement backend business logic (routes to Code)

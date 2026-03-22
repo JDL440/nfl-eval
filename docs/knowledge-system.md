@@ -1,6 +1,11 @@
 # Knowledge System
 
-The NFL Lab platform uses a four-layer knowledge architecture to give agents persistent expertise, skills, and memory across article production runs.
+The NFL Lab platform now has two complementary knowledge tracks:
+
+1. **Runtime knowledge** — the charter, skill, and memory system that is composed into prompts during live agent runs.
+2. **Structured domain knowledge defaults** — curated glossary YAML and team identity markdown that give the repo a durable, reviewable football knowledge base.
+
+Phases 1–3 of issue #85 deliver the structured content layer only. Runtime loading, artifact injection, source indexing, and monthly refresh automation remain deferred work.
 
 ## Architecture Overview
 
@@ -22,6 +27,116 @@ At runtime, the Agent Runner composes a system prompt from:
 1. **Charter** — who the agent is (identity, responsibilities, boundaries)
 2. **Skills** — what the agent knows how to do (workflows, output formats)
 3. **Memory** — what the agent has learned (past decisions, domain knowledge)
+
+## Structured Domain Knowledge Defaults (Issue #85 Phases 1–3)
+
+These assets are authored in-repo so Research, Code, and Data can collaborate on a shared football reference layer without mixing it into free-form agent memory.
+
+### What Ships Now
+
+```text
+src/config/defaults/glossaries/
+  ├── analytics-metrics.yaml
+  ├── cap-mechanics.yaml
+  ├── defense-schemes.yaml
+  └── personnel-groupings.yaml
+
+content/data/team-sheets/
+  ├── BUF.md
+  ├── KC.md
+  └── SEA.md
+```
+
+### What Phases 1–3 Deliver
+
+- **Phase 1 — Schema and layout**
+  - A consistent YAML structure for shared glossaries
+  - A consistent markdown section layout for team identity sheets
+  - Validation tests that check file presence and structural integrity
+- **Phase 2 — Universal glossary content**
+  - Initial high-value definitions for analytics metrics, cap mechanics, defense schemes, and personnel groupings
+- **Phase 3 — Team identity sheets**
+  - Initial validated team sheets for SEA, KC, and BUF
+
+### What Is Explicitly Deferred
+
+- Loading glossaries into `runner.ts`
+- Creating article artifacts from team sheets in `actions.ts`
+- Building a domain knowledge index with source provenance
+- Monthly or scheduled refresh automation
+
+Those items belong to the follow-up implementation phases, not the Phase 1–3 content pass.
+
+### Glossary YAML Format
+
+Each glossary file follows a flat, validation-friendly YAML structure:
+
+```yaml
+schema_version: 1
+glossary: analytics-metrics
+description: Core NFL analytics terms aligned to NFL Lab usage.
+entry_fields:
+  required:
+    - term
+    - definition
+    - source
+    - verified_date
+    - ttl_days
+  optional:
+    - notes
+    - examples
+refresh_guidance:
+  - Re-verify threshold language when source material changes.
+entries:
+  - term: EPA per play
+    definition: ...
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+    verified_date: 2026-03-22
+    ttl_days: 365
+```
+
+**Why this shape works now**
+
+- It is structured enough for deterministic validation tests.
+- It keeps every term tied to freshness and source-reference fields from day one.
+- It keeps the authoring contract focused on the entry-level factual fields that matter most for auditability.
+- It is easy for Code or Data to extend later and now parses cleanly in the validation tests.
+
+### Team Identity Sheet Markdown Format
+
+Each initial team sheet uses frontmatter plus a stable markdown briefing layout:
+
+```markdown
+---
+team: SEA
+team_name: Seattle Seahawks
+verified_date: 2026-03-22
+ttl_days: 30
+sources:
+  - https://www.seahawks.com/team/front-office-roster/
+volatility:
+  leadership: 30
+  team_identity: 120
+  venue_and_division: 365
+---
+
+# Seattle Seahawks
+
+## Durable snapshot
+## Identity anchors
+### Offense
+### Defense
+## Roster-building and cap framing
+## Source guidance
+```
+
+**Why this shape works now**
+
+- The frontmatter makes freshness, source, and volatility expectations explicit.
+- The markdown body stays focused on durable identity, not volatile depth-chart detail.
+- The sections are stable enough for validation while staying readable to writers and researchers.
 
 ## Layer 1: Charters
 
@@ -204,6 +319,8 @@ When you run `npm run v2:init`:
 3. **Seed charters** copied from `src/config/defaults/charters/{league}/` (16 specialist charters for NFL)
 4. **Seed skills** copied from `src/config/defaults/skills/` (14 workflow skills)
 5. **Bootstrap memory** loaded from `src/config/defaults/bootstrap-memory.json` (28 domain_knowledge entries)
+
+Structured domain knowledge defaults from Issue #85 are **not** seeded into the runtime data directory yet. During Phases 1–3 they remain source-controlled reference files in the repository until the deferred runtime-integration work is completed.
 
 ### What Gets Seeded
 

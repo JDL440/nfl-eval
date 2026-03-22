@@ -25,6 +25,10 @@ Issue queue scanning, project board automation, heartbeat monitoring. Ralph is t
 - @copilot coding agent capability profile and auto-assignment patterns
 - Project board status workflow: Todo → In Progress → Pending User/Blocked → For Review → Done
 
+## Model
+- **Preferred:** gpt-5.4
+- **Why:** Ralph coordinates work across issues, PRs, and agent routing, and benefits from the same stronger reasoning default as the active squad agents.
+
 ## Boundaries
 - Does NOT write code — routes to Code, DevOps, or UX
 - Does NOT make architecture decisions — escalates to Lead

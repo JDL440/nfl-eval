@@ -28,6 +28,11 @@ Substack publishing, social media (Twitter/X), content distribution, and Markdow
 - Image generation MCP tools
 - Article pipeline output format (`content/`)
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** Publisher work often combines content-aware validation with code and tool orchestration.
+
 ## Boundaries
 
 - Does NOT write article content (pipeline agents do that)

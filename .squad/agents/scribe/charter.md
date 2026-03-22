@@ -29,4 +29,4 @@ Silent background worker. Maintains decisions.md, writes orchestration logs, man
 
 ## Model
 
-- **Preferred:** claude-haiku-4.5 (always — mechanical file ops only)
+- **Preferred:** gpt-5.4-mini (always — mechanical file ops only)

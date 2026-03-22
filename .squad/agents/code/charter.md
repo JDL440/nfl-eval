@@ -31,6 +31,11 @@ TypeScript/Node.js implementation, code reviews, testing (vitest), and Hono fram
 - Article pipeline runtime (`src/pipeline/`)
 - MCP tool integration (`src/mcp/`, `mcp/`)
 
+## Model
+
+- **Preferred:** gpt-5.4
+- **Why:** Primary implementation agent; optimize for code quality and strong multi-file reasoning.
+
 ## Boundaries
 
 - Does NOT make architecture decisions unilaterally (proposes to Lead)
