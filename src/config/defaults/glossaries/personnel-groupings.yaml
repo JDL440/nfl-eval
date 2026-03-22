@@ -1,0 +1,83 @@
+schema_version: 1
+glossary: personnel-groupings
+description: Standard offensive personnel labels used in team sheets, prompts, and article drafts.
+entry_fields:
+  required:
+    - term
+    - definition
+    - source
+    - verified_date
+    - ttl_days
+  optional:
+    - notes
+    - examples
+refresh_guidance:
+  - Personnel labels are durable, but usage-frequency claims should be refreshed with current charting or snap data.
+  - Spell out the back and tight-end counts once in article copy when writing for general readers.
+entries:
+  - term: 11 personnel
+    definition: 11 personnel means one running back, one tight end, and three wide receivers.
+    notes:
+      - It is the most common spread base grouping in the modern NFL.
+    examples:
+      - "11 personnel usually forces the defense to answer with nickel-friendly spacing."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/offense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: 12 personnel
+    definition: 12 personnel means one running back, two tight ends, and two wide receivers.
+    notes:
+      - It often supports heavier run looks and play-action.
+    examples:
+      - "12 personnel can create heavier looks without giving up pass-game flexibility."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/offense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: 13 personnel
+    definition: 13 personnel means one running back, three tight ends, and one wide receiver.
+    notes:
+      - It is typically used for heavy formations, short yardage, or goal-line situations.
+    examples:
+      - "13 personnel is a clean shorthand for true heavy offense."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/offense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: 21 personnel
+    definition: 21 personnel means two running backs, one tight end, and two wide receivers.
+    notes:
+      - The second back is often a fullback or hybrid player.
+    examples:
+      - "21 personnel helps describe offenses that value backfield multiplicity."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/offense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: 22 personnel
+    definition: 22 personnel means two running backs, two tight ends, and one wide receiver.
+    notes:
+      - It is usually a short-yardage or power-football grouping.
+    examples:
+      - "22 personnel is a standard heavy-package label in red-zone and goal-line contexts."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/offense.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Jumbo package
+    definition: A jumbo package adds extra offensive linemen or unusually heavy bodies to a standard personnel grouping.
+    notes:
+      - Jumbo is descriptive rather than a strict numeric personnel label.
+    examples:
+      - "A team can run a jumbo variant of 12 personnel by adding a sixth offensive lineman."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/offense.md
+    verified_date: 2026-03-22
+    ttl_days: 365

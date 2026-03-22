@@ -132,6 +132,11 @@ Agent knowledge is loaded from the data directory at runtime. On a fresh install
 
 See **[docs/knowledge-system.md](docs/knowledge-system.md)** for the full knowledge architecture, bootstrap process, and multi-league extensibility guide.
 
+The repo also includes a proof-of-concept structured knowledge slice for issue #85:
+
+- Glossary seeds: `src/config/defaults/glossaries/`
+- Team identity sheets: `content/data/team-sheets/`
+
 ## Dashboard Pages
 
 The editorial dashboard includes:

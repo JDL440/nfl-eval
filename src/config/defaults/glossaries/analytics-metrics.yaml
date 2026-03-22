@@ -1,0 +1,91 @@
+schema_version: 1
+glossary: analytics-metrics
+description: Core NFL analytics terms used across NFL Lab writing, editing, and analysis.
+entry_fields:
+  required:
+    - term
+    - definition
+    - source
+    - verified_date
+    - ttl_days
+  optional:
+    - notes
+    - examples
+refresh_guidance:
+  - Re-check definitions when bootstrap-memory.json or the Analytics charter changes.
+  - Keep thresholds and framing tied to durable league-wide interpretation, not one-season outputs.
+entries:
+  - term: EPA per play
+    definition: Expected Points Added per play measures how much a play changes a team's expected scoring outlook.
+    notes:
+      - Use EPA per play for efficiency comparison across players and teams with different volume.
+      - NFL Lab treats EPA as the default efficiency anchor for offense and passing.
+    examples:
+      - "0.00 EPA/play is roughly league average."
+      - "Positive EPA/play means the play improved expected scoring value."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/analytics.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Success rate
+    definition: Success rate is the share of plays that gain enough yardage to stay on schedule toward a first down or touchdown.
+    notes:
+      - NFL Lab uses the standard definition of 50 percent of needed yards on first down, 70 percent on second down, and 100 percent on third or fourth down.
+      - Pair success rate with EPA to separate consistency from explosiveness.
+    examples:
+      - "A lower defensive success rate allowed is better."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/analytics.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: CPOE
+    definition: Completion Percentage Over Expected compares actual quarterback completions to a model-based expected completion rate.
+    notes:
+      - CPOE is most useful when paired with EPA so accuracy and value are considered together.
+    examples:
+      - "A quarterback with positive CPOE completed passes above expectation."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/analytics.md
+        - src/config/defaults/skills/nflverse-data.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: aDOT
+    definition: Average depth of target measures the average air-yard distance of a player's targets or a quarterback's throws.
+    notes:
+      - aDOT describes target depth, not overall quality by itself.
+    examples:
+      - "A lower aDOT can still be productive if the offense creates yards after catch."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/analytics.md
+        - src/config/defaults/bootstrap-memory.json
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: Explosive play rate
+    definition: Explosive play rate tracks how often an offense creates chunk gains, commonly 20-plus yards on passes and 10-plus yards on runs.
+    notes:
+      - Use it to explain boom-or-bust profile differences that success rate may hide.
+    examples:
+      - "A unit can be explosive without being consistently efficient."
+    source:
+      refs:
+        - src/config/defaults/charters/nfl/analytics.md
+    verified_date: 2026-03-22
+    ttl_days: 365
+  - term: WPA
+    definition: Win Probability Added measures how much a play changes a team's chance to win in that specific game situation.
+    notes:
+      - WPA is more useful for narrative and clutch context than for standalone player evaluation.
+    examples:
+      - "A late-game touchdown can carry large WPA even if the offense was uneven overall."
+    source:
+      refs:
+        - src/config/defaults/bootstrap-memory.json
+        - src/config/defaults/charters/nfl/analytics.md
+    verified_date: 2026-03-22
+    ttl_days: 365
