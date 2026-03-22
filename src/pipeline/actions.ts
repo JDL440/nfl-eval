@@ -28,6 +28,7 @@ import {
   getRevisionCount,
   buildRevisionSummaryContext,
   buildEditorPreviousReviews,
+  MAX_EDITOR_PREVIOUS_REVIEWS,
 } from './conversation.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -642,7 +643,11 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     // If this is a revision and editor feedback exists, record it as a conversation turn
     // (only if not already recorded — check by looking for recent editor turns)
     if (isRevision && editorReview) {
-      const recentEditorTurns = getArticleConversation(ctx.repo, articleId, { agentName: 'editor', limit: 1 });
+      const recentEditorTurns = getArticleConversation(ctx.repo, articleId, {
+        agentName: 'editor',
+        limit: 1,
+        newestFirst: true,
+      });
       const lastEditorContent = recentEditorTurns.length > 0 ? recentEditorTurns[recentEditorTurns.length - 1].content : null;
       if (lastEditorContent !== editorReview) {
         addConversationTurn(ctx.repo, articleId, 6, 'editor', 'assistant', editorReview);
@@ -731,7 +736,11 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     // Editor gets compact shared handoff plus its own prior reviews, not the raw cross-role transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
     const conversationCtx = buildRevisionSummaryContext(revisions);
-    const editorTurns = getArticleConversation(ctx.repo, articleId, { agentName: 'editor' });
+    const editorTurns = getArticleConversation(ctx.repo, articleId, {
+      agentName: 'editor',
+      limit: MAX_EDITOR_PREVIOUS_REVIEWS,
+      newestFirst: true,
+    });
     const editorPreviousReviews = buildEditorPreviousReviews(editorTurns);
     const fullConversationCtx = [conversationCtx, editorPreviousReviews].filter(Boolean).join('\n\n---\n\n') || undefined;
 
