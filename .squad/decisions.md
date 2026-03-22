@@ -1,46 +1,216 @@
-# Decisions — NFL Lab
+# Decisions\n\n### Issue #82: Publish Article Broken — Root Cause and Fix
 
-> Canonical decision ledger. Append-only. Agents write to `.squad/decisions/inbox/` → Scribe merges here.
+**By:** Code (🔧 Dev)
+**Date:** 2026-03-22
+**Issue:** #82
+
+**What:** The "Publish to Substack" button on the article detail page (stage 7) calls the wrong backend endpoint. It POSTs to the generic `/htmx/articles/:id/advance` handler which only updates the database stage — it never calls the Substack API. This caused the article to be marked "Published" (stage 8) without actually appearing on Substack.
+
+**Root Cause Files:**
+- `src/dashboard/views/article.ts:530` — button targets `/htmx/articles/:id/advance` instead of `/api/articles/:id/publish`
+- `src/pipeline/engine.ts:270-274` — stage 7→8 guard only checks `requirePublisherPass`, missing `requireSubstackUrl` (which exists at line 216 but is unused)
+- `src/pipeline/actions.ts:782` — `publish` action is intentionally a no-op ("handled externally")
+
+**Fix Approach:**
+1. Change button target in `article.ts:530` to POST to `/api/articles/:id/publish`
+2. Add `requireSubstackUrl` as compound guard for stage 7→8 in `engine.ts`
+3. Optionally block raw advance endpoints from reaching stage 8
+
+**Scope:** Small (~30 lines). No schema changes. Should include regression test.
+
+**Status:** Bug confirmed. Issue labeled `go:yes`. Ready for implementation.
+
 
 ---
 
-### 2025-07-18: Team initialized with functional names
-**By:** Joe Robinson (via Squad init)
-**What:** Squad team uses functional role names (Lead, Code, Data, Publisher, Research, DevOps, UX) instead of fictional character names. No casting algorithm.
-**Why:** Owner preference for clarity and simplicity over themed naming.
+### Issue #83: K5a Wire Fact Checking Into Pipeline — Implementation
 
-### 2025-07-18: @copilot auto-assignment enabled
-**By:** Joe Robinson (via Squad init)
-**What:** GitHub Copilot coding agent added to roster with auto-assignment enabled for `squad:copilot` labeled issues.
-**Why:** Autonomous pickup of well-scoped issues (bug fixes, tests, docs) to keep the backlog moving.
-
-### 2025-07-18: Human member — Joe Robinson as Product Owner / Tech Lead
-**By:** Squad (Coordinator)
-**What:** Joe Robinson is on the roster as a human member with final decision authority.
-**Why:** Owner is actively involved in architecture and product decisions.
-
-### 2026-03-22: TLDR required on all issue comments
-**By:** Joe Robinson
-**What:** Every Squad agent comment on a GitHub issue MUST start with `**TLDR:**` followed by a 2-3 sentence summary. Full analysis goes below the TLDR.
-**Why:** Agent comments can be thousands of words. The TLDR lets the owner scan quickly and only drill into details when needed. This is how Tamir's squad works and it's proven effective for async communication.
-
-### 2026-03-22: PR auto-merge enabled
-**By:** Joe Robinson
-**What:** Squad agents may create, review, and merge their own PRs without human approval. Exception: PRs touching authentication, secrets, or production deployment configs require human review.
-**Why:** Reduces friction and keeps the backlog moving. The owner reviews when issues are flagged `pending-user` or when he chooses to inspect merged work.
-
-### 2026-03-22: Squad and article pipeline are separate systems
-**By:** Joe Robinson
-**What:** The Squad team (`.squad/agents/`) handles project-level work: issues, PRs, infrastructure, research, publishing workflow. The article pipeline agents (`src/config/defaults/charters/nfl/`) handle content production (panel discussions, drafting, editing). These are independent — Squad does NOT modify pipeline agent charters, and pipeline agents do NOT participate in Squad ceremonies.
-**Why:** The article pipeline has its own 8-stage state machine, model policy, and agent runner. Mixing the two systems would create confusion. Squad coordinates the *project*; the pipeline produces the *content*.
-
-### 2026-03-22: Triage Round 1 — Backlog hygiene and routing
-**By:** Lead (🏗️)
-**What:** Triaged 5 open non-article project issues. Closed #73 (nflverse) and #72 (Substack Notes) as already implemented in v2. Routed #81 to UX, #76 to Code, #70 to UX with detailed TLDR comments.
-**Why:** The backlog had stale research spikes that were fully shipped but never closed, creating a false impression of open work. Cleaning these up and routing actionable issues ensures the team focuses on real gaps. The v2 platform's capabilities (11 nflverse MCP tools, full Notes support) should be the baseline for future issue triage.
-
-### 2026-03-22: Issue #81 — Token Usage Broken (Investigation Findings)
 **By:** Code (🔧 Dev)
-**What:** Confirmed three bugs in token usage tracking: (1) No pricing module — `cost_usd_estimate` always NULL; (2) Copilot CLI hard-codes `usage: undefined`; (3) No per-provider cost breakdown. Recommended approach: create pricing module, calculate cost in `recordAgentUsage()`, add provider-level aggregation to dashboard, implement token estimation for CLI.
-**Why:** Token usage tracking is broken across the board, making cost analysis impossible. The pipeline needs accurate cost data for agent efficiency metrics. Implementation scope is medium (~300 lines) with no schema changes needed.
-**Status:** Bug confirmed. Issue #81 labeled `go:yes`. Ready for implementation assignment.
+**Date:** 2025-07-19
+**Issue:** #83
+**PR:** #89 (merged)
+
+**What:** Wired fact-checking into the article pipeline with three new modules covering Option A (pre-compute nflverse context for LLM fact-check) and Option C (deterministic stat/draft validators).
+
+**New modules:**
+- `src/pipeline/claim-extractor.ts` — Regex-based extraction of stat, contract, draft, and performance claims from markdown text. Case-sensitive name matching to avoid pronoun false positives.
+- `src/pipeline/fact-check-context.ts` — Queries nflverse Python scripts (player EPA, draft history, rosters) and builds `fact-check-context.md` artifact. Follows roster-context.ts architecture: execFileSync, getGlobalCache(), graceful degradation.
+- `src/pipeline/validators.ts` — Deterministic post-draft validators: stat claims (10% tolerance OR ±5 absolute), draft claims (round/pick/year match). Produces `fact-validation.md` report.
+
+**Pipeline integration (actions.ts):**
+- writeDraft (Stage 4→5): Extract claims from panel outputs → build nflverse lookup context → inject into LLM fact-check prompt
+- runEditor (Stage 5→6): Include fact-check-context.md in editor context via context-config.ts
+- runPublisherPass (Stage 6→7): Run deterministic validators after existing player mention check → write fact-validation.md artifact
+
+**Key technical decisions:**
+1. Regex-only claim extraction — no LLM calls, deterministic, fast (~1ms per article)
+2. 10% tolerance + ±5 absolute floor for stat matching (avoids false positives on small numbers)
+3. Graceful degradation everywhere — if Python scripts fail or cache is empty, pipeline proceeds normally
+4. Pronoun limitation accepted: "He threw for 3,200 yards" won't extract because "He" isn't a player name. Only sentences with explicit name references are validated.
+
+**Test coverage:** 29 new tests (17 claim-extractor, 12 validators). Total suite: 1315 tests passing.
+
+**Future considerations:**
+- Coreference resolution (pronoun → name mapping) could boost claim coverage but would require NLP or LLM
+- Contract validation not yet wired to nflverse (no contract data in current Python scripts)
+- Performance claims (rankings, percentiles) are extracted but not yet deterministically validated
+
+
+---
+
+# Decision: Structured Domain Knowledge Infrastructure
+
+**Issue:** #85 — K6a │ Structured domain knowledge
+**Status:** PROPOSED
+**Submitted by:** Research (🔍)
+**For decision by:** Lead or Product Owner (Joe Robinson)
+**Date:** 2025-07-19
+
+---
+
+## TLDR
+
+The pipeline already has a structured domain knowledge system (SQLite agent memory + bootstrap JSON) and injects roster context live. To scale domain knowledge infrastructure, implement a hierarchical KB with: (1) Universal Glossaries (YAML), (2) Team Identity Sheets (Markdown), (3) Domain Knowledge Index (JSON with metadata), and (4) Monthly Refresh Job (cron). Effort: MEDIUM (5–7 days).
+
+---
+
+## Current State: Domain Knowledge Inventory
+
+The infrastructure for structured domain knowledge exists but is fragmented:
+
+### 1. Bootstrap Domain Knowledge (176 pre-loaded facts)
+- **Location:** `src/config/defaults/bootstrap-memory.json`
+- **Format:** JSON array injected into AgentMemory at app startup
+- **Content:** 176 facts across categories (shared, analytics, editor, writer, cap, draft, lead)
+- **Examples:** EPA definitions, salary cap mechanics, draft hit rates, positional value hierarchy, voice guidelines
+- **Injection:** `src/agents/runner.ts` composeSystemPrompt() line 310–312
+
+### 2. Live Roster Context (Dynamic per-article)
+- **Location:** `src/pipeline/roster-context.ts`
+- **Called at:** Idea→Prompt, Editor review, Factcheck stages
+- **Data source:** nflverse official rosters (primary) + snap counts (supplementary)
+- **Format:** Markdown artifact `roster-context.md`
+- **Injection:** Stored in article artifacts, included in CONTEXT_CONFIG for Writer/Editor/Lead
+
+### 3. Agent Memory System (SQLite persistence)
+- **Location:** `src/agents/memory.ts`
+- **Categories:** learning, decision, preference, domain_knowledge, error_pattern
+- **Recall:** Agents retrieve top-10 memories per spawn (filtered by category)
+- **Lifecycle:** Memories have relevance scores (updated on use), optional TTL, access counters
+- **Durability:** Global per-project database survives across all sessions
+
+### 4. Context Configuration (Per-article routing)
+- **Location:** `src/pipeline/context-config.ts`
+- **Pattern:** Each article stores `_config.json` artifact with upstream include lists
+- **Default:** Writer receives [idea.md, discussion-summary.md, editor-review.md, panel-factcheck.md, roster-context.md]
+- **Flexibility:** Per-article overrides via getArticleContextOverrides()
+
+---
+
+## Identified Gaps
+
+| Gap | Impact | Example |
+|-----|--------|---------|
+| **No team-specific glossaries** | Scheme terminology not standardized | Writer doesn't know SEA's defensive terms (Nyseal scheme?) |
+| **No hierarchical KB** | All 176 facts are flat | Cap facts mixed with analytics; hard to organize/find |
+| **No factual currency** | Bootstrap loaded at startup, never refreshed | 2025 cap ($272.5M) becomes stale when CBA settles; coaching changes missed |
+| **No source tracking** | Can't audit fact provenance | Unknown: "Is the 2025 cap still $272.5M?" "Where did this fact come from?" |
+| **No team identity sheets** | Only roster provided | Writer lacks team colors, stadium, coaching staff, division, scheme identity |
+| **No unified glossary** | Agents use terminology inconsistently | "Cover 2" vs "Tampa 2" vs "2-high" used interchangeably |
+| **No inter-fact relationships** | Knowledge is siloed | Cap agent and Writer both explain proration independently |
+
+---
+
+## Proposed: Hierarchical KB Architecture
+
+### Layer 1: Universal Glossaries (YAML files)
+**Location:** `src/config/defaults/glossaries/`
+**Examples:** analytics-metrics.yaml, cap-mechanics.yaml, nfl-scheme-defense.yaml, personnel-grouping.yaml
+**Injection:** Runner loads relevant glossaries per agent skill set, appends to system prompt as "## Glossaries" section
+**Contains:** Definitions, thresholds, sources, verified dates, TTL
+
+### Layer 2: Team Identity Sheets (Markdown files)
+**Location:** `content/data/team-sheets/{TEAM}.md` (32 files)
+**Called at:** Stage 1 (generatePrompt action)
+**Content:** Team colors, stadium, leadership, scheme identity, division, draft patterns, cap constraints
+**Injection:** Stored as team-identity.md artifact, included in Writer/Editor/Lead contexts
+
+### Layer 3: Domain Knowledge Index (Hierarchical JSON)
+**Location:** `src/config/defaults/domain-knowledge-index.json`
+**Purpose:** Reorganize 176 bootstrap facts by domain with metadata (source URL, verified date, TTL days)
+**Benefit:** Enables refresh job detection, auditable by Editor
+
+### Layer 4: Monthly Knowledge Refresh Job
+**Location:** `scripts/refresh-domain-knowledge.ts`
+**Trigger:** Scheduled 1st of each month (GitHub Actions cron)
+**Logic:** Check fact TTL, fetch fresh data from sources (nflverse, OTC, NFL.com), update bootstrap + index, log changes
+**Output:** scripts/domain-knowledge-refresh-log.md (immutable audit trail)
+
+---
+
+## Integration Points
+
+### runner.ts (System Prompt Composition)
+Add glossary loading before boundaries section:
+```typescript
+const glossaries = this.loadGlossaries(agentName, skillNames);
+if (glossaries.length > 0) {
+  const glossaryText = glossaries.map(g => `### ${g.name}\n${g.content}`).join('\n\n');
+  parts.push('## Glossaries\n' + glossaryText);
+}
+```
+
+### actions.ts (Article Pipeline)
+At Stage 1 (generatePrompt):
+```typescript
+const teamSheet = buildTeamIdentitySheet(team); // -> markdown
+repo.artifacts.put(articleId, 'team-identity.md', teamSheet);
+CONTEXT_CONFIG.writeDraft.include.push('team-identity.md');
+```
+
+### Bootstrap Memory Reorganization
+Reorganize 176 facts by domain with metadata; maintain backward compatibility for existing runner code.
+
+---
+
+## Effort: MEDIUM (5–7 days)
+
+| Phase | Task | Days |
+|-------|------|------|
+| 1 | Design schemas + examples | 1–2 |
+| 2 | Build 4 glossaries (analytics, cap, defense, personnel) | 1–2 |
+| 3 | Team identity sheets (32 teams, 3 tested + 29 templated) | 0.5–1 |
+| 4 | Runner/actions integration (glossary + team sheet injection) | 1 |
+| 5 | Refresh job (cron + audit logging) | 1–2 |
+| 6 | Documentation + testing | 0.5 |
+| **TOTAL** | | **5–7** |
+
+---
+
+## Why This Matters
+
+1. **Consistency:** Shared glossaries prevent agents from inventing definitions
+2. **Freshness:** Auto-refresh monthly; stale facts (2025 cap, old coaches) updated without manual intervention
+3. **Discoverability:** Writers have glossaries in system prompt; no need to search
+4. **Scale:** New agents onboard with full KB immediately
+5. **Trust:** Every fact has source + verified date; Editor can audit
+
+---
+
+## Success Criteria
+
+- ✅ Glossaries loaded + injected into Writer/Analytics/Editor prompts
+- ✅ Team sheets included in Writer/Editor/Lead artifacts
+- ✅ Domain knowledge index created with source tracking
+- ✅ Monthly refresh job runs without error
+- ✅ Audit trail (refresh-log.md) tracks all fact updates
+- ✅ No stale facts after first refresh cycle (month 2)
+
+---
+
+## Recommendation
+
+Build Phases 1–3 (glossaries + team sheets) as proof of concept; extend to Phases 4–6 (refresh automation) after validation. Start with highest-impact glossaries (analytics-metrics, cap-mechanics) and 3 teams (SEA, KC, BUF). Timeline: 1 week for full implementation if prioritized.
+
+
+

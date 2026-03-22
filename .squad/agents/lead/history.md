@@ -26,3 +26,45 @@
 - **#70** (Social link image generation) → `squad:ux`. Cover image generation works (Gemini 3 Pro) but needs style standardization using Witherspoon article as reference, plus platform-specific OG preview auditing.
 
 **Key finding:** The v2 platform is more capable than the backlog reflects. Two major research spikes (#72, #73) were fully implemented but never closed. Future triage should cross-check the codebase before assuming issues are still open work.
+
+### 2026-03-22: Issue #88 — Pipeline Conversation Context (Investigation & Triage)
+
+**By:** Lead (🏗️)
+
+**What:** Created comprehensive GitHub issue (#88) for a 4-phase feature to add persistent per-article conversation history and agent context reuse across revision cycles.
+
+**Investigation Findings:**
+- **Current revision flow (actions.ts lines 605-850):** Detects revision by checking if `editor-review.md` exists, includes current editor feedback in writer prompt, but no multi-iteration history. When editor sends back REVISE, system regresses to stage 4 but rebuilds entire context from scratch on next writer call—losing the trail of "what did editor say in iteration 1, 2, 3?"
+- **AgentRunner prompt composition (runner.ts lines 279-381):** Rebuilds system prompt from scratch on every call by loading charter, skills, and global agent memories. Messages array (lines 378-381) contains only `[system, user]`—no conversation history. No per-article context stack mechanism.
+- **Database schema (schema.sql):** `editor_reviews` table tracks review number (line 169) but doesn't store full review text or context. `stage_runs` records execution metadata but not per-iteration agent context or conversation state. No table for "conversation thread" or "agent context stack" per article.
+- **Agent memory (src/agents/memory.ts):** Stores learnings globally by agent, not per-article. Recall doesn't prioritize article-specific context.
+
+**Problem Statement:**
+1. Writer doesn't see editor's *previous* feedback—only current feedback
+2. Editor doesn't see its own prior reviews ("I already flagged this in iteration 1")
+3. Context re-injected on every call (re-reads panel discussion, draft, feedback, roster)—wastes ~30% of tokens per agent call
+4. No mechanism to maintain coherent feedback loops across iterations
+
+**Proposed Solution (4 phases):**
+1. **Schema:** Add `article_conversations` (store per-article message history), `article_context_stack` (per-iteration context), `revision_summaries` (iteration outcomes)
+2. **Agent Runner:** Accept `conversationHistory` parameter, pass full message chain to LLM Gateway instead of just system + user
+3. **Pipeline Actions:** Update `writeDraft()` and `runEditor()` to load/store conversation, build revision summary context block
+4. **Observability:** Add conversation view to dashboard, track iteration count, measure token savings
+
+**Scope:** Affects ALL agents and stages (writer, editor, publisher, future research agents)—not just editor pass.
+
+**Goals:**
+1. Improve article generation quality—coherent feedback across iterations
+2. Reduce revision count—better context → fewer back-and-forth cycles
+3. Reduce token usage—conversation history vs. re-injection saves ~30% per call
+4. Increase observability—see full revision history
+
+**Status:** Issue #88 created and triaged. Labeled `squad:lead,squad:code`. TLDR comment posted per team decision. Ready for architectural review before assignment.
+
+### 2026-03-22: Session Completion & Issue #88 Status
+
+**Session context:** 7-agent spawn manifest completed. Code implemented 2 issues (#82 publish fix, #83 fact-check pipeline). Research/DevOps/UX completed investigations for issues #85, #83, #76, #70 — all labeled go:yes.
+
+**Issue #88 status:** Created and triaged. Awaiting architectural review and PO decision on 4-phase approach before assignment.
+
+
