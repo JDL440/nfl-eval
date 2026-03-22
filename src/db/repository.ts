@@ -12,6 +12,8 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   Article,
+  ArticleRetrospective,
+  ArticleRetrospectiveFinding,
   ArticleRun,
   ArticleStatus,
   EditorReview,
@@ -110,6 +112,25 @@ interface UsageEventParams {
   metadata?: unknown;
   runId?: string | null;
   stageRunId?: string | null;
+}
+
+interface ArticleRetrospectiveFindingInput {
+  role: string;
+  findingType: string;
+  findingText: string;
+  sourceIteration?: number | null;
+  priority?: string | null;
+}
+
+interface SaveArticleRetrospectiveParams {
+  articleId: string;
+  completionStage: number;
+  revisionCount: number;
+  forceApprovedAfterMaxRevisions: boolean;
+  participantRoles: string[];
+  overallSummary: string;
+  artifactName?: string | null;
+  findings: ArticleRetrospectiveFindingInput[];
 }
 
 // ── Repository ───────────────────────────────────────────────────────────────
@@ -868,6 +889,87 @@ export class Repository {
     const stmt = this.db.prepare('SELECT * FROM publisher_pass WHERE article_id = ?');
     const row = stmt.get(articleId) as unknown as PublisherPass | undefined;
     return row ?? null;
+  }
+
+  saveArticleRetrospective(params: SaveArticleRetrospectiveParams): number {
+    const article = this.getArticle(params.articleId);
+    if (article == null) {
+      throw new Error(`Article '${params.articleId}' not found in pipeline.db`);
+    }
+
+    const now = nowISO();
+    const participantRoles = JSON.stringify([...params.participantRoles].sort());
+    const artifactName = params.artifactName ?? null;
+
+    this.db.prepare(
+      `INSERT INTO article_retrospectives
+       (article_id, completion_stage, revision_count, force_approved_after_max_revisions,
+        participant_roles, overall_summary, artifact_name, generated_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(article_id, completion_stage, revision_count)
+       DO UPDATE SET
+         force_approved_after_max_revisions = excluded.force_approved_after_max_revisions,
+         participant_roles = excluded.participant_roles,
+         overall_summary = excluded.overall_summary,
+         artifact_name = excluded.artifact_name,
+         updated_at = excluded.updated_at`,
+    ).run(
+      params.articleId,
+      params.completionStage,
+      params.revisionCount,
+      params.forceApprovedAfterMaxRevisions ? 1 : 0,
+      participantRoles,
+      params.overallSummary,
+      artifactName,
+      now,
+      now,
+    );
+
+    const row = this.db.prepare(
+      `SELECT id
+       FROM article_retrospectives
+       WHERE article_id = ? AND completion_stage = ? AND revision_count = ?`,
+    ).get(params.articleId, params.completionStage, params.revisionCount) as { id: number } | undefined;
+
+    if (!row) {
+      throw new Error(`Failed to load retrospective id for article '${params.articleId}'`);
+    }
+
+    this.db.prepare(
+      'DELETE FROM article_retrospective_findings WHERE retrospective_id = ?',
+    ).run(row.id);
+
+    const insertFinding = this.db.prepare(
+      `INSERT INTO article_retrospective_findings
+       (retrospective_id, article_id, role, finding_type, finding_text, source_iteration, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+
+    for (const finding of params.findings) {
+      insertFinding.run(
+        row.id,
+        params.articleId,
+        finding.role,
+        finding.findingType,
+        finding.findingText,
+        finding.sourceIteration ?? null,
+        finding.priority ?? null,
+      );
+    }
+
+    return row.id;
+  }
+
+  getArticleRetrospectives(articleId: string): ArticleRetrospective[] {
+    return this.db.prepare(
+      'SELECT * FROM article_retrospectives WHERE article_id = ? ORDER BY revision_count ASC, id ASC',
+    ).all(articleId) as unknown as ArticleRetrospective[];
+  }
+
+  getRetrospectiveFindings(retrospectiveId: number): ArticleRetrospectiveFinding[] {
+    return this.db.prepare(
+      'SELECT * FROM article_retrospective_findings WHERE retrospective_id = ? ORDER BY id ASC',
+    ).all(retrospectiveId) as unknown as ArticleRetrospectiveFinding[];
   }
 
   updateChecklistItem(articleId: string, key: string, value: number | string | null): void {

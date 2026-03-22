@@ -35,3 +35,4 @@ tools: [view, rg, gh]
 - Issue `#108` adds a writer/editor/Lead retrospective for articles with at least one revision iteration.
 - The issue was scoped as a post-Stage-7 artifact/process because `src/types.ts` hard-codes stages `1..8`.
 - Likely implementation seams are `src/pipeline/actions.ts`, `src/pipeline/conversation.ts`, `src/db/schema.sql`, `src/db/repository.ts`, and focused tests, with dashboard surfacing kept optional/minimal.
+- A durable idempotence pattern is: trigger from the existing auto-advance completion path once `current_stage >= 7`, write a deterministic artifact name (for example `revision-retrospective-r{revisionCount}.md`), upsert the parent DB row on `(article_id, completion_stage, revision_count)`, then replace the child findings rows for that parent.
