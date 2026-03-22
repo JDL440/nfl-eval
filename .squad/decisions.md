@@ -228,20 +228,6 @@ This POC stays aligned with existing seed/bootstrap mechanics, current artifact 
 
 ---
 
-### Issue #85: Proof-of-Concept Knowledge Structure
-
-**By:** Research (🔍)  
-**Date:** 2026-03-22  
-**Status:** RECOMMENDED FOR IMPLEMENTATION
-
-For phases 1–3, keep canonical knowledge assets in `src/config/defaults/`, not `content/data/`, because this repo already seeds reusable knowledge from defaults and treats `content/articles/{slug}/` as the place for per-article artifacts.
-
-Use lowercase team abbreviations for filenames (`sea.md`, `buf.md`, `kc.md`, `wsh.md`) and generate a per-article `team-sheet.md` artifact next to `roster-context.md`.
-
-This POC keeps the implementation aligned with existing seed/bootstrap mechanics, current artifact naming, and current testing seams without pulling in the deferred refresh automation.
-
-
-
 
 
 ---

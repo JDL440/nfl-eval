@@ -52,4 +52,17 @@
 - Key implementation pitfall: `primary_team` is inconsistent today (`SEA` in dashboard/new-idea flows, lowercase full names like `seahawks` in some tests and repo calls), so any future team-sheet lookup must normalize team keys through a shared mapper instead of using raw article values.
 - Testing implication: asset-validation tests are the right Phase 1–3 target; broader updates to `tests/agents/runner.test.ts`, `tests/pipeline/actions.test.ts`, `tests/config/bootstrap.test.ts`, and dashboard fixture configs only become necessary once deferred runtime loading/seeding work begins.
 
+### 2026-03-22: Issue #85 content pass completed
 
+- Implemented the Phase 1–3 content layer using the user-requested paths: glossary YAML under `src/config/defaults/glossaries/` and team sheets under `content/data/team-sheets/`.
+- Standardized glossary files around `schema_version`, glossary metadata, section blocks, and term-level fields (`definition`, `why_it_matters`, `when_to_use`, optional thresholds, cautions, related_terms).
+- Standardized team sheets around six stable sections: Snapshot, Team Identity, Offensive Identity, Defensive Identity, Roster Construction Signals, and Writing Cues.
+- Updated `docs/knowledge-system.md` to distinguish the existing runtime prompt system from the new structured KB defaults and to state clearly that Phases 4–5 remain deferred.
+- Added validation coverage focused on asset presence and format integrity rather than runtime injection behavior.
+
+
+
+- **2026-03-22 — Issue #85 decision inbox merged**
+  - Merged the POC structure decision into `.squad/decisions.md` and removed the inbox file.
+  - Canonical phase 1–3 asset layout stays under `src/config/defaults/`, with lowercase team sheet stems (`sea.md`, `buf.md`, `kc.md`, `wsh.md`) and per-article `team-sheet.md` artifacts.
+  - This keeps the feature aligned with seeded defaults, keeps `content/articles/{slug}/` reserved for runtime article artifacts, and leaves refresh automation for the deferred follow-up issue.
