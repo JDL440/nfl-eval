@@ -2188,3 +2188,14 @@ At the same time, the surrounding Writer/Editor/Publisher guidance was inconsist
 - TLDR fixes preserve good analysis more reliably.
 - Prompt guidance is now consistent across pipeline repair, Editor review, and Publisher verification.
 
+
+---
+
+# TLDR follow-up note
+
+- Date: 2026-03-25
+- Agent: Lead
+- Scope: Follow-up clarification only
+
+Decision: keep TLDR misses on the revision-first path, but make the prompts and charters explicit that TLDR is a hard structural requirement. Writer now owns verifying TLDR on every draft, Editor must log missing/incomplete TLDR under `## 🔴 ERRORS` with a `REVISE` verdict, and revision prompts explicitly preserve or restore the canonical TLDR block instead of assuming Editor will restate it every time.
+
