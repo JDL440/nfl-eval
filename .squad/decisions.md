@@ -1075,3 +1075,48 @@ Restack the missing-config fix so it only includes:
 1. the HTMX missing-config fragment behavior,
 2. the minimum startup wiring/helper change needed for `SubstackService`, and
 3. focused regressions for HTMX vs JSON behavior plus direct env-to-service/dashboard wiring coverage.
+
+---
+
+# Lead Review — Issue #118
+
+**Date:** 2026-03-25  
+**Reviewer:** Lead  
+**Status:** APPROVE
+
+## Decision
+
+Approve Issue #118 in current repo state.
+
+## Evidence relied on
+
+- src/cli.ts
+  - isRepeatedProcessImprovement() returns true for process_improvement findings with rticleCount >= 2.
+  - uildProcessImprovementReasons() adds process-improvement finding repeated across 2+ articles, and uildRetrospectiveDigest() promotes any group with process-improvement reasons into candidates.processImprovements.
+  - handleRetrospectiveDigest() only reads via epo.listRetrospectiveDigestFindings(limit), builds the report, and prints markdown/JSON; it does not write digest, backlog, issue, or team-memory state.
+- src/db/repository.ts
+  - listRetrospectiveDigestFindings(limit) is a read-only query over rticle_retrospectives, rticles, and rticle_retrospective_findings.
+- 	ests/cli.test.ts
+  - prints a bounded markdown digest for manual review
+  - supports json output through the command dispatcher
+  - promotes repeated non-lead process improvements to issue-ready candidates
+
+## Review scope
+
+Reviewed only:
+
+- .squad/agents/lead/history.md
+- .squad/decisions.md
+- .squad/identity/now.md
+- .squad/skills/manual-retro-digest-first/SKILL.md
+- .squad/skills/post-stage-retrospective-artifact/SKILL.md
+- src/cli.ts
+- 	ests/cli.test.ts
+- src/db/repository.ts
+
+ .squad/identity/wisdom.md was not present.
+
+## Validation
+
+- Ran focused existing coverage: 
+px vitest run tests/cli.test.ts -t "retrospective digest command" — passed.
