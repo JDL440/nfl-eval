@@ -34,3 +34,20 @@
 ### 2026-03-23T15-13-57Z: Lead board cleanup follow-up
 - `#115` is now unblocked and assigned `go:yes` + `squad:research`, with `#117/#118` already landed.
 - Next research work should continue mining retrospectives into learning updates and process-improvement candidates.
+
+### 2026-03-25T21-30Z: Issue #119 duplication audit for research-driven issues
+- Issue #119 **fully covers artifact-level model provenance + UX badge**, spanning schema design, pipeline threading, artifact finalization, backfill strategy, and UI presentation.
+- Comprehensive searches across 8 open issues found **zero overlapping duplicates** for:
+  - Writer research/fact-checking routing
+  - Editor blockers/unresolved issues
+  - Evidence-deficit routing
+  - Claim mode/fallback handling
+  - Model routing/stage metadata beyond #119
+- All requested research-driven issues are **safe to create** with no duplication risk.
+- Recommended new issues include: Writer fact-check integration, Editor unresolved-issue gate, evidence-deficit routing, claim mode/fallback defaults, and stage metadata population.
+
+### 2026-03-25T17:58:41Z: Scribe consolidation of duplicate audit (Inbox merge)
+- Duplication audit decision merged into .squad/decisions.md from inbox.
+- Confirmed zero duplicates across 8 open issues for all 5 research-driven topic areas.
+- Coordination points documented: #119 artifact provenance ↔ stage routing rules, Writer research ↔ claim mode, Editor gate ↔ evidence-deficit routing.
+- Orchestration log written to .squad/orchestration-log/2026-03-25T17-58-41Z-research.md.

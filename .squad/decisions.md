@@ -2199,3 +2199,286 @@ At the same time, the surrounding Writer/Editor/Publisher guidance was inconsist
 
 Decision: keep TLDR misses on the revision-first path, but make the prompts and charters explicit that TLDR is a hard structural requirement. Writer now owns verifying TLDR on every draft, Editor must log missing/incomplete TLDR under `## 🔴 ERRORS` with a `REVISE` verdict, and revision prompts explicitly preserve or restore the canonical TLDR block instead of assuming Editor will restate it every time.
 
+
+
+---
+
+# Lead Decision — Research Findings → Issue Set for Writer/Editor Loop Improvements
+
+**Date:** 2026-03-25  
+**Requester:** Backend (Squad Agent)  
+**Status:** PENDING CREATION (6 draft issues ready for handoff)  
+
+---
+
+## Summary
+
+The Backend agent provided 7 research findings on Writer/Editor loop inefficiencies. Lead analyzed, de-duplicated, and split them into 6 implementable issues (excluding #119 which already covers artifact provenance/UX badges). This decision documents the split rationale, priority order, and draft issue bodies ready for GitHub creation.
+
+---
+
+## Research Findings → Issue Split
+
+| Finding | Issue # | Title | Tier | Dependencies |
+|---------|---------|-------|------|--------------|
+| Free-text blockers prevent routing | **#NEW-1** | Add structured editor blocker tracking | Foundation | None |
+| Writer lacks blocker context | **#NEW-2** | Add unresolved-blockers list to Writer prompt | Quick win | #NEW-1 |
+| Evidence gaps loop Writer | **#NEW-3** | Route evidence-deficit to Research | Medium | #NEW-1 |
+| Repeated blockers hang articles | **#NEW-5** | Escalate repeated blockers to Lead | Medium | #NEW-1 |
+| No fallback when evidence insufficient | **#NEW-4** | Add fallback/claim-mode after revisions | Medium | #NEW-1 |
+| Writer cannot fact-check (biggest win) | **#NEW-6** | Unbox Writer with guardrailed fact-checking | Research | Research phase |
+| Model routing observability | ~~#NEW-7~~ | *Skip — covered by existing #119* | — | — |
+
+---
+
+## Priority Ordering (Recommended Implementation Sequence)
+
+### Tier 1: Foundation (Unblocks 4 other issues)
+1. **#NEW-1: Structured blocker tracking** (1-2 days)
+   - Converts free-text summaries to structured blocker_type + blocker_ids
+   - Enables programmatic routing and repeat detection
+   - Files: `src/db/schema.sql`, `src/db/repository.ts`, `src/pipeline/actions.ts`
+
+### Tier 2: Quick Wins (Direct ROI)
+2. **#NEW-2: Blocker summary in Writer prompt** (1-2 days)
+   - Injects unresolved blockers list into Writer REVISE context
+   - Reduces repeated-fix cycles
+   - Depends on #NEW-1
+
+3. **#NEW-3: Evidence-gap routing to Research** (2-3 days)
+   - Breaks evidence-loop anti-pattern
+   - Routes blocker_type=evidence_deficit to Research instead of Writer
+   - Depends on #NEW-1
+   - Files: `src/pipeline/actions.ts`, `src/config/defaults/charters/nfl/{editor,researcher}.md`
+
+### Tier 3: Safety Nets (Prevent System Hangs)
+4. **#NEW-5: Escalate repeated blockers to Lead** (2-3 days)
+   - Escalates repeated blockers to Lead for decision instead of infinite Writer loop
+   - Depends on #NEW-1
+   - Files: `src/pipeline/actions.ts`, `src/config/defaults/charters/nfl/lead.md`
+
+### Tier 4: Graceful Degradation
+5. **#NEW-4: Fallback/claim-mode after revisions** (2-3 days)
+   - Offers opinion-framing fallback when evidence unavailable
+   - Depends on #NEW-1
+   - Files: `src/pipeline/actions.ts`, `src/config/defaults/charters/nfl/{writer,editor}.md`
+
+### Tier 5: Forward-Looking Capability Expansion
+6. **#NEW-6: Writer fact-checking with guardrails** (Research phase + 3-4 days implementation)
+   - User identified as "biggest win"
+   - Requires careful scoping to avoid uncontrolled API usage
+   - Consider starting with read-only sources (rosters, cap tables, public schedules)
+   - Files: `src/config/defaults/charters/nfl/writer.md`, `src/pipeline/actions.ts`
+
+---
+
+## Duplicate Check Results
+
+Searched GitHub issues for overlapping scope:
+- ✅ No existing issue for "Writer research/fact-checking with guardrails"
+- ✅ No existing issue for "Evidence-gap routing to Research"
+- ✅ No existing issue for "Blocker escalation to Lead"
+- ✅ No existing issue for "Blocker summary in Writer prompt"
+- ✅ No existing issue for "Structured blocker tracking"
+- ✅ Issue #119 covers separate scope (artifact-level provenance + UX badges) — EXCLUDE #NEW-7
+- ✅ All searches negative; safe to proceed with full 6-issue set
+
+---
+
+## Design Decisions
+
+### 1. Keep the split practical (6 issues, not 1 umbrella)
+- Separate implementation lanes so teams can parallelize
+- Each issue is independently testable and mergeable
+- Dependencies are explicit and minimal (#NEW-1 unblocks 4 others)
+
+### 2. Structured blocker IDs are mandatory foundation
+- Every downstream routing decision (#NEW-3, #NEW-4, #NEW-5) depends on blocker data
+- Low-cost implementation (schema + enum, one query helper)
+- High-payoff: enables data-driven pipeline decisions instead of heuristics
+
+### 3. Writer fact-checking is research phase, not quick win
+- Biggest user-identified win, but requires careful design
+- Guardrails needed: approved sources, cost budget, citation requirement
+- Suggest starting with read-only sources, then expanding to external APIs
+- Do research first; implement second
+
+### 4. Escalation (issue #NEW-5) is a safety mechanism
+- Prevents indefinite loops on blockers Writer cannot fix (scope, data availability)
+- Lead makes the decision (reframe, pause, abandon) not pipeline logic
+- Reduces frustration from force-approval when real problems remain
+
+### 5. Fallback/claim-mode (issue #NEW-4) preserves publishability with transparency
+- Not "ship broken content anyway"
+- Is "publish analysis/opinion when evidence is limited, clearly labeled"
+- Writer must reframe under explicit rules (cite assumptions, mark speculation, transparency)
+- Reader expectations are managed
+
+---
+
+## Risk Mitigation
+
+| Risk | Mitigation |
+|------|-----------|
+| #NEW-1 schema change breaks existing revisions | Keep free-text summary alongside blocker_ids; map old summaries to blocker_type=other |
+| #NEW-3 Research agent missing/unavailable | Research task is non-blocking; timeout after 10 min and return "data unavailable" |
+| #NEW-4 fallback mode abused to ship poor content | Lead approval is mandatory; opinion-framing rules are strict (cite, flag speculation) |
+| #NEW-5 escalation creates Lead bottleneck | Tie escalation to 2+ repeats of same blocker; not every revision |
+| #NEW-6 Writer fact-checking runs unconstrained | Define approved sources upfront; budget enforcement (max 3 checks/draft, 5 min total) |
+
+---
+
+## Files to Update (by issue)
+
+**All issues:**
+- `.squad/decisions.md` — Record the split and priority ordering
+- `src/config/defaults/charters/nfl/*.md` — Update Writer, Editor, Lead, Researcher guidance
+
+**#NEW-1 (Blocker tracking):**
+- `src/db/schema.sql` — Add blocker_type enum, blocker_ids array
+- `src/db/repository.ts` — Add blocker query methods
+- `src/pipeline/actions.ts` — Wire blocker data into revision records
+- `tests/db/repository.test.ts` — Add blocker retrieval tests
+
+**#NEW-2 (Blocker summary):**
+- `src/config/defaults/charters/nfl/writer.md` — Add "## Unresolved Blockers" section
+- `src/pipeline/actions.ts` — Inject blocker summary into Writer REVISE context
+
+**#NEW-3 (Evidence routing):**
+- `src/pipeline/actions.ts` — Branch on blocker_type=evidence_deficit to Research
+- `src/config/defaults/charters/nfl/editor.md` — Guidance for evidence_deficit classification
+- `src/config/defaults/charters/nfl/researcher.md` — New task: mid-article data enrichment
+
+**#NEW-4 (Fallback mode):**
+- `src/db/schema.sql` — Add article_mode enum
+- `src/pipeline/actions.ts` — Trigger fallback after N revisions; route to Lead
+- `src/config/defaults/charters/nfl/{writer,editor}.md` — Fallback reframe rules
+
+**#NEW-5 (Escalation):**
+- `src/pipeline/actions.ts` — Detect repeated blockers; escalate to Lead
+- `src/config/defaults/charters/nfl/lead.md` — Escalation decision guidance
+
+**#NEW-6 (Writer fact-checking):**
+- `src/config/defaults/charters/nfl/writer.md` — Fact-checking permission + guardrails
+- `src/pipeline/actions.ts` — Optional fact-check gate (approved sources, budget)
+- `src/config/defaults/skills/writer-fact-check.md` — New skill doc
+
+---
+
+## Acceptance Criteria (Overall)
+
+- [ ] 6 GitHub issues created with titles, bodies, acceptance criteria, and notes
+- [ ] Issues reference each other's dependencies (e.g., "Depends on #NEW-1")
+- [ ] Duplicate search documented and cleared
+- [ ] Priority ordering is visible in issue labels or description
+- [ ] Draft issue bodies are ready for Backend agent to post via `gh issue create`
+
+---
+
+## Next Steps
+
+1. **Lead (this pass):** Draft all 6 issue bodies (DONE) ✅
+2. **Backend (next pass):** Search for duplicates with focused queries (provided draft to support this)
+3. **Backend (final pass):** Create issues via `gh issue create` in priority order
+4. **Team:** Implement in Tier 1 → Tier 2 → Tier 3 sequence
+
+---
+
+## Notes
+
+- **Scope pragmatism:** This split avoids a 100-line umbrella issue that would be unimplementable. Each issue is 1-3 days of work for one engineer.
+- **User feedback:** Writer fact-checking was explicitly called out as "biggest win" — prioritize research phase for this.
+- **Architecture alignment:** All issues fit within existing pipeline model (stage routing, blocker tracking, chart guidance) — no new abstractions needed.
+- **Interdependencies:** #NEW-1 is truly foundational; the rest can be parallelized once #NEW-1 lands.
+
+
+---
+
+# Research — Issue Duplication Audit & Recommendations
+
+**Date:** 2026-03-25T21:30:00Z  
+**Task:** Assess requested research-driven issues for duplicates against open GitHub issues.  
+**Requested by:** Backend (Squad Agent)  
+**Related:** Issue #119 (model provenance + UX badge)
+
+## Summary
+
+Comprehensive search of 8 open GitHub issues found **zero overlapping duplicates** for the requested items. Issue #119 is already accounted for (scope clearly defined). All proposed research-driven issues are safe to create.
+
+## Issue #119 Coverage Analysis
+
+**Title:** Capture model provenance per output artifact and show model badges in UX  
+**Status:** Open, awaiting research → implementation
+
+### What #119 Already Covers
+- **Artifact-level provenance model** — captures provider, actual_model, actual_model_tier, actual_precedence_rank, requested_model/tier, and linkage to source stage_run_id/usage_event_id
+- **Schema + DB design** — extends artifact record metadata (may require new table or extension)
+- **Pipeline threading** — threading requested model metadata into `ctx.repo.startStageRun(...)` calls
+- **Artifact finalization** — persisting actual model provenance at creation/finalization time
+- **Backfill strategy** — inferring provenance from existing usage_events/stage_runs where confidence is acceptable
+- **UX presentation** — model/provider badge or label in artifact/article views (e.g., "Claude Sonnet 4.5", "GPT-5.2", Gemini)
+- **Open questions** — canonical artifact record ownership, requested vs actual display logic, backfill vs forward-fill approach
+
+### What #119 Intentionally Does NOT Cover
+- Writer research/fact-checking system design
+- Editor's unresolved-issue gate or blocker logic
+- Evidence-deficit routing rules
+- Claim mode and fallback behavior
+- Other model routing or stage metadata work beyond artifact provenance
+
+---
+
+## Duplicate Search Results
+
+### Searches Performed
+1. Explicit phrase searches: "fact-check", "claim mode", "evidence deficit", "fallback", "routing"
+2. Role-based searches: "Writer", "Editor", "editor blocker", "unresolved"
+3. Broad topic searches: "model routing", "stage metadata", "writer research"
+4. Comprehensive issue list: All 8 open issues reviewed
+
+### Findings
+- **Zero duplicate issues** discovered for Writer fact-checking, Editor blockers, evidence routing, claim modes, or fallback strategies.
+- Existing open issues cover only tangentially related work (domain knowledge, auth, retrospectives, article inventory, staleness detection, social images, stage-run timing).
+
+---
+
+## Recommended Issue Scope (Ready to Create)
+
+### 1. **Writer Fact-Checking Integration** [SAFE]
+- Research: design writer's fact-check research flow (sources, inline evidence tagging, confidence scoring)
+- No duplicate found; #119 covers only artifact provenance, not writer research logic
+
+### 2. **Editor Blockers & Unresolved Issues Gate** [SAFE]
+- Research: define Editor's responsibility for flagging unresolved issues, blockers, and required Writer revisions
+- No duplicate found; #119 covers only model badges, not editorial gates
+
+### 3. **Evidence-Deficit Routing** [SAFE]
+- Research: define how pipeline should handle articles with insufficient evidence, backoff strategies, and human escalation
+- No duplicate found; completely orthogonal to artifact provenance
+
+### 4. **Claim Mode & Fallback Defaults** [SAFE]
+- Research: define claim mode selection (strict, moderate, relaxed), fallback behavior, and model selection heuristics
+- No duplicate found; no existing issue touches claim-level decision logic
+
+### 5. **Stage Metadata & Model Routing** [PARTIAL—see note]
+- Research: define stage-level model routing rules, precedence, and metadata capture (distinct from #119's artifact-level provenance)
+- **Note:** #119 includes "populate requested_model in stage_runs" as part of artifact prep. Propose framing this as **stage-level routing rules** (when/why to route to which model) vs. **artifact-level provenance** (capturing that routing decision durable on the artifact). No duplicate, but coordinate scope with #119 implementation.
+
+---
+
+## Coordination Points
+
+- **#119 → New stage routing issue:** #119 handles artifact-level capture; new issue should define stage-level model selection rules and precedence logic.
+- **Writer research ↔ Claim mode:** Writer's fact-check findings should feed into claim-mode selection (strict/moderate/relaxed). Sequence: Writer research → claim mode → Editor gate.
+- **Editor gate ↔ Evidence-deficit routing:** If Editor flags insufficient evidence, evidence-deficit routing should determine escalation vs. auto-revision flow.
+
+---
+
+## Approval
+
+✅ **All requested issues are safe to create.** Recommend starting with:
+1. Writer fact-checking (inputs to other systems)
+2. Claim mode / fallback defaults (gates Writer and Editor behavior)
+3. Editor blockers (consumes Writer findings)
+4. Evidence-deficit routing (fallback for Editor gate failures)
+5. Stage metadata (orchestration; coordinate with #119)
