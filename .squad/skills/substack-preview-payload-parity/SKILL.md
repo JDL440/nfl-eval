@@ -3,17 +3,31 @@ name: Substack Preview Payload Parity
 domain: publishing
 confidence: high
 tools: [view, rg, vitest]
+status: resolved
 ---
 
 # Substack Preview Payload Parity
 
-## When to Use
+**STATUS: ✅ RESOLVED 2026-03-23** — Payload now matches preview. See implementation details below.
+
+## Resolution
+
+As of 2026-03-23, the Substack payload includes all elements shown in preview:
+
+1. **Images**: `enrichSubstackBody()` uploads cover and inline images to Substack CDN and inserts them into the HTML body
+2. **Subscribe CTA**: Appended automatically with caption from `config.leagueConfig.substackConfig.subscribeCaption`
+3. **Publication blurb**: Footer with Lab intro and engagement prompt appended to every draft
+4. **Image distribution**: `intersperseImages()` uses the same block-splitting logic as `preview.ts:intersperse()` for consistent placement
+
+Implementation in `src/dashboard/server.ts:291-385` (`enrichSubstackBody` and `intersperseImages` functions).
+
+## When to Use (Historical)
 
 - A local preview looks rich, but the actual Substack draft/post is missing images, subscribe widgets, or other v1 presentation elements.
 - You need to determine whether a problem lives in payload construction, preview rendering, content readiness, or a mix of those.
 - There are multiple rendering paths and you need to know which one actually drives `draft_body`.
 
-## Workflow
+## Workflow (Historical)
 
 1. Start at the publish seam in `src/dashboard/server.ts`.
    - Find the function that prepares article presentation for both preview and publish.
@@ -33,21 +47,22 @@ tools: [view, rg, vitest]
    - Do the candidate drafts actually contain `::subscribe` markers or image references?
    - Do referenced files/assets exist, or are they only local-relative paths with no upload step?
 
-## High-signal checks
+## High-signal checks (Historical)
 
-1. **If preview adds images outside the article body**, those images are not necessarily in the Substack payload.
-2. **If preview adds a generic subscribe CTA outside the body**, it may hide the absence of payload-native `subscribeWidget` nodes.
-3. **If `SubstackService.uploadImage()` exists but is unused in draft creation**, local image references are likely not publishable yet.
-4. **If preview uses `proseMirrorToHtml()` but publish sends raw ProseMirror JSON**, an HTML-parity check alone is misleading.
-5. **If the preview renderer lacks explicit cases for payload-native node types**, the preview cannot be trusted as a one-to-one validation tool.
+1. **~~If preview adds images outside the article body~~**, ✅ FIXED: Images now uploaded and added to Substack payload via `enrichSubstackBody()`.
+2. **~~If preview adds a generic subscribe CTA outside the body~~**, ✅ FIXED: Subscribe CTA and footer now appended to Substack payload.
+3. **~~If `SubstackService.uploadImage()` exists but is unused in draft creation~~**, ✅ FIXED: Now used during draft save in `enrichSubstackBody()`.
+4. **~~If preview uses `proseMirrorToHtml()` but publish sends raw ProseMirror JSON~~**, ✅ FIXED 2026-03-23: Both preview and publish now use `proseMirrorToHtml()` consistently.
+5. **If the preview renderer lacks explicit cases for payload-native node types**, the preview cannot be trusted as a one-to-one validation tool. (Still relevant for future node types)
 
 ## Current seam map
 
-- `src/dashboard/server.ts:262-317` builds both `htmlBody` and `substackBody`.
-- `src/dashboard/views/publish.ts:90-92` renders preview HTML from `proseMirrorToHtml(doc)`.
-- `src/dashboard/views/preview.ts:89-151` adds cover/inline image chrome, subscribe CTA, and footer copy.
-- `src/services/substack.ts:135-173` sends `draft_body` to Substack; image upload is a separate helper, not part of draft creation/update.
+- `src/dashboard/server.ts:262-288` — `buildPublishPresentation()` converts markdown to HTML for both preview and base Substack body
+- `src/dashboard/server.ts:291-385` — `enrichSubstackBody()` uploads images, intersperses them, and appends subscribe/footer
+- `src/dashboard/server.ts:387-421` — `saveOrUpdateSubstackDraft()` calls enrichment before sending to Substack API
+- `src/dashboard/views/preview.ts:89-151` — Preview frame adds same images/CTA for local viewing
+- `src/services/substack.ts:212-235` — `SubstackService.uploadImage()` uploads to Substack CDN
 
 ## Recommendation
 
-For this repo, treat the Substack payload as the source of truth and the preview as a diagnostic surface. First make sure publish-critical elements are present in `substackBody`; then tune the preview so it reflects that payload faithfully instead of compensating with local-only presentation.
+✅ **Resolved.** Preview and payload are now in parity. For future changes, maintain the enrichment logic in `enrichSubstackBody()` to ensure both paths receive the same content enhancements.

@@ -1203,3 +1203,133 @@ Created and used `devops/publish-substack-progress` instead of committing on `ma
 ## Commit scope rule
 
 Only stage publish/Substack workflow changes and directly related tests/docs. Leave unrelated retrospective, runner, revision-history, and agent history changes uncommitted.
+
+---
+
+# Decision: Fix Substack Publish Payload Format
+
+**Date:** 2026-03-23  
+**Author:** Data  
+**Status:** Implemented  
+**Impact:** High (affects all published articles)
+
+## Problem
+
+Published articles on Substack were missing images, formatting, and other rich content. The root cause was in `buildPublishPresentation()` which was sending raw ProseMirror JSON to Substack instead of rendered HTML.
+
+## Root Cause
+
+Line 276 in `src/dashboard/server.ts`:
+```typescript
+substackBody = JSON.stringify(doc);  // ❌ Wrong - sends JSON
+```
+
+Meanwhile, the preview correctly used:
+```typescript
+htmlBody = proseMirrorToHtml(doc);  // ✅ Correct - sends HTML
+```
+
+The `saveOrUpdateSubstackDraft()` function passes `presentation.substackBody` as `bodyHtml` to Substack's API, which expects HTML, not JSON.
+
+## Solution
+
+Changed line 276 to match the preview rendering:
+```typescript
+substackBody = proseMirrorToHtml(doc);  // ✅ Now sends HTML
+```
+
+## Error Precedence
+
+Reviewer also requested verification that error precedence in `POST /api/articles/:id/publish` remained correct. Confirmed the route checks:
+1. **First:** Missing markdown (`!presentation.substackBody`) → "No article draft found yet..."
+2. **Second:** Missing draft URL (`!article.substack_draft_url`) → "No linked Substack draft found..."
+
+This order is correct and unchanged.
+
+## Testing
+
+- ✅ All 42 publish tests pass (`npm run test -- tests/dashboard/publish.test.ts`)
+- ✅ Build succeeds (`npm run v2:build`)
+- ⚠️ 2 pre-existing server.test.ts failures unrelated to this change (revision history rendering)
+
+## Architecture Note
+
+The `buildPublishPresentation()` function serves dual purposes:
+- `htmlBody`: rendered preview in the dashboard
+- `substackBody`: payload sent to Substack API
+
+Both now use the same `proseMirrorToHtml()` renderer to ensure consistency between preview and published content.
+
+---
+
+# Decision — Substack Payload Parity Restoration
+
+**Agent:** Publisher  
+**Date:** 2026-03-23  
+**Status:** Implemented
+
+## Context
+
+The preview frame (`/articles/:id/preview`) showed a fully formatted article with cover/inline images, subscribe CTA, and publication blurb. However, the actual Substack draft/post was missing all these elements — it contained only the bare article body HTML.
+
+**Root cause:** `buildPublishPresentation()` in `src/dashboard/server.ts` created identical `htmlBody` and `substackBody` (both from `proseMirrorToHtml(doc)`), but the preview added images and chrome _after_ that conversion via `intersperse()` and DOM injection. The Substack payload path never received these enhancements.
+
+## Decision
+
+Implemented `enrichSubstackBody()` to augment the Substack payload with:
+
+1. **Cover image**: Upload to Substack CDN and prepend as `<figure>` at the top
+2. **Inline images**: Upload each to Substack CDN and distribute evenly throughout the body using the same `intersperseImages()` logic as preview
+3. **Subscribe CTA**: Append styled div with caption from `config.leagueConfig.substackConfig.subscribeCaption`
+4. **Publication blurb**: Append footer with Lab intro and engagement prompt
+
+## Implementation
+
+### Key files changed
+
+- **`src/dashboard/server.ts`**:
+  - Added `enrichSubstackBody()` function (async)
+  - Added `intersperseImages()` helper (mirrors preview.ts distribution logic)
+  - Modified `saveOrUpdateSubstackDraft()` to await enrichment and pass enriched body to `createDraft`/`updateDraft`
+  - Added `resolve` import from `node:path`
+
+- **`tests/dashboard/publish.test.ts`**:
+  - Added 4 new tests verifying enriched body contains subscribe CTA, footer, and handles image uploads
+  - Tests confirm images fail gracefully if files don't exist
+
+### Architecture decisions
+
+1. **Image upload is non-blocking**: If an image file doesn't exist or upload fails, log a warning and continue. This prevents draft creation from failing due to missing images.
+
+2. **Enrichment is applied once per draft save**: Images are uploaded and body is enriched every time `saveOrUpdateSubstackDraft()` is called (both create and update paths). This ensures the draft always reflects the latest content + images.
+
+3. **Config-driven text**: Subscribe caption and lab name come from `config.leagueConfig.substackConfig`, not hardcoded strings.
+
+4. **Intersperse algorithm preserved**: Inline images are distributed using the same block-splitting logic as `preview.ts:intersperse()`, ensuring consistency between preview and live article.
+
+## Benefits
+
+- **Preview = Production**: What the user sees in preview now matches what gets published
+- **v1 feature parity**: Articles now include subscribe CTAs and publication branding, not just bare content
+- **Graceful degradation**: Missing images don't block draft creation
+- **Maintainability**: Image distribution logic is centralized and consistent
+
+## Trade-offs
+
+- **Draft save latency**: Each draft save now includes image uploads (potentially multiple HTTP requests). Acceptable because draft saves are user-initiated and async.
+- **Storage**: Substack CDN hosts the images, not local filesystem. This is the correct behavior for published content.
+
+## Testing
+
+All 45 tests in `tests/dashboard/publish.test.ts` pass, including new tests for:
+- Subscribe CTA and footer blurb presence
+- Cover image upload and prepending
+- Inline image upload and interspersing
+
+Build passes with `npm run v2:build`.
+
+## Next Steps
+
+1. Test with a real article that has images and republish to validate end-to-end
+2. Consider adding progress indicators for image uploads in the UI (future enhancement)
+3. Document the enrichment flow for future maintainers

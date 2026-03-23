@@ -17,6 +17,15 @@
 - 2026-03-22: For durable team identity files, official club/NFL pages anchor leadership and venue facts; seasonal identity claims should defer to current nflverse efficiency or charting refreshes.
 - 2026-03-23: In `POST /api/articles/:id/publish`, preserve the accepted missing-config split (HTMX gets the publish-panel HTML guidance, non-HTMX gets JSON 500), but validate article markdown before checking for a linked Substack draft so the operator sees the real prerequisite failure first.
 - 2026-03-23: Focused validation commands for the publish-page fix were `npm run test -- tests/dashboard/publish.test.ts` and `npm run v2:build`.
+- 2026-03-23: Critical bug fixed in `buildPublishPresentation()` (src/dashboard/server.ts:276): changed `substackBody = JSON.stringify(doc)` to `substackBody = proseMirrorToHtml(doc)` so Substack receives HTML instead of raw ProseMirror JSON. This fixes missing images/formatting in published articles. Error precedence in POST /api/articles/:id/publish was already correct (markdown check before draft URL check).
+
+### 2026-03-23T05:00:39Z: Publish Payload Path Fix Complete
+- **Bug:** `buildPublishPresentation()` was sending raw ProseMirror JSON to Substack instead of rendered HTML  
+- **Root cause:** Line 276: `substackBody = JSON.stringify(doc)`  
+- **Fix:** Changed to `substackBody = proseMirrorToHtml(doc)` to match preview rendering  
+- **Error precedence validated:** Route checks article markdown before draft URL (correct order)  
+- **Testing:** All 42 publish tests pass, `npm run v2:build` succeeds  
+- **Status:** Shipped on main with Publisher payload enrichment
 
 ### 2026-03-22T18-23-26Z: Issue #85 decision sync
 - The merged decision set keeps the glossary schema and team-sheet frontmatter as the canonical Phase 1-3 shape.
