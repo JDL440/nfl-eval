@@ -23,7 +23,7 @@
 
 ## Recent Learnings
 
-- 2026-03-23 — Dev launcher: `dev.ps1` should invoke `npm run v2:serve` per README.md and package.json, which already handles `.env` loading and `initDataDir()` during startup. No extra env vars needed.
+- 2026-03-23 — **Dev launcher (v2)**: Recreated `dev.ps1` to invoke `npm run v2:serve` per README.md and package.json. The current v2 startup already handles `.env` loading and `initDataDir()` during serve. PowerShell wrapper is thin: UTF-8 encoding, command visibility, port override. Commit 696ddbe81868af2569ce4eace6b082292e85388a.
 - 2026-03-23 — PR #113 cleanup: Stage 7 manual publish readiness belongs in the dashboard action panel and should key off `substack_draft_url`; the regression stays anchored in `tests/dashboard/server.test.ts`.
 - 2026-03-23 — Issue #110 triage: article timing totals are a dashboard aggregation over existing `stage_runs`; per-state or retry-aware timing remains a separate persistence question.
 - 2026-03-23 — Spawn-manifest follow-up: the article detail page already has hydrated stage-run data and per-run elapsed-time rendering, so no schema change is needed for the base total-time view.

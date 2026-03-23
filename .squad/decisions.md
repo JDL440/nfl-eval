@@ -1,3 +1,28 @@
+# Decision: repo-root v2 dashboard launcher
+
+**By:** Code (🔧 Dev)
+**Date:** 2026-03-23
+**Status:** ACCEPTED
+**Commit:** 696ddbe81868af2569ce4eace6b082292e85388a
+
+## TLDR
+
+The repo-root `dev.ps1` should launch `npm run v2:serve`, not `v2:dev`, and should not set extra runtime env vars. The v2 startup path already derives config from `.env` plus defaults and initializes the data directory during `serve`.
+
+## Basis
+
+- `package.json` defines both `v2:dev` (`tsx watch src/cli.ts serve`) and `v2:serve` (`tsx src/cli.ts serve`).
+- `README.md` explicitly documents using `npm run v2:serve` for source-mode development.
+- `src/cli.ts` routes `serve` to `startServer()`.
+- `src/config/index.ts` loads `.env` from repo root and data dir config.
+- `src/dashboard/server.ts` calls `initDataDir()` during startup.
+
+## Implementation
+
+PowerShell wrapper is thin: resolves repo root from script location, prints the exact npm command being run, and passes port override through to `serve` when needed for local validation.
+
+---
+
 ### 2026-03-22T18:05:59Z: User directive
 **By:** Joe Robinson (via Copilot)
 **What:** Update Squad agent model preferences so Squad coding agents use `gpt-5.4`, with Scribe pinned to `gpt-5.4-mini`.

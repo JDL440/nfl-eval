@@ -21,3 +21,8 @@
 - Wrote orchestration logs and the session log for the issue #110 triage pass.
 - Merged the new decision inbox items, deduplicated the article-trace notes against the established #109 decision, and removed the inbox files.
 - No archive rollover or history summarization was needed.
+### 2026-03-23T02:07:00Z: Code dev.ps1 scribe pass
+- Merged the dev.ps1 decision from inbox into `decisions.md` at the top (most recent).
+- Wrote orchestration log (`.squad/orchestration-log/2026-03-23T02-07-00Z-code.md`) and session log (`.squad/log/2026-03-23T02-07-00Z-code.md`).
+- Updated Code agent history with expanded dev.ps1 learning.
+- No inbox files remained to clean (Code had already created the inbox file in the commit).
