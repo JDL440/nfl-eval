@@ -939,3 +939,50 @@ Keep the actionable recovery detail outside the alert, in the existing hint that
 - No duplicate decision text was appended.
 - Inbox files were deleted after verification.
 
+
+---
+
+# Code Decision Inbox — Publish 500 Wiring
+
+**Date:** 2026-03-23T04:17:39Z
+**Owner:** Code
+**Status:** 📋 Proposed
+
+## Decision
+
+Treat dashboard draft/publish "Substack publishing is not configured" failures as a startup wiring bug first, and only as a user config problem after confirming the service is actually instantiated and injected.
+
+## Why
+
+- `createApp()` only checks whether `substackService` exists.
+- `loadConfig()` already loads env from repo-root `.env` and `~/.nfl-lab/config/.env`.
+- Before the fix, `startServer()` never created or passed `SubstackService`, so the routes failed even when the required env vars were present.
+
+## Implementation
+
+- Add `createSubstackServiceFromEnv()` in `src/dashboard/server.ts`.
+- Build the service during `startServer()` when `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` exist.
+- Pass it into `createApp(...)`.
+- Keep the existing HTMX publish-panel guidance for the true missing-config path.
+
+---
+
+# Lead Review — dashboard publish missing-config fix
+
+**Date:** 2026-03-25
+**Owner:** Lead
+**Status:** Rejected for scope, behavior approved
+
+## Outcome
+
+Approve the operator-facing HTMX behavior, but reject the change as a narrow scoped fix because it is bundled with broader publish-flow and test changes.
+
+## Why
+
+- HTMX draft/publish requests now receive a swapped `renderPublishWorkflow()` fragment with recovery guidance when `substackService` is missing.
+- JSON callers still receive 500 responses, so API semantics remain intact.
+- The diff also bundles broader publish-overhaul behavior and lacks a direct startup-wiring regression for `createSubstackServiceFromEnv()` / `startServer()`.
+
+## Required next step
+
+Split or restack the missing-config fix so it can be approved independently from the broader publish-overhaul work.
