@@ -1,4 +1,38 @@
+# Code Decision — Issue #118 Retrospective Finding Promotion
+
+**Date:** 2026-03-23  
+**Owner:** Code  
+**Status:** ✅ IMPLEMENTED  
+**Related:** Issue #117 (Retrospective Digest CLI), Issue #118 (Promotion logic)
+
+## Decision
+
+Extended the manual retrospective digest CLI to deterministically promote retrospective findings into two classes:
+1. **Issue-Ready (Process Improvement):** Findings where the evidence clearly supports actionable process improvement AND the finding is lead-authored OR appears across 2+ articles
+2. **Learning Update:** Broader-audience findings where the evidence is recent/high-priority OR appears across 3+ articles (lower threshold for team awareness)
+
+Both candidate types include evidence, reason, and source fields for human review before GitHub issue creation.
+
+## Why
+
+- Early promotion thresholds prevent retrospective findings from being lost in the digest
+- Separating process improvements (immediate team action) from learning updates (awareness) prioritizes effort
+- Evidence fields enable human judgment before any auto-issue creation in future phases
+- Clear, deterministic rules prevent ambiguity about which findings are promotion-ready
+
+## Implementation
+
+- `src/cli.ts`: Added `promoteIssueCandidates()` and `promoteLearningUpdates()` functions with evidence collection
+- `src/types.ts`: New shared types `IssueCandidate` and `LearningUpdate` with structured evidence/reason fields
+- `tests/cli.test.ts`: Focused coverage for both promotion pathways
+- Validation: `npm run v2:test` and `npm run v2:build` passing
+
+**Key Files:** src/cli.ts, src/types.ts, tests/cli.test.ts, .squad/skills/manual-retro-digest-first/SKILL.md
+
+---
+
 # Code Decision — Issue #107 TLDR Contract Enforcement
+
 
 **Date:** 2026-03-23  
 **Owner:** Code  
@@ -897,4 +931,11 @@ Keep the actionable recovery detail outside the alert, in the existing hint that
 - `src/dashboard/server.ts`
 - `src/dashboard/views/config.ts`
 - `tests/dashboard/publish.test.ts`
+---
+
+# Scribe Inbox Dedupe — 2026-03-23T04:18:42Z
+
+- Inbox records for `publisher-substack-config.md` and `ux-publish-500.md` matched existing decision entries in `decisions.md`.
+- No duplicate decision text was appended.
+- Inbox files were deleted after verification.
 
