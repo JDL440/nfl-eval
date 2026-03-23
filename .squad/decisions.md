@@ -1117,13 +1117,6 @@ Issue #107 TLDR contract enforcement is complete and approved. Code agent delive
 
 ---
 
-**Related Documents:**
-- `.squad/orchestration-log/2026-03-24T03-25-00Z-code.md` — Code agent orchestration
-- `.squad/orchestration-log/2026-03-24T03-25-00Z-lead.md` — Lead agent orchestration
-- `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md` — Session summary
-
----
-
 # Scribe Inbox Merge Notice — 2026-03-24T02-40-39Z
 
 **Inbox file:** `.squad/decisions/inbox/code-issue-107.md` (MERGED)
@@ -1343,6 +1336,7 @@ Keep the actionable recovery detail outside the alert, in the existing hint that
 - `src/dashboard/server.ts`
 - `src/dashboard/views/config.ts`
 - `tests/dashboard/publish.test.ts`
+
 ---
 
 # Scribe Inbox Dedupe — 2026-03-23T04:18:42Z
@@ -1350,7 +1344,6 @@ Keep the actionable recovery detail outside the alert, in the existing hint that
 - Inbox records for `publisher-substack-config.md` and `ux-publish-500.md` matched existing decision entries in `decisions.md`.
 - No duplicate decision text was appended.
 - Inbox files were deleted after verification.
-
 
 ---
 
@@ -1473,7 +1466,8 @@ Approve Issue #118 in current repo state.
 - src/cli.ts
   - isRepeatedProcessImprovement() returns true for process_improvement findings with rticleCount >= 2.
   - uildProcessImprovementReasons() adds process-improvement finding repeated across 2+ articles, and uildRetrospectiveDigest() promotes any group with process-improvement reasons into candidates.processImprovements.
-  - handleRetrospectiveDigest() only reads via epo.listRetrospectiveDigestFindings(limit), builds the report, and prints markdown/JSON; it does not write digest, backlog, issue, or team-memory state.
+  - handleRetrospectiveDigest() only reads via 
+epo.listRetrospectiveDigestFindings(limit), builds the report, and prints markdown/JSON; it does not write digest, backlog, issue, or team-memory state.
 - src/db/repository.ts
   - listRetrospectiveDigestFindings(limit) is a read-only query over rticle_retrospectives, rticles, and rticle_retrospective_findings.
 - 	ests/cli.test.ts
@@ -1861,7 +1855,8 @@ Staged and committed publish-fix changes to main branch. Three files modified: d
 
 1. src/dashboard/server.ts — +253, -109
    - Added createSubstackServiceFromEnv() factory
-   - Added esolveDashboardDependencies() resolver
+   - Added 
+esolveDashboardDependencies() resolver
    - Proper service injection at startup
 
 2. src/dashboard/views/publish.ts — +7, -0
@@ -1959,3 +1954,98 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 - Optional env var NOTES_ENDPOINT_PATH still works for overriding the default if needed (e.g., for testing against different endpoints)
 - No breaking changes — existing setups with explicit NOTES_ENDPOINT_PATH continue to work
 - Same contract pattern applicable to Tweet feature if similar issues emerge (service optional but feature requires configuration)
+
+---
+
+# Lead — Board Cleanup & Priority Triage
+
+**Date:** 2026-03-25T11:00:00Z  
+**Status:** COMPLETED  
+**Reviewer:** Lead  
+
+## Changes Made
+
+### Closed Issues (Work Completed & Merged)
+- **#107** ✓ Enforce TLDR article structure contract before editor approval
+- **#109** ✓ Dashboard article detail: surface revision history and persisted thinking traces
+- **#117** ✓ Add manual CLI retrospective digest over structured retrospective data
+- **#118** ✓ Promote retrospective findings into issue-ready and learning-ready candidates
+
+**Basis:** All four issues have completed commits to main. #107 and #109 were merged in earlier sessions; #117 and #118 were merged in the current session after Lead approval and hotfix validation.
+
+### Unblocked & Ready for Active Work
+- **#115** → Added `go:yes` + `squad:research` labels
+  - **Reason:** Both blocking issues (#117 CLI digest scaffold, #118 promotion layer) are now merged.
+  - **Status:** Awaiting Research to begin mining retrospectives into learning updates and process-improvement tickets.
+
+## Issues Remaining Actionable
+
+### Awaiting Research Investigation
+- **#102** (go:needs-research, squad:devops) — Dashboard auth hardening
+- **#110** (go:needs-research, squad:lead) — Time spent metrics on stage runs
+- **#91** (go:needs-research, release:backlog, squad:code) — Domain knowledge runtime integration
+
+### Awaiting User Input/Feedback
+- **#84** (pending-user, go:yes) — Staleness detection design approval
+- **#76** (pending-user) — Mass document update service
+- **#70** (pending-user) — Social link image generation
+
+## Next Issue for Ralph
+
+**#115 — Mine article retrospectives into learning updates and process-improvement work**
+
+**One-line reason:** Natural continuation of completed #117/#118 digest pipeline; unblocks team's retrospective→process-improvement feedback loop.
+
+**Team assignment:** Squad:Research → Begin synthesis of retrospective patterns and process-improvement candidacy rules per Manual Retro Digest First skill.
+
+---
+
+# Lead Board Reconciliation — 2026-03-25
+
+**Status:** Board reconciled. Stale issues closed. #117 identified as next priority.
+
+## Issues Reconciled (Closed)
+
+### #107 — Enforce TLDR article structure contract before editor approval
+- **Status:** ✅ COMPLETED (Commit `74d87b2`)
+- **Completion:** TLDR contract enforcement implemented in `src/pipeline/engine.ts` via `inspectDraftStructure()`
+- **Evidence:** Scribe logs and decision records in `.squad/decisions.md`
+- **Action:** Close as completed
+
+### #109 — Dashboard article detail: surface revision history and persisted thinking traces
+- **Status:** ✅ COMPLETED (Scribe logs dated `2026-03-25`)
+- **Completion:** Revision history and thinking artifact visibility surfaced in dashboard
+- **Evidence:** Scribe logs reference issue #109 implementation completion
+- **Action:** Close as completed
+
+## Active Issue Chain — #115/#117/#118
+
+### Parent: #115 — Mine article retrospectives into learning updates
+- **Status:** ACTIVE (architecture work)
+- **Notes:** Locked architecture decision established; child issues (#117, #118) own execution
+
+### Current: #117 — Add manual CLI retrospective digest (unblocked, go:yes)
+- **Status:** NEXT PRIORITY
+- **Scope:** Manual CLI surface over `article_retrospectives` + `article_retrospective_findings`
+- **Blocking:** #118 (digest scaffold prerequisite)
+- **Assigned to:** Code
+- **Why Next:** Establishes base surface for retrospective mining pipeline; unblocks #118
+
+### Dependent: #118 — Promote retrospective findings into candidates
+- **Status:** BLOCKED on #117 (digest scaffold)
+- **Scope:** Candidate promotion layer with process-improvement/learning-update distinction
+- **Notes:** Research (#116) completed; waits only for #117 to land
+- **Assigned to:** Code
+
+## Summary
+
+**Board changes:** None (no label/status changes needed)
+
+**Active issues remaining:** 8 open issues across squad scope
+- Priority-P2: #107 (✅ CLOSED), #109 (✅ CLOSED), #115 (active), #117 (next), #118 (blocked), #102
+- Other: #110, #91, #84, #76, #70
+
+**Next issue for Ralph:** #117 — Add manual CLI retrospective digest
+- Unblocked (`go:yes`)
+- Code team ready to implement
+- Clear acceptance criteria documented

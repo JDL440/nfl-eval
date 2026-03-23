@@ -34,3 +34,8 @@
 - **Branching strategy:** Single cohesive merge recommended. All changes are tightly coupled (schema → engine → UI). Created session log with three merge scenarios (direct, feature branch, atomic commits) and risk assessment.
 - **No conflicts:** main integrates prior shipped fixes; worktrees (issue-108, issue-109) remain independent.
 - **Ready for Lead review:** Core changes in engine.ts, actions.ts, schema.sql validated. All decisions locked. Low risk to merge.
+
+### 2026-03-23T15-13-57Z: Slug-history Scribe pass
+- Wrote the Research orchestration and session logs for the Packers slug-history investigation.
+- Merged the lead board cleanup inbox decision, deduplicated the identical inbox copies, and removed the inbox files.
+- Archived older decision entries out of `decisions.md` and left the recent board context in place.
