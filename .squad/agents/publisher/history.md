@@ -96,3 +96,23 @@
 **Rationale:** Following Issue #107 decision: single canonical source (substack-article.md) prevents policy drift across Writer, Editor, and Publisher skill docs. Publisher role is to verify compliance, not re-state policy. Division of responsibility: substack-article.md states "what images must be," publisher.md verifies "did this article's images match the contract."
 
 **Status:** Merged to `src/config/defaults/skills/publisher.md`. No code changes, no runtime validation needed (markdown documentation change). Change is surgical and complete.
+
+### 2026-03-25: Dashboard Substack config trace
+
+**Root cause:** Dashboard draft/publish routes only work when `createApp()` receives a `substackService` dependency (`src/dashboard/server.ts:167-177`), but `startServer()` currently builds `imageService` only and calls `createApp(repo, config, { actionContext, imageService, memory })` without constructing/passing `SubstackService` (`src/dashboard/server.ts:2455-2495`).
+
+**Trigger condition:** Any dashboard started through normal `startServer()` / `npm run v2:serve` flow will leave `substackService` undefined, so `/api/articles/:id/draft` and `/api/articles/:id/publish` immediately return HTTP 500 "Substack publishing is not configured for this environment." (`src/dashboard/server.ts:1366-1381`, `1415-1429`) even if `.env` contains valid Substack keys.
+
+**Config expectation:** For dashboard article draft/publish, the meaningful runtime keys are `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL` (`src/services/substack.ts`, `.env.example`). `SUBSTACK_STAGE_URL` is optional stage-target support, and `NOTES_ENDPOINT_PATH` is only needed for Notes, not article draft/publish.
+
+**UX note:** Current publish UI adds a helpful config hint when this exact error string appears (`src/dashboard/views/publish.ts:195-205`), but in this bug it is misleading because the environment can already be configured correctly. Better product behavior would be to detect service availability before rendering actions, disable/replace publish controls, and distinguish "missing env" from "startup wiring bug / service unavailable."
+
+**Validation:** `npx vitest run tests/dashboard/publish.test.ts` passes, but those route tests inject a mock `substackService` directly into `createApp()` (`tests/dashboard/publish.test.ts:227`, `253`, `328`, `353`), so they do not cover real startup wiring.
+
+### 2026-03-25T02:47:00Z: Scribe Orchestration — Publisher Session Finalized
+
+**Session outcome logged:**
+- Orchestration log written: `.squad/orchestration-log/2026-03-25T02-47-00Z-publisher.md`
+- Session log written: `.squad/log/2026-03-25T02-47-00Z-publisher-substack-trace.md`
+- Root cause documented: Startup wiring bug (missing SubstackService dependency injection) vs. configuration issue
+- Next action: Code agent to fix `startServer()` SubstackService construction and pass to `createApp()`

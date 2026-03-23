@@ -98,6 +98,123 @@ Create-draft function in `publishToSubstack` action appears broken or incomplete
 ## Team Impact
 
 - **Code:** Implementation fix + test updates required
+
+---
+
+# Code Decision — Publish HTMX Config Errors
+
+**Date:** 2026-03-25  
+**Owner:** Code  
+**Status:** 📋 Proposed
+
+## Decision
+
+For HTMX requests targeting the publish panel, return a normal HTML fragment from `renderPublishWorkflow()` with setup guidance instead of an HTMX-blocking 500. Keep non-HTMX callers on JSON 500 responses.
+
+## Why
+
+- HTMX does not swap the publish panel on a 500 response, so operators only saw a raw failure instead of a usable recovery message.
+- This keeps API semantics intact while fixing the dashboard UX with the smallest scoped change.
+
+## Operator Guidance
+
+Set `SUBSTACK_PUBLICATION_URL` and `SUBSTACK_TOKEN` in `.env`, restart the dashboard, and confirm the values on `/config`.
+
+---
+
+# Decision Inbox — Dashboard Substack Service Runtime Wiring
+
+**Date:** 2026-03-25  
+**Owner:** Code + Publisher  
+**Status:** 📋 Proposed  
+**Type:** Runtime wiring + UX semantics
+
+## Consensus Position
+
+Treat dashboard publishing integrations as **startup-wired optional services**, not as route-level environment lookups.
+
+If a route declares a service "not configured," startup must have already attempted to construct that service from env and injected it into `createApp(...)`.
+
+## Problem Statement
+
+- `createApp()` expects optional `substackService` dependency (`src/dashboard/server.ts:167-177`)
+- Draft/publish routes hard-stop with 500 when dependency missing (`src/dashboard/server.ts:1366-1381, 1415-1429`)
+- `startServer()` initializes `imageService` but never wires `SubstackService` (`src/dashboard/server.ts:2455-2495`)
+- Route tests pass because they inject mock `substackService` directly instead of exercising startup wiring
+- Result: Current UI message conflates "missing env" with "startup DI gap," sending operators to wrong fix
+
+## Implications
+
+1. Optional integrations should follow one shared seam:
+   - Load env in `loadConfig()` / startup
+   - Instantiate service if required vars exist
+   - Inject into `createApp(...)`
+   - Log unavailable state without crashing startup
+
+2. Route-level config errors should distinguish:
+   - Missing/invalid credentials
+   - Service not wired at startup
+   - Upstream API failure after service exists
+
+3. For user-facing UX, this state is predictable and recoverable; a clearer "publishing unavailable" state is preferable to a generic 500.
+
+## Immediate Operator Guidance
+
+Until Code wires `SubstackService` into startup, treat dashboard draft/publish as blocked. Use the existing non-dashboard publishing path (MCP/CLI) with the same `.env` credentials if publication must happen now.
+
+---
+
+# Lead Decision — Retrospective Digest Issue Chain
+
+**Date:** 2026-03-23  
+**Owner:** Lead  
+**Status:** ✅ APPROVED
+
+## Decision
+
+Treat **#114** as resolved reconcile/verification work, not an active runtime-port issue.
+
+Execution order is now:
+1. **#115** remains the parent umbrella
+2. **#117** is the next executable implementation issue and should stay unblocked
+3. **#118** stays blocked only on **#117** landing the digest scaffold
+4. **#116** remains closed as the completed heuristic/spec input
+
+## Why
+
+- The retrospective runtime seam is already present on mainline, so keeping **#114** alive as a port task would misstate the remaining work.
+- Research for **#116** is complete, which is enough to let Code start the read-only manual digest in **#117**.
+- Promotion logic in **#118** should layer on top of the scaffold from **#117**, not wait on stale runtime assumptions.
+
+## Backlog Effect
+
+- Close/narrow **#114** around verification evidence only
+- Keep **#117** marked ready
+- Keep **#118** blocked, but only by **#117**
+
+---
+
+# Lead Review — Issue #117 Retrospective Digest CLI
+
+**Date:** 2026-03-23  
+**Reviewer:** Lead (🏗️)  
+**Status:** ✅ APPROVED
+
+## Verdict
+
+Approve the current #117 slice in this checkout.
+
+## Evidence
+
+- `src\db\repository.ts` keeps the data seam read-only for the digest via one joined `listRetrospectiveDigestFindings(limit)` query over structured retrospective tables plus article metadata.
+- `src\cli.ts` implements the new `retrospective-digest` / `retro-digest` command, validates `--limit`, supports optional `--json`, dedupes repeated findings with normalized text, and bounds both candidate sections and per-category examples for human review.
+- `src\types.ts`, `tests\cli.test.ts`, and `tests\db\repository.test.ts` cover the new row shape, CLI output, JSON mode, and repository query ordering/limit behavior.
+- Validation confirmed the targeted retrospective CLI/repository Vitest suite passes, and the repository TypeScript build passes via `npm run v2:build`.
+
+## Follow-on Impact
+
+- From Lead review, #117 no longer blocks the next slice.
+- **#118 should now be unblocked** if no separate product/scope gate remains open.
 - **UX:** May depend on fixed create-draft to show draft state
 - **Publisher:** Needed for draft management workflows
 
