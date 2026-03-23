@@ -1,3 +1,201 @@
+# UX Review: Stage 7 Publish Flow Wording & Mental Models
+
+**Reviewer:** UX  
+**Date:** 2026-03-24  
+**Status:** FINDINGS — Ready for team review  
+**Input artifacts:** src/dashboard/views/publish.ts, article.ts, home.ts; tests/dashboard/publish.test.ts
+
+---
+
+## Summary
+
+The Stage 7 "Publisher Pass" UI uses the term **"publish workspace"** exactly once, in a tooltip/disabled-state message. The phrase is vague and conflates the **article detail page** (Stage 7 view) with the **separate publish page** (`/articles/:id/publish`). Additionally, warning/status copy about draft creation has weak language that may confuse users about the two-step workflow (Draft → Publish).
+
+---
+
+## Findings
+
+### 1. **"Publish Workspace" Is Ambiguous**
+
+**Evidence:**
+- `src/dashboard/views/article.ts:513`
+  ```typescript
+  : 'Create a Substack draft in the publish workspace before publishing';
+  ```
+  This appears as a tooltip/disabled-state message on the "Publish to Substack" button when no draft exists.
+
+**Issue:**  
+- **Mental model mismatch:** Users don't have a clear referent for "publish workspace."
+  - Is it the `/articles/:id/publish` page (Publish Preview view)?
+  - Is it the Stage 7 action panel on `/articles/:id`?
+  - Is it some external tool?
+- The term is used nowhere else in the UI, making it feel like jargon.
+
+**Current workflow:**
+1. Article reaches Stage 7 (Publisher Pass)
+2. User clicks **"Open Publish Workspace"** → navigates to `/articles/:id/publish`
+3. Inside the Publish Preview, user clicks **"Create Draft"** → calls `POST /api/articles/:id/draft`
+4. Back on `/articles/:id`, user can now click **"Publish to Substack"** → calls `POST /api/articles/:id/publish`
+
+---
+
+### 2. **Warning Copy Doesn't Match Intended Workflow**
+
+**Evidence:**
+- `src/dashboard/views/article.ts:511–513` (Stage 7 action panel, Article Detail page)
+  ```typescript
+  const publishStatus = hasDraft
+    ? 'Substack draft ready for manual publish'
+    : 'Create a Substack draft in the publish workspace before publishing';
+  ```
+- `src/dashboard/views/publish.ts:349`
+  ```typescript
+  <p class="hint">Publish to Substack, then optionally post a Note and Tweet in sequence.</p>
+  ```
+
+**Issue:**  
+The two messages tell conflicting stories:
+1. Article detail says: *"Create a draft first"* — implies drafting is a blocker
+2. Publish page says: *"Then optionally post"* — implies publishing is the main event, social is optional
+
+**Reality (from code & tests):**
+- **Two-step workflow is required:** `POST /draft` → `POST /publish`
+- User must:
+  1. Create a **Substack draft** (saves to their account, editable)
+  2. Then publish that draft (makes it live)
+- The warning is correct *in isolation*, but the Publish Preview "Publish All" section (lines 347–425) makes it sound like publishing is already done and Notes/Tweets are bonus actions.
+
+---
+
+### 3. **Weak Language in Success States**
+
+**Evidence:**
+- `src/dashboard/views/publish.ts:212–214` (when draft is created)
+  ```typescript
+  return `
+    <p class="status-info">Draft created: <a href="${escapeHtml(draftUrl)}" target="_blank">View on Substack ↗</a></p>
+    ...
+  ```
+- Button still says **"Publish to Substack"** — ambiguous whether this publishes the draft or creates a new one
+- Test verifies this behavior: `tests/dashboard/publish.test.ts:177–189`
+  - Checklist no longer shown on publish page (good)
+  - But button label remains static
+
+---
+
+### 4. **Implementation vs. Mental Model: Where Do Publishers Expect To Be?**
+
+**Evidence from navigation:**
+
+| Page | User's mental model | What happens | Risk |
+|------|-------------------|---|---|
+| `/articles/:id` (Stage 7 Detail) | "I'm reviewing my article" | Can see draft link + "Open Publish Workspace" button | User may not realize publish page is *separate* |
+| `/articles/:id/publish` (Publish Preview) | "I'm in the publish workspace" | Preview + Draft/Publish buttons + Note/Tweet composers | User may expect publish page to be a Substack-connected editor, not a local form |
+| Substack editor (via link) | "I'm in Substack" | Draft is editable in Substack | User may try to modify article there, then come back to lab expecting sync |
+
+**Finding:** Publishers don't have clear **separation of concerns**:
+1. **Lab publish page** = local pre-flight checklist (preview, composer, multi-channel posting)
+2. **Substack editor** = live draft editor (syncs directly to Substack account)
+
+---
+
+## Recommendations (For Team Review)
+
+### A. Rename "Publish Workspace" → "Publish Preview" or "Publication Settings"
+- Aligns with actual page route
+- Clearer intent (preview content before committing)
+
+### B. Clarify Two-Step Workflow in UI Copy
+**Current:**
+```
+"Create a Substack draft in the publish workspace before publishing"
+```
+
+**Better:**
+```
+"Create a draft on Substack, then publish it live from here"
+```
+or
+```
+"Create a Substack draft first, then you can publish"
+```
+
+### C. Update Button Labels to Reflect State
+- Keep **"Create Draft"** (current, clear)
+- Change **"Publish to Substack"** → **"Publish Draft to Substack"** or **"Go Live"**
+- Adds clarity that this *publishes an existing draft*, not creates a new one
+
+### D. Add Explicit Messaging About Substack Account
+In the Publish Preview, surface:
+```
+📌 Your draft is saved to your Substack account. 
+You can edit it in Substack and publish from here when ready.
+```
+
+---
+
+## Files to Review for Implementation
+
+1. **article.ts:511–513** — Warning message for Stage 7 disabled state
+2. **article.ts:532** — "Open Publish Workspace" button label  
+3. **publish.ts:349** — "Publish All" hint text
+4. **publish.ts:161** — Button label "Publish to Substack"
+5. **publish.ts:219** — Button label in draft-created state
+
+---
+
+### 5. **"Publish All" Flow Doesn't Reflect Pre-Draft Gate** (publish.ts:359–361)
+
+**Evidence:**
+- `src/dashboard/views/publish.ts:348–364` (Publish Preview page)
+  ```typescript
+  <button class="btn btn-publish btn-lg" id="publish-all-btn"
+    onclick="publishAll('${id}')"
+    ${publishEnabled ? '' : 'disabled title="Create a draft first"'}>
+    🚀 Publish All
+  </button>
+  ```
+
+**Issue:**  
+- The "Publish All" section appears on the Publish Preview page, which is *only reachable after creating a draft*.
+- Yet the button disabled state still says *"Create a draft first"*
+- This is technically correct but suggests the button might be clickable before draft creation—it won't be, because the page itself gates access to non-draft articles.
+- Creates redundant information: the page already prevents access if no draft; the button tooltip is noise.
+
+**Better pattern:**  
+Remove the disabled state check—the button is only rendered when `publishEnabled` is true. Simplify to:
+```typescript
+<button class="btn btn-publish btn-lg" id="publish-all-btn" onclick="publishAll('${id}')">
+  🚀 Publish All
+</button>
+```
+
+---
+
+## Test Coverage Notes
+
+- `tests/dashboard/publish.test.ts:142–189` — Publish preview page rendering
+- `tests/dashboard/publish.test.ts:217–250` — Draft creation workflow
+- Tests verify correct *behavior* (draft creation, publish POST), but don't validate *copy clarity*
+- Add test for disabled-state tooltip message once copy is updated
+- Note: "Publish All" orchestration uses inline JavaScript (lines 365–425); consider whether SSE/HTMX alternatives better fit dashboard's real-time event model as features evolve
+
+---
+
+## Charter Alignment
+
+This review is scoped entirely within **UX responsibilities**:
+- ✅ Dashboard UI design and implementation (wording clarity, labeling)
+- ✅ User experience flows and interaction patterns (two-step draft/publish workflow)
+- ✅ Responsive interaction patterns (button states, form flows)
+- ✅ Hono view rendering (template text clarity)
+
+**Out of scope:**
+- ❌ Backend business logic (Code team)
+- ❌ Data persistence (Data team)
+
+---
+
 # Decision: repo-root v2 dashboard launcher
 
 **By:** Code (🔧 Dev)
