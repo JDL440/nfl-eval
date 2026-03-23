@@ -92,3 +92,49 @@
 - Session log documenting Issue #102 auth research outcomes written
 - Research + Lead decision inbox merged into `.squad/decisions.md`, deduplicating findings
 - Merged inbox files deleted
+
+### 2026-03-24: Issue #116 retrospective digest research
+
+**Task:** Define grouping and promotion rules for the retrospective follow-up digest so Code can implement a stable v1 without inventing heuristics ad hoc.
+
+**Context:**
+- Issue #115 (parent) asks for a post-retrospective learning-update pass that mines structured findings into actionable process improvements and learning updates.
+- Issue #116 (this task) is the Research phase to specify the exact grouping, deduping, and ranking heuristics.
+- Base retrospective runtime lands on issue #114; by issue #116 the retrospectives table contains role-based findings (writer, editor, lead) with finding types (churn_cause, repeated_issue, next_time_action, process_improvement).
+
+**Recommendation delivered:**
+- **Primary grouping:** By role + finding_type (12 natural categories per digest)
+- **Deduping:** Normalize finding text (lowercase, remove punctuation) and hash-group near-duplicates
+- **Evidence collection:** Track article count, priority distribution, recency per finding group
+- **Promotion thresholds:**
+  - **Process-improvement candidate:** Lead-authored process_improvement findings, OR repeated churn/issue in 2+ articles with high priority
+  - **Learning-update candidate:** Writer/editor findings with high priority in recent articles, OR findings repeating across 3+ articles
+- **Output:** Human-readable markdown digest + optional JSON for programmatic use
+- **Scope:** v1 is read-only (no auto-issue creation, manual CLI command only)
+- **Implementation:** Define SQL queries, hash normalization logic, markdown output layout, and CLI invocation pattern
+
+**Why this approach:**
+- Simplicity: No ad-hoc categorization beyond schema dimensions (role, type)
+- Deduping without false positives: Hash normalization catches near-duplicates without collapsing distinct issues
+- Human-centered: Thresholds (2+ articles for process improvement, 3+ for learning) are practical and visible
+- Bounded output: Ranking by evidence count + priority keeps digest scannable
+- v1 is safe: No risk of unreviewed issue creation or republishing
+
+**Deliverable:** Detailed recommendation document at `.squad/decisions/inbox/research-116.md` including:
+- Executive summary and grouping heuristic
+- Evidence collection and ranking logic
+- Promotion rules with clear thresholds
+- Full markdown and JSON output structure examples
+- Database query templates
+- CLI invocation pattern
+- Acceptance criteria verification
+
+### 2026-03-24T02:38:09Z: Ralph Round 3 — Research #116 Launched
+
+**Session:** Research agent newly spawned to execute Issue #116 (manual retrospective digest CLI v1).
+
+**Scope:** Implement manual CLI interface for cross-article retrospective synthesis, bounded markdown digest output, optional JSON format.
+
+**Dependencies:** Awaits Code completion of #114 (base retrospective runtime merge).
+
+**Next:** Begin design specification for digest CLI surface upon #114 completion signal.

@@ -59,6 +59,23 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 
 **Deferred for Code:** Implementation tracked as Issue #102 follow-up after decision lock.
 
+### 2026-03-24T02:38:09Z: Ralph Round 3 Orchestration
+
+**Agents Completed:**
+- lead-issue-107 (review): Code fix rejection → publisher revision approval
+- publisher-issue-107-revision (background): Image-policy deduplication completed
+- lead-retro-learning (background): Manual digest v1 approved, issue chain #116-#118 created
+- code-retro-port (background): Base retrospective runtime ported, review pending
+- research-116 (background): Newly launched for #116 execution
+
+**Decision Inbox Merge:** All decision files merged to `.squad/decisions.md` with deduplication:
+- "Publish-Overhaul Isolation Strategy" (Lead isolation/cherry-pick plan)
+- "retrospective follow-up should start as a manual digest" (manual CLI v1 approved)
+- "Retrospective Port Boundary" (base runtime Phase 1 slice approved)
+- "Issue #107 Revision: Publisher Skill Deduplication" (completed)
+
+**Next Steps:** Lead to execute publish-overhaul feature branch isolation; Code to prepare #114 merge; Research to await #114 completion and begin #116 digest design.
+
 ### 2026-03-23: Issue #102 triage refresh — current auth seam and routing
 
 - The current checked-in dashboard app layer is effectively open: `src/dashboard/server.ts` registers SSE (`/events`), static assets, generated images, HTML pages, HTMX fragments, and JSON API routes directly from `createApp()` with no auth middleware, login/logout routes, cookie parsing, or session checks. If a temporary shared-password gate exists, it is outside the current `src/` runtime or no longer present in this branch.
@@ -119,4 +136,72 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 
 **Status:** Ready for merge. No blockers.
 
+### 2026-03-24: Retrospective worktree port triage
+- Compared `worktrees/issue-108-retrospectives` against mainline at the actual runtime seams: `src/pipeline/actions.ts`, `src/db/repository.ts`, `src/db/schema.sql`, `src/types.ts`, `tests/pipeline/actions.test.ts`, and `tests/db/repository.test.ts`.
+- Mainline already contains the retrospective artifact + persistence slice: `recordPostRevisionRetrospectiveIfEligible()` runs after Stage 7 in `src/pipeline/actions.ts`, SQLite tables live in `src/db/schema.sql`, and repository read/write seams plus focused tests already exist in `src/db/repository.ts`, `tests/db/repository.test.ts`, and `tests/pipeline/actions.test.ts`.
+- The issue-108 worktree is older than current prompt-handoff and writer-structure guard changes. Its surrounding diffs would regress current behavior by dropping `inspectDraftStructure`/`MIN_DRAFT_WORDS` repair flow in `src/pipeline/actions.ts` and weakening deterministic usage-history ordering/index expectations in `src/db/repository.ts` + `tests/db/repository.test.ts`.
+- Lead guidance: treat the minimal coherent port slice as **no code port now** unless a later review identifies a missing retrospective-only delta outside the already-landed mainline seams.
+
 - 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Processed Issues #114 and #115 routing from user. GitHub issues created and routed to Code/Lead for mainline retrospective automation shipping and learning extraction. Inbox decisions merged covering TLDR contract (Code), publish flow overhaul (Publisher/UX), and create-draft validation (Code). Session logged; orchestration updates recorded.
+
+### 2026-03-24: Retrospective automation port boundary review
+- Approved the smallest coherent mainline port as **base post-revision retrospective runtime only**: generate the `revision-retrospective-rN.md` artifact after revisioned articles reach Stage 7, persist the structured rows in `article_retrospectives` / `article_retrospective_findings`, and cover it with repository + pipeline action tests.
+- Main target files in current checkout are `src/pipeline/actions.ts`, `src/db/repository.ts`, `src/db/schema.sql`, `src/types.ts`, `tests/pipeline/actions.test.ts`, and `tests/db/repository.test.ts`; current mainline already has the needed revision-summary seams in `src/pipeline/conversation.ts`.
+- Keep this slice out of dashboard/CLI/reporting for now. `tests/e2e/full-lifecycle.test.ts` still models manual stage advancement, so retrospective generation should hook off `autoAdvanceArticle()` completion at Stage 7 rather than trying to fire on every direct 6→7 transition in the first pass.
+
+### 2026-03-24: Retrospective worktree vs mainline drift check
+- Compared `worktrees/issue-108-retrospectives` against current mainline and confirmed the approved minimal slice is already present in mainline: Stage-7 `revision-retrospective-rN.md` generation plus structured persistence/query seams and focused tests.
+- The safe file set for this slice remains `src/pipeline/actions.ts`, `src/db/schema.sql`, `src/db/repository.ts`, `src/types.ts`, `tests/pipeline/actions.test.ts`, and `tests/db/repository.test.ts`; `src/pipeline/conversation.ts` is a dependency seam, not a new port target.
+- Do **not** cherry-pick the whole worktree `actions.ts` or `repository.ts` into mainline: those files have unrelated drift around prompt handoff, draft validation, and usage-event ordering that would risk regressing newer mainline behavior.
+
+### 2026-03-24: Publish-overhaul isolation analysis — working-tree separation strategy
+
+**By:** Lead (🏗️) — Architecture & routing inspection
+
+**Request:** Backend asked for safe publish-overhaul branch isolation strategy: identify whether changes live in working tree or committed history, and provide step-by-step plan to extract only publish changes into a new branch without touching unrelated local-main work.
+
+**Findings:**
+
+1. **Publish-overhaul code changes:** Live **exclusively in working tree** (not yet committed), across 7 dashboard files and 2 test files (~435 net insertions):
+   - `src/dashboard/public/styles.css` (+22)
+   - `src/dashboard/server.ts` (+209 lines net, HTMX target unification)
+   - `src/dashboard/views/publish.ts` (154 lines net, richer preview, draft-first workflow)
+   - `src/dashboard/views/article.ts` (+112, status clarity)
+   - `src/dashboard/views/preview.ts` (+38, shared rendering)
+   - `tests/dashboard/publish.test.ts` (+66 test cases)
+   - `tests/dashboard/server.test.ts` (+52 test cases)
+
+2. **Publish-overhaul decision framework:** Committed in `991c66b` ("chore: squad orchestration & decision merge — publish overhaul session") on 2026-03-22. Contains decision record in `.squad/decisions.md` but **zero code changes**.
+
+3. **Local main commits ahead of origin/main:** 13 total, none touching the dashboard publish codebase since origin/main. These are mostly orchestration/decision merges, retrospective automation, auth research, and scribe logs.
+
+4. **Non-publish working-tree changes:** 27 files (retrospective automation, TLDR contract enforcement, squad metadata, config/charter updates). These should **stay on main** and not ship with publish-overhaul.
+
+**Safest isolation strategy:** Create new branch from `origin/main` (not HEAD), stash the 27 non-publish files, commit the 7 dashboard files, push as PR, then restore stash on main. This ensures zero contamination from local-main history and preserves all working tree for later segregation.
+
+**Decision written to:** `.squad/decisions/inbox/lead-publish-isolation.md` — includes full step-by-step execution plan with stash/checkout commands, risk assessment, and verification checklist.
+
+### 2026-03-24T03:25:00Z: Issue #107 Orchestration & Approval
+
+**By:** Lead (🏗️) — Final review and sign-off
+
+**Review Status:** ✅ APPROVED — All core functionality validated. Non-blocking tech-debt observations noted for future cleanup.
+
+**Approved Artifacts:**
+- Canonical TLDR contract in `src/config/defaults/skills/substack-article.md`
+- Stage 5→6 enforcement via `inspectDraftStructure()` in `src/pipeline/engine.ts`
+- Writer self-healing + synthetic send-back in `src/pipeline/actions.ts`
+- Charter/skill updates with canonical contract references
+- Test coverage: 145/145 regression tests passing
+- Mock provider alignment complete
+
+**Caveats (Non-Blocking):**
+- Diagnostic/logging cleanup opportunity in Stage 5→6 guard paths (future tech debt)
+- Redundant `clearArtifactsAfterStage()` call in auto-advance flow (noted for consolidation review)
+
+**Handoff:** Code approved for merge. Issue #107 ready for integration to origin/main.
+
+**Related Logs:**
+- Orchestration: `.squad/orchestration-log/2026-03-24T03-25-00Z-lead.md`
+- Session: `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md`
+- Decision: `.squad/decisions.md` — "Code Decision — Issue #107 TLDR Contract Enforcement"

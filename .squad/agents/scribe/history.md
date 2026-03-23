@@ -26,3 +26,11 @@
 - Wrote orchestration log (`.squad/orchestration-log/2026-03-23T02-07-00Z-code.md`) and session log (`.squad/log/2026-03-23T02-07-00Z-code.md`).
 - Updated Code agent history with expanded dev.ps1 learning.
 - No inbox files remained to clean (Code had already created the inbox file in the commit).
+### 2026-03-24T03:00:00Z: Publish-overhaul branch inspection and isolation strategy
+- **Reviewed publish-overhaul history:** Investigated all related branches (fix/82-publish-endpoint, fix/issue-111-publish-ui) and merged work.
+- **Consolidated decisions:** All Code/UX/Publisher findings are locked in `decisions.md`; no inbox files remain.
+- **Assessed pending changes:** 13 commits ahead on main; ~2006 insertions (TLDR contract, draft-first UI, richer preview, conversation context, schema updates).
+- **Validated test coverage:** Baseline validation passed (Validation agent); all regression tests passing.
+- **Branching strategy:** Single cohesive merge recommended. All changes are tightly coupled (schema → engine → UI). Created session log with three merge scenarios (direct, feature branch, atomic commits) and risk assessment.
+- **No conflicts:** main integrates prior shipped fixes; worktrees (issue-108, issue-109) remain independent.
+- **Ready for Lead review:** Core changes in engine.ts, actions.ts, schema.sql validated. All decisions locked. Low risk to merge.

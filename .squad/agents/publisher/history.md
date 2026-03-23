@@ -48,6 +48,18 @@
 
 ### 2026-03-23: Publish page overhaul investigation
 
+### 2026-03-24T02:38:09Z: Ralph Round 3 — Issue #107 Revision Completed
+
+**Session:** Publisher executed image-policy deduplication per Lead request.
+
+**Scope:** Removed duplicated policy language from `src/config/defaults/skills/publisher.md` Step 2, replaced with reference to canonical `../substack-article.md` Phase 4b. Retained technical verification checks (syntax, naming, existence, alt text quality).
+
+**Validation:** Reference path and section title verified in target file. Documentation-only change; no code/test impacts.
+
+**Decision Status:** "Issue #107 Revision: Publisher Skill Deduplication" merged to `.squad/decisions.md`.
+
+**Next:** Lead to execute publish-overhaul feature branch isolation strategy (decision documented in "Publish-Overhaul Isolation Strategy").
+
 **Flow recommendation:** Keep Stage 7 as a draft-first workflow. “Save/Create Draft” should be a safe create-or-update action that never publishes; “Publish Now” should publish the reviewed Substack draft already linked to the article, not a separate direct-from-markdown path.
 
 **Preview finding:** The publish page currently shows a lightweight local HTML render from markdown (`src/dashboard/views/publish.ts`), while the richer article preview uses `renderArticlePreview(...)` with cover image, inline image placement, CTA, and mobile toggle (`src/dashboard/views/preview.ts`, `src/dashboard/server.ts:1256-1287`). Editorially, that means the current publish-page preview is only a sanity check, not a high-fidelity publish preview.
@@ -74,3 +86,13 @@
 **Status:** Decision merged to `.squad/decisions.md` as "Decision: Publish-Flow Architecture — Draft-First Model". Awaiting Coordinator implementation.
 
 - 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Publish-flow overhaul proposal merged into decisions. Draft-first model recommended: Create Draft → Publish Now (two-step explicit workflow). Blocking issue: create-draft function appears broken/incomplete in publishToSubstack.ts. Routed validation request to Code team. UX and error-handling implications documented. Awaiting Code's create-draft fix before implementing draft-first UI changes.
+
+### 2026-03-24: Issue #107 Revision — Publisher Skill Deduplication
+
+**Outcome:** Removed duplicated normative image-policy text from `src/config/defaults/skills/publisher.md` Step 2. Publisher now references `../substack-article.md` Phase 4b as the single canonical source for image count, placement, hero-safety, naming, and alt-text policy. Retained only publisher-specific verification checks: syntax validation, filename verification, file existence, alt text descriptiveness, and broken-link detection.
+
+**Revision detail:** Step 2 originally enumerated the full image placement policy (cover image above TLDR, exactly 2 inline images, hero-safety, player-centric cover for player articles, naming convention, no captions). All policy text removed; replaced with concise reference to canonical contract. Verification checklist reduced to 5 technical checks that are publisher-specific and not policy enforcement.
+
+**Rationale:** Following Issue #107 decision: single canonical source (substack-article.md) prevents policy drift across Writer, Editor, and Publisher skill docs. Publisher role is to verify compliance, not re-state policy. Division of responsibility: substack-article.md states "what images must be," publisher.md verifies "did this article's images match the contract."
+
+**Status:** Merged to `src/config/defaults/skills/publisher.md`. No code changes, no runtime validation needed (markdown documentation change). Change is surgical and complete.

@@ -272,3 +272,289 @@ The publish page should become the place where users verify final appearance and
    - Substack draft
    - publish/go live
 4. Normalize error and success messages around next-step guidance.
+
+---
+
+# Decision — Publish-Overhaul Isolation Strategy
+
+**Lead Recommendation**  
+**Date:** 2026-03-24  
+**Status:** Ready for Backend execution
+
+## Summary
+
+The publish-overhaul code changes live **exclusively in the working tree** (not yet committed). The decision framework was committed in `991c66b` ("chore: squad orchestration & decision merge"), but all implementation code changes are staged in the current working directory.
+
+## Execution Plan: Safest Isolation Strategy
+
+### Phase 1: Create Clean Branch from origin/main
+
+1. **Create and push a new isolation branch** rooted at origin/main (not HEAD):
+   ```
+   git fetch origin
+   git checkout -b feature/publish-overhaul origin/main
+   ```
+
+2. **This ensures:** New branch starts clean at origin/main, upstream consensus point, zero risk of picking up local-main commits or unrelated work.
+
+### Phase 2: Selective Cherry-Pick of Publish Changes Only
+
+3. **Stash working-tree changes** that you want to keep for now:
+   ```
+   git stash push -m "temp: non-publish work (pipeline, config, squad)" \
+     .squad/agents/code/history.md \
+     .squad/agents/lead/history.md \
+     .squad/agents/publisher/history.md \
+     src/agents/runner.ts \
+     src/config/defaults/ \
+     src/db/repository.ts \
+     src/db/schema.sql \
+     src/llm/providers/mock.ts \
+     src/pipeline/ \
+     src/types.ts \
+     tests/db/ \
+     tests/llm/ \
+     tests/pipeline/
+   ```
+
+4. **Verify only publish changes remain** in working tree:
+   ```
+   git status
+   # Should show ONLY: src/dashboard/** and tests/dashboard/{publish,server}.test.ts
+   ```
+
+5. **Stage and commit publish-only changes** on the new branch:
+   ```
+   git add src/dashboard/ tests/dashboard/publish.test.ts tests/dashboard/server.test.ts
+   git commit -m "feat: publish-overhaul — draft-first UX, shared preview, unified workflow"
+   ```
+
+6. **Include in commit message:**
+   - Reference the publish-decision record in `.squad/decisions.md`
+   - Mention the related issues (#106, #107, #109 if applicable)
+   - Note that this commit matches the decisions from the publish-overhaul session (2026-03-24)
+
+7. **Push to remote** and create PR for review:
+   ```
+   git push -u origin feature/publish-overhaul
+   ```
+
+### Phase 3: Restore Unrelated Work on Local Main
+
+8. **Return to main** and restore the stashed changes:
+   ```
+   git checkout main
+   git stash pop
+   ```
+
+9. **Local main remains ahead of origin/main** by 13 commits (prior orchestration work) + your new non-publish work (unstaged), keeping your working branch clean for future publish-related work.
+
+## Key Architecture Insights
+
+### What's in the working tree (publish-overhaul):
+- **Code changes:** `src/dashboard/` (server.ts, views/publish.ts, views/article.ts, views/preview.ts, public/styles.css)
+- **Test changes:** `tests/dashboard/publish.test.ts`, `tests/dashboard/server.test.ts`
+- **Size:** 435 net insertions across 7 files (22 CSS lines, 209 server, 112 article, 38 preview, 154 publish, 66+52 tests)
+
+### What stays on local main (NOT publish-overhaul):
+- **Retrospective automation:** `src/pipeline/`, `src/db/`, `src/types.ts`, retrospective tests
+- **TLDR contract enforcement:** Already shipped in commit `74d87b2` (Issue #107)
+- **Agent/config updates:** `.squad/agents/`, `src/agents/`, `src/config/defaults/charters/`, `src/config/defaults/skills/`
+- **Squad metadata:** `.squad/agents/{code,lead,publisher}/history.md`
+
+### Committed history context (for reference):
+- `991c66b` (2026-03-22): Publish-overhaul *decisions* merged into `.squad/decisions.md`, no code changes
+- `74d87b2` (2026-03-22): Retrospective session logging + orchestration merges
+- No commits since origin/main touch the dashboard publish views
+
+## Risk Assessment
+
+| Risk | Mitigation |
+|------|-----------|
+| Accidentally including unrelated commits on PR | Use new branch from origin/main, cherry-pick only publish files |
+| Losing non-publish work on main | Stash and restore; local main remains unchanged except for stash pop |
+| Breaking existing tests | New branch has no retrospective changes; publish tests already designed for draft-first model |
+| Dashboard regression if merged incomplete | All 7 dashboard files should move together; single atomic commit |
+
+## Verification Checklist
+
+Before pushing `feature/publish-overhaul`:
+
+- [ ] Branch starts at `origin/main` (zero local-main commits)
+- [ ] Status shows only dashboard files modified
+- [ ] All 7 dashboard files present (server.ts, views/publish.ts, views/article.ts, views/preview.ts, public/styles.css, publish.test.ts, server.test.ts)
+- [ ] Commit message references decisions and related issues
+- [ ] `npm run build && npm run test` passes on new branch
+- [ ] Stashed work restored on local main and nothing lost
+
+## Co-authored-by
+
+This decision reflects team investigation findings from the publish-overhaul session (2026-03-24). Code, UX, Publisher, and Coordinator agents contributed.
+
+**Team:** Code (@agent/code), UX (@agent/ux), Publisher (@agent/publisher), Coordinator (@agent/coordinator)
+
+---
+
+# Decision: retrospective follow-up should start as a manual digest
+
+**By:** Lead (🏗️)  
+**Date:** 2026-03-23  
+**Related issues:** #115, #114, #116, #117, #118
+
+## Decision
+
+Implement the missing learning-update / process-improvement follow-up as a **manual CLI digest** first.
+
+- **Trigger surface:** manual CLI only in v1
+- **Data source:** structured retrospective rows in `article_retrospectives` and `article_retrospective_findings`, plus article metadata
+- **Output:** bounded markdown digest for human review, with optional JSON if cheap
+- **Explicitly out of scope for v1:** scheduled jobs, cron workflows, and automatic GitHub issue creation
+
+## Why
+
+The retrospective system already generates structured article-local findings in the branch implementation, so the highest-value missing seam is cross-article synthesis, not more automation. A manual digest keeps Lead/Research in the review loop while the signal quality, grouping heuristics, and operator cadence are still being proven.
+
+## Dependency note
+
+Implementation work stays downstream of **#114**, which tracks landing the base retrospective runtime into mainline.
+
+---
+
+# Lead Decision — Retrospective Port Boundary
+
+**Date:** 2026-03-24
+**Status:** APPROVED for smallest coherent slice
+
+## Decision
+
+Port only the **base post-revision retrospective runtime** from the `issue-108-retrospectives` worktree into mainline now:
+
+1. Add structured retrospective persistence (`article_retrospectives`, `article_retrospective_findings`)
+2. Add repository read/write APIs for those tables
+3. Generate and persist a synthesized `revision-retrospective-rN.md` artifact when a revisioned article reaches Stage 7 through `autoAdvanceArticle()`
+4. Add focused repository and pipeline-action tests
+
+## Explicitly Out of Scope
+
+- Dashboard surfacing
+- CLI digest/reporting
+- Scheduled jobs / workflow automation
+- Backfilling old articles
+- Triggering retrospectives from every manual one-off stage change in this first pass
+
+## Why this slice
+
+- It is the smallest slice that is still architecturally coherent: artifact generation without durable structured storage would conflict with the already-approved direction for #115 follow-up work.
+- Mainline already has the prerequisite revision-history seam (`revision_summaries` plus compact revision handoff helpers), so this slice can land without broader conversation/dashboard rewiring.
+- It avoids dragging in the worktree's larger conversation-context divergence, which is unrelated to the core retrospective capability.
+
+## Risks to watch
+
+- Current mainline only guarantees automation through `autoAdvanceArticle()`; manual stage advancement paths may not emit retrospectives yet unless a separate hook is added intentionally.
+- The worktree stores `participant_roles` as sorted JSON and upserts by `(article_id, completion_stage, revision_count)`; preserve that idempotency contract so reruns do not duplicate rows.
+- The worktree heuristic infers force-approval from `editor-review.md` text. Keep that heuristic narrow and covered by tests so wording drift does not silently break the flag.
+
+---
+
+# Decision — Issue #107 Revision: Publisher Skill Deduplication
+
+**Date:** 2026-03-24  
+**Owner:** Publisher (Squad Agent)  
+**Status:** ✅ COMPLETED  
+**Related:** Issue #107, Code rejection feedback, `.squad/decisions.md` #Code Decision — Issue #107 TLDR Contract Enforcement
+
+## Decision
+
+Removed all duplicated normative image-policy text from `src/config/defaults/skills/publisher.md` Step 2 and replaced it with a concise reference to the canonical source: `../substack-article.md` **Phase 4b: Image policy (updated)**.
+
+The Publisher skill now focuses exclusively on **verification** (syntax, paths, file existence, alt text) rather than **policy statement** (count, placement, hero-safety, naming).
+
+## What Changed
+
+### Before (duplicated policy):
+- Enumerated "exactly 2 inline images"
+- Stated "cover image is hero-safe — not a chart, table, or data visualization"
+- Dictated "if story is player-centric, cover image is player-centric too"
+- Required "images do not use visible markdown captions"
+- Named inline images `{slug}-inline-1.png` and `{slug}-inline-2.png`
+
+### After (policy reference + verification only):
+- Line 51: "The canonical image policy (count, placement, hero-safety, naming, alt text) is documented in `../substack-article.md` **Phase 4b: Image policy (updated)** — refer to that section as the source of truth."
+- Lines 55–59: Retained only technical Publisher checks (syntax, naming, existence, alt text quality, broken links)
+
+## Why
+
+Following the Code team's Issue #107 decision: **Single canonical source prevents policy drift.**
+
+- **Before:** Writer charter, Editor skill, Publisher skill all potentially restated the same rules → divergence risk
+- **After:** One policy source (substack-article.md) is referenced by all three roles → consistent enforcement
+
+**Division of labor:**
+- `substack-article.md`: Defines image contract (what must be true)
+- `publisher.md`: Verifies contract compliance (did this article meet it?)
+
+## Implementation Notes
+
+- **File modified:** `src/config/defaults/skills/publisher.md`
+- **Lines changed:** 49–64 (Step 2 section)
+- **Scope:** Documentation only; no code changes
+- **Testing:** Markdown change does not impact runtime behavior or tests
+- **Validation:** Cross-verified reference path (`../substack-article.md` exists in same directory); confirmed section title "Phase 4b: Image policy (updated)" exists in target file
+
+## Related Files
+
+- `src/config/defaults/skills/substack-article.md` — Canonical image policy (Phase 4b, lines 207–215)
+- `src/config/defaults/charters/nfl/writer.md` — Writer charter (should reference canonical source)
+- `src/config/defaults/charters/nfl/editor.md` — Editor charter (should reference canonical source)
+- `src/config/defaults/skills/publisher.md` — Updated with reference-only Step 2
+
+## Next Steps (if any)
+
+None required for this revision. Coordinated team documentation updates may follow per Issue #107 scope (Writer and Editor charters), but those are owned by respective teams.
+
+---
+
+# Scribe Routing Log — Issue #107 Completion & Orchestration
+
+**From:** Scribe  
+**Date:** 2026-03-24T03:25:00Z  
+**Topic:** Issue #107 TLDR contract enforcement completion, orchestration consolidation, and merge readiness
+
+## Summary
+
+Issue #107 TLDR contract enforcement is complete and approved. Code agent delivered all guardrails; Lead reviewed and approved with non-blocking caveats. Scribe has consolidated all session logs, orchestration records, and decision documentation.
+
+### Orchestration Complete
+
+- ✅ Orchestration logs written: Code and Lead agents
+- ✅ Session log written: Issue #107 TLDR contract enforcement
+- ✅ Decision inbox merged and deduplicated into `decisions.md`
+- ✅ Agent history updated with session learnings
+- ✅ Git commit staged for `.squad/` state
+
+### Core Deliverables (Approved)
+
+1. **Canonical TLDR contract:** `src/config/defaults/skills/substack-article.md` with YAML frontmatter
+2. **Stage 5→6 enforcement:** `inspectDraftStructure()` validates structure before advance
+3. **Writer self-healing:** Malformed drafts retry once, then auto-regress with synthetic send-back
+4. **Test coverage:** 145/145 regression tests passing
+5. **Charter alignment:** All agent charters reference single canonical contract
+
+### Lead Review Status
+
+✅ **APPROVED** — All guardrails validated, test coverage verified  
+⚠️ **Non-blocking notes:** Diagnostic cleanup opportunity, redundant clearArtifacts call (noted for future tech debt)
+
+### Next Steps
+
+1. **Lead agent to proceed** with final code review if needed
+2. **Code agent to validate** idempotent behavior and full integration
+3. **Final build/test pass** (`npm run v2:build`) before merge
+4. **Merge main → origin/main** and close Issue #107
+
+---
+
+**Related Documents:**
+- `.squad/orchestration-log/2026-03-24T03-25-00Z-code.md` — Code agent orchestration
+- `.squad/orchestration-log/2026-03-24T03-25-00Z-lead.md` — Lead agent orchestration
+- `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md` — Session summary

@@ -31,6 +31,8 @@
 
 ## Learnings
 
+- 2026-03-24 — Issue #107 follow-up: keep `src/config/defaults/skills/substack-article.md` as the only TLDR/order contract, and make Writer/Editor/Publisher docs point to that file instead of `~/.nfl-lab` aliases or duplicated checklist wording. `tests/pipeline/actions.test.ts` needs an explicit fact-check fixture before draft fixtures whenever `writeDraft()` uses `RecordingProvider`, because the lead preflight consumes the first canned response before the writer draft call.
+- 2026-03-24 — Issue #108 port triage: committed `main` (HEAD `991c66b`) still lacks retrospective automation, but the current checkout already has a local WIP port across `src/pipeline/actions.ts`, `src/db/repository.ts`, `src/db/schema.sql`, `src/types.ts`, `tests/pipeline/actions.test.ts`, and `tests/db/repository.test.ts`. The safe slice is backend-only: keep the post-Stage-7 artifact + structured persistence seam, but do **not** copy the worktree branch's older `buildConversationContext`/draft-repair code or its `usage_events` ordering changes (`ORDER BY created_at DESC` without `id DESC`), because current checkout has newer handoff/validation behavior and deterministic usage-history guarantees.
 - 2026-03-23 — Publish warning investigation: the Stage 7 article-detail warning `Create a Substack draft in the publish workspace before publishing` is intentional. It appears when `article.current_stage === 7` and `article.substack_draft_url` is null; the expected recovery path is `GET /articles/:id/publish` → `POST /api/articles/:id/draft` → `repo.setDraftUrl(...)`.
 - 2026-03-23 — Dashboard auth research: `src/dashboard/server.ts` exposes the Hono dashboard directly from `createApp()` with SSE registration plus `/static/*`, then all HTML/API/HTMX routes without any auth middleware, login route, cookie handling, or session store. Config comes from `src/config/index.ts` (`loadDotEnv()`, `loadConfig()`) and currently covers NFL_* runtime plus provider/service env vars only. Repository/schema (`src/db/repository.ts`, `src/db/schema.sql`) have no auth/session tables or methods. Existing tests (`tests/dashboard/server.test.ts`, `tests/dashboard/publish.test.ts`, `tests/e2e/live-server.test.ts`, `tests/dashboard/config.test.ts`) hit routes directly with no login setup, so the clean long-term seam is Hono middleware + login/logout routes + opaque SQLite-backed sessions, while keeping auth disabled by default in tests/dev unless explicitly enabled.
 - 2026-03-23 — Issue #109: article detail now hydrates revision loops from `getArticleConversation()` + `getRevisionHistory()` via `buildRevisionHistoryEntries()` in `src/pipeline/conversation.ts`, then renders them in `src/dashboard/views/article.ts` instead of treating legacy `editor_reviews` as the main history surface.
@@ -43,3 +45,34 @@
 - 2026-03-24 — **Publish-overhaul team session**: Coordinated investigation across Code, UX, Publisher, Validation, and Coordinator agents. Key findings: HTMX target mismatch, draft serialization divergence, terminology ambiguity ("publish workspace"), missing two-step explicit workflow. Decisions submitted to `.squad/decisions.md`: draft-first model (Publisher), explicit two-step UX (UX), canonical TLDR enforcement (Code). Coordinator implemented: shared richer preview path (`/api/articles/:id/publish-preview`), idempotent draft save/update, publish-now sync logic, cleaned Stage 7 copy, improved alerts. All regressions passing (`npm run v2:build`). Team ready for merge.
 
 - 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Completed Issue #107 implementation (canonical TLDR contract enforcement). Tests passing (145/145). Build blocked by pre-existing TypeScript error in src/server.ts (unrelated to this work). Orchestration log written; session log and decision inbox merged. Agent staged for Lead review of guardrail specification compliance.
+- 2026-03-24 — Issue #107 cleanup: the remaining surgical gaps were policy drift and missing negative-path coverage. Keep `src/config/defaults/skills/substack-article.md` as the sole image/TLDR contract, and pin writer-repair failure plus editor-REVISE regressions in `tests/pipeline/actions.test.ts`, `tests/pipeline/engine.test.ts`, and `tests/llm/provider-mock.test.ts`.
+- 2026-03-24 — Issue #108 retrospective port: main now persists post-revision retrospectives via `article_retrospectives` / `article_retrospective_findings`, synthesizes `revision-retrospective-rN.md` from `revision_summaries`, and auto-generates that artifact when `autoAdvanceArticle()` reaches Stage 7. Focused validation: `npm run v2:build` passed; new retrospective tests in `tests/db/repository.test.ts` and `tests/pipeline/actions.test.ts` passed, while three older `tests/pipeline/actions.test.ts` failures remain pre-existing in the current branch.
+- 2026-03-24 — Issue #107 validation refresh: the canonical TLDR contract path remains `src/config/defaults/skills/substack-article.md`, with enforcement split between `inspectDraftStructure()` in `src/pipeline/engine.ts` and writer/auto-advance repair logic in `src/pipeline/actions.ts`. Focused regression coverage passed in `tests/pipeline/engine.test.ts`, `tests/pipeline/actions.test.ts`, and `tests/llm/provider-mock.test.ts`, and `npm run v2:build` currently succeeds on this tree.
+
+### 2026-03-24T02:38:09Z: Ralph Round 3 — Retrospective Port Work (code-retro-port)
+
+**Session:** Code agent completed retrospective port workspace work; base runtime slice ported to working tree, broader reconcile/review still needed before #114 merge.
+
+**Scope Completed:**
+- Ported structured retrospective persistence tables (`article_retrospectives`, `article_retrospective_findings`)
+- Ported repository read/write APIs for retrospective tables
+- Ported artifact generation and persistence logic for `revision-retrospective-rN.md`
+- Added focused repository and pipeline-action tests
+- Idempotency contract documented for `(article_id, completion_stage, revision_count)` upserts
+
+**Scope Deferred (explicitly out of Phase 1):**
+- Dashboard surfacing
+- CLI digest/reporting
+- Scheduled jobs / workflow automation
+- Backfilling old articles
+- Manual stage advancement retrospective triggers
+
+**Risk Mitigation Notes:**
+- Current mainline only guarantees automation through `autoAdvanceArticle()`
+- Manual stage advancement paths may not emit retrospectives without additional hooks
+- Heuristic narrowly scoped for `editor-review.md` text parsing force-approval detection
+
+**Decision Status:** "Lead Decision — Retrospective Port Boundary" merged to `.squad/decisions.md`.
+
+**Next:** Broader reconcile/review needed before mainline integration; Code to validate #114 merge readiness.
+- 2026-03-24T03:25:00Z — **Issue #107 orchestration complete**: Lead approved Issue #107 TLDR contract enforcement with non-blocking tech-debt notes (diagnostic cleanup opportunity, redundant clearArtifacts call). Scribe consolidated all session logs, orchestration records, and decision documentation. Issue #107 ready for merge. Orchestration logs: `.squad/orchestration-log/2026-03-24T03-25-00Z-{code,lead}.md`. Session log: `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md`.
