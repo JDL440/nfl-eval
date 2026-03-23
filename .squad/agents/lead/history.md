@@ -88,6 +88,11 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 - Kept the minimum pre-Editor runtime gate narrow: draft exists, meets length floor, and satisfies the top-of-article TLDR contract; broader publish-readiness checks stay downstream.
 - Code review for #107 should verify shared runtime validation, targeted writer repair/send-back behavior, and regressions proving TLDR-less drafts cannot advance to Editor while compliant drafts and mocks still pass.
 
+### 2026-03-23: Issue #115 retrospective follow-up path locked
+- Locked v1 follow-up for retrospectives to a **manual CLI digest** rather than a scheduled job or workflow-owned path.
+- Confirmed the source of truth should be structured retrospective tables (`article_retrospectives` + `article_retrospective_findings`, with article metadata) instead of scraping `revision-retrospective-rN.md`.
+- Split the work into child issues: **#116** (Research digest heuristics/spec), **#117** (Code CLI/query surface), and **#118** (Code candidate-promotion layer), with implementation explicitly downstream of **#114** landing the base retrospective runtime in mainline.
+
 ### 2026-03-24: Publish-overhaul team coordination and decision lock
 
 **Team session outcomes:** Coordinated five-agent publish-flow investigation (Code, UX, Publisher, Validation, Coordinator). 
@@ -113,3 +118,5 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 - All regressions passing (`npm run v2:build`)
 
 **Status:** Ready for merge. No blockers.
+
+- 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Processed Issues #114 and #115 routing from user. GitHub issues created and routed to Code/Lead for mainline retrospective automation shipping and learning extraction. Inbox decisions merged covering TLDR contract (Code), publish flow overhaul (Publisher/UX), and create-draft validation (Code). Session logged; orchestration updates recorded.

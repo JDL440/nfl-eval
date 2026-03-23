@@ -72,3 +72,5 @@
 **Error states:** Surface draft creation state (no markdown, Substack not configured, save failed, URL stale, publish failed, page refresh needed).
 
 **Status:** Decision merged to `.squad/decisions.md` as "Decision: Publish-Flow Architecture — Draft-First Model". Awaiting Coordinator implementation.
+
+- 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Publish-flow overhaul proposal merged into decisions. Draft-first model recommended: Create Draft → Publish Now (two-step explicit workflow). Blocking issue: create-draft function appears broken/incomplete in publishToSubstack.ts. Routed validation request to Code team. UX and error-handling implications documented. Awaiting Code's create-draft fix before implementing draft-first UI changes.

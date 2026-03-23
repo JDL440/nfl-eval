@@ -61,3 +61,5 @@
 - One unified "Publish" section on article detail instead of overlapping controls across detail + publish pages
 
 **Status:** Recommendations merged to `.squad/decisions.md` as "Decision: Publish Flow UX — Two-Step Model with Explicit Workflow". Coordinator implemented all findings. Regressions passing.
+
+- 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Stage 7 publish-flow mental models and terminology review completed. Key findings: "publish workspace" is ambiguous/jargon; warning copy conflicts with intended two-step workflow; success states need stronger language. UX decision merged into decisions.md. Recommendations: rename/clarify workspace term, strengthen warnings, upgrade publish preview, add draft status indicator. Implementation pending Code's create-draft validation and Publisher's draft-first model adoption.
