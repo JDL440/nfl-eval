@@ -96,11 +96,78 @@ export function requireDiscussionSummary(store: ArtifactStore, articleId: string
   return { passed: true, reason: 'Discussion summary ready' };
 }
 
-const MIN_DRAFT_WORDS = 200;
+export const MIN_DRAFT_WORDS = 200;
+const REQUIRED_TLDR_BULLETS = 4;
+const MAX_NON_EMPTY_LINES_BEFORE_TLDR = 8;
+
+export interface DraftStructureCheck {
+  passed: boolean;
+  reason: string;
+  issue?: 'missing-tldr' | 'tldr-too-low' | 'tldr-too-short';
+}
+
+export function inspectDraftStructure(draft: string): DraftStructureCheck {
+  const lines = draft.replace(/\r\n/g, '\n').split('\n');
+  const tldrStart = lines.findIndex((line) => {
+    const normalized = line.replace(/\*/g, '').trim();
+    return /^>\s*(?:📋\s*)?TLDR\b/i.test(normalized);
+  });
+
+  if (tldrStart === -1) {
+    return {
+      passed: false,
+      issue: 'missing-tldr',
+      reason: 'Draft structure: missing required TLDR block near the top of the article',
+    };
+  }
+
+  const firstSectionHeading = lines.findIndex((line) => /^\s*##\s+\S/.test(line));
+  const authorLine = lines.findIndex((line) => /\*\*By:/i.test(line));
+  const nonEmptyBeforeTldr = lines.slice(0, tldrStart).filter((line) => line.trim() !== '').length;
+
+  if (
+    (firstSectionHeading !== -1 && firstSectionHeading < tldrStart) ||
+    (authorLine !== -1 && authorLine < tldrStart) ||
+    nonEmptyBeforeTldr > MAX_NON_EMPTY_LINES_BEFORE_TLDR
+  ) {
+    return {
+      passed: false,
+      issue: 'tldr-too-low',
+      reason: 'Draft structure: TLDR block must appear near the top after the headline/subtitle (and optional cover image)',
+    };
+  }
+
+  let tldrEnd = tldrStart + 1;
+  while (tldrEnd < lines.length && /^\s*>/.test(lines[tldrEnd])) {
+    tldrEnd++;
+  }
+
+  const tldrBullets = lines
+    .slice(tldrStart + 1, tldrEnd)
+    .map((line) => line.replace(/^\s*>\s?/, '').trim())
+    .filter((line) => /^[-*+]\s+\S/.test(line));
+
+  if (tldrBullets.length < REQUIRED_TLDR_BULLETS) {
+    return {
+      passed: false,
+      issue: 'tldr-too-short',
+      reason: `Draft structure: TLDR block must include at least ${REQUIRED_TLDR_BULLETS} bullet points`,
+    };
+  }
+
+  return {
+    passed: true,
+    reason: `Draft structure ready (${tldrBullets.length} TLDR bullets)`,
+  };
+}
 
 export function requireDraft(store: ArtifactStore, articleId: string): GuardResult {
   if (!store.exists(articleId, 'draft.md')) {
     return { passed: false, reason: 'Article draft has not been written yet' };
+  }
+  const content = store.get(articleId, 'draft.md');
+  if (!content || content.trim().length === 0) {
+    return { passed: false, reason: 'Article draft is empty' };
   }
   const wordCount = store.wordCount(articleId, 'draft.md');
   if (wordCount < MIN_DRAFT_WORDS) {
@@ -109,7 +176,11 @@ export function requireDraft(store: ArtifactStore, articleId: string): GuardResu
       reason: `Draft has ${wordCount} words (minimum ${MIN_DRAFT_WORDS})`,
     };
   }
-  return { passed: true, reason: `Draft ready (${wordCount} words)` };
+  const structure = inspectDraftStructure(content);
+  if (!structure.passed) {
+    return { passed: false, reason: structure.reason };
+  }
+  return { passed: true, reason: `Draft ready (${wordCount} words; TLDR contract satisfied)` };
 }
 
 // ── Editor verdict helpers ──────────────────────────────────────────────────

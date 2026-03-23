@@ -34,6 +34,13 @@ export interface RevisionSummary {
   created_at: string;
 }
 
+export interface RevisionHistoryEntry {
+  summary: RevisionSummary;
+  keyIssues: string[];
+  writerTurn: ConversationTurn | null;
+  editorTurn: ConversationTurn | null;
+}
+
 export interface GetConversationOptions {
   sinceStage?: number;
   agentName?: string;
@@ -59,6 +66,26 @@ function parseKeyIssues(raw: string | null): string[] {
   } catch {
     return [];
   }
+}
+
+function normalizeTimestamp(value: string): number {
+  const normalized = value.includes('T')
+    ? value
+    : `${value.replace(' ', 'T')}${value.endsWith('Z') ? '' : 'Z'}`;
+  return Number.isNaN(Date.parse(normalized)) ? 0 : Date.parse(normalized);
+}
+
+function sortTurnsAscending(turns: ConversationTurn[]): ConversationTurn[] {
+  return [...turns].sort((a, b) => a.turn_number - b.turn_number);
+}
+
+function sortRevisionsAscending(revisions: RevisionSummary[]): RevisionSummary[] {
+  return [...revisions].sort((a, b) => a.iteration - b.iteration || normalizeTimestamp(a.created_at) - normalizeTimestamp(b.created_at));
+}
+
+function matchesRevisionSummary(turn: ConversationTurn, revision: RevisionSummary): boolean {
+  const preview = revision.feedback_summary?.trim();
+  return preview ? turn.content.startsWith(preview) : false;
 }
 
 // ── Conversation functions ──────────────────────────────────────────────────
@@ -185,6 +212,64 @@ export function getRevisionCount(
     'SELECT COALESCE(MAX(iteration), 0) AS count FROM revision_summaries WHERE article_id = ?',
   ).get(articleId) as { count: number };
   return row.count;
+}
+
+/**
+ * Attach revision summaries to the writer/editor turns that formed each loop.
+ * The revision summary is authoritative for loop order; writer/editor turns are
+ * matched from the shared conversation thread for dashboard rendering.
+ */
+export function buildRevisionHistoryEntries(
+  turns: ConversationTurn[],
+  revisions: RevisionSummary[],
+): RevisionHistoryEntry[] {
+  if (turns.length === 0 || revisions.length === 0) return [];
+
+  const orderedTurns = sortTurnsAscending(turns);
+  const writerTurns = orderedTurns.filter(turn => turn.agent_name === 'writer');
+  const editorTurns = orderedTurns.filter(turn => turn.agent_name === 'editor');
+
+  let priorMatchedEditorTurnNumber = 0;
+  let editorSearchIndex = 0;
+
+  return sortRevisionsAscending(revisions).map((summary) => {
+    let editorTurn: ConversationTurn | null = null;
+    const lowerBound = priorMatchedEditorTurnNumber;
+
+    for (let i = editorSearchIndex; i < editorTurns.length; i += 1) {
+      const candidate = editorTurns[i];
+      if (candidate.turn_number <= lowerBound) continue;
+
+      if (!editorTurn) {
+        editorTurn = candidate;
+      }
+
+      if (matchesRevisionSummary(candidate, summary)) {
+        editorTurn = candidate;
+        editorSearchIndex = i + 1;
+        break;
+      }
+    }
+
+    if (editorTurn) {
+      priorMatchedEditorTurnNumber = editorTurn.turn_number;
+      editorSearchIndex = editorTurns.findIndex(turn => turn.turn_number === editorTurn.turn_number) + 1;
+    }
+
+    const writerTurn = editorTurn
+      ? [...writerTurns]
+          .reverse()
+          .find(turn => turn.turn_number > lowerBound && turn.turn_number < editorTurn.turn_number)
+        ?? null
+      : null;
+
+    return {
+      summary,
+      keyIssues: parseKeyIssues(summary.key_issues),
+      writerTurn,
+      editorTurn,
+    };
+  });
 }
 
 // ── Context formatting ──────────────────────────────────────────────────────

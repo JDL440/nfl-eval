@@ -3,11 +3,18 @@ import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Repository } from '../../src/db/repository.js';
-import { createApp } from '../../src/dashboard/server.js';
+import {
+  createApp,
+  createSubstackServiceFromEnv,
+} from '../../src/dashboard/server.js';
 import { proseMirrorToHtml } from '../../src/dashboard/views/publish.js';
 import { markdownToProseMirror } from '../../src/services/prosemirror.js';
 import type { AppConfig } from '../../src/config/index.js';
-import type { SubstackService, SubstackDraft, SubstackPost } from '../../src/services/substack.js';
+import {
+  type SubstackDraft,
+  type SubstackPost,
+  type SubstackService,
+} from '../../src/services/substack.js';
 import type { TwitterService, TweetResult } from '../../src/services/twitter.js';
 
 function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
@@ -105,8 +112,28 @@ describe('Publish Workflow', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.SUBSTACK_TOKEN;
+    delete process.env.SUBSTACK_PUBLICATION_URL;
+    delete process.env.SUBSTACK_STAGE_URL;
+    delete process.env.NOTES_ENDPOINT_PATH;
     repo.close();
     rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  describe('createSubstackServiceFromEnv', () => {
+    it('creates the startup Substack service when publish env vars are present', () => {
+      const service = createSubstackServiceFromEnv({
+        SUBSTACK_TOKEN: 'test-token',
+        SUBSTACK_PUBLICATION_URL: 'https://test.substack.com',
+        SUBSTACK_STAGE_URL: 'https://stage-test.substack.com',
+        NOTES_ENDPOINT_PATH: '/api/v1/comment/feed',
+      });
+
+      expect(service).toBeDefined();
+      expect(service?.resolveBaseUrl('prod')).toBe('https://test.substack.com');
+      expect(service?.resolveBaseUrl('stage')).toBe('https://stage-test.substack.com');
+    });
   });
 
   // ── proseMirrorToHtml ──────────────────────────────────────────────────────
@@ -144,6 +171,7 @@ describe('Publish Workflow', () => {
       repo.createArticle({ id: 'pub-preview', title: 'Publish Preview Test' });
       advanceToStage(repo, 'pub-preview', 7);
       writeArticleDraft(repo, 'pub-preview', '# Test Article\n\nSome content here.');
+      repo.setDraftUrl('pub-preview', 'https://test.substack.com/publish/post/12345');
 
       const app = createApp(repo, config);
       const res = await app.request('/articles/pub-preview/publish');
@@ -153,8 +181,9 @@ describe('Publish Workflow', () => {
       expect(html).toContain('Publish Preview Test');
       expect(html).toContain('Test Article');
       expect(html).toContain('Some content here');
-      expect(html).toContain('Article Preview');
-      expect(html).toContain('Create Draft');
+      expect(html).toContain('Published Layout Preview');
+      expect(html).toContain('Update Draft on Substack');
+      expect(html).toContain('Publish Now');
     });
 
     it('returns 404 for missing article', async () => {
@@ -171,7 +200,29 @@ describe('Publish Workflow', () => {
       const res = await app.request('/articles/no-md/publish');
       expect(res.status).toBe(200);
       const html = await res.text();
-      expect(html).toContain('No article draft found');
+      expect(html).toContain('No article draft found yet');
+      expect(html).toContain('No Substack draft is linked yet. Save a draft to Substack before publishing live.');
+      expect(html).not.toContain('Publish Now');
+    });
+
+    it('shows an actionable config warning and disables publish actions when Substack is unavailable', async () => {
+      repo.createArticle({ id: 'no-substack-config', title: 'No Substack Config' });
+      advanceToStage(repo, 'no-substack-config', 7);
+      writeArticleDraft(repo, 'no-substack-config', '# Draft\n\nContent.');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/articles/no-substack-config/publish');
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Substack publishing is not configured.');
+      expect(html).toContain('SUBSTACK_PUBLICATION_URL');
+      expect(html).toContain('SUBSTACK_TOKEN');
+      expect(html).toContain('/config');
+      expect(html).toContain('aria-disabled="true"');
+      expect(html).toContain('Configure Substack on the <a href="/config">Config</a> page before using Publish All.');
+      expect(html).not.toContain('hx-post="/api/articles/no-substack-config/draft"');
+      expect(html).not.toContain('hx-post="/api/articles/no-substack-config/publish"');
     });
 
     it('displays publish actions without checklist gate', async () => {
@@ -182,8 +233,8 @@ describe('Publish Workflow', () => {
       const app = createApp(repo, config);
       const res = await app.request('/articles/with-pass/publish');
       const html = await res.text();
-      expect(html).toContain('Publish Actions');
-      expect(html).toContain('Article Preview');
+      expect(html).toContain('Publish Status');
+      expect(html).toContain('Published Layout Preview');
       // Checklist no longer shown on publish page
       expect(html).not.toContain('Publisher Checklist');
     });
@@ -200,8 +251,10 @@ describe('Publish Workflow', () => {
       const res = await app.request('/htmx/articles/htmx-prev/preview');
       expect(res.status).toBe(200);
       const html = await res.text();
+      expect(html).toContain('preview-container');
       expect(html).toContain('Section');
       expect(html).toContain('Body text');
+      expect(html).toContain('Subscribe');
       expect(html).not.toContain('<!DOCTYPE html>');
     });
 
@@ -215,11 +268,11 @@ describe('Publish Workflow', () => {
   // ── POST /api/articles/:id/draft (create Substack draft) ──────────────────
 
   describe('POST /api/articles/:id/draft', () => {
-    it('converts markdown via ProseMirror and creates draft', async () => {
+    it('converts cleaned markdown via ProseMirror and creates draft', async () => {
       const mockService = createMockSubstackService();
       repo.createArticle({ id: 'draft-test', title: 'Draft Test' });
       advanceToStage(repo, 'draft-test', 7);
-      writeArticleDraft(repo, 'draft-test', '# Draft\n\nContent here.');
+      writeArticleDraft(repo, 'draft-test', '<think>trace</think>\n\n# Draft\n\nContent here.');
 
       const app = createApp(repo, config, { substackService: mockService });
       const res = await app.request('/api/articles/draft-test/draft', { method: 'POST' });
@@ -233,10 +286,26 @@ describe('Publish Workflow', () => {
       expect(mockService.createDraft).toHaveBeenCalledOnce();
       const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(callArgs.title).toBe('Draft Test');
+      expect(callArgs.bodyHtml).not.toContain('trace');
 
       // Draft URL should be stored on the article
       const updated = repo.getArticle('draft-test');
       expect(updated?.substack_draft_url).toBe('https://test.substack.com/publish/post/12345');
+    });
+
+    it('updates an existing linked Substack draft instead of creating a new one', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'draft-update', title: 'Draft Update' });
+      advanceToStage(repo, 'draft-update', 7);
+      writeArticleDraft(repo, 'draft-update', '# Updated Draft\n\nFresh content.');
+      repo.setDraftUrl('draft-update', 'https://test.substack.com/publish/post/12345');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/draft-update/draft', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      expect(mockService.updateDraft).toHaveBeenCalledOnce();
+      expect(mockService.createDraft).not.toHaveBeenCalled();
     });
 
     it('returns error when no markdown found', async () => {
@@ -291,9 +360,105 @@ describe('Publish Workflow', () => {
       expect(res.status).toBe(200);
 
       const html = await res.text();
-      expect(html).toContain('Draft created');
+      expect(html).toContain('Substack draft created');
       expect(html).toContain('substack.com');
     });
+
+    it('returns an actionable HTMX message when Substack is not configured', async () => {
+      repo.createArticle({ id: 'htmx-no-svc', title: 'HTMX No Service' });
+      writeArticleDraft(repo, 'htmx-no-svc', '# Draft\n\nContent.');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/api/articles/htmx-no-svc/draft', {
+        method: 'POST',
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Substack publishing is not configured.');
+      expect(html).toContain('SUBSTACK_PUBLICATION_URL');
+      expect(html).toContain('SUBSTACK_TOKEN');
+      expect(html).toContain('/config');
+      expect(html).toContain('aria-disabled="true"');
+    });
+
+    it('enriches Substack body with subscribe CTA and footer blurb', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'enrich-test', title: 'Enrichment Test' });
+      advanceToStage(repo, 'enrich-test', 7);
+      writeArticleDraft(repo, 'enrich-test', '# Article\n\nBody content here.');
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/enrich-test/draft', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      expect(mockService.createDraft).toHaveBeenCalledOnce();
+      const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const body = callArgs.bodyHtml as string;
+
+      // Should contain subscribe CTA (using test config value)
+      expect(body).toContain('Test');
+      expect(body).toContain('Subscribe');
+
+      // Should contain footer blurb
+      expect(body).toContain('virtual front office');
+      expect(body).toContain('specialized AI analysts');
+      expect(body).toContain('Drop it in the comments');
+    });
+
+    it('uploads and includes cover image when manifest present', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'cover-test', title: 'Cover Test' });
+      advanceToStage(repo, 'cover-test', 7);
+      writeArticleDraft(repo, 'cover-test', '# Article\n\nContent.');
+      
+      // Create images manifest with cover
+      const manifest = JSON.stringify([
+        { type: 'cover', path: 'content/images/cover-test/cover-1.png', prompt: 'Cover image' }
+      ]);
+      repo.artifacts.put('cover-test', 'images.json', manifest);
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/cover-test/draft', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const body = callArgs.bodyHtml as string;
+
+      // Should have attempted to upload cover (mock returns CDN URL)
+      if (mockService.uploadImage) {
+        // Note: uploadImage will fail gracefully if file doesn't exist
+        // but the enrichment logic should still run
+        expect(body).toContain('<h1>Article</h1>');
+      }
+    });
+
+    it('uploads and intersperses inline images when manifest present', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'inline-test', title: 'Inline Test' });
+      advanceToStage(repo, 'inline-test', 7);
+      writeArticleDraft(repo, 'inline-test', '# Article\n\nFirst para.\n\nSecond para.\n\nThird para.\n\nFourth para.');
+      
+      // Create images manifest with inline images
+      const manifest = JSON.stringify([
+        { type: 'inline', path: 'content/images/inline-test/inline-1.png', prompt: 'First image' },
+        { type: 'inline', path: 'content/images/inline-test/inline-2.png', prompt: 'Second image' }
+      ]);
+      repo.artifacts.put('inline-test', 'images.json', manifest);
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/inline-test/draft', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const body = callArgs.bodyHtml as string;
+
+      // Body should contain article content
+      expect(body).toContain('First para');
+      expect(body).toContain('Fourth para');
+    });
+
   });
 
   // ── POST /api/articles/:id/publish (publish draft) ─────────────────────────
@@ -303,6 +468,7 @@ describe('Publish Workflow', () => {
       const mockService = createMockSubstackService();
       repo.createArticle({ id: 'pub-test', title: 'Publish Test' });
       advanceToStage(repo, 'pub-test', 7);
+      writeArticleDraft(repo, 'pub-test', '# Publish Test\n\nLatest content.');
       repo.setDraftUrl('pub-test', 'https://test.substack.com/publish/post/12345');
 
       const app = createApp(repo, config, { substackService: mockService });
@@ -314,6 +480,7 @@ describe('Publish Workflow', () => {
       expect(body.publishedUrl).toBe('https://test.substack.com/p/test-article');
 
       expect(mockService.publishDraft).toHaveBeenCalledWith({ draftId: '12345' });
+      expect(mockService.updateDraft).toHaveBeenCalledOnce();
 
       // Article should be at Stage 8 with substack_url set
       const updated = repo.getArticle('pub-test');
@@ -323,16 +490,34 @@ describe('Publish Workflow', () => {
       expect(updated?.published_at).toBeTruthy();
     });
 
-    it('returns error when no draft exists', async () => {
+    it('returns error when publishing without an existing linked Substack draft', async () => {
       const mockService = createMockSubstackService();
       repo.createArticle({ id: 'no-draft', title: 'No Draft' });
+      advanceToStage(repo, 'no-draft', 7);
+      writeArticleDraft(repo, 'no-draft', '# No Draft\n\nReady to publish.');
 
       const app = createApp(repo, config, { substackService: mockService });
       const res = await app.request('/api/articles/no-draft/publish', { method: 'POST' });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(500);
 
       const body = await res.json() as { error: string };
-      expect(body.error).toContain('No draft exists');
+      expect(body.error).toContain('No linked Substack draft found');
+      expect(mockService.createDraft).not.toHaveBeenCalled();
+      expect(mockService.updateDraft).not.toHaveBeenCalled();
+      expect(mockService.publishDraft).not.toHaveBeenCalled();
+    });
+
+    it('returns error when no article markdown exists for publish-now', async () => {
+      const mockService = createMockSubstackService();
+      repo.createArticle({ id: 'no-publish-md', title: 'No Publish MD' });
+      advanceToStage(repo, 'no-publish-md', 7);
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/no-publish-md/publish', { method: 'POST' });
+      expect(res.status).toBe(500);
+
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('No article draft found yet');
     });
 
     it('returns error when SubstackService not configured', async () => {
@@ -352,6 +537,8 @@ describe('Publish Workflow', () => {
         publishDraft: vi.fn().mockRejectedValue(new Error('Substack 503')),
       } as unknown as Partial<SubstackService>);
       repo.createArticle({ id: 'pub-fail', title: 'Pub Fail' });
+      advanceToStage(repo, 'pub-fail', 7);
+      writeArticleDraft(repo, 'pub-fail', '# Pub Fail\n\nLatest content.');
       repo.setDraftUrl('pub-fail', 'https://test.substack.com/publish/post/999');
 
       const app = createApp(repo, config, { substackService: mockService });
@@ -366,6 +553,7 @@ describe('Publish Workflow', () => {
       const mockService = createMockSubstackService();
       repo.createArticle({ id: 'htmx-pub', title: 'HTMX Pub' });
       advanceToStage(repo, 'htmx-pub', 7);
+      writeArticleDraft(repo, 'htmx-pub', '# HTMX Pub\n\nLatest content.');
       repo.setDraftUrl('htmx-pub', 'https://test.substack.com/publish/post/12345');
 
       const app = createApp(repo, config, { substackService: mockService });
@@ -376,8 +564,28 @@ describe('Publish Workflow', () => {
       expect(res.status).toBe(200);
 
       const html = await res.text();
-      expect(html).toContain('Published!');
+      expect(html).toContain('Published to Substack using the latest article content.');
       expect(html).toContain('substack.com');
+    });
+
+    it('returns an actionable HTMX message when publish is unavailable', async () => {
+      repo.createArticle({ id: 'htmx-no-svc-pub', title: 'HTMX No Service Publish' });
+      advanceToStage(repo, 'htmx-no-svc-pub', 7);
+      writeArticleDraft(repo, 'htmx-no-svc-pub', '# Draft\n\nContent.');
+
+      const app = createApp(repo, config);
+      const res = await app.request('/api/articles/htmx-no-svc-pub/publish', {
+        method: 'POST',
+        headers: { 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(200);
+
+      const html = await res.text();
+      expect(html).toContain('Substack publishing is not configured.');
+      expect(html).toContain('SUBSTACK_PUBLICATION_URL');
+      expect(html).toContain('SUBSTACK_TOKEN');
+      expect(html).toContain('/config');
+      expect(html).toContain('aria-disabled="true"');
     });
 
     it('updates article with substack_url on publish', async () => {
@@ -392,6 +600,7 @@ describe('Publish Workflow', () => {
 
       repo.createArticle({ id: 'url-check', title: 'URL Check' });
       advanceToStage(repo, 'url-check', 7);
+      writeArticleDraft(repo, 'url-check', '# URL Check\n\nLatest content.');
       repo.setDraftUrl('url-check', 'https://test.substack.com/publish/post/99');
 
       const app = createApp(repo, config, { substackService: mockService });

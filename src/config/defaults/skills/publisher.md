@@ -32,44 +32,29 @@ Editor: ✅ APPROVED → Publisher: prep + dashboard handoff → dashboard revie
 
 Run this in order. Each step is a gate before the next.
 
+The canonical article skeleton, TLDR contract, and image placement expectations live in `src/config/defaults/skills/substack-article.md`. Treat that skill as the source of truth whenever this checklist summarizes structure requirements.
+
 ### Step 1 — Article File Verification
 
 Open `content/articles/{slug}.md` and verify:
 
-- [ ] **First line** is `# The Headline` — no blank lines before it
-- [ ] **Second non-blank line** is `*The subtitle in italics*` (single asterisks)
+- [ ] Top-of-article order matches the canonical `substack-article` contract: headline → italic subtitle → optional cover image → TLDR block → byline
 - [ ] No `TODO`, `[PLACEHOLDER]`, `{FIXME}`, or `...fill in...` markers remain
 - [ ] No stale date references (e.g., "upcoming Draft" when it already happened)
-- [ ] Author line present: `**By: The NFL Lab Expert Panel**`
 - [ ] Boilerplate footer present: "Welcome to the Lab" brand footer (virtual front office + human editor + Lab brand) + CTA + next article tease
 - [ ] "Next from the panel" tease references a real upcoming article idea and reads like a cliffhanger
 
 ### Step 2 — Image Placement Verification
 
-**Image policy (current):**
-- **Exactly 1 cover image** at the top of the article markdown body, above the TLDR block
-- **Exactly 2 inline images** in the article markdown body
-- **The cover image MUST be hero-safe** — it drives the social share thumbnail. NOT a chart, table, or dense data image.
-- **inline-2** can be analytical or data-adjacent
-- Images rendered at `imageSize: "normal"` (text column width), NOT full-bleed
+The canonical image policy (count, placement, hero-safety, naming, alt text) is documented in `src/config/defaults/skills/substack-article.md` **Phase 4b: Image policy (updated)** — refer to that section as the source of truth.
 
-**Checklist:**
+**Publisher verification checklist (technical, not policy):**
 
-- [ ] **Cover image is present** in the article markdown body and sits above the TLDR block
-- [ ] **Exactly 2 inline images** present in the article body
-- [ ] **First image (the cover) is hero-safe** — not a chart, table, or data visualization (the publisher extension will warn/swap if not, but it's better to get this right)
-- [ ] If the story is player-centric, the cover image is player-centric too
 - [ ] Both inline images use correct syntax: `![alt text](../../images/{slug}/filename.png)`
-- [ ] Images do not use visible markdown captions
 - [ ] Both inline images are named `{slug}-inline-1.png` and `{slug}-inline-2.png`
 - [ ] Both inline images have descriptive alt text (no empty `![]()`)
 - [ ] Both image files exist: verify `content/images/{slug}/` contains the referenced filenames
 - [ ] No broken image references (paths with typos, wrong extensions, missing files)
-
-**Inline image placement guidelines:**
-- Place first inline image after the first major data table or argument (~line 35–40)
-- Place second inline image at a natural tension point in the middle section (~line 85–95)
-- Do NOT place images in the closing section or after the verdict
 
 ### Step 2b — Subscribe Button Verification
 

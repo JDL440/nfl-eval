@@ -17,12 +17,30 @@ import {
   requirePublisherPass,
   requireSubstackUrl,
   extractVerdict,
+  inspectDraftStructure,
 } from '../../src/pipeline/engine.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function longText(wordCount: number): string {
   return Array.from({ length: wordCount }, (_, i) => `word${i}`).join(' ');
+}
+
+function validDraft(wordCount = 1000): string {
+  return `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+> - Fourth takeaway
+
+**By: The NFL Lab Expert Panel**
+
+${longText(wordCount)}
+`;
 }
 
 // ── Guard function unit tests ───────────────────────────────────────────────
@@ -141,16 +159,48 @@ describe('Guard functions', () => {
 
     it('passes when draft.md has 200+ words', () => {
       repo.createArticle({ id: 'good-draft', title: 'Test' });
-      repo.artifacts.put('good-draft', 'draft.md', longText(1000));
+      repo.artifacts.put('good-draft', 'draft.md', validDraft(1000));
       const result = requireDraft(repo.artifacts, 'good-draft');
       expect(result.passed).toBe(true);
     });
 
     it('passes at exactly 800 words', () => {
       repo.createArticle({ id: 'exact-draft', title: 'Test' });
-      repo.artifacts.put('exact-draft', 'draft.md', longText(800));
+      repo.artifacts.put('exact-draft', 'draft.md', validDraft(800));
       const result = requireDraft(repo.artifacts, 'exact-draft');
       expect(result.passed).toBe(true);
+    });
+
+    it('fails when TLDR block is missing near the top', () => {
+      repo.createArticle({ id: 'missing-tldr', title: 'Test' });
+      repo.artifacts.put('missing-tldr', 'draft.md', `# Headline\n\n*Subtitle*\n\n${longText(250)}`);
+      const result = requireDraft(repo.artifacts, 'missing-tldr');
+      expect(result.passed).toBe(false);
+      expect(result.reason).toContain('TLDR');
+    });
+  });
+
+  describe('inspectDraftStructure', () => {
+    it('passes when the draft follows the canonical TLDR contract', () => {
+      const result = inspectDraftStructure(validDraft(400));
+      expect(result.passed).toBe(true);
+    });
+
+    it('fails when TLDR appears after the first section heading', () => {
+      const result = inspectDraftStructure(`# Headline
+
+*Subtitle*
+
+## Section 1
+
+> **📋 TLDR**
+> - One
+> - Two
+> - Three
+> - Four
+`);
+      expect(result.passed).toBe(false);
+      expect(result.reason).toContain('near the top');
     });
   });
 
@@ -381,7 +431,7 @@ describe('PipelineEngine', () => {
 
     it('allows 5→6 when draft.md has 800+ words', () => {
       repo.createArticle({ id: 'test-article', title: 'Test' });
-      repo.artifacts.put('test-article', 'draft.md', longText(900));
+      repo.artifacts.put('test-article', 'draft.md', validDraft(900));
       const check = engine.canAdvance('test-article', 5 as Stage);
       expect(check.allowed).toBe(true);
       expect(check.nextStage).toBe(6);
@@ -392,6 +442,33 @@ describe('PipelineEngine', () => {
       repo.artifacts.put('test-article', 'draft.md', longText(100));
       const check = engine.canAdvance('test-article', 5 as Stage);
       expect(check.allowed).toBe(false);
+    });
+
+    it('blocks 5→6 when draft.md is long enough but missing the TLDR contract', () => {
+      repo.createArticle({ id: 'test-article', title: 'Test' });
+      repo.artifacts.put('test-article', 'draft.md', `# Headline\n\n*Subtitle*\n\n**By: The NFL Lab Expert Panel**\n\n${longText(300)}`);
+      const check = engine.canAdvance('test-article', 5 as Stage);
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('TLDR');
+    });
+
+    it('blocks 5→6 when draft.md has too few TLDR bullets', () => {
+      repo.createArticle({ id: 'test-article', title: 'Test' });
+      repo.artifacts.put('test-article', 'draft.md', `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+
+**By: The NFL Lab Expert Panel**
+
+${longText(300)}`);
+      const check = engine.canAdvance('test-article', 5 as Stage);
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('4 bullet');
     });
 
     it('allows 6→7 when editor approved', () => {
@@ -472,7 +549,7 @@ describe('PipelineEngine', () => {
       repo.artifacts.put('multi', 'discussion-prompt.md', 'prompt');
       repo.artifacts.put('multi', 'panel-composition.md', 'panel');
       repo.artifacts.put('multi', 'discussion-summary.md', 'summary');
-      repo.artifacts.put('multi', 'draft.md', longText(1000));
+      repo.artifacts.put('multi', 'draft.md', validDraft(1000));
       repo.artifacts.put('multi', 'editor-review.md', '## Verdict: APPROVED');
 
       expect(engine.advance('multi', 1 as Stage)).toBe(2);

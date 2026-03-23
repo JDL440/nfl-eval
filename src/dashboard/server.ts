@@ -8,7 +8,7 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { Repository } from '../db/repository.js';
@@ -55,7 +55,7 @@ import {
 } from './views/new-idea.js';
 import {
   renderPublishPreview,
-  renderPublishResult,
+  renderPublishWorkflow,
   proseMirrorToHtml,
   extractDraftId,
   renderNoteComposer,
@@ -64,8 +64,8 @@ import {
 } from './views/publish.js';
 import { markdownToProseMirror } from '../services/prosemirror.js';
 import { markdownToHtml } from '../services/markdown.js';
-import { renderArticlePreview, parseImageManifest } from './views/preview.js';
-import type { SubstackService } from '../services/substack.js';
+import { renderArticlePreview, renderArticlePreviewFrame, parseImageManifest } from './views/preview.js';
+import { SubstackService } from '../services/substack.js';
 import type { TwitterService } from '../services/twitter.js';
 import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
@@ -257,6 +257,192 @@ export function createApp(
     } catch (err) {
       console.warn(`[images] Generation failed (non-fatal): ${err instanceof Error ? err.message : err}`);
     }
+  }
+
+  function buildPublishPresentation(articleId: string): {
+    htmlBody: string;
+    coverImageUrl: string | null;
+    inlineImageUrls: string[];
+    substackBody: string | null;
+  } {
+    const rawDraft = repo.artifacts.get(articleId, 'draft.md');
+    let htmlBody = '<p class="empty-state">No article draft found yet. Re-run drafting or send the article back to editing.</p>';
+    let substackBody: string | null = null;
+
+    if (rawDraft) {
+      const cleanDraft = separateThinking(rawDraft).output;
+      const doc = markdownToProseMirror(cleanDraft);
+      htmlBody = proseMirrorToHtml(doc);
+      substackBody = proseMirrorToHtml(doc);
+    }
+
+    let coverImageUrl: string | null = null;
+    let inlineImageUrls: string[] = [];
+    const manifestJson = repo.artifacts.get(articleId, 'images.json');
+    if (manifestJson) {
+      const parsed = parseImageManifest(manifestJson);
+      coverImageUrl = parsed.cover;
+      inlineImageUrls = parsed.inlines;
+    }
+
+    return { htmlBody, coverImageUrl, inlineImageUrls, substackBody };
+  }
+
+  /**
+   * Enrich Substack body with uploaded images and subscribe/footer elements.
+   * Uploads images to Substack, rewrites URLs, intersperses them in the body,
+   * and adds subscribe CTA + publication blurb.
+   */
+  async function enrichSubstackBody(
+    baseBody: string,
+    coverImagePath: string | null,
+    inlineImagePaths: string[],
+    articleId: string
+  ): Promise<string> {
+    let enrichedBody = baseBody;
+
+    // Upload and prepend cover image if present
+    if (coverImagePath && substackService) {
+      try {
+        const absPath = resolve(coverImagePath.replace(/^\/images\//, config.imagesDir + '/'));
+        if (existsSync(absPath)) {
+          const coverUrl = await substackService.uploadImage(absPath);
+          enrichedBody = `<figure><img src="${escapeHtml(coverUrl)}" alt="Cover image" /></figure>\n\n${enrichedBody}`;
+        }
+      } catch (err) {
+        console.warn(`[publish] Cover image upload failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+
+    // Upload and intersperse inline images
+    if (inlineImagePaths.length > 0 && substackService) {
+      const uploadedUrls: string[] = [];
+      for (const imagePath of inlineImagePaths) {
+        try {
+          const absPath = resolve(imagePath.replace(/^\/images\//, config.imagesDir + '/'));
+          if (existsSync(absPath)) {
+            const url = await substackService.uploadImage(absPath);
+            uploadedUrls.push(url);
+          }
+        } catch (err) {
+          console.warn(`[publish] Inline image upload failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        enrichedBody = intersperseImages(enrichedBody, uploadedUrls);
+      }
+    }
+
+    // Append subscribe CTA
+    const labName = config.leagueConfig.substackConfig.labName;
+    const subscribeCaption = config.leagueConfig.substackConfig.subscribeCaption;
+    const subscribeCta = `
+<div style="margin: 2rem 0; padding: 1.5rem; background: #f8f9fa; border-radius: 4px; text-align: center;">
+  <p style="margin: 0 0 1rem 0; font-size: 1rem; color: #333;">${escapeHtml(subscribeCaption)}</p>
+  <p style="margin: 0;"><a href="#" style="display: inline-block; padding: 0.75rem 2rem; background: #1a73e8; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">Subscribe</a></p>
+</div>`;
+
+    enrichedBody += '\n\n' + subscribeCta;
+
+    // Append publication blurb
+    const blurb = `
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;" />
+<div style="margin: 2rem 0; font-style: italic; color: #666;">
+  <p><em>The ${escapeHtml(labName)} is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement <strong>is</strong> the analysis. Welcome to the Lab.</em></p>
+  <p><em>Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.</em></p>
+</div>`;
+
+    enrichedBody += '\n' + blurb;
+
+    return enrichedBody;
+  }
+
+  /**
+   * Insert inline images between block-level elements in the HTML body.
+   * Distributes images evenly throughout the article (matches preview.ts logic).
+   */
+  function intersperseImages(htmlBody: string, imageUrls: string[]): string {
+    if (imageUrls.length === 0) return htmlBody;
+
+    const blocks = htmlBody.split(/(?<=<\/(?:p|h[1-6]|blockquote|ul|ol|figure|pre)>)/);
+    if (blocks.length < 3) {
+      const imgs = imageUrls.map((url, i) =>
+        `<figure><img src="${escapeHtml(url)}" alt="Inline image ${i + 1}" style="max-width: 100%; height: auto;" /></figure>`
+      ).join('\n');
+      return htmlBody + '\n' + imgs;
+    }
+
+    const startIdx = Math.max(3, Math.floor(blocks.length * 0.2));
+    const endIdx = Math.floor(blocks.length * 0.85);
+    const range = Math.max(endIdx - startIdx, 1);
+
+    const result = [...blocks];
+    for (let i = 0; i < imageUrls.length; i++) {
+      const pos = startIdx + Math.floor((i + 0.5) * range / imageUrls.length);
+      const insertAt = Math.min(pos, result.length - 1);
+      const img = `<figure><img src="${escapeHtml(imageUrls[i])}" alt="Inline image ${i + 1}" style="max-width: 100%; height: auto;" /></figure>`;
+      result[insertAt] = result[insertAt] + '\n' + img;
+    }
+
+    return result.join('');
+  }
+
+  async function saveOrUpdateSubstackDraft(article: Article): Promise<{ id: string; editUrl: string }> {
+    if (!substackService) {
+      throw new Error('Substack publishing is not configured for this environment.');
+    }
+
+    const presentation = buildPublishPresentation(article.id);
+    if (!presentation.substackBody) {
+      throw new Error('No article draft found yet. Re-run drafting or send the article back to editing before publishing.');
+    }
+
+    // Enrich the body with uploaded images, subscribe CTA, and footer
+    const enrichedBody = await enrichSubstackBody(
+      presentation.substackBody,
+      presentation.coverImageUrl,
+      presentation.inlineImageUrls,
+      article.id
+    );
+
+    const existingDraftId = article.substack_draft_url ? extractDraftId(article.substack_draft_url) : null;
+    const draft = existingDraftId
+      ? await substackService.updateDraft({
+          draftId: existingDraftId,
+          title: article.title,
+          subtitle: article.subtitle ?? undefined,
+          bodyHtml: enrichedBody,
+        })
+      : await substackService.createDraft({
+          title: article.title,
+          subtitle: article.subtitle ?? undefined,
+          bodyHtml: enrichedBody,
+        });
+
+    repo.setDraftUrl(article.id, draft.editUrl);
+    return draft;
+  }
+
+  const missingSubstackConfigMessage =
+    'Substack publishing is not configured for this environment.';
+
+  function renderMissingSubstackConfig(article: Article, isHtmx: boolean): Response {
+    if (isHtmx) {
+      return new Response(
+        renderPublishWorkflow({
+          article,
+          success: false,
+          error: missingSubstackConfigMessage,
+          substackConfigured: false,
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
+        },
+      );
+    }
+    return Response.json({ error: missingSubstackConfigMessage }, { status: 500 });
   }
 
   // Register SSE event stream
@@ -1243,31 +1429,15 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
 
-    const rawMarkdown = repo.artifacts.get(id, 'draft.md');
-    let htmlBody = '<p class="empty-state">No article draft found</p>';
-    if (rawMarkdown) {
-      const markdown = separateThinking(rawMarkdown).output;
-      const doc = markdownToProseMirror(markdown);
-      htmlBody = proseMirrorToHtml(doc);
-    }
-
-    // Parse image manifest for cover and inline images
-    let coverImageUrl: string | null = null;
-    let inlineImageUrls: string[] = [];
-    const manifestJson = repo.artifacts.get(id, 'images.json');
-    if (manifestJson) {
-      const parsed = parseImageManifest(manifestJson);
-      coverImageUrl = parsed.cover;
-      inlineImageUrls = parsed.inlines;
-    }
+    const presentation = buildPublishPresentation(id);
 
     return c.html(
       renderArticlePreview({
         config,
         article,
-        htmlBody,
-        coverImageUrl,
-        inlineImageUrls,
+        htmlBody: presentation.htmlBody,
+        coverImageUrl: presentation.coverImageUrl,
+        inlineImageUrls: presentation.inlineImageUrls,
       }),
     );
   });
@@ -1278,24 +1448,16 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
-
-    let htmlPreview = '';
-
-    // Load article markdown from DB artifact store
-    const rawMd = repo.artifacts.get(id, 'draft.md');
-    if (rawMd) {
-      const cleanMd = separateThinking(rawMd).output;
-      const doc = markdownToProseMirror(cleanMd);
-      htmlPreview = proseMirrorToHtml(doc);
-    } else {
-      htmlPreview = '<p class="empty-state">No article draft found</p>';
-    }
+    const presentation = buildPublishPresentation(id);
 
     return c.html(
       renderPublishPreview({
         config,
         article,
-        htmlPreview,
+        htmlBody: presentation.htmlBody,
+        coverImageUrl: presentation.coverImageUrl,
+        inlineImageUrls: presentation.inlineImageUrls,
+        substackConfigured: !!substackService,
       }),
     );
   });
@@ -1304,15 +1466,16 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-
-    const rawDraft = repo.artifacts.get(id, 'draft.md');
-    if (!rawDraft) {
-      return c.html('<p class="empty-state">No article draft found</p>');
-    }
-
-    const cleanDraft = separateThinking(rawDraft).output;
-    const doc = markdownToProseMirror(cleanDraft);
-    return c.html(proseMirrorToHtml(doc));
+    const presentation = buildPublishPresentation(id);
+    return c.html(
+      renderArticlePreviewFrame({
+        config,
+        article,
+        htmlBody: presentation.htmlBody,
+        coverImageUrl: presentation.coverImageUrl,
+        inlineImageUrls: presentation.inlineImageUrls,
+      }),
+    );
   });
 
   app.post('/api/articles/:id/draft', async (c) => {
@@ -1321,39 +1484,26 @@ export function createApp(
     if (!article) return c.json({ error: 'Article not found' }, 404);
 
     if (!substackService) {
-      // Return htmx-compatible HTML if Accept header suggests it
       const isHtmx = c.req.header('hx-request') === 'true';
-      if (isHtmx) {
-        return c.html(
-          renderPublishResult({ article, success: false, error: 'Substack service not configured' }),
-          500,
-        );
-      }
-      return c.json({ error: 'Substack service not configured' }, 500);
+      return renderMissingSubstackConfig(article, isHtmx);
     }
 
     try {
-      // Load article markdown from DB artifact store
-      const markdown = repo.artifacts.get(id, 'draft.md');
-      if (!markdown) {
-        throw new Error('No article draft found');
-      }
-
-      const doc = markdownToProseMirror(markdown);
-      const bodyHtml = JSON.stringify(doc);
-
-      const draft = await substackService.createDraft({
-        title: article.title,
-        subtitle: article.subtitle ?? undefined,
-        bodyHtml,
-      });
-
-      repo.setDraftUrl(id, draft.editUrl);
+      const draft = await saveOrUpdateSubstackDraft(article);
+      const updatedArticle = repo.getArticle(id)!;
+      const message = article.substack_draft_url
+        ? 'Substack draft updated with the latest article content.'
+        : 'Substack draft created and ready for review.';
 
       const isHtmx = c.req.header('hx-request') === 'true';
       if (isHtmx) {
         return c.html(
-          renderPublishResult({ article: repo.getArticle(id)!, success: true, draftUrl: draft.editUrl }),
+          renderPublishWorkflow({
+            article: updatedArticle,
+            success: true,
+            message,
+            draftUrl: draft.editUrl,
+          }),
         );
       }
       return c.json({ success: true, draftUrl: draft.editUrl, draftId: draft.id });
@@ -1362,7 +1512,7 @@ export function createApp(
       const isHtmx = c.req.header('hx-request') === 'true';
       if (isHtmx) {
         return c.html(
-          renderPublishResult({ article, success: false, error: message }),
+          renderPublishWorkflow({ article, success: false, error: message }),
           500,
         );
       }
@@ -1377,40 +1527,30 @@ export function createApp(
 
     if (!substackService) {
       const isHtmx = c.req.header('hx-request') === 'true';
-      if (isHtmx) {
-        return c.html(
-          renderPublishResult({ article, success: false, error: 'Substack service not configured' }),
-          500,
-        );
-      }
-      return c.json({ error: 'Substack service not configured' }, 500);
-    }
-
-    const draftUrl = article.substack_draft_url;
-    if (!draftUrl) {
-      const isHtmx = c.req.header('hx-request') === 'true';
-      if (isHtmx) {
-        return c.html(
-          renderPublishResult({ article, success: false, error: 'No draft exists — create a draft first' }),
-          400,
-        );
-      }
-      return c.json({ error: 'No draft exists — create a draft first' }, 400);
-    }
-
-    const draftId = extractDraftId(draftUrl);
-    if (!draftId) {
-      const isHtmx = c.req.header('hx-request') === 'true';
-      if (isHtmx) {
-        return c.html(
-          renderPublishResult({ article, success: false, error: 'Cannot extract draft ID from URL' }),
-          400,
-        );
-      }
-      return c.json({ error: 'Cannot extract draft ID from URL' }, 400);
+      return renderMissingSubstackConfig(article, isHtmx);
     }
 
     try {
+      const presentation = buildPublishPresentation(id);
+      if (!presentation.substackBody) {
+        throw new Error('No article draft found yet. Re-run drafting or send the article back to editing before publishing.');
+      }
+
+      if (!article.substack_draft_url) {
+        throw new Error('No linked Substack draft found. Save a draft to Substack from this page before publishing.');
+      }
+
+      const existingDraftId = extractDraftId(article.substack_draft_url);
+      if (!existingDraftId) {
+        throw new Error('The saved Substack draft link is invalid. Save the draft again from this page before publishing.');
+      }
+
+      const syncedDraft = await saveOrUpdateSubstackDraft(article);
+      const draftId = extractDraftId(syncedDraft.editUrl);
+      if (!draftId) {
+        throw new Error('The saved Substack draft link is invalid. Save the draft again from this page before publishing.');
+      }
+
       const post = await substackService.publishDraft({ draftId });
 
       // Record publish: advances to Stage 8, sets substack_url + published_at
@@ -1421,9 +1561,10 @@ export function createApp(
       const isHtmx = c.req.header('hx-request') === 'true';
       if (isHtmx) {
         return c.html(
-          renderPublishResult({
+          renderPublishWorkflow({
             article: repo.getArticle(id)!,
             success: true,
+            message: 'Published to Substack using the latest article content.',
             publishedUrl: post.canonicalUrl,
           }),
         );
@@ -1434,7 +1575,7 @@ export function createApp(
       const isHtmx = c.req.header('hx-request') === 'true';
       if (isHtmx) {
         return c.html(
-          renderPublishResult({ article, success: false, error: message }),
+          renderPublishWorkflow({ article, success: false, error: message }),
           500,
         );
       }
@@ -2314,6 +2455,23 @@ export function createApp(
 
 // ── Server startup ───────────────────────────────────────────────────────────
 
+export function createSubstackServiceFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): SubstackService | undefined {
+  const token = env['SUBSTACK_TOKEN']?.trim();
+  const publicationUrl = env['SUBSTACK_PUBLICATION_URL']?.trim();
+  if (!token || !publicationUrl) {
+    return undefined;
+  }
+
+  return new SubstackService({
+    publicationUrl,
+    token,
+    stageUrl: env['SUBSTACK_STAGE_URL']?.trim() || undefined,
+    notesEndpoint: env['NOTES_ENDPOINT_PATH']?.trim() || undefined,
+  });
+}
+
 export async function startServer(overrides?: Partial<AppConfig>): Promise<void> {
   const config = loadConfig(overrides);
   initDataDir(config.dataDir, config.league);
@@ -2445,6 +2603,24 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Image service not available: ${err instanceof Error ? err.message : err}`);
   }
 
+  let substackService: SubstackService | undefined;
+  try {
+    substackService = createSubstackServiceFromEnv();
+    if (substackService) {
+      console.log(
+        `Substack service initialized (${substackService.resolveBaseUrl('prod')})`,
+      );
+    } else {
+      console.log(
+        'Substack publishing credentials not set — draft/publish actions will remain unavailable',
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[startup] Substack service not available: ${err instanceof Error ? err.message : err}`,
+    );
+  }
+
   // Periodic relevance decay — throttled to once per hour
   if (memory) {
     try {
@@ -2466,7 +2642,12 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     }
   }
 
-  const app = createApp(repo, config, { actionContext, imageService, memory });
+  const app = createApp(repo, config, {
+    actionContext,
+    imageService,
+    memory,
+    substackService,
+  });
 
   serve({ fetch: app.fetch, port: config.port }, (info) => {
     console.log(`NFL Lab Dashboard running at http://localhost:${info.port}`);

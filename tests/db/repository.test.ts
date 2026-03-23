@@ -211,6 +211,155 @@ describe('Repository', () => {
     });
   });
 
+  // ── Article retrospectives ──────────────────────────────────────────────────
+
+  describe('article retrospectives', () => {
+    it('saves and retrieves a retrospective with structured findings', () => {
+      repo.createArticle({ id: 'retro-test', title: 'Retro Test' });
+
+      const retrospectiveId = repo.saveArticleRetrospective({
+        articleId: 'retro-test',
+        completionStage: 7,
+        revisionCount: 2,
+        forceApprovedAfterMaxRevisions: false,
+        participantRoles: ['writer', 'editor', 'lead'],
+        overallSummary: 'Two revision loops centered on stale stats.',
+        artifactName: 'revision-retrospective-r2.md',
+        findings: [
+          {
+            role: 'writer',
+            findingType: 'churn_cause',
+            findingText: 'The opening missed the latest EPA update.',
+            sourceIteration: 1,
+            priority: 'high',
+          },
+          {
+            role: 'lead',
+            findingType: 'process_improvement',
+            findingText: 'Add a pre-editor stat check.',
+            sourceIteration: 2,
+            priority: 'medium',
+          },
+        ],
+      });
+
+      const retrospectives = repo.getArticleRetrospectives('retro-test');
+      expect(retrospectives).toHaveLength(1);
+      expect(retrospectives[0].revision_count).toBe(2);
+      expect(retrospectives[0].artifact_name).toBe('revision-retrospective-r2.md');
+
+      const findings = repo.getRetrospectiveFindings(retrospectiveId);
+      expect(findings).toHaveLength(2);
+      expect(findings[0].role).toBe('writer');
+      expect(findings[1].finding_type).toBe('process_improvement');
+    });
+
+    it('upserts the same completion path without duplicating rows', () => {
+      repo.createArticle({ id: 'retro-upsert', title: 'Retro Upsert' });
+
+      repo.saveArticleRetrospective({
+        articleId: 'retro-upsert',
+        completionStage: 7,
+        revisionCount: 1,
+        forceApprovedAfterMaxRevisions: false,
+        participantRoles: ['writer', 'editor', 'lead'],
+        overallSummary: 'First summary.',
+        findings: [
+          {
+            role: 'writer',
+            findingType: 'churn_cause',
+            findingText: 'Initial issue.',
+          },
+        ],
+      });
+
+      const sameId = repo.saveArticleRetrospective({
+        articleId: 'retro-upsert',
+        completionStage: 7,
+        revisionCount: 1,
+        forceApprovedAfterMaxRevisions: true,
+        participantRoles: ['writer', 'editor', 'lead'],
+        overallSummary: 'Updated summary.',
+        findings: [
+          {
+            role: 'lead',
+            findingType: 'process_improvement',
+            findingText: 'Updated finding.',
+            priority: 'high',
+          },
+        ],
+      });
+
+      const retrospectives = repo.getArticleRetrospectives('retro-upsert');
+      expect(retrospectives).toHaveLength(1);
+      expect(retrospectives[0].id).toBe(sameId);
+      expect(retrospectives[0].force_approved_after_max_revisions).toBe(1);
+      expect(retrospectives[0].overall_summary).toBe('Updated summary.');
+
+      const findings = repo.getRetrospectiveFindings(sameId);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].role).toBe('lead');
+      expect(findings[0].finding_text).toBe('Updated finding.');
+    });
+
+    it('lists joined digest findings for the latest retrospectives only', () => {
+      repo.createArticle({ id: 'retro-old', title: 'Retro Old', primary_team: 'SEA' });
+      repo.createArticle({ id: 'retro-mid', title: 'Retro Mid', primary_team: 'KC' });
+      repo.createArticle({ id: 'retro-new', title: 'Retro New', primary_team: 'BUF' });
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-20T12:00:00Z'));
+      repo.saveArticleRetrospective({
+        articleId: 'retro-old',
+        completionStage: 7,
+        revisionCount: 1,
+        forceApprovedAfterMaxRevisions: false,
+        participantRoles: ['writer'],
+        overallSummary: 'Old summary.',
+        findings: [
+          { role: 'writer', findingType: 'churn_cause', findingText: 'Old signal', priority: 'low' },
+        ],
+      });
+
+      vi.setSystemTime(new Date('2026-03-21T12:00:00Z'));
+      repo.saveArticleRetrospective({
+        articleId: 'retro-mid',
+        completionStage: 7,
+        revisionCount: 2,
+        forceApprovedAfterMaxRevisions: false,
+        participantRoles: ['editor'],
+        overallSummary: 'Mid summary.',
+        findings: [
+          { role: 'editor', findingType: 'repeated_issue', findingText: 'Mid signal', priority: 'medium' },
+        ],
+      });
+
+      vi.setSystemTime(new Date('2026-03-22T12:00:00Z'));
+      repo.saveArticleRetrospective({
+        articleId: 'retro-new',
+        completionStage: 7,
+        revisionCount: 3,
+        forceApprovedAfterMaxRevisions: true,
+        participantRoles: ['lead'],
+        overallSummary: 'New summary.',
+        findings: [
+          { role: 'lead', findingType: 'process_improvement', findingText: 'New signal', priority: 'high' },
+        ],
+      });
+      vi.useRealTimers();
+
+      const rows = repo.listRetrospectiveDigestFindings(2);
+
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.article_id)).toEqual(['retro-new', 'retro-mid']);
+      expect(rows[0].article_title).toBe('Retro New');
+      expect(rows[0].article_primary_team).toBe('BUF');
+      expect(rows[0].article_league).toBe('nfl');
+      expect(rows[0].finding_type).toBe('process_improvement');
+      expect(rows[0].force_approved_after_max_revisions).toBe(1);
+    });
+  });
+
   // ── Update checklist item ─────────────────────────────────────────────────
 
   describe('updateChecklistItem', () => {

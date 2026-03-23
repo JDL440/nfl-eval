@@ -1,3 +1,11 @@
+---
+name: substack-article
+description: Canonical NFL Lab article structure, TLDR contract, and Substack drafting guidance
+domain: content-production
+confidence: 1.0
+tools: []
+---
+
 # Substack Article Generation — Skill
 
 > **Confidence:** medium
@@ -7,6 +15,20 @@
 ## Purpose
 
 Generate long-form Substack articles for "NFL Lab" (or similar expert-panel sports blogs) by synthesizing multi-agent analysis into a compelling, reader-friendly narrative with expert-panel framing.
+
+## Canonical Contract
+
+This file is the canonical article structure contract for NFL Lab. Writer, Editor, and Publisher should reference this skill instead of maintaining duplicate policy text elsewhere.
+
+**Non-negotiable top-of-article order:**
+1. `# Headline`
+2. `*Italic subheadline*`
+3. Optional cover image markdown
+4. `> **📋 TLDR**` block with **4 bullet points**
+5. `**By: The NFL Lab Expert Panel**`
+
+Drafts that miss this TLDR contract should be repaired before Editor approval.
+Stage 5→6 validation treats a missing, misplaced, or too-short TLDR block as a hard guard failure, and Writer should repair that structure before Editor runs.
 
 ## When to Use
 

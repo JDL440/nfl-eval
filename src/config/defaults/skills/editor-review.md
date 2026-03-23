@@ -26,7 +26,7 @@ Defines the Editor's review protocol for article drafts. Editor is the mandatory
 - [ ] Are all player stats from the most recently completed season?
 - [ ] Are "Year N" references correct?
 - [ ] Is cap space current (2026 offseason)?
-- [ ] Does the article have a TLDR callout block?
+- [ ] Does the article satisfy the canonical TLDR structure from `src/config/defaults/skills/substack-article.md`?
 - [ ] Are all player/coach names verified?
 
 ### Style & Readability

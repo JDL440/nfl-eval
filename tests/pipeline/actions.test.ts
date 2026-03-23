@@ -3,6 +3,7 @@ import {
   mkdtempSync,
   mkdirSync,
   writeFileSync,
+  readFileSync,
   rmSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -19,7 +20,6 @@ import {
   type ChatResponse,
   type LLMProvider,
 } from '../../src/llm/gateway.js';
-import { StubProvider } from '../../src/llm/providers/stub.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 import type { AppConfig } from '../../src/config/index.js';
 import type { Stage } from '../../src/types.js';
@@ -27,6 +27,7 @@ import type { Stage } from '../../src/types.js';
 import {
   STAGE_ACTIONS,
   executeTransition,
+  autoAdvanceArticle,
   resetContextConfigCache,
   recordAgentUsage,
   parsePanelComposition,
@@ -36,6 +37,7 @@ import {
 import {
   addConversationTurn,
   addRevisionSummary,
+  getRevisionHistory,
 } from '../../src/pipeline/conversation.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -57,6 +59,23 @@ const AGENT_CHARTERS: Record<string, string> = {
 
 function longText(wordCount: number): string {
   return Array.from({ length: wordCount }, (_, i) => `word${i}`).join(' ');
+}
+
+function validDraft(wordCount = 900): string {
+  return `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+> - Fourth takeaway
+
+**By: The NFL Lab Expert Panel**
+
+${longText(wordCount)}
+`;
 }
 
 interface TestFixtures {
@@ -101,6 +120,85 @@ class CopilotCliUsageProvider implements LLMProvider {
   }
 }
 
+class RecordingProvider implements LLMProvider {
+  readonly id = 'recording';
+  readonly name = 'Recording Provider';
+  lastRequest: ChatRequest | null = null;
+
+  constructor(private readonly responses: string[]) {}
+
+  chat(request: ChatRequest): Promise<ChatResponse> {
+    this.lastRequest = request;
+    const content = this.responses.shift() ?? validDraft();
+    return Promise.resolve({
+      content,
+      model: request.model ?? 'recording-model',
+      provider: this.id,
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+      finishReason: 'stop',
+    });
+  }
+
+  listModels(): string[] {
+    return ['recording-model'];
+  }
+
+  supportsModel(_model: string): boolean {
+    return true;
+  }
+}
+
+class PipelineTestProvider implements LLMProvider {
+  readonly id = 'stub';
+  readonly name = 'Pipeline Test Provider';
+
+  chat(request: ChatRequest): Promise<ChatResponse> {
+    const userContent = request.messages.find((message) => message.role === 'user')?.content ?? '';
+    const lowered = userContent.toLowerCase();
+    let content = `Stub response for: ${userContent}`;
+
+    if (lowered.includes('lightweight preflight fact-check')) {
+      content = '# Panel Fact-Check\n\nAll high-risk claims reviewed.';
+    } else if (lowered.includes('write an analytical article draft') || lowered.includes('you are revising an existing draft')) {
+      content = `${userContent}\n\n${validDraft()}`;
+    } else if (lowered.includes('review the article draft')) {
+      content = `${userContent}\n\n## Verdict\nAPPROVED`;
+    } else if (lowered.includes('run the publisher pass')) {
+      content = `${userContent}\n\n# Publisher Pass\n\nReady for dashboard handoff.`;
+    } else if (lowered.includes('generate a discussion prompt')) {
+      content = '# Prompt\n\nDiscussion prompt content.';
+    } else if (lowered.includes('compose a panel')) {
+      content = '# Panel Composition\n\n- cap - Cap analysis';
+    } else if (lowered.includes('moderate the panel discussion')) {
+      content = '# Summary\n\nPanel discussion summary.';
+    }
+
+    return Promise.resolve({
+      content,
+      model: request.model ?? 'stub-model',
+      provider: this.id,
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+      finishReason: 'stop',
+    });
+  }
+
+  listModels(): string[] {
+    return ['stub-model'];
+  }
+
+  supportsModel(_model: string): boolean {
+    return true;
+  }
+}
+
 function createFixtures(): TestFixtures {
   const tempDir = mkdtempSync(join(tmpdir(), 'nfl-actions-test-'));
   const articlesDir = join(tempDir, 'articles');
@@ -120,6 +218,13 @@ function createFixtures(): TestFixtures {
     writeFileSync(join(chartersDir, `${name}.md`), content);
   }
 
+  for (const skillName of ['substack-article', 'editor-review', 'fact-checking']) {
+    writeFileSync(
+      join(skillsDir, `${skillName}.md`),
+      readFileSync(join(process.cwd(), 'src', 'config', 'defaults', 'skills', `${skillName}.md`), 'utf-8'),
+    );
+  }
+
   const repo = new Repository(dbPath);
   const engine = new PipelineEngine(repo);
   const auditor = new PipelineAuditor(repo, logsDir);
@@ -127,7 +232,7 @@ function createFixtures(): TestFixtures {
   const policy = loadPolicy();
   const gateway = new LLMGateway({
     modelPolicy: policy,
-    providers: [new StubProvider()],
+    providers: [new PipelineTestProvider()],
   });
   const runner = new AgentRunner({ gateway, memory, chartersDir, skillsDir });
 
@@ -405,6 +510,7 @@ describe('STAGE_ACTIONS', () => {
 
   describe('writeDraft', () => {
     it('calls writer agent and writes draft.md', async () => {
+      setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
       createArticleWithStage(fixtures, 'test-wd', 4 as Stage, {
         'idea.md': '# Idea',
         'discussion-prompt.md': '# Prompt',
@@ -418,7 +524,81 @@ describe('STAGE_ACTIONS', () => {
       expect(fixtures.repo.artifacts.get('test-wd', 'draft.md')).toBeTruthy();
     });
 
+    it('passes the canonical TLDR contract to the writer via the substack-article skill', async () => {
+      const provider = new RecordingProvider([validDraft()]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-contract', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-contract', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const systemPrompt = provider.lastRequest?.messages.find((message) => message.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('### Skill: substack-article');
+      expect(systemPrompt).toContain('> **📋 TLDR**');
+    });
+
+    it('self-heals drafts missing the TLDR structure before succeeding', async () => {
+      const provider = new RecordingProvider([
+        '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
+        `# Headline
+
+*Subtitle*
+
+${longText(400)}`,
+        validDraft(500),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-repair', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-repair', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const draft = fixtures.repo.artifacts.get('test-wd-repair', 'draft.md') ?? '';
+      expect(draft).toContain('> **📋 TLDR**');
+    });
+
+    it('fails when the retry draft still misses the TLDR contract', async () => {
+      const provider = new RecordingProvider([
+        '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
+        `# Headline
+
+*Subtitle*
+
+${longText(400)}`,
+        `# Headline
+
+*Subtitle*
+
+${longText(450)}`,
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-repair-fail', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-repair-fail', fixtures.ctx);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Writer draft failed validation after self-heal');
+      expect(result.error).toContain('TLDR');
+    });
+
     it('keeps writer conversation handoff summary-only while still providing the full current editor review', async () => {
+      const provider = new RecordingProvider([validDraft()]);
+      setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-handoff', 4 as Stage, {
         'idea.md': '# Idea',
         'discussion-prompt.md': '# Prompt',
@@ -446,13 +626,13 @@ describe('STAGE_ACTIONS', () => {
       const result = await STAGE_ACTIONS.writeDraft('test-wd-handoff', fixtures.ctx);
 
       expect(result.success).toBe(true);
-      const draft = fixtures.repo.artifacts.get('test-wd-handoff', 'draft.md') ?? '';
-      expect(draft).toContain('## Shared Revision Handoff');
-      expect(draft).toContain('Tighten the math.');
-      expect(draft).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
-      expect(draft).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
-      expect(draft).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
-      expect(draft).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
+      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+      expect(userPrompt).toContain('## Shared Revision Handoff');
+      expect(userPrompt).toContain('Tighten the math.');
+      expect(userPrompt).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
+      expect(userPrompt).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
+      expect(userPrompt).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
+      expect(userPrompt).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
     });
   });
 
@@ -465,7 +645,7 @@ describe('STAGE_ACTIONS', () => {
         'discussion-prompt.md': '# Prompt',
         'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary',
-        'draft.md': longText(1000),
+        'draft.md': validDraft(1000),
       });
 
       const result = await STAGE_ACTIONS.runEditor('test-re', fixtures.ctx);
@@ -480,7 +660,7 @@ describe('STAGE_ACTIONS', () => {
         'discussion-prompt.md': '# Prompt',
         'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary',
-        'draft.md': longText(1000),
+        'draft.md': validDraft(1000),
       });
       addConversationTurn(fixtures.repo, 'test-re-handoff', 5, 'writer', 'assistant', 'WRITER_THREAD_SHOULD_NOT_APPEAR');
       addConversationTurn(fixtures.repo, 'test-re-handoff', 6, 'editor', 'assistant', 'EDITOR_PREVIOUS_REVIEW_SHOULD_APPEAR');
@@ -507,6 +687,34 @@ describe('STAGE_ACTIONS', () => {
       expect(review).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
       expect(review).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
     });
+
+    it('returns REVISE and records a revision summary when the editor sends the draft back', async () => {
+      setRunnerProvider(fixtures, new RecordingProvider([
+        `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- Restore the required TLDR block near the top before another pass.
+
+## Verdict
+REVISE`,
+      ]));
+      createArticleWithStage(fixtures, 'test-re-revise', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': validDraft(1000),
+      });
+
+      const result = await STAGE_ACTIONS.runEditor('test-re-revise', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(result.outcome).toBe('REVISE');
+      const history = getRevisionHistory(fixtures.repo, 'test-re-revise');
+      expect(history).toHaveLength(1);
+      expect(history[0]?.agent_name).toBe('editor');
+      expect(history[0]?.outcome).toBe('REVISE');
+    });
   });
 
   // ── runPublisherPass (6→7) ────────────────────────────────────────────────
@@ -518,7 +726,7 @@ describe('STAGE_ACTIONS', () => {
         'discussion-prompt.md': '# Prompt',
         'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary',
-        'draft.md': longText(1000),
+        'draft.md': validDraft(1000),
         'editor-review.md': '## Verdict: APPROVED\nLooks great.',
       });
 
@@ -534,7 +742,7 @@ describe('STAGE_ACTIONS', () => {
         'discussion-prompt.md': '# Prompt',
         'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary',
-        'draft.md': longText(1000),
+        'draft.md': validDraft(1000),
         'editor-review.md': '## Verdict\nAPPROVED',
       });
       addConversationTurn(fixtures.repo, 'test-rp-handoff', 5, 'writer', 'assistant', 'WRITER_THREAD_SHOULD_NOT_APPEAR');
@@ -571,7 +779,7 @@ describe('STAGE_ACTIONS', () => {
         'discussion-prompt.md': '# Prompt',
         'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary',
-        'draft.md': longText(1000),
+        'draft.md': validDraft(1000),
         'editor-review.md': '## Verdict: APPROVED\nGood.',
       });
 
@@ -731,6 +939,90 @@ describe('executeTransition', () => {
   });
 });
 
+describe('autoAdvanceArticle draft structure recovery', () => {
+  let fixtures: TestFixtures;
+
+  beforeEach(() => {
+    fixtures = createFixtures();
+  });
+
+  afterEach(() => {
+    fixtures.memory.close();
+    fixtures.repo.close();
+    rmSync(fixtures.tempDir, { recursive: true, force: true });
+  });
+
+  it('sends stage-5 drafts back to writer when the TLDR contract is missing', async () => {
+    createArticleWithStage(fixtures, 'test-auto-tldr', 5 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': `# Headline\n\n*Subtitle*\n\n${longText(400)}`,
+    });
+
+    const result = await autoAdvanceArticle('test-auto-tldr', fixtures.ctx, {
+      maxStage: 6,
+      maxRevisions: 1,
+    });
+
+    expect(result.revisionCount).toBe(1);
+    expect(result.steps.some((step) => step.type === 'regress' && /required structure/i.test(step.action))).toBe(true);
+    expect(fixtures.repo.getArticle('test-auto-tldr')!.current_stage).toBe(4);
+    expect(fixtures.repo.artifacts.get('test-auto-tldr', 'draft.md')).toContain('# Headline');
+    const sendBackReview = fixtures.repo.artifacts.get('test-auto-tldr', 'editor-review.md') ?? '';
+    expect(sendBackReview).toContain('## Verdict');
+    expect(sendBackReview).toContain('REVISE');
+    expect(sendBackReview).toContain('repair the required top-of-article TLDR structure');
+  });
+
+  it('regresses back to writer when runEditor succeeds with a REVISE verdict', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Editor Review\n\nNeeds a clearer verdict block.',
+      `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- Tighten the opening and rework the TLDR framing.
+
+## Verdict
+REVISE`,
+      '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
+      `# Headline
+
+*Subtitle*
+
+${longText(400)}`,
+      `# Headline
+
+*Subtitle*
+
+${longText(450)}`,
+    ]));
+    createArticleWithStage(fixtures, 'test-auto-editor-revise', 5 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+    });
+
+    const result = await autoAdvanceArticle('test-auto-editor-revise', fixtures.ctx, {
+      maxStage: 6,
+      maxRevisions: 1,
+    });
+
+    expect(result.revisionCount).toBe(1);
+    expect(result.steps.some((step) =>
+      step.type === 'advance' && step.from === 5 && step.to === 6,
+    )).toBe(true);
+    expect(result.steps.some((step) =>
+      step.type === 'regress' && step.from === 6 && step.to === 4 && /Editor requested revisions/i.test(step.action),
+    )).toBe(true);
+    expect(fixtures.repo.getArticle('test-auto-editor-revise')!.current_stage).toBe(4);
+    expect(result.error).toContain('Writer draft failed validation after self-heal');
+  });
+});
+
 // ── Upstream context tests ──────────────────────────────────────────────────
 
 describe('Configurable upstream context', () => {
@@ -749,6 +1041,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('writeDraft includes idea.md as upstream context by default', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
     createArticleWithStage(fixtures, 'test-ctx-wd', 4 as Stage, {
       'idea.md': '# Original Angle\nSeahawks cap space.',
       'discussion-prompt.md': '# Prompt',
@@ -764,7 +1057,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('runEditor includes idea.md and discussion-summary.md by default', async () => {
-    const draft = longText(900);
+    const draft = validDraft(900);
     createArticleWithStage(fixtures, 'test-ctx-ed', 5 as Stage, {
       'idea.md': '# Angle\nSeahawks secondary.',
       'discussion-prompt.md': '# Prompt',
@@ -781,7 +1074,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('runPublisherPass includes editor-review.md by default', async () => {
-    const draft = longText(900);
+    const draft = validDraft(900);
     createArticleWithStage(fixtures, 'test-ctx-pub', 6 as Stage, {
       'idea.md': '# Idea',
       'discussion-prompt.md': '# Prompt',
@@ -799,6 +1092,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('respects pipeline-context.json overrides', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
     const configDir = join(fixtures.tempDir, 'config');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
@@ -817,6 +1111,8 @@ describe('Configurable upstream context', () => {
   });
 
   it('uses per-article overrides stored in _config.json', async () => {
+    const provider = new RecordingProvider([validDraft()]);
+    setRunnerProvider(fixtures, provider);
     createArticleWithStage(fixtures, 'test-ctx-article-override', 4 as Stage, {
       'idea.md': '# Idea\nUPSTREAM IDEA',
       'discussion-prompt.md': '# Prompt',
@@ -828,12 +1124,13 @@ describe('Configurable upstream context', () => {
     const result = await STAGE_ACTIONS.writeDraft('test-ctx-article-override', fixtures.ctx);
     expect(result.success).toBe(true);
 
-    const draft = fixtures.repo.artifacts.get('test-ctx-article-override', 'draft.md') ?? '';
-    expect(draft).toContain('PRIMARY SUMMARY');
-    expect(draft).not.toContain('Upstream Context: idea.md');
+    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+    expect(userPrompt).toContain('PRIMARY SUMMARY');
+    expect(userPrompt).not.toContain('Upstream Context: idea.md');
   });
 
   it('works with empty include list (minimal context)', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
     const configDir = join(fixtures.tempDir, 'config');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
@@ -849,6 +1146,142 @@ describe('Configurable upstream context', () => {
 
     const result = await STAGE_ACTIONS.writeDraft('test-ctx-minimal', fixtures.ctx);
     expect(result.success).toBe(true);
+  });
+});
+
+describe('post-revision retrospective automation', () => {
+  let fixtures: TestFixtures;
+
+  beforeEach(() => {
+    fixtures = createFixtures();
+  });
+
+  afterEach(() => {
+    fixtures.memory.close();
+    fixtures.repo.close();
+    rmSync(fixtures.tempDir, { recursive: true, force: true });
+  });
+
+  function createPublisherReadyArticle(slug: string): void {
+    createArticleWithStage(fixtures, slug, 6 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(1000),
+      'editor-review.md': '## Verdict\nAPPROVED\n\nReady for publisher pass.',
+    });
+  }
+
+  it('does not create a retrospective when revision_count is 0', async () => {
+    createPublisherReadyArticle('retro-zero');
+    setRunnerProvider(fixtures, new RecordingProvider(['# Publisher Pass\n\nReady for dashboard handoff.']));
+
+    const result = await autoAdvanceArticle('retro-zero', fixtures.ctx, { maxStage: 7 });
+
+    expect(result.finalStage).toBe(7);
+    expect(fixtures.repo.artifacts.get('retro-zero', 'revision-retrospective-r1.md')).toBeNull();
+    expect(fixtures.repo.getArticleRetrospectives('retro-zero')).toHaveLength(0);
+  });
+
+  it('creates one retrospective after a single revisioned completion path', async () => {
+    createPublisherReadyArticle('retro-one');
+    setRunnerProvider(fixtures, new RecordingProvider(['# Publisher Pass\n\nReady for dashboard handoff.']));
+    addConversationTurn(fixtures.repo, 'retro-one', 5, 'writer', 'assistant', 'Initial draft.');
+    addConversationTurn(fixtures.repo, 'retro-one', 6, 'editor', 'assistant', '## Verdict\nREVISE\n\nFix the EPA section.');
+    addRevisionSummary(
+      fixtures.repo,
+      'retro-one',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      ['Fix the EPA section'],
+      'Fix the EPA section before publish.',
+    );
+
+    const result = await autoAdvanceArticle('retro-one', fixtures.ctx, { maxStage: 7 });
+
+    expect(result.finalStage).toBe(7);
+    const artifact = fixtures.repo.artifacts.get('retro-one', 'revision-retrospective-r1.md');
+    expect(artifact).toContain('# Post-Revision Retrospective');
+    expect(artifact).toContain('Writer Perspective');
+    expect(artifact).toContain('Editor Perspective');
+    expect(artifact).toContain('Lead Perspective');
+
+    const retrospectives = fixtures.repo.getArticleRetrospectives('retro-one');
+    expect(retrospectives).toHaveLength(1);
+    expect(retrospectives[0].completion_stage).toBe(7);
+    expect(retrospectives[0].revision_count).toBe(1);
+    expect(JSON.parse(retrospectives[0].participant_roles)).toEqual(['editor', 'lead', 'writer']);
+
+    const findings = fixtures.repo.getRetrospectiveFindings(retrospectives[0].id);
+    expect(findings.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(findings.map((finding) => finding.role))).toEqual(new Set(['writer', 'editor', 'lead']));
+  });
+
+  it('captures multiple revisions and stays idempotent on rerun', async () => {
+    createPublisherReadyArticle('retro-multi');
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Publisher Pass\n\nReady for dashboard handoff.',
+      '# Publisher Pass\n\nReady for dashboard handoff.',
+    ]));
+    addRevisionSummary(
+      fixtures.repo,
+      'retro-multi',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      ['Fix stale contract figures'],
+      'Fix stale contract figures.',
+    );
+    addRevisionSummary(
+      fixtures.repo,
+      'retro-multi',
+      2,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      ['Fix stale contract figures'],
+      'Fix stale contract figures and tighten the opening.',
+    );
+
+    await autoAdvanceArticle('retro-multi', fixtures.ctx, { maxStage: 7 });
+    await autoAdvanceArticle('retro-multi', fixtures.ctx, { maxStage: 7 });
+
+    const retrospectives = fixtures.repo.getArticleRetrospectives('retro-multi');
+    expect(retrospectives).toHaveLength(1);
+    expect(retrospectives[0].revision_count).toBe(2);
+
+    const findings = fixtures.repo.getRetrospectiveFindings(retrospectives[0].id);
+    expect(findings.some((finding) => finding.finding_text.includes('Fix stale contract figures'))).toBe(true);
+  });
+
+  it('marks force-approved completion paths in the retrospective', async () => {
+    createPublisherReadyArticle('retro-force');
+    setRunnerProvider(fixtures, new RecordingProvider(['# Publisher Pass\n\nReady for dashboard handoff.']));
+    fixtures.repo.artifacts.put(
+      'retro-force',
+      'editor-review.md',
+      '## Editor Review\n\n**Auto-approved after 3 revision cycles.** The editor requested further changes, but the maximum revision limit has been reached. The draft has been iteratively improved and is being moved forward.\n\n## Verdict\nAPPROVED',
+    );
+    addRevisionSummary(fixtures.repo, 'retro-force', 1, 6, 4, 'editor', 'REVISE', ['Fix stale stat'], 'Fix stale stat');
+    addRevisionSummary(fixtures.repo, 'retro-force', 2, 6, 4, 'editor', 'REVISE', ['Fix stale stat'], 'Fix stale stat again');
+    addRevisionSummary(fixtures.repo, 'retro-force', 3, 6, 4, 'editor', 'REVISE', ['Fix stale stat'], 'Fix stale stat once more');
+
+    const result = await autoAdvanceArticle('retro-force', fixtures.ctx, { maxStage: 7 });
+
+    expect(result.finalStage).toBe(7);
+    const retrospectives = fixtures.repo.getArticleRetrospectives('retro-force');
+    expect(retrospectives).toHaveLength(1);
+    expect(retrospectives[0].force_approved_after_max_revisions).toBe(1);
+
+    const artifact = fixtures.repo.artifacts.get('retro-force', 'revision-retrospective-r3.md');
+    expect(artifact).toContain('**Force-approved after max revisions:** Yes');
   });
 });
 
@@ -1019,6 +1452,10 @@ describe('writeDraft fact-check preflight', () => {
   });
 
   it('runs fact-check then writer when discussion-summary.md exists', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nNo blocking issues.',
+      validDraft(),
+    ]));
     createArticleWithStage(fixtures, 'test-fc', 4 as Stage, {
       'idea.md': '# Idea',
       'discussion-prompt.md': '# Prompt',
@@ -1031,9 +1468,8 @@ describe('writeDraft fact-check preflight', () => {
     const result = await STAGE_ACTIONS.writeDraft('test-fc', fixtures.ctx);
 
     expect(result.success).toBe(true);
-    // Three runner calls: fact-check (lead) + draft (writer) + word-count retry (writer)
-    // The retry fires because StubProvider returns <200 words.
-    expect(runSpy).toHaveBeenCalledTimes(3);
+    // Two runner calls: fact-check (lead) + draft (writer)
+    expect(runSpy).toHaveBeenCalledTimes(2);
 
     const firstCall = runSpy.mock.calls[0][0];
     expect(firstCall.agentName).toBe('lead');
@@ -1042,13 +1478,14 @@ describe('writeDraft fact-check preflight', () => {
     const secondCall = runSpy.mock.calls[1][0];
     expect(secondCall.agentName).toBe('writer');
 
-    const thirdCall = runSpy.mock.calls[2][0];
-    expect(thirdCall.agentName).toBe('writer'); // word-count retry
-
     runSpy.mockRestore();
   });
 
   it('stores panel-factcheck.md artifact', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nNo blocking issues.',
+      validDraft(),
+    ]));
     createArticleWithStage(fixtures, 'test-fc-art', 4 as Stage, {
       'idea.md': '# Idea',
       'discussion-prompt.md': '# Prompt',

@@ -13,6 +13,7 @@ import {
   buildConversationContext,
   buildRevisionSummaryContext,
   buildEditorPreviousReviews,
+  buildRevisionHistoryEntries,
   MAX_EDITOR_PREVIOUS_REVIEWS,
   type ConversationTurn,
   type RevisionSummary,
@@ -261,6 +262,162 @@ describe('conversation', () => {
       expect(result).toContain('Fix stale cap number');
       expect(result).not.toContain('Conversation Thread');
       expect(result).not.toContain('[writer]');
+    });
+  });
+
+  // ── buildRevisionHistoryEntries ───────────────────────────────────────────
+
+  describe('buildRevisionHistoryEntries', () => {
+    it('matches revision summaries to the writer and editor turns for each loop', () => {
+      const turns: ConversationTurn[] = [
+        {
+          id: 1,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 1,
+          content: '# First Draft\n\nOpening angle.',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:01',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 2,
+          content: 'Need a stronger lead.\n\n## Verdict\nREVISE',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:02',
+        },
+        {
+          id: 3,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 3,
+          content: '# Revised Draft\n\nStronger lead.',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:03',
+        },
+        {
+          id: 4,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 4,
+          content: 'Fix the cap math.\n\n## Verdict\nREVISE',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:04',
+        },
+      ];
+      const revisions: RevisionSummary[] = [
+        {
+          id: 1,
+          article_id: 'test',
+          iteration: 1,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: JSON.stringify(['Lead']),
+          feedback_summary: 'Need a stronger lead.\n\n## Verdict\nREVISE',
+          created_at: '2025-01-01 00:00:02',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          iteration: 2,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: JSON.stringify(['Cap math']),
+          feedback_summary: 'Fix the cap math.\n\n## Verdict\nREVISE',
+          created_at: '2025-01-01 00:00:04',
+        },
+      ];
+
+      const history = buildRevisionHistoryEntries(turns, revisions);
+
+      expect(history).toHaveLength(2);
+      expect(history[0].writerTurn?.turn_number).toBe(1);
+      expect(history[0].editorTurn?.turn_number).toBe(2);
+      expect(history[0].keyIssues).toEqual(['Lead']);
+      expect(history[1].writerTurn?.turn_number).toBe(3);
+      expect(history[1].editorTurn?.turn_number).toBe(4);
+      expect(history[1].keyIssues).toEqual(['Cap math']);
+    });
+
+    it('uses feedback previews to skip unrelated editor turns', () => {
+      const turns: ConversationTurn[] = [
+        {
+          id: 1,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 1,
+          content: '# Draft\n\nAlpha',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:01',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 2,
+          content: 'Looks good.\n\n## Verdict\nAPPROVED',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:02',
+        },
+        {
+          id: 3,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 3,
+          content: '# Revised Draft\n\nBeta',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:03',
+        },
+        {
+          id: 4,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 4,
+          content: 'Need fresher stats.\n\n## Verdict\nREVISE',
+          token_count: 20,
+          created_at: '2025-01-01 00:00:04',
+        },
+      ];
+      const revisions: RevisionSummary[] = [{
+        id: 1,
+        article_id: 'test',
+        iteration: 1,
+        from_stage: 6,
+        to_stage: 4,
+        agent_name: 'editor',
+        outcome: 'REVISE',
+        key_issues: null,
+        feedback_summary: 'Need fresher stats.\n\n## Verdict\nREVISE',
+        created_at: '2025-01-01 00:00:05',
+      }];
+
+      const history = buildRevisionHistoryEntries(turns, revisions);
+
+      expect(history).toHaveLength(1);
+      expect(history[0].writerTurn?.turn_number).toBe(3);
+      expect(history[0].editorTurn?.turn_number).toBe(4);
     });
   });
 

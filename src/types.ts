@@ -89,6 +89,112 @@ export interface PublisherPass {
   no_stale_refs: number;
 }
 
+export interface ArticleRetrospective {
+  id: number;
+  article_id: string;
+  completion_stage: number;
+  revision_count: number;
+  force_approved_after_max_revisions: number;
+  participant_roles: string;
+  overall_summary: string;
+  artifact_name: string | null;
+  generated_at: string;
+  updated_at: string;
+}
+
+export interface ArticleRetrospectiveFinding {
+  id: number;
+  retrospective_id: number;
+  article_id: string;
+  role: string;
+  finding_type: string;
+  finding_text: string;
+  source_iteration: number | null;
+  priority: string | null;
+}
+
+export interface RetrospectiveDigestFindingRow {
+  retrospective_id: number;
+  finding_id: number;
+  article_id: string;
+  article_title: string;
+  article_primary_team: string | null;
+  article_league: string;
+  completion_stage: number;
+  revision_count: number;
+  force_approved_after_max_revisions: number;
+  participant_roles: string;
+  overall_summary: string;
+  artifact_name: string | null;
+  generated_at: string;
+  updated_at: string;
+  role: string;
+  finding_type: string;
+  finding_text: string;
+  source_iteration: number | null;
+  priority: string | null;
+}
+
+export interface RetrospectiveDigestPriorityCounts {
+  high: number;
+  medium: number;
+  low: number;
+  unknown: number;
+}
+
+export interface RetrospectiveDigestArticleEvidence {
+  articleId: string;
+  title: string;
+  generatedAt: string;
+  revisionCount: number;
+  priority: string | null;
+  forceApprovedAfterMaxRevisions: boolean;
+}
+
+export interface RetrospectiveDigestCandidateEvidence {
+  articleCount: number;
+  findingCount: number;
+  priorityCounts: RetrospectiveDigestPriorityCounts;
+  forceApprovedArticleCount: number;
+  latestGeneratedAt: string;
+  sampleArticles: RetrospectiveDigestArticleEvidence[];
+}
+
+export type RetrospectiveDigestCandidateKind = 'process_improvement' | 'learning_update';
+
+export interface RetrospectiveDigestCandidate {
+  key: string;
+  kind: RetrospectiveDigestCandidateKind;
+  role: string;
+  findingType: string;
+  normalizedText: string;
+  text: string;
+  promotionReasons: string[];
+  evidence: RetrospectiveDigestCandidateEvidence;
+}
+
+export interface RetrospectiveDigestCategory {
+  role: string;
+  findingType: string;
+  items: RetrospectiveDigestCandidate[];
+}
+
+export interface RetrospectiveDigestReport {
+  generatedAt: string;
+  retrospectiveLimit: number;
+  totals: {
+    retrospectives: number;
+    findings: number;
+    groupedFindings: number;
+    articles: number;
+  };
+  candidates: {
+    processImprovements: RetrospectiveDigestCandidate[];
+    learningUpdates: RetrospectiveDigestCandidate[];
+  };
+  categories: RetrospectiveDigestCategory[];
+}
+
 // ── Validation constant arrays ───────────────────────────────────────────────
 
 export const VALID_STATUSES: readonly ArticleStatus[] = [

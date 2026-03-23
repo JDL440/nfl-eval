@@ -210,6 +210,25 @@ describe('renderArtifactContent', () => {
     expect(html).toContain('artifact-pre');
     expect(html).toContain('&quot;key&quot;');
   });
+
+  it('prefers persisted thinking sidecars over inline think blocks', () => {
+    const html = renderArtifactContent(
+      'draft.md',
+      '<think>inline trace</think>\n\n# Draft\n\nBody copy.',
+      'Persisted sidecar trace',
+    );
+    expect(html).toContain('Persisted Thinking Trace');
+    expect(html).toContain('Persisted sidecar trace');
+    expect(html).not.toContain('inline trace');
+    expect(html).toContain('<h1>Draft</h1>');
+  });
+
+  it('falls back to extracting inline think blocks when no sidecar exists', () => {
+    const html = renderArtifactContent('draft.md', '<think>inline trace</think>\n\n# Draft\n\nBody copy.');
+    expect(html).toContain('Extracted Thinking Trace');
+    expect(html).toContain('inline trace');
+    expect(html).toContain('<h1>Draft</h1>');
+  });
 });
 
 // ── Usage panel unit tests ──────────────────────────────────────────────────

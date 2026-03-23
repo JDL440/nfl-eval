@@ -2,14 +2,15 @@
  * publish.ts — Publish preview and result views for the editorial workstation.
  *
  * Renders:
- *   - Publish preview: article content, publisher checklist, draft/publish buttons
- *   - Publish result: success/failure after draft creation or publishing
+ *   - Publish preview: richer article preview plus draft/publish actions
+ *   - Publish workflow: success/failure after draft creation or publishing
  */
 
-import { renderLayout, escapeHtml, formatDate } from './layout.js';
+import { renderLayout, escapeHtml } from './layout.js';
 import type { Article, PublisherPass } from '../../types.js';
 import type { ProseMirrorNode, ProseMirrorDoc } from '../../services/prosemirror.js';
 import type { AppConfig } from '../../config/index.js';
+import { renderArticlePreviewFrame } from './preview.js';
 
 // ── ProseMirror JSON → HTML renderer ─────────────────────────────────────────
 
@@ -113,19 +114,27 @@ export const CHECKLIST_ITEMS: { key: keyof PublisherPass; label: string }[] = [
 export interface PublishPreviewData {
   config: AppConfig;
   article: Article;
-  htmlPreview: string;
+  htmlBody: string;
+  coverImageUrl: string | null;
+  inlineImageUrls: string[];
+  substackConfigured?: boolean;
 }
 
 export function renderPublishPreview(data: PublishPreviewData): string {
-  const { config, article, htmlPreview } = data;
-
-  const hasDraft = !!article.substack_draft_url;
+  const {
+    config,
+    article,
+    htmlBody,
+    coverImageUrl,
+    inlineImageUrls,
+    substackConfigured = true,
+  } = data;
 
   const content = `
     <div class="article-detail">
       <div class="detail-header">
         <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article Detail</a>
-        <h1>Publish: ${escapeHtml(article.title)}</h1>
+        <h1>Publish Page: ${escapeHtml(article.title)}</h1>
         ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
         <div class="detail-meta">
           ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
@@ -133,47 +142,32 @@ export function renderPublishPreview(data: PublishPreviewData): string {
             Stage ${article.current_stage}
           </span>
         </div>
+        <p class="hint">Save a Substack draft for review, then publish that linked draft live when ready.</p>
       </div>
 
       <div class="detail-grid">
         <div class="detail-main">
           <section class="detail-section">
-            <h2>Article Preview</h2>
-            <div class="article-preview" id="article-preview"
-                 hx-get="/htmx/articles/${escapeHtml(article.id)}/preview"
-                 hx-trigger="load"
-                 hx-swap="innerHTML">
-              ${htmlPreview}
+            <div class="action-bar" style="justify-content:space-between; margin-bottom:0.75rem;">
+              <h2 style="margin:0;">Published Layout Preview</h2>
+              <button id="viewport-toggle" class="btn btn-secondary btn-sm" onclick="toggleViewport()">
+                📱 Mobile
+              </button>
+            </div>
+            <p class="hint">This preview uses the same Substack-style layout as the dedicated article preview page.</p>
+            <div class="article-preview" id="article-preview">
+              ${renderArticlePreviewFrame({ config, article, htmlBody, coverImageUrl, inlineImageUrls })}
             </div>
           </section>
         </div>
 
         <div class="detail-sidebar">
-          <section class="detail-section">
-            <h2>Publish Actions</h2>
-            <div id="publish-actions" class="action-bar" style="flex-direction:column;gap:0.5rem;">
-              ${hasDraft
-                ? `<p class="status-info">Draft created: <a href="${escapeHtml(article.substack_draft_url!)}" target="_blank">View on Substack ↗</a></p>
-                   <button class="btn btn-primary btn-publish"
-                     hx-post="/api/articles/${escapeHtml(article.id)}/publish"
-                     hx-target="#publish-result"
-                     hx-swap="innerHTML">
-                     Publish to Substack
-                   </button>`
-                : `<button class="btn btn-secondary"
-                     hx-post="/api/articles/${escapeHtml(article.id)}/draft"
-                     hx-target="#publish-actions"
-                     hx-swap="innerHTML">
-                     Create Draft
-                   </button>`}
-            </div>
-            <div id="publish-result"></div>
-          </section>
+          ${renderPublishWorkflow({ article, substackConfigured })}
 
           ${renderNoteComposer(article)}
           ${renderTweetComposer(article)}
 
-          ${renderPublishAll(article.id, hasDraft)}
+          ${renderPublishAll(article.id, substackConfigured)}
         </div>
       </div>
     </div>`;
@@ -185,42 +179,112 @@ export function renderPublishPreview(data: PublishPreviewData): string {
 
 export interface PublishResultData {
   article: Article;
-  success: boolean;
+  success?: boolean;
+  message?: string;
+  messageTone?: 'success' | 'error' | 'info';
   draftUrl?: string;
   publishedUrl?: string;
   error?: string;
+  substackConfigured?: boolean;
 }
 
-export function renderPublishResult(data: PublishResultData): string {
-  const { article, success, draftUrl, publishedUrl, error } = data;
+export function renderPublishWorkflow(data: PublishResultData): string {
+  const {
+    article,
+    success,
+    message,
+    messageTone,
+    draftUrl,
+    publishedUrl,
+    error,
+    substackConfigured = true,
+  } = data;
+  const hasDraft = !!article.substack_draft_url;
+  const hadAction = success !== undefined || message !== undefined || error !== undefined || draftUrl !== undefined || publishedUrl !== undefined;
+  const resolvedMessage = success === false
+    ? (error ?? 'Unknown error')
+    : (message
+        ?? (publishedUrl
+          ? 'Article published successfully.'
+          : draftUrl
+            ? (hasDraft ? 'Substack draft updated.' : 'Substack draft created.')
+            : 'Success'));
+  const needsSubstackConfig = !substackConfigured || (
+    success === false
+    && resolvedMessage.includes('Substack publishing is not configured')
+  );
+  const tone = needsSubstackConfig || success === false ? 'error' : (messageTone ?? 'success');
+  const displayMessage = needsSubstackConfig
+    ? 'Substack publishing is not configured.'
+    : resolvedMessage;
+  const alertLabel = needsSubstackConfig || success === false ? 'Action needed:' : 'Ready:';
 
-  if (!success) {
+  const alertHtml = (hadAction || needsSubstackConfig) && displayMessage
+    ? `<div class="alert alert-${escapeHtml(tone)}">
+          <strong>${alertLabel}</strong> ${escapeHtml(displayMessage)}
+          ${publishedUrl ? ` <a href="${escapeHtml(publishedUrl)}" target="_blank">View article ↗</a>` : ''}
+        </div>`
+    : '';
+  const configHintHtml = needsSubstackConfig
+    ? `<p class="hint">Set <code>SUBSTACK_PUBLICATION_URL</code> and <code>SUBSTACK_TOKEN</code> in <code>.env</code>, restart the dashboard, then try again. You can confirm the current environment on the <a href="/config">Config</a> page.</p>`
+    : '';
+
+  if (article.current_stage === 8 || publishedUrl) {
     return `
-      <div class="alert alert-error">
-        <strong>Error:</strong> ${escapeHtml(error ?? 'Unknown error')}
-      </div>`;
+      <section id="publish-workflow" class="detail-section">
+        <h2>Publish Status</h2>
+        ${alertHtml}
+        <p class="status-info">This article is now live on Substack.</p>
+        <div class="action-bar">
+          ${publishedUrl
+            ? `<a href="${escapeHtml(publishedUrl)}" target="_blank" class="btn btn-secondary">View Live Article ↗</a>`
+            : ''}
+          <a href="/articles/${escapeHtml(article.id)}" class="btn btn-primary">Back to Article</a>
+        </div>
+      </section>`;
   }
 
-  if (publishedUrl) {
-    return `
-      <div class="alert alert-success">
-        <strong>Published!</strong> Article is live on Substack.
-        <a href="${escapeHtml(publishedUrl)}" target="_blank">View article ↗</a>
-      </div>`;
-  }
+  const draftCopy = hasDraft
+    ? 'Latest draft saved to Substack. You can update it again or publish that linked draft live.'
+    : 'No Substack draft is linked yet. Save a draft to Substack before publishing live.';
+  const unavailableAttrs = !substackConfigured
+    ? ' disabled aria-disabled="true" title="Set SUBSTACK_PUBLICATION_URL and SUBSTACK_TOKEN, restart the dashboard, then try again."'
+    : '';
+  const draftActionAttrs = substackConfigured
+    ? ` hx-post="/api/articles/${escapeHtml(article.id)}/draft"
+          hx-target="#publish-workflow"
+          hx-swap="outerHTML"`
+    : unavailableAttrs;
+  const publishActionAttrs = substackConfigured
+    ? ` hx-post="/api/articles/${escapeHtml(article.id)}/publish"
+          hx-target="#publish-workflow"
+          hx-swap="outerHTML"
+          hx-confirm="Publish this article live to Substack now?"`
+    : unavailableAttrs;
 
-  if (draftUrl) {
-    return `
-      <p class="status-info">Draft created: <a href="${escapeHtml(draftUrl)}" target="_blank">View on Substack ↗</a></p>
-      <button class="btn btn-primary btn-publish"
-        hx-post="/api/articles/${escapeHtml(article.id)}/publish"
-        hx-target="#publish-result"
-        hx-swap="innerHTML">
-        Publish to Substack
-      </button>`;
-  }
-
-  return `<div class="alert alert-success"><strong>Success</strong></div>`;
+  return `
+    <section id="publish-workflow" class="detail-section">
+      <h2>Publish Status</h2>
+      ${alertHtml}
+      ${configHintHtml}
+      <p class="status-info">${escapeHtml(draftCopy)}</p>
+      ${article.substack_draft_url
+        ? `<p class="status-info">Current draft: <a href="${escapeHtml(article.substack_draft_url)}" target="_blank">Open in Substack ↗</a></p>`
+        : ''}
+      <div class="action-bar" style="flex-direction:column;align-items:stretch;">
+        <button class="btn btn-secondary"${draftActionAttrs}>
+          ${hasDraft ? 'Update Draft on Substack' : 'Save Draft to Substack'}
+        </button>
+        ${hasDraft
+          ? `<button class="btn btn-primary btn-publish"${publishActionAttrs}>
+               Publish Now
+             </button>`
+          : ''}
+      </div>
+      <p class="hint">${hasDraft
+        ? '“Publish Now” updates the linked Substack draft with the latest article body, then publishes it live.'
+        : 'Publishing becomes available after this article has a linked Substack draft.'}</p>
+    </section>`;
 }
 
 // ── Checklist renderer ───────────────────────────────────────────────────────
@@ -341,12 +405,19 @@ export function renderTweetComposer(article: Article): string {
 
 // ── Publish All section ──────────────────────────────────────────────────────
 
-export function renderPublishAll(articleId: string, publishEnabled: boolean): string {
+export function renderPublishAll(articleId: string, substackConfigured: boolean = true): string {
   const id = escapeHtml(articleId);
+  const buttonAttrs = substackConfigured
+    ? `onclick="publishAll('${id}')"`
+    : 'disabled aria-disabled="true" title="Set SUBSTACK_PUBLICATION_URL and SUBSTACK_TOKEN, restart the dashboard, then try again."';
+  const unavailableHint = substackConfigured
+    ? ''
+    : '<p class="hint">Configure Substack on the <a href="/config">Config</a> page before using Publish All.</p>';
   return `
     <section class="detail-section">
       <h2>🚀 Publish All</h2>
-      <p class="hint">Publish to Substack, then optionally post a Note and Tweet in sequence.</p>
+      <p class="hint">Publish the latest article live, then optionally post a Note and Tweet in sequence.</p>
+      ${unavailableHint}
       <div class="publish-all-options">
         <label class="composer-check">
           <input type="checkbox" id="pa-note" checked> Post Substack Note
@@ -355,9 +426,7 @@ export function renderPublishAll(articleId: string, publishEnabled: boolean): st
           <input type="checkbox" id="pa-tweet" checked> Post Tweet
         </label>
       </div>
-      <button class="btn btn-publish btn-lg" id="publish-all-btn"
-        onclick="publishAll('${id}')"
-        ${publishEnabled ? '' : 'disabled title="Create a draft first"'}>
+      <button class="btn btn-publish btn-lg" id="publish-all-btn" ${buttonAttrs}>
         🚀 Publish All
       </button>
       <div id="publish-all-progress"></div>

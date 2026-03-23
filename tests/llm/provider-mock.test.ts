@@ -94,6 +94,7 @@ describe('MockProvider', () => {
         stageReq('You are the writer agent.', 'Write the full article draft from the panel discussion summary.'),
       );
       expect(res.content).toContain('Data-Driven Offseason Blueprint');
+      expect(res.content).toContain('> **📋 TLDR**');
       expect(res.content).toContain('Offensive Line');
     });
 
@@ -103,6 +104,26 @@ describe('MockProvider', () => {
       );
       expect(res.content).toContain('Editor Review');
       expect(res.content).toContain('APPROVED');
+      expect(res.content).toContain('canonical article contract');
+    });
+
+    it('can return a malformed draft fixture for writer repair tests', async () => {
+      provider.setStage('draft-missing-tldr');
+      const res = await provider.chat(req());
+      expect(res.content).not.toContain('> **📋 TLDR**');
+      expect(res.content).toContain('By: The NFL Lab Expert Panel');
+    });
+
+    it('can return revise and reject editor fixtures for send-back tests', async () => {
+      provider.setStage('editor-review-revise');
+      const revise = await provider.chat(req());
+      expect(revise.content).toContain('## Verdict');
+      expect(revise.content).toContain('REVISE');
+
+      provider.setStage('editor-review-reject');
+      const reject = await provider.chat(req());
+      expect(reject.content).toContain('## Verdict');
+      expect(reject.content).toContain('REJECT');
     });
 
     it('returns publisher pass for runPublisherPass context', async () => {

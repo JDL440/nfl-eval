@@ -12,6 +12,8 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   Article,
+  ArticleRetrospective,
+  ArticleRetrospectiveFinding,
   ArticleRun,
   ArticleStatus,
   EditorReview,
@@ -20,6 +22,7 @@ import type {
   NoteTarget,
   NoteType,
   PublisherPass,
+  RetrospectiveDigestFindingRow,
   RunStatus,
   Stage,
   StageRun,
@@ -110,6 +113,25 @@ interface UsageEventParams {
   metadata?: unknown;
   runId?: string | null;
   stageRunId?: string | null;
+}
+
+interface ArticleRetrospectiveFindingInput {
+  role: string;
+  findingType: string;
+  findingText: string;
+  sourceIteration?: number | null;
+  priority?: string | null;
+}
+
+interface SaveArticleRetrospectiveParams {
+  articleId: string;
+  completionStage: number;
+  revisionCount: number;
+  forceApprovedAfterMaxRevisions: boolean;
+  participantRoles: string[];
+  overallSummary: string;
+  artifactName?: string | null;
+  findings: ArticleRetrospectiveFindingInput[];
 }
 
 // ── Repository ───────────────────────────────────────────────────────────────
@@ -868,6 +890,139 @@ export class Repository {
     const stmt = this.db.prepare('SELECT * FROM publisher_pass WHERE article_id = ?');
     const row = stmt.get(articleId) as unknown as PublisherPass | undefined;
     return row ?? null;
+  }
+
+  saveArticleRetrospective(params: SaveArticleRetrospectiveParams): number {
+    const article = this.getArticle(params.articleId);
+    if (article == null) {
+      throw new Error(`Article '${params.articleId}' not found in pipeline.db`);
+    }
+
+    const now = nowISO();
+    const participantRoles = JSON.stringify([...params.participantRoles].sort());
+    const artifactName = params.artifactName ?? null;
+
+    this.db.prepare(
+      `INSERT INTO article_retrospectives
+       (article_id, completion_stage, revision_count, force_approved_after_max_revisions,
+        participant_roles, overall_summary, artifact_name, generated_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(article_id, completion_stage, revision_count)
+       DO UPDATE SET
+         force_approved_after_max_revisions = excluded.force_approved_after_max_revisions,
+         participant_roles = excluded.participant_roles,
+         overall_summary = excluded.overall_summary,
+         artifact_name = excluded.artifact_name,
+         updated_at = excluded.updated_at`,
+    ).run(
+      params.articleId,
+      params.completionStage,
+      params.revisionCount,
+      params.forceApprovedAfterMaxRevisions ? 1 : 0,
+      participantRoles,
+      params.overallSummary,
+      artifactName,
+      now,
+      now,
+    );
+
+    const row = this.db.prepare(
+      `SELECT id
+       FROM article_retrospectives
+       WHERE article_id = ? AND completion_stage = ? AND revision_count = ?`,
+    ).get(params.articleId, params.completionStage, params.revisionCount) as { id: number } | undefined;
+
+    if (!row) {
+      throw new Error(`Failed to load retrospective id for article '${params.articleId}'`);
+    }
+
+    this.db.prepare(
+      'DELETE FROM article_retrospective_findings WHERE retrospective_id = ?',
+    ).run(row.id);
+
+    const insertFinding = this.db.prepare(
+      `INSERT INTO article_retrospective_findings
+       (retrospective_id, article_id, role, finding_type, finding_text, source_iteration, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+
+    for (const finding of params.findings) {
+      insertFinding.run(
+        row.id,
+        params.articleId,
+        finding.role,
+        finding.findingType,
+        finding.findingText,
+        finding.sourceIteration ?? null,
+        finding.priority ?? null,
+      );
+    }
+
+    return row.id;
+  }
+
+  getArticleRetrospectives(articleId: string): ArticleRetrospective[] {
+    return this.db.prepare(
+      'SELECT * FROM article_retrospectives WHERE article_id = ? ORDER BY revision_count ASC, id ASC',
+    ).all(articleId) as unknown as ArticleRetrospective[];
+  }
+
+  getRetrospectiveFindings(retrospectiveId: number): ArticleRetrospectiveFinding[] {
+    return this.db.prepare(
+      'SELECT * FROM article_retrospective_findings WHERE retrospective_id = ? ORDER BY id ASC',
+    ).all(retrospectiveId) as unknown as ArticleRetrospectiveFinding[];
+  }
+
+  listRetrospectiveDigestFindings(limit = 25): RetrospectiveDigestFindingRow[] {
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new Error(`Retrospective digest limit must be a positive integer, got ${JSON.stringify(limit)}`);
+    }
+
+    return this.db.prepare(
+      `WITH selected_retrospectives AS (
+         SELECT
+           r.id,
+           r.article_id,
+           r.completion_stage,
+           r.revision_count,
+           r.force_approved_after_max_revisions,
+           r.participant_roles,
+           r.overall_summary,
+           r.artifact_name,
+           r.generated_at,
+           r.updated_at,
+           a.title AS article_title,
+           a.primary_team AS article_primary_team,
+           a.league AS article_league
+         FROM article_retrospectives r
+         JOIN articles a ON a.id = r.article_id
+         ORDER BY r.generated_at DESC, r.id DESC
+         LIMIT ?
+       )
+       SELECT
+         selected_retrospectives.id AS retrospective_id,
+         f.id AS finding_id,
+         selected_retrospectives.article_id,
+         selected_retrospectives.article_title,
+         selected_retrospectives.article_primary_team,
+         selected_retrospectives.article_league,
+         selected_retrospectives.completion_stage,
+         selected_retrospectives.revision_count,
+         selected_retrospectives.force_approved_after_max_revisions,
+         selected_retrospectives.participant_roles,
+         selected_retrospectives.overall_summary,
+         selected_retrospectives.artifact_name,
+         selected_retrospectives.generated_at,
+         selected_retrospectives.updated_at,
+         f.role,
+         f.finding_type,
+         f.finding_text,
+         f.source_iteration,
+         f.priority
+       FROM selected_retrospectives
+       JOIN article_retrospective_findings f ON f.retrospective_id = selected_retrospectives.id
+       ORDER BY selected_retrospectives.generated_at DESC, selected_retrospectives.id DESC, f.id ASC`,
+    ).all(limit) as unknown as RetrospectiveDigestFindingRow[];
   }
 
   updateChecklistItem(articleId: string, key: string, value: number | string | null): void {

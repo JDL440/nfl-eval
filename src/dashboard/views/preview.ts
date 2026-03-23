@@ -86,7 +86,7 @@ function intersperse(htmlBody: string, inlineUrls: string[]): string {
   return result.join('');
 }
 
-export function renderArticlePreview(data: ArticlePreviewData): string {
+export function renderArticlePreviewFrame(data: ArticlePreviewData): string {
   const { config, article, htmlBody, coverImageUrl, inlineImageUrls } = data;
 
   const authorDate = formatDate(article.created_at);
@@ -100,17 +100,7 @@ export function renderArticlePreview(data: ArticlePreviewData): string {
       <p><em>Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.</em></p>
     </div>`;
 
-  const content = `
-    <div class="preview-toolbar">
-      <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Back to Article</a>
-      <span class="preview-toolbar-title">${escapeHtml(article.title)}</span>
-      <div class="preview-toolbar-actions">
-        <button id="viewport-toggle" class="btn btn-secondary btn-sm" onclick="toggleViewport()">
-          📱 Mobile
-        </button>
-      </div>
-    </div>
-
+  return `
     <div id="preview-frame" class="preview-container">
       ${coverImageUrl
         ? `<img src="${escapeHtml(coverImageUrl)}" alt="Cover image" class="preview-cover-image" />`
@@ -142,10 +132,10 @@ export function renderArticlePreview(data: ArticlePreviewData): string {
       ${blurb}
     </div>
 
-    <script>
-      (function() {
-        var frame = document.getElementById('preview-frame');
-        var btn = document.getElementById('viewport-toggle');
+      <script>
+        (function() {
+          var frame = document.getElementById('preview-frame');
+          var btn = document.getElementById('viewport-toggle');
         var isMobile = false;
         window.toggleViewport = function() {
           isMobile = !isMobile;
@@ -159,6 +149,22 @@ export function renderArticlePreview(data: ArticlePreviewData): string {
         };
       })();
     </script>`;
+}
+
+export function renderArticlePreview(data: ArticlePreviewData): string {
+  const { config, article } = data;
+  const content = `
+    <div class="preview-toolbar">
+      <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Back to Article</a>
+      <span class="preview-toolbar-title">${escapeHtml(article.title)}</span>
+      <div class="preview-toolbar-actions">
+        <button id="viewport-toggle" class="btn btn-secondary btn-sm" onclick="toggleViewport()">
+          📱 Mobile
+        </button>
+      </div>
+    </div>
+
+    ${renderArticlePreviewFrame(data)}`;
 
   return renderLayout(`Preview — ${article.title}`, content, config.leagueConfig.name);
 }

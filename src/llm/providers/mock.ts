@@ -90,6 +90,12 @@ This panel blends financial, scouting, film, and analytical perspectives to ensu
 
 *How one team can maximize its championship window by investing wisely in the 2025 offseason*
 
+> **📋 TLDR**
+> - This team's clearest path to contention starts with fixing the offensive line before chasing splash moves.
+> - The front office has enough cap flexibility to add a veteran tackle and still preserve extension room for core players.
+> - The panel's verdict is to invest heavily in the trenches, draft cornerback value on Day 2, and extend the WR1 early.
+> - The biggest disagreement is whether the first-round pick should be spent on a tackle trade-up or held for best-player-available discipline.
+
 ---
 
 The conversation around roster building often defaults to skill positions — the flashy receivers, the dynamic running backs, the game-breaking tight ends. But the teams that win consistently in January and February are built from the inside out.
@@ -127,6 +133,30 @@ The teams that win championships don't just collect talent — they allocate res
 
 The blueprint is clear. The question is whether the front office has the discipline to execute it.`,
 
+  'draft-missing-tldr': `# Building Through the Trenches: A Data-Driven Offseason Blueprint
+
+*How one team can maximize its championship window by investing wisely in the 2025 offseason*
+
+**By: The NFL Lab Expert Panel**
+
+This opening leans straight into the analysis without the required TLDR block, which should trigger the writer repair/send-back path in tests that need malformed draft structure.
+
+${'missing '.repeat(260)}`,
+
+  'draft-short-tldr': `# Building Through the Trenches: A Data-Driven Offseason Blueprint
+
+*How one team can maximize its championship window by investing wisely in the 2025 offseason*
+
+> **📋 TLDR**
+> - Fix the line first.
+> - Keep room for core extensions.
+
+**By: The NFL Lab Expert Panel**
+
+This version includes a TLDR block but violates the four-bullet minimum so structure validation can exercise the too-short branch.
+
+${'short '.repeat(260)}`,
+
   'editor-review': `# Editor Review
 
 ## Verdict
@@ -150,12 +180,32 @@ Strong analytical piece with clear thesis and solid statistical support. The wri
 - ✅ EPA/play advantage (0.15) — Consistent with nflfastR modeling
 - ✅ Day 2 CB hit rate (62%) — Verified against draft history database
 - ✅ Receiver market reset — Confirmed by recent contract trends
+- ✅ TLDR block present near top and aligned with the canonical article contract
 
 ## Publication Notes
 - Title is strong and SEO-friendly
 - Subtitle effectively frames the analytical angle
 - Length is appropriate for the depth level (≈800 words)
 - Ready for images and final formatting`,
+
+  'editor-review-revise': `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- The draft is missing the required TLDR contract at the top of the article. Rebuild the opening so it matches the canonical article contract before another review.
+
+## 🟡 SUGGESTIONS (Strong Recommendations)
+- Keep the core analysis, but restore the required top-of-article structure.
+
+## Verdict
+REVISE`,
+
+  'editor-review-reject': `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- The draft is not publishable in its current form and needs a rewrite before it can return to the pipeline.
+
+## Verdict
+REJECT`,
 
   'publisher-pass': `# Publisher Pass
 
@@ -250,8 +300,10 @@ export class MockProvider implements LLMProvider {
    * Set the current pipeline stage so the mock returns the correct canned response
    * without relying on fragile keyword detection. Pass null to revert to auto-detect.
    *
-   * Valid stage keys: 'discussion-prompt', 'panel-composition', 'discussion-summary',
-   * 'draft', 'editor-review', 'publisher-pass'.
+     * Valid stage keys: 'discussion-prompt', 'panel-composition', 'discussion-summary',
+     * 'draft', 'draft-missing-tldr', 'draft-short-tldr',
+     * 'editor-review', 'editor-review-revise', 'editor-review-reject',
+     * 'publisher-pass'.
    *
    * Stage numbers are also accepted and mapped automatically:
    * 1→discussion-prompt, 2→panel-composition, 3→discussion-summary,

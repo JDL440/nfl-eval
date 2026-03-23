@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { Repository } from '../../src/db/repository.js';
 import { createApp } from '../../src/dashboard/server.js';
 import type { AppConfig } from '../../src/config/index.js';
+import { addConversationTurn, addRevisionSummary } from '../../src/pipeline/conversation.js';
 
 function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
   return {
@@ -137,6 +138,32 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Token Usage');
       expect(html).toContain('copilot-cli');
       expect(html).toContain('gpt-5.4');
+    });
+
+    it('article detail renders revision history from persisted conversations', async () => {
+      repo.createArticle({ id: 'detail-revisions', title: 'Detail Revisions' });
+      addConversationTurn(repo, 'detail-revisions', 5, 'writer', 'assistant', '# First Draft\n\nOpening angle.');
+      addConversationTurn(repo, 'detail-revisions', 6, 'editor', 'assistant', 'Need a stronger lead and fresher stats.\n\n## Verdict\nREVISE');
+      addRevisionSummary(
+        repo,
+        'detail-revisions',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        ['Tighten the lead', 'Refresh the stats'],
+        'Need a stronger lead and fresher stats.\n\n## Verdict\nREVISE',
+      );
+
+      const res = await app.request('/articles/detail-revisions');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Revision History');
+      expect(html).toContain('Iteration 1');
+      expect(html).toContain('Writer pass');
+      expect(html).toContain('Editor pass');
+      expect(html).toContain('Refresh the stats');
     });
 
     it('article detail returns 404 for missing article', async () => {
@@ -491,12 +518,14 @@ describe('Dashboard Server', () => {
 
     it('renders artifact tabs with htmx attributes', async () => {
       repo.createArticle({ id: 'tabs-test', title: 'Tabs Test' });
+      repo.artifacts.put('tabs-test', 'idea.thinking.md', 'Persisted planning trace');
 
       const res = await app.request('/articles/tabs-test');
       const html = await res.text();
       expect(html).toContain('tab-bar');
       expect(html).toContain('tab-btn');
       expect(html).toContain('hx-get="/htmx/articles/tabs-test/artifact/idea.md"');
+      expect(html).toContain('artifact-trace-badge');
       expect(html).toContain('Artifacts');
     });
 
@@ -593,6 +622,20 @@ describe('Dashboard Server', () => {
       expect(html).toContain('&lt;script&gt;');
     });
 
+    it('GET /htmx/articles/:id/artifact/:name prefers persisted thinking sidecars', async () => {
+      repo.createArticle({ id: 'art-thinking', title: 'Thinking Artifact' });
+      repo.artifacts.put('art-thinking', 'draft.md', '<think>inline trace</think>\n\n# Final Draft\n\nBody');
+      repo.artifacts.put('art-thinking', 'draft.thinking.md', 'Persisted trace from sidecar');
+
+      const res = await app.request('/htmx/articles/art-thinking/artifact/draft.md');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Persisted Thinking Trace');
+      expect(html).toContain('Persisted trace from sidecar');
+      expect(html).not.toContain('inline trace');
+      expect(html).toContain('Final Draft');
+    });
+
     it('POST /htmx/articles/:id/advance returns 404 for unknown article', async () => {
       const res = await app.request('/htmx/articles/nonexistent/advance', {
         method: 'POST',
@@ -642,12 +685,11 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/stage7-publish');
       const html = await res.text();
 
-      expect(html).toContain('Open Publish Workspace');
-      expect(html).toContain('Publish to Substack');
-      expect(html).toContain('Substack draft ready for manual publish');
+      expect(html).toContain('Open Publish Page');
+      expect(html).not.toContain('Publish to Substack');
+      expect(html).toContain('Substack draft saved. Open the Publish Page');
       expect(html).not.toContain('substack_url not set on article');
-      expect(html).toContain('Draft ↗');
-      expect(html).not.toContain('disabled>Publish to Substack');
+      expect(html).toContain('Open Draft ↗');
     });
   });
 

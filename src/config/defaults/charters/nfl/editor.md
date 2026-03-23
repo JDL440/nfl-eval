@@ -23,7 +23,7 @@
 - [ ] Are all player stats from the most recently completed season?
 - [ ] Are "Year N" references correct (upcoming season = Year N+1 from last completed)?
 - [ ] Is cap space current (2026 offseason) not prior year?
-- [ ] Does the article have a TLDR callout block?
+- [ ] Does the article satisfy the canonical TLDR structure from `src/config/defaults/skills/substack-article.md`?
 - [ ] Are all player/coach names verified (no invented first names)?
 
 ### Style & Readability
@@ -115,9 +115,9 @@ Editor reviews all images that appear inline in articles. Images ship alongside 
 - **Embedded text with specific claims** — any AI image containing readable text with player names, dollar amounts, dates, or team names must be verified. If any value differs from the article, reject it.
 
 **Current image policy reminder:**
-- Articles should have **exactly 2 inline images** (no cover in markdown)
-- Cover is set manually in Substack editor by Joe at Stage 8
-- If the article has a cover image embedded in markdown, flag it as a policy violation
+- The canonical image and TLDR structure live in `src/config/defaults/skills/substack-article.md`
+- Review the draft against that contract rather than an older duplicated policy block
+- If the article violates that contract, flag it and return `REVISE`
 
 ### Image Review Output
 

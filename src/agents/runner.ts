@@ -159,7 +159,8 @@ function parseBulletList(text: string): string[] {
 
 /** Parse YAML frontmatter from a skill markdown file. */
 function parseSkillFile(raw: string): AgentSkill | null {
-  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  const normalized = raw.replace(/\r\n/g, '\n');
+  const fmMatch = normalized.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!fmMatch) return null;
 
   const frontmatter = fmMatch[1];

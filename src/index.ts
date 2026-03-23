@@ -41,6 +41,7 @@ export type {
   NoteTarget,
   StageInference,
   ResolvedModel,
+  RetrospectiveDigestFindingRow,
 } from './types.js';
 
 // Database

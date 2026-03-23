@@ -12,7 +12,7 @@
 ## Responsibilities
 
 - Verify article file structure (headline, subtitle, author line, boilerplate footer)
-- Verify image placement (cover image, exactly 2 inline images, correct paths and alt text)
+- Verify the article against the canonical `src/config/defaults/skills/substack-article.md` structure contract (including TLDR and image placement expectations)
 - Verify subscribe button markers are present
 - Run a final content read-through for spelling, formatting, and orphaned sections
 - Prepare Substack metadata (title, subtitle, audience)
