@@ -35,3 +35,8 @@
 - **Key finding:** Users conflate the lab's publish preview page with Substack's live draft editor—no clear separation of concerns in messaging.
 - **Bonus finding:** "Publish All" button has redundant disabled-state tooltip because the page itself gates draft-less articles.
 - **Charter scope:** Fully within UX responsibilities (dashboard UI, flows, interaction patterns). See .squad/decisions/inbox/ux-publish-wording.md.
+- 2026-03-24: Publish UX investigation follow-up
+- `src/dashboard/views/publish.ts` currently renders a lightweight local HTML preview, while `/articles/:id/preview` already has the richer Substack-style experience with cover image, inline-image placement, and mobile toggle; the publish page is not using that richer preview model.
+- The create-draft interaction likely feels broken because the initial `Create Draft` button swaps `#publish-actions`, but the success partial from `renderPublishResult()` targets `#publish-result` for the follow-up publish action, splitting the flow across two containers.
+- The biggest mental-model problem is naming: "preview" means at least three different things today—local preview (`/articles/:id/preview`), publish-page preview (`/articles/:id/publish`), and external Substack draft links—so labels should explicitly distinguish local preview, draft in Substack, and go-live actions.
+- Article detail should become the concise status-and-routing page, with one publish section that says what exists now (no draft / draft ready / published) and links users into either the richer preview page or the external Substack draft, instead of repeating overlapping publish controls.

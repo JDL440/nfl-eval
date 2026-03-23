@@ -85,3 +85,10 @@
 - Research findings on Issue #102 merged into `.squad/decisions.md` as "Dashboard auth direction — Issue #102".
 - Recommendation: single-operator local login with Hono middleware, opaque session cookies, and SQLite persistence.
 - Deferred for Code agent implementation after decision lock.
+
+### 2026-03-23T02:21:03Z: Scribe session — decisions inbox merge and orchestration log
+
+- Orchestration log written for Research agent (2026-03-23T02-21-03Z)
+- Session log documenting Issue #102 auth research outcomes written
+- Research + Lead decision inbox merged into `.squad/decisions.md`, deduplicating findings
+- Merged inbox files deleted

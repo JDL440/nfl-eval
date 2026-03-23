@@ -19,6 +19,7 @@ tools: [view, rg, vitest]
    - inspect `createApp(...)`
    - verify whether `app.use(...)` only handles static assets or also applies auth middleware
    - trace representative routes like `/`, `/articles/:id`, `/config`, `/api/articles/:id/draft`, `/api/articles/:id/publish`
+   - if an issue mentions an existing password gate, verify that the checked-in runtime still contains it before planning around it
 2. Check startup/config in `src/config/index.ts`:
    - confirm which env vars are loaded through `loadDotEnv()` / `loadConfig()`
    - verify whether dashboard auth settings already exist

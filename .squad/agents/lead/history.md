@@ -120,3 +120,10 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 - Protect all dashboard surfaces consistently, including `src/dashboard/sse.ts` (`/events`) and `src/dashboard/server.ts` image serving at `/images/:slug/:file`; these currently expose live dashboard state and unpublished assets if left outside the auth gate.
 - Existing tests prove current open-access assumptions: `tests/dashboard/server.test.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/config.test.ts`, and `tests/e2e/live-server.test.ts` construct `createApp(repo, config)` and hit routes directly. Auth should therefore stay off by default in tests/dev unless explicitly enabled, with focused auth regression coverage added separately.
 - Recommended routing for implementation: **Code** owns middleware, login/logout handlers, config wiring, schema/repository changes, and auth tests; **UX** owns login page/form states and copy; **DevOps** owns deployment/env-secret documentation and cookie/security defaults review; **Lead** reviews architecture and confirms scope stays local-login only.
+
+### 2026-03-23T02:21:03Z: Scribe session — decisions inbox merge and orchestration log
+
+- Orchestration log written for Code agent (2026-03-23T02-21-03Z)
+- Session log documenting Issue #102 auth research outcomes written
+- Research + Lead decision inbox merged into `.squad/decisions.md`, deduplicating findings
+- Merged inbox files deleted

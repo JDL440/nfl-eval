@@ -981,3 +981,165 @@ Current implementation already works this way. Product copy should use consisten
 - Tests verify the two-step behavior.
 
 Using multiple labels for the same surface creates avoidable confusion. Standardize on one term.
+
+---
+
+# Decision: Research direction — Issue #102 dashboard auth
+
+**By:** Research (🔍)  
+**Date:** 2026-03-23  
+**Issue:** #102 — Dashboard auth hardening
+
+## TLDR
+
+Issue #102 should move toward a **single-operator local login** model matching current repo architecture: Hono dashboard, HTMX interactions, and SQLite persistence. Server-enforced session-based auth, not shared-password stopgap or OAuth.
+
+## Why
+
+- Owner guidance: **"We can use simple local login control mechanism with user and password control for now."**
+- `src/dashboard/server.ts` exposes HTML, HTMX, API, SSE, image routes from one Hono app → auth should be centralized middleware
+- `src/config/index.ts` natural seam for auth mode/session secret
+- `src/db/repository.ts` and `src/db/schema.sql` natural persistence seam
+- `README.md` describes small Hono + HTMX + SQLite workstation, not multi-tenant SaaS
+
+## Proposal
+
+1. **Local username/password login** as approved first auth mode
+2. **Hono auth middleware** protecting dashboard HTML, HTMX, API, SSE, unpublished images
+3. **Opaque `httpOnly` cookie session** with secure defaults
+4. **SQLite-backed session persistence** via small dashboard session seam
+5. **Config-driven enable/disable** for lightweight tests/dev
+
+## Non-goals for first pass
+
+- OAuth / SSO
+- Multi-role RBAC
+- Generalized account-management system
+
+---
+
+# Decision: Lead recommendation — Issue #102 dashboard auth hardening
+
+**By:** Lead  
+**Date:** 2026-03-23  
+**Issue:** #102 — Dashboard auth hardening
+
+## TLDR
+
+Current repo has **no durable app-layer auth seam**. Minimum viable long-term fix: **single-operator local login** via existing Hono + SQLite:
+
+- Hono auth middleware in `src/dashboard/server.ts`
+- Explicit login/logout routes
+- Opaque `httpOnly` session cookie
+- SQLite-backed `dashboard_sessions` persistence
+- Config-driven auth mode in `src/config/index.ts`
+
+Defer OAuth, multi-user roles, external identity providers.
+
+## Grounded findings
+
+1. `src/dashboard/server.ts` registers `/`, article pages, HTMX, API, `/images/:slug/:file`, SSE without auth middleware or login/session handling
+2. `src/dashboard/sse.ts` exposes `/events` directly → must be covered by auth seam
+3. `src/config/index.ts` has no dashboard-auth config yet → natural place for `off|local` mode, username, password-hash, session-secret
+4. `src/db/schema.sql` and `src/db/repository.ts` have no user/session tables → SQLite cleanest durable seam
+5. Current tests hit routes directly with no login → auth must stay disabled by default unless explicitly enabled
+6. Joe's issue comment: **"We can use simple local login control mechanism with user and password control for now."**
+
+## In scope
+
+- Local username/password login
+- Durable server-side session storage
+- Secure cookie defaults for internet-facing deployment
+- Protection for HTML, HTMX, JSON API, SSE, unpublished image routes
+- Regression coverage for login, logout, protected-route behavior
+
+## Out of scope for first pass
+
+- OAuth / GitHub login / SSO
+- Multi-user role matrices
+- Fine-grained authorization beyond "authenticated operator"
+- External auth providers
+
+## Suggested routing
+
+- **Code:** middleware seam, login/logout handlers, config wiring, DB schema/repository changes, auth tests
+- **UX:** login page/form UX, auth error copy, unauthenticated redirects
+- **DevOps:** env-secret documentation, secure deployment defaults, cookie/security review
+- **Lead:** architectural review and scope control
+
+## Risk notes
+
+- Issue body references temporary shared-password gate, but not present in current `src/` → implementation should avoid preserving client-only/shared-secret stopgap
+- `/events` and `/images/:slug/:file` easy to miss → should be protected dashboard surfaces by default
+---
+
+# Decision: Dashboard auth hardening — single-operator local login
+
+**Issue:** #102  
+**Status:** RECOMMENDED (locked, ready for team routing)  
+**Submitted by:** Lead + Research (🏗️ 🔍)  
+**Date:** 2026-03-23
+
+## Summary
+
+Issue #102 seeks to harden dashboard auth by replacing an ad-hoc shared-password gate with proper login controls. Current analysis shows the dashboard in `src/dashboard/server.ts` has no durable app-layer auth seam. Recommendation: implement **single-operator local login** using Hono middleware, opaque `httpOnly` session cookie, and SQLite persistence.
+
+This direction aligns with Joe's product guidance ("simple local login for now"), fits the existing Hono + SQLite architecture with minimal churn, and defers OAuth/RBAC to a future issue.
+
+## TLDR
+
+Implement single-operator local login via:
+- Hono auth middleware protecting all dashboard + API routes
+- explicit login/logout endpoints with session cookie
+- SQLite `dashboard_sessions` table for durable persistence
+- config-driven auth mode (`off|local`) in `src/config/index.ts`
+- secure cookie defaults (`HttpOnly`, `SameSite=Lax`, `Secure` in production)
+
+Out of scope for first pass: OAuth, multi-user RBAC, external auth providers.
+
+## Why
+
+1. **No current auth seam:** `src/dashboard/server.ts` registers `/`, article pages, HTMX routes, API routes, `/images/:slug/:file`, and SSE without auth middleware or session handling.
+2. **Exposure scope:** All surfaces (HTML, HTMX, JSON API, SSE, unpublished images) must be protected by default.
+3. **Architecture fit:** Hono middleware + SQLite persistence aligns with existing editorial workstation design, not multi-tenant SaaS.
+4. **Product direction:** Joe's comment directs toward "simple local login"—not a generalized account system.
+5. **Test compatibility:** Current tests assume open access. Auth must stay disabled by default in tests/dev.
+
+## Grounded findings
+
+- `src/dashboard/server.ts` — no auth middleware, login routes, or cookie/session parsing
+- `src/dashboard/sse.ts` exposes `/events` directly, must be covered by same auth gate
+- `src/config/index.ts` — natural seam for auth mode, username, password-hash, session-secret settings
+- `src/db/schema.sql` + `src/db/repository.ts` — no user/session tables yet; SQLite is the cleanest durable seam
+- Tests (`tests/dashboard/server.test.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/config.test.ts`, `tests/e2e/live-server.test.ts`) hit routes directly with no login setup
+- Issue comment references a temporary shared-password gate, but that seam is not present in current checked-in `src/` runtime
+
+## Scope boundary
+
+### In scope
+- Local username/password login
+- Durable server-side session storage (SQLite)
+- Secure cookie defaults suitable for internet-facing deployment
+- Protection for HTML, HTMX, JSON API, SSE, and unpublished image routes
+- Regression coverage for login, logout, and protected-route behavior
+
+### Out of scope for first pass
+- OAuth / GitHub login / SSO
+- multi-user role matrices
+- fine-grained authorization beyond "authenticated operator"
+- external auth providers
+
+## Suggested team routing
+
+- **Code (🔧):** Middleware seam, login/logout handlers, config wiring, DB schema/repository changes, auth tests
+- **UX (🎨):** Login page/form UX, auth error copy, unauthenticated redirects
+- **DevOps (⚙️):** Env-secret documentation, secure deployment defaults, cookie/security review
+- **Lead (🏗️):** Architectural review and scope control
+
+## Key files to touch
+
+- `src/dashboard/server.ts` — auth middleware
+- `src/dashboard/sse.ts` — SSE protection
+- `src/config/index.ts` — auth mode config
+- `src/db/schema.sql`, `src/db/repository.ts` — session persistence
+- `tests/` — auth-aware test helpers and disable-by-default fixtures
