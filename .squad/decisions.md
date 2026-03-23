@@ -2139,3 +2139,52 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 
 
 
+
+---
+
+# Decision — TLDR Retry Revision Fix
+
+**Date:** 2026-03-25  
+**Author:** Code  
+**Status:** Implemented
+
+## Context
+
+Revised article drafts were still missing the canonical TLDR block in some retry paths. The main failure mode was that `writeDraft()` self-heal retried from the original upstream context, not from the failed draft that actually needed repair. That turned a targeted TLDR fix into a soft rewrite request.
+
+At the same time, the surrounding Writer/Editor/Publisher guidance was inconsistent about whether a structural miss like a missing TLDR should trigger a revision of the existing draft or a from-scratch rewrite.
+
+## Decision
+
+1. Treat missing or misplaced TLDR as a **revision-first** problem when the analysis is otherwise usable.
+2. On self-heal retry, pass the failed draft back to Writer under a dedicated revision section so the model repairs the existing draft instead of restarting.
+3. Align Editor and Publisher instructions so canonical structure misses explicitly ask for revision of the current draft, preserving strong analysis where possible.
+
+## Implementation
+
+- `src/pipeline/actions.ts`
+  - strengthened retry instructions to preserve working analysis
+  - appended the failed draft under `## Failed Draft To Revise` before retry
+- `src/config/defaults/charters/nfl/editor.md`
+- `src/config/defaults/charters/nfl/publisher.md`
+- `src/config/defaults/skills/editor-review.md`
+- `src/config/defaults/skills/publisher.md`
+  - clarified that TLDR/structure misses should be sent back as revisions, not rewrites
+- `tests/pipeline/actions.test.ts`
+  - added regression coverage for both self-heal retry and stage send-back revision paths
+
+## Validation
+
+- Focused Vitest coverage passed:
+  - `tests/pipeline/actions.test.ts`
+  - `tests/pipeline/engine.test.ts`
+  - `tests/llm/provider-mock.test.ts`
+  - `tests/agents/runner.test.ts`
+- TypeScript build passed with `npm run v2:build`
+
+## Consequences
+
+- Writer retries now have the exact failed draft available for repair.
+- TLDR fixes preserve good analysis more reliably.
+- Prompt guidance is now consistent across pipeline repair, Editor review, and Publisher verification.
+
