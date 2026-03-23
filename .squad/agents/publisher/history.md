@@ -45,3 +45,30 @@
 **Decision:** Treat Stage 7 publishing as explicitly **manual two-step** (create draft → publish draft), and standardize terminology for /articles/:id/publish page to reduce editor confusion (recommend "Publish Page", "Publish Console", or "Publish Workspace" — but use only one).
 
 **Status:** Decision merged to .squad/decisions.md as "Publisher publish-flow review — Stage 7 mental models".
+
+### 2026-03-23: Publish page overhaul investigation
+
+**Flow recommendation:** Keep Stage 7 as a draft-first workflow. “Save/Create Draft” should be a safe create-or-update action that never publishes; “Publish Now” should publish the reviewed Substack draft already linked to the article, not a separate direct-from-markdown path.
+
+**Preview finding:** The publish page currently shows a lightweight local HTML render from markdown (`src/dashboard/views/publish.ts`), while the richer article preview uses `renderArticlePreview(...)` with cover image, inline image placement, CTA, and mobile toggle (`src/dashboard/views/preview.ts`, `src/dashboard/server.ts:1256-1287`). Editorially, that means the current publish-page preview is only a sanity check, not a high-fidelity publish preview.
+
+**Likely UX bug:** The draft action appears broken because creating a draft swaps only the `#publish-actions` fragment, while other publish-page state such as “Publish All” remains rendered from the old no-draft state until refresh (`src/dashboard/views/publish.ts:154-176`, `344-360`; `src/dashboard/server.ts:1368-1372`).
+
+**Key failure cases to surface clearly:** missing draft markdown, Substack service not configured, no saved draft yet, malformed/stale draft URL, and upstream Substack API failures. The current server routes already distinguish these cases (`src/dashboard/server.ts:1333-1457`), but the UI should present them in editor language rather than generic errors.
+
+### 2026-03-24: Publish-overhaul team coordination
+
+**Team session:** Coordinated with Code, UX, Validation, and Coordinator agents on publish-flow architecture.
+
+**Draft-first model decision:** Submitted to `.squad/decisions.md`. Model treats Stage 7 as manual two-step: idempotent save/create draft (never publishes), then publish-now action (publishes existing linked draft only). Substack service already exposes `createDraft` and `updateDraft`, so implementation is straightforward.
+
+**Key benefits:** 
+- Prevents divergence between "what editor reviewed" and "what got published"
+- Single draft lifecycle eliminates mental-model confusion
+- Idempotent save means users can repeat click without side effects
+
+**Preview expectation:** Publish page should move to high-fidelity preview by reusing richer preview rendering from `/articles/:id/preview` (cover image, inline placement, subscribe CTA, mobile toggle).
+
+**Error states:** Surface draft creation state (no markdown, Substack not configured, save failed, URL stale, publish failed, page refresh needed).
+
+**Status:** Decision merged to `.squad/decisions.md` as "Decision: Publish-Flow Architecture — Draft-First Model". Awaiting Coordinator implementation.

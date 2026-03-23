@@ -87,3 +87,29 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 - Locked article-structure authority to `src/config/defaults/skills/substack-article.md`; Writer, Editor, and Publisher docs should reference it instead of carrying competing normative skeletons.
 - Kept the minimum pre-Editor runtime gate narrow: draft exists, meets length floor, and satisfies the top-of-article TLDR contract; broader publish-readiness checks stay downstream.
 - Code review for #107 should verify shared runtime validation, targeted writer repair/send-back behavior, and regressions proving TLDR-less drafts cannot advance to Editor while compliant drafts and mocks still pass.
+
+### 2026-03-24: Publish-overhaul team coordination and decision lock
+
+**Team session outcomes:** Coordinated five-agent publish-flow investigation (Code, UX, Publisher, Validation, Coordinator). 
+
+**Root causes identified:**
+- HTMX target split between `#publish-actions` (draft response) and `#publish-result` (publish action) breaks user perception of draft creation success
+- Preview divergence: draft conversion omits thinking-strip while preview routes include it
+- Terminology ambiguity: "publish workspace" used once, not reinforced
+- Workflow unclear: draft/publish controls scattered across detail page and publish page
+
+**Decisions submitted to `.squad/decisions.md`:**
+1. Code: TLDR structure contract enforcement (Issue #107) — already implemented
+2. Publisher: Draft-first model (create/update idempotent, publish-now syncs latest)
+3. UX: Two-step explicit workflow with richer preview reuse
+4. Validation: Baseline pass; focused regression tests for draft lifecycle
+
+**Coordinator implementation complete:**
+- Shared richer publish preview path via `/api/articles/:id/publish-preview`
+- Idempotent draft save/update with state return
+- Publish-now syncs latest content before publishing
+- Stage 7 copy clarified (removed "workspace" ambiguity)
+- Alert styling + error guidance improved
+- All regressions passing (`npm run v2:build`)
+
+**Status:** Ready for merge. No blockers.

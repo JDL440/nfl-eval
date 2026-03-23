@@ -40,3 +40,24 @@
 - The create-draft interaction likely feels broken because the initial `Create Draft` button swaps `#publish-actions`, but the success partial from `renderPublishResult()` targets `#publish-result` for the follow-up publish action, splitting the flow across two containers.
 - The biggest mental-model problem is naming: "preview" means at least three different things today—local preview (`/articles/:id/preview`), publish-page preview (`/articles/:id/publish`), and external Substack draft links—so labels should explicitly distinguish local preview, draft in Substack, and go-live actions.
 - Article detail should become the concise status-and-routing page, with one publish section that says what exists now (no draft / draft ready / published) and links users into either the richer preview page or the external Substack draft, instead of repeating overlapping publish controls.
+
+## Publish-Overhaul Team Coordination (2026-03-24)
+
+**Team session:** Coordinated with Code, Publisher, Validation, and Coordinator agents on Stage 7 publish-flow architecture.
+
+**Two-step UX model decision:** Submitted to `.squad/decisions.md`. Recommendation treats Stage 7 as explicit two-step workflow:
+- Article detail: Clean status hub ("No draft yet" / "Draft ready" / "Published live") with routing actions
+- Publish page: Single workflow panel with "Create Draft" and "Publish Now" as distinct primary actions
+
+**Key UX improvements:**
+- Richer preview reuse: Embed `/articles/:id/preview` rendering on publish page (cover, inline images, mobile toggle)
+- Single workflow container: Fix HTMX target split (`#publish-actions` vs `#publish-result`) so draft creation and publish stay together
+- Clearer copy: Action-first language ("No draft yet — create one to continue" vs "publish workspace")
+- Error clarity: Explicit next-step guidance for each state (no draft, draft ready, published, error)
+
+**Mental model improvements:**
+- Distinguish lab preview page (local sanity check) from Substack draft (editable account) from go-live action (published)
+- Remove redundant disabled-state tooltips that the page itself gates
+- One unified "Publish" section on article detail instead of overlapping controls across detail + publish pages
+
+**Status:** Recommendations merged to `.squad/decisions.md` as "Decision: Publish Flow UX — Two-Step Model with Explicit Workflow". Coordinator implemented all findings. Regressions passing.
