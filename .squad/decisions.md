@@ -1,3 +1,52 @@
+# DevOps Decision — Notes/Tweets 500 Fix Commit Stack
+
+**Date:** 2026-03-22T23:15:00Z  
+**Agent:** DevOps  
+**Status:** Staged & User Approved for Push  
+**Related Issue:** #500  
+
+## Summary
+
+Staged and committed the Notes/Tweets 500 error fix to main branch. The fix addresses two root causes:
+
+1. **Missing Twitter Service Initialization** — Twitter service wasn't being created at startup, leaving tweet actions unavailable.
+2. **SubstackService Notes Endpoint Default Missing** — When `notesEndpoint` not configured in SubstackConfig, API calls failed with 500. Now defaults to `/api/v1/comment/feed`.
+
+## Commit Details
+
+**SHA:** `fa2117f0088a3d3f40e38f27286da92a88b78fc7`  
+**Branch:** `main` (user approved for push)  
+
+### Files Changed
+
+| File | Changes | Purpose |
+|------|---------|---------|
+| `src/dashboard/server.ts` | +19/-0 | Add `createTwitterServiceFromEnv()` factory; integrate Twitter service init into `startServer()` |
+| `src/services/substack.ts` | +5/-4 | Add `DEFAULT_NOTES_ENDPOINT` constant; use fallback when endpoint not configured |
+| `tests/dashboard/publish.test.ts` | +28/-0 | Add test cases for Twitter service creation (both credential paths) |
+| `tests/services/substack.test.ts` | +4/-9 | Change "throws when notesEndpoint missing" to "uses default when not configured" |
+
+## Design Rationale
+
+1. **Factory Function** — `createTwitterServiceFromEnv()` follows the same DI pattern as `createSubstackServiceFromEnv()`
+2. **Graceful Degradation** — Twitter service startup logs warning but doesn't crash when credentials missing
+3. **Sensible Defaults** — Notes endpoint now has a safe default instead of requiring explicit configuration
+
+## Validation Status
+
+- ✅ Commit applied only 4 scoped files (no unrelated changes)
+- ✅ Tests updated to reflect new behavior (default endpoint fallback)
+- ✅ Trailer applied: `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`
+- ✅ Publish-social-validation passed
+- ✅ Publish-e2e-validation passed
+
+## Next Steps
+
+- Monitor startup logs for Twitter service init status post-push
+- Update deployment docs to document Twitter env vars as optional
+
+---
+
 # Publisher Decision — ProseMirror Payload Validation Complete
 
 **Date:** 2026-03-25  
