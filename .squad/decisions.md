@@ -1,3 +1,89 @@
+# Code & Lead Decision — TLDR Retry Revision & Contract Clarity
+
+**Date:** 2026-03-25  
+**Agents:** Code, Lead  
+**Status:** Implemented and Validated  
+**Related Issues:** Self-heal retry fix; TLDR contract clarity  
+
+## Context
+
+The TLDR contract had two related issues:
+
+1. **Instruction Clarity Issue (Lead Decision):** Writer charter incorrectly claimed that Writer sends back drafts missing TLDR (the pipeline guard does, not Writer). When Editor returns REVISE, the 6→4 regression didn't re-validate TLDR, so Writer could miss fixing it if Editor didn't explicitly flag it as a 🔴 ERROR.
+
+2. **Self-Heal Retry Bug (Code Implementation):** writeDraft() retried malformed drafts using only pre-draft context, discarding the failed draft that needed repair. This forced the model to essentially restart, often producing the same error or dropping working analysis.
+
+## Decisions
+
+### Lead: Narrow Scope Definition (2026-03-15)
+
+Approved three focused edits:
+
+1. **Writer Charter Clarity** — Remove confusion about who sends back missing TLDRs (the pipeline guard, not Writer).
+2. **Editor Charter Hard Guard** — Add explicit instruction to flag missing/incomplete TLDR as 🔴 ERROR (non-negotiable structural requirement).
+3. **writeDraft Revision Safety** — Remind Writer to preserve/verify TLDR on every revision, not just when Editor calls it out.
+
+**Rationale:** TLDR is usually a structural miss, not content failure. Treating fixes as revisions that preserve good analysis rather than rewrites reduces churn and maintains working analysis.
+
+### Code: Implementation & Validation (2026-03-25)
+
+**Implemented all scope items:**
+
+1. Fixed writeDraft() to append failed draft under ## Failed Draft To Revise section before self-heal retry
+   - Changed retry prompt from "rewrite this structure" to "revise what you just produced"
+   - Keeps Writer context rich (failed output + upstream facts)
+
+2. Updated Editor and Publisher charters:
+   - Explicit guidance: REVISE cases should preserve draft when analysis is sound
+   - Framed TLDR/structure fixes as revision-first, not rewrite-first
+
+3. Updated skills (editor-review, publisher):
+   - Consistent language around TLDR validation
+   - Aligned cross-role expectations
+
+4. Added regression test:
+   - "retries and revises the failed draft when self-heal is needed"
+   - Validates immediate self-heal path without mocking
+
+**Validation:** All 147 tests pass; build clean.
+
+## Why This Works
+
+- **Instruction clarity** removes confusion about roles (Writer vs. pipeline guard vs. Editor).
+- **Explicit TLDR flagging** ensures Editor catches misses and marks them as non-negotiable.
+- **Revision-first retry** preserves good analysis while fixing structural gaps.
+- **Cross-role alignment** prevents mixed signals (Writer sees "preserve" AND "fix TLDR" as the same instruction).
+
+## Files Modified
+
+**Charters & Skills:**
+- src/config/defaults/charters/nfl/writer.md — Clarified role in TLDR validation
+- src/config/defaults/charters/nfl/editor.md — Added hard-guard instruction for TLDR validation + 🔴 ERROR flagging
+- src/config/defaults/charters/nfl/publisher.md — Aligned revision guidance
+- src/config/defaults/skills/editor-review.md — Consistent TLDR language
+- src/config/defaults/skills/publisher.md — Consistent TLDR language
+
+**Pipeline:**
+- src/pipeline/actions.ts — writeDraft retry logic + guidance alignment
+- 	ests/pipeline/actions.test.ts — Regression coverage for self-heal retry path
+
+## Validation Evidence
+
+- ✅ All existing tests pass (147/147)
+- ✅ New regression test covers self-heal retry path
+- ✅ Build succeeds (
+pm run v2:build)
+- ✅ No regressions in pipeline guards or stage transitions
+
+## Notes
+
+- No new reusable skill extracted; pattern captured adequately by existing writer-structure and prompt-handoff skills.
+- Stage 5 send-back behavior already preserved draft + synthetic editor-review; the missing piece was the immediate self-heal retry inside writeDraft().
+- Scope 4 (proactive TLDR re-validation in 6→4 regression) remains optional; Scopes 1–3 are sufficient in the happy path.
+
+---
+
+
 # DevOps Decision — Notes/Tweets 500 Fix Commit Stack
 
 **Date:** 2026-03-22T23:15:00Z  
@@ -2049,3 +2135,7 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 - Unblocked (`go:yes`)
 - Code team ready to implement
 - Clear acceptance criteria documented
+
+
+
+
