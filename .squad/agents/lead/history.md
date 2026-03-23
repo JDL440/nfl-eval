@@ -16,6 +16,7 @@
 - @copilot enabled with auto-assignment for well-scoped issues
 - Joe Robinson is the human Product Owner / Tech Lead with final decision authority
 - Closed reconcile-only issues should shed active-state and routing labels (`go:*`, `squad:*`) once the execution chain moves on, to keep backlog signals accurate.
+- 2026-03-23: Issue #117 is review-ready when the digest stays read-only, pulls the latest retrospectives through one joined repository query, dedupes normalized finding text, and caps manual-review candidate sections; that is enough to unblock the downstream promotion layer.
 
 ### 2026-03-22: Issue #85 — Structured Domain Knowledge Scope Lock
 

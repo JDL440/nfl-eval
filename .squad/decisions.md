@@ -617,3 +617,109 @@ When local `main` is dirty and ahead of `origin/main`, isolate ship-ready dashbo
 - Branch: `feature/publish-overhaul-ship`
 - Validation: `npm run v2:build` and `npx vitest run tests/dashboard/publish.test.ts tests/dashboard/server.test.ts`
 - Worktree isolation prevents workspace pollution during active development.
+
+---
+
+# Decision: Substack Service Initialization Gap
+
+**Date:** 2026-03-25  
+**Initiator:** DevOps (investigation of issue #XXX)  
+**Status:** Awaiting Code team action  
+**Type:** Bug analysis + architecture recommendation
+
+## Problem Statement
+
+Users encounter HTTP 500 error "Substack publishing is not configured for this environment" when attempting to create drafts or publish articles, despite having all required environment variables correctly configured:
+- `SUBSTACK_TOKEN` ✅ present (base64-encoded)
+- `SUBSTACK_PUBLICATION_URL` ✅ present (nfllab.substack.com)
+- `SUBSTACK_STAGE_URL` ✅ present (nfllabstage.substack.com)
+
+## Root Cause
+
+**Code bug in `src/dashboard/server.ts` — `startServer()` function (lines 2342–2499)**
+
+The application has proper architecture to support optional services via dependency injection:
+```typescript
+createApp(repo, config, { 
+  actionContext,      // ✅ created (lines 2374–2449)
+  imageService,       // ✅ created (lines 2456–2471)
+  memory,             // ✅ created (line 2439)
+  substackService     // ❌ MISSING — never created or passed
+})
+```
+
+The `ImageService` pattern (lines 2455–2471) shows the correct approach:
+1. Check for `GEMINI_API_KEY`
+2. Instantiate service (with fallback provider)
+3. Pass to `createApp()`
+4. Log outcome
+
+**SubstackService is never instantiated.** The handlers (`/api/articles/:id/draft` and `/api/articles/:id/publish`, lines 1366–1459) check:
+```typescript
+if (!substackService) {
+  return c.json({ error: 'Substack publishing is not configured for this environment.' }, 500);
+}
+```
+
+Since `substackService` is `undefined` (never created), publishing always fails.
+
+## Investigation Summary
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| Is SubstackService class available? | ✅ Yes | `src/services/substack.ts` (391 lines, fully implemented) |
+| Do env vars exist? | ✅ Yes | `.env` file verified |
+| Are env vars used elsewhere? | ✅ Yes | `src/dashboard/server.ts:513–514` shows them in config page |
+| Is dependency injection wired? | ✅ Partial | `createApp()` accepts `substackService` param, but startup never passes it |
+| Is similar service working? | ✅ Yes | `imageService` follows same pattern and works |
+
+## Recommendation
+
+**Add SubstackService initialization to `startServer()` at line 2455 (before `imageService`):**
+
+```typescript
+// Build SubstackService if publishing credentials available
+let substackService: SubstackService | undefined;
+try {
+  const token = process.env['SUBSTACK_TOKEN'];
+  const pubUrl = process.env['SUBSTACK_PUBLICATION_URL'];
+  const stageUrl = process.env['SUBSTACK_STAGE_URL'] || undefined;
+
+  if (!token || !pubUrl) {
+    console.log('Substack publishing credentials not set — publishing unavailable');
+  } else {
+    const SubstackServiceClass = (await import('../services/substack.js')).SubstackService;
+    substackService = new SubstackServiceClass({
+      publicationUrl: pubUrl,
+      stageUrl,
+      token,
+      notesEndpoint: process.env['NOTES_ENDPOINT_PATH'],
+    });
+    console.log('Substack service initialized (pub: nfllab.substack.com)');
+  }
+} catch (err) {
+  console.log(`Substack service not available: ${err instanceof Error ? err.message : err}`);
+}
+
+// Then pass to createApp:
+const app = createApp(repo, config, { substackService, actionContext, imageService, memory });
+```
+
+**Rationale:**
+- Mirrors existing `imageService` pattern (proven working)
+- Non-fatal initialization (logs warning, doesn't crash server if env missing)
+- Enables publishing workflow without user env changes
+- Unblocks Stage 7→8 transition in pipeline
+
+## Timeline
+
+**Awaiting:** Code team action to implement SubstackService initialization  
+**Not blocked by:** Any DevOps, CI/CD, or environment changes  
+**User-facing:** Once deployed, publishing will work with current .env config
+
+## Out of Scope
+
+- MCP tool integration (separate concern)
+- Token refresh automation (UX, not DevOps)
+- GitHub Actions CI/CD (no changes needed)
+
