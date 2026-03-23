@@ -51,6 +51,9 @@ const SUBSTACK_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+/** Default Substack Notes endpoint path. */
+const DEFAULT_NOTES_ENDPOINT = '/api/v1/comment/feed';
+
 interface DecodedToken {
   substackSid: string;
   connectSid: string;
@@ -237,12 +240,7 @@ export class SubstackService {
   // ── Notes ────────────────────────────────────────────────────────────────
 
   async createNote(params: NoteParams): Promise<{ id: string; url: string }> {
-    const endpoint = this.config.notesEndpoint;
-    if (!endpoint) {
-      throw new Error(
-        'Missing notesEndpoint in SubstackConfig — required for Notes posting.',
-      );
-    }
+    const endpoint = this.config.notesEndpoint || DEFAULT_NOTES_ENDPOINT;
 
     const attachmentIds: string[] = [];
     if (params.articleSlug) {

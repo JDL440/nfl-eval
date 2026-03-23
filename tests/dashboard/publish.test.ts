@@ -6,6 +6,7 @@ import { Repository } from '../../src/db/repository.js';
 import {
   createApp,
   createSubstackServiceFromEnv,
+  createTwitterServiceFromEnv,
 } from '../../src/dashboard/server.js';
 import { proseMirrorToHtml } from '../../src/dashboard/views/publish.js';
 import { markdownToProseMirror, validateProseMirrorBody } from '../../src/services/prosemirror.js';
@@ -117,6 +118,10 @@ describe('Publish Workflow', () => {
     delete process.env.SUBSTACK_PUBLICATION_URL;
     delete process.env.SUBSTACK_STAGE_URL;
     delete process.env.NOTES_ENDPOINT_PATH;
+    delete process.env.TWITTER_API_KEY;
+    delete process.env.TWITTER_API_SECRET;
+    delete process.env.TWITTER_ACCESS_TOKEN;
+    delete process.env.TWITTER_ACCESS_TOKEN_SECRET;
     repo.close();
     rmSync(tempDir, { recursive: true, force: true });
   });
@@ -133,6 +138,29 @@ describe('Publish Workflow', () => {
       expect(service).toBeDefined();
       expect(service?.resolveBaseUrl('prod')).toBe('https://test.substack.com');
       expect(service?.resolveBaseUrl('stage')).toBe('https://stage-test.substack.com');
+    });
+  });
+
+  describe('createTwitterServiceFromEnv', () => {
+    it('creates the startup Twitter service when all tweet env vars are present', () => {
+      const service = createTwitterServiceFromEnv({
+        TWITTER_API_KEY: 'api-key',
+        TWITTER_API_SECRET: 'api-secret',
+        TWITTER_ACCESS_TOKEN: 'access-token',
+        TWITTER_ACCESS_TOKEN_SECRET: 'access-token-secret',
+      });
+
+      expect(service).toBeDefined();
+    });
+
+    it('returns undefined when any required Twitter credential is missing', () => {
+      const service = createTwitterServiceFromEnv({
+        TWITTER_API_KEY: 'api-key',
+        TWITTER_API_SECRET: 'api-secret',
+        TWITTER_ACCESS_TOKEN: 'access-token',
+      });
+
+      expect(service).toBeUndefined();
     });
   });
 

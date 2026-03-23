@@ -74,7 +74,7 @@ import {
 import { markdownToHtml } from '../services/markdown.js';
 import { renderArticlePreview, renderArticlePreviewFrame, parseImageManifest } from './views/preview.js';
 import { SubstackService } from '../services/substack.js';
-import type { TwitterService } from '../services/twitter.js';
+import { TwitterService } from '../services/twitter.js';
 import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
 import { buildTeamRosterContext } from '../pipeline/roster-context.js';
@@ -2551,6 +2551,25 @@ export function createSubstackServiceFromEnv(
   });
 }
 
+export function createTwitterServiceFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): TwitterService | undefined {
+  const apiKey = env['TWITTER_API_KEY']?.trim();
+  const apiSecret = env['TWITTER_API_SECRET']?.trim();
+  const accessToken = env['TWITTER_ACCESS_TOKEN']?.trim();
+  const accessTokenSecret = env['TWITTER_ACCESS_TOKEN_SECRET']?.trim();
+  if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
+    return undefined;
+  }
+
+  return new TwitterService({
+    apiKey,
+    apiSecret,
+    accessToken,
+    accessTokenSecret,
+  });
+}
+
 export async function startServer(overrides?: Partial<AppConfig>): Promise<void> {
   const config = loadConfig(overrides);
   initDataDir(config.dataDir, config.league);
@@ -2700,6 +2719,22 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     );
   }
 
+  let twitterService: TwitterService | undefined;
+  try {
+    twitterService = createTwitterServiceFromEnv();
+    if (twitterService) {
+      console.log('Twitter service initialized');
+    } else {
+      console.log(
+        'Twitter credentials not set — tweet actions will remain unavailable',
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[startup] Twitter service not available: ${err instanceof Error ? err.message : err}`,
+    );
+  }
+
   // Periodic relevance decay — throttled to once per hour
   if (memory) {
     try {
@@ -2726,6 +2761,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     imageService,
     memory,
     substackService,
+    twitterService,
   });
 
   serve({ fetch: app.fetch, port: config.port }, (info) => {

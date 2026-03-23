@@ -414,12 +414,14 @@ describe('SubstackService', () => {
       expect(result.url).toBe('https://nfllab.substack.com/note/c-600');
     });
 
-    it('throws when notesEndpoint is not configured', async () => {
+    it('uses default notesEndpoint when not configured', async () => {
       const svc = new SubstackService(makeConfig());
-      await expect(
-        svc.createNote({ content: 'Will fail' }),
-      ).rejects.toThrow('Missing notesEndpoint');
-      expect(fetchSpy).not.toHaveBeenCalled();
+      const result = await svc.createNote({ content: 'Default endpoint test' });
+
+      expect(result.id).toBe('1');
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [url] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('/api/v1/comment/feed');
     });
 
     it('throws on HTTP error', async () => {
