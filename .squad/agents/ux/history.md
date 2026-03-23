@@ -69,3 +69,20 @@
 
 - 2026-03-23T04:12:59Z — **UX Dashboard Publish Review (read-only)**: Conducted exploratory review of dashboard publish/draft missing Substack configuration messaging. Examined HTMX vs JSON error surfacing patterns and adjacent dashboard conventions. **Findings:** (1) HTMX 500 responses do not swap publish panel—operators see raw failure instead of recovery guidance; (2) Adjacent panels use inline state messages for setup guidance (config status, missing credentials); (3) Recommended smallest actionable message: combine current error text with environment setup hints inline, no additional modals or redirects. **Outcome:** Read-only review completed. No code edits requested. Findings documented for Code decision on publish workflow error handling. See orchestration-log/2026-03-23T04-12-59Z-ux.md.
 
+### 2026-03-23T04-16-31Z: Scribe Cross-Agent Update — Publish Config Fix Coordination
+
+**Coordinated Session:** Multi-agent Publish Config investigation  
+
+**UX decisions finalized and merged:**
+
+1. **Publisher — Substack Dashboard Config UX Decision:** Detect service availability before rendering publish actions. Distinguish missing configuration from service-unavailability-despite-config. Use appropriate copy for each state (env-setup vs. editor-language).
+
+2. **UX Decision — Publish Missing Config Copy:** Primary alert text should be short ("Substack publishing is not configured.") with actionable recovery details in separate hint (env var names, /config link, restart guidance).
+
+**Design guidance:**
+- Short error labels match adjacent dashboard patterns (scannable, repeatable)
+- Separate alert from recovery hints prevents cluttered UI
+- Consistent copy across publish page, config page, and error states
+- HTMX responses enable in-panel error handling instead of raw 500s
+
+**Validation:** Focused publish and server tests passed. Full build blocked by pre-existing src/cli.ts errors (unrelated). Both decisions merged to .squad/decisions.md.

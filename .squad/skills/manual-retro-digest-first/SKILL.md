@@ -47,3 +47,4 @@ tools: [view, rg, gh]
 - Pull the digest input through one joined repository query that returns findings plus article metadata for the latest N retrospectives; keep the CLI itself read-only.
 - Group findings first by `role + finding_type`, then dedupe repeated wording with normalized lowercase text (punctuation stripped) so markdown and JSON can share the same aggregation pass.
 - Bound the report explicitly: cap candidate sections and per-category examples, and prefer evidence fields that help human review (`articleCount`, `priorityCounts`, latest timestamp, sample article titles).
+- When promotion heuristics are layered on later, keep the promoted candidate arrays explicit and human-reviewable: emit separate process-improvement vs learning-update lists, include deterministic `promotionReasons`, and prefer disjoint candidate classes so one normalized finding does not appear in both sections of the same digest.

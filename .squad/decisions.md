@@ -840,3 +840,61 @@ const app = createApp(repo, config, { substackService, actionContext, imageServi
 - Token refresh automation (UX, not DevOps)
 - GitHub Actions CI/CD (no changes needed)
 
+---
+
+# Publisher — Substack Dashboard Config UX
+
+**Date:** 2026-03-23  
+**Owner:** Publisher  
+**Status:** ✅ DECISION MERGED  
+
+## Recommendation
+
+Treat Substack dashboard publishing failures as two different product states:
+1. **Missing configuration** — `SUBSTACK_TOKEN` and/or `SUBSTACK_PUBLICATION_URL` absent.
+2. **Service unavailable despite config** — startup failed to instantiate or inject `SubstackService`.
+
+## Why
+
+Current publish UI collapses both states into one message telling the user to set env vars and restart. That is misleading when the environment is already configured and the real problem is server startup wiring.
+
+## Product Guidance
+
+- Detect service availability before rendering publish actions.
+- Disable or replace Draft/Publish controls when unavailable.
+- Keep the Config-page hint for true missing-env cases only.
+- Use editor-language copy like "Publishing is unavailable in this dashboard session" when service wiring/startup failed.
+
+---
+
+# UX Decision — Publish Missing Config Copy
+
+**Date:** 2026-03-23  
+**Owner:** UX  
+**Status:** ✅ DECISION MERGED  
+
+## Context
+
+The Stage 7 publish workflow already treats missing Substack configuration as an operator-fixable state on HTMX requests: the server returns the refreshed publish workflow fragment and the UI shows recovery guidance instead of a broken-page failure.
+
+## Decision
+
+Use a short primary alert on the publish page:
+
+**"Substack publishing is not configured."**
+
+Keep the actionable recovery detail outside the alert, in the existing hint that names `SUBSTACK_PUBLICATION_URL`, `SUBSTACK_TOKEN`, restart, and the `/config` page.
+
+## Why
+
+- Matches adjacent dashboard patterns that favor short error labels.
+- Keeps the publish panel scannable under repeated retries.
+- Avoids changing backend/API semantics while still improving the human-facing copy.
+
+## Files
+
+- `src/dashboard/views/publish.ts`
+- `src/dashboard/server.ts`
+- `src/dashboard/views/config.ts`
+- `tests/dashboard/publish.test.ts`
+

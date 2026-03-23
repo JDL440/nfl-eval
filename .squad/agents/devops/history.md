@@ -53,3 +53,17 @@ The application architecture supports passing `substackService` as optional depe
 - Strategy: Create worktree → copy target files → validate (`npm run v2:build` + `npx vitest run tests/dashboard/publish.test.ts tests/dashboard/server.test.ts`) → push feature branch.
 
 **Decision status:** Implemented during branch isolation; now recorded in team decisions for reuse across agents and future shipping cycles.
+
+### 2026-03-23T04-16-31Z: Scribe Cross-Agent Update — Publish Config Fix Coordination
+
+**Coordinated Session:** Multi-agent Publish Config investigation  
+
+**Why this matters for DevOps:**
+- Root-cause investigation confirmed: `SubstackService` initialization missing from `startServer()` (line 2494) despite correct environment setup.
+- Architecture properly supports dependency injection; `ImageService` pattern exists as reference implementation.
+- No CI/CD or environment changes required — code team implementation only.
+- Non-fatal service: Log warning if credentials missing, don't crash startup.
+
+**Code team action:** Implement SubstackService initialization. Reference code provided in decisions.md ("DevOps Decision — Substack Publishing 500 Error Root Cause").
+
+**Validation complete:** Environment variables verified, application architecture reviewed, implementation pattern documented.

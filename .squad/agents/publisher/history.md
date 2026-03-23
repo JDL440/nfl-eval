@@ -58,6 +58,18 @@
 
 **Decision Status:** "Issue #107 Revision: Publisher Skill Deduplication" merged to `.squad/decisions.md`.
 
+### 2026-03-23T04-16-31Z: Scribe Cross-Agent Update — Publish Config Fix Coordination
+
+**Coordinated Session:** Multi-agent Publish Config investigation  
+
+**Publisher decision finalized:** Treat Substack dashboard publishing failures as two distinct product states—missing configuration vs. service unavailability despite config. Service-availability detection should precede publish-action rendering.
+
+**UX decision finalized:** Short alert ("Substack publishing is not configured.") with actionable recovery details (env var names, /config link, restart guidance) in separate hint section.
+
+**Stage 7 architecture validated:** Flow is correctly manual two-step (Create Draft → Publish). UX gap is terminology consistency across article detail, publish page, and preview surfaces. Both decisions merged to .squad/decisions.md.
+
+**Validation:** Focused publish and server tests passed (tests/dashboard/publish.test.ts, tests/dashboard/server.test.ts).
+
 **Next:** Lead to execute publish-overhaul feature branch isolation strategy (decision documented in "Publish-Overhaul Isolation Strategy").
 
 **Flow recommendation:** Keep Stage 7 as a draft-first workflow. “Save/Create Draft” should be a safe create-or-update action that never publishes; “Publish Now” should publish the reviewed Substack draft already linked to the article, not a separate direct-from-markdown path.
@@ -116,3 +128,13 @@
 - Session log written: `.squad/log/2026-03-25T02-47-00Z-publisher-substack-trace.md`
 - Root cause documented: Startup wiring bug (missing SubstackService dependency injection) vs. configuration issue
 - Next action: Code agent to fix `startServer()` SubstackService construction and pass to `createApp()`
+
+### 2026-03-25: Dashboard publish config investigation
+
+**Exact trigger:** The 500 `"Substack publishing is not configured for this environment."` is raised whenever `createApp()` has no `substackService` dependency and a user hits `/api/articles/:id/draft` or `/api/articles/:id/publish` (`src/dashboard/server.ts`). In current startup, `startServer()` calls `createApp(repo, config, { actionContext, imageService, memory })` without constructing/passing `SubstackService`, so normal local dashboard runs leave publishing unavailable even when env vars exist.
+
+**Expected local config:** Article draft/publish needs `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL`; env is loaded from repo-root `.env` or `~/.nfl-lab/config/.env`. `SUBSTACK_STAGE_URL` is optional stage-target support, and `NOTES_ENDPOINT_PATH` is only needed for Notes, not article draft/article publish.
+
+**UX assessment:** Current publish page hint says to set env vars and restart, which is only partly right. Better UX should distinguish true missing-env cases from service-startup/wiring failures, and disable or replace publish actions when the dashboard knows Substack service is unavailable.
+
+**Key paths:** `src/dashboard/server.ts`, `src/dashboard/views/publish.ts`, `src/services/substack.ts`, `src/config/index.ts`, `.github/extensions/README.md`, `README.md`.
