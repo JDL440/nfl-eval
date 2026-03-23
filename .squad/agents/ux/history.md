@@ -28,6 +28,8 @@
 - Article detail and live-sidebar usage panels (`src/dashboard/server.ts` → `src/dashboard/views/article.ts`) should read full per-article usage history so early-provider rows like `copilot-cli` idea-generation calls are not dropped after heavy later activity
 - Issue #93 fix stayed scoped to the usage hydration seam: `src/db/repository.ts` now returns full per-article usage history by default, while article detail (`src/dashboard/server.ts`) and the HTMX live sidebar keep reusing the same query path unchanged.
 - Focused verification for #93: `tests/llm/provider-copilot-cli.test.ts`, `tests/pipeline/actions.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`, and `tests/db/repository.test.ts` pass locally, proving the break was the repository/query cap rather than missing provider estimation or persistence.
+- Issue #93 follow-up evidence showed the article UI already rendered correctly when `usage_events` rows existed; the safer regression anchor is the full provider → runner → `recordAgentUsage()` → repository → article/live-sidebar chain, not seeded dashboard-only rows.
+- For Copilot CLI usage regressions, prefer a stage-action test that runs against a provider reporting `provider: 'copilot-cli'` plus usage numbers, then assert both the persisted `usage_events` row and the article/live-sidebar HTML.
 
 ### 2026-03-22: Issue #70 Investigation Outcome
 
@@ -51,3 +53,62 @@
 
 - Re-verified the Copilot CLI token path end-to-end and kept the final change on the real article usage seam only: repository hydration.
 - Explicitly did **not** carry forward the rejected artifact-thinking/debug renderer change; the article page fix is just full-history usage hydration plus focused dashboard/repository regression coverage.
+
+### 2026-03-22T19:07:48.2253500Z: Issue #93 decision sync
+
+- Confirmed the issue #93 decision record is now canonical in `.squad/decisions.md` and the inbox files were removed.
+- Kept the UX finding aligned on the repository query cap: article detail and live usage panels should read full per-article usage history by default.
+### 2026-03-22T19-13-43Z: Scribe sync — Issue #93 inbox merge
+- Consolidated the issue #93 usage-history decision into `.squad/decisions.md`.
+- Article detail and live sidebar usage panels should keep reading full per-article history by default, with explicit limits reserved for bounded queries.
+
+### 2026-03-22T19:13:43Z: Issue #93 regression safeguard
+
+- UX now records the regression guard that validates the full Copilot CLI usage path through persistence and hydration.
+- The article detail and live sidebar views should continue to read the full per-article usage history by default.
+- The rejected thinking/debug renderer path stays out of scope.
+
+### 2026-03-22T19:14:56Z: Issue #93 blocked / not reproducible follow-up
+- Traced the provider -> runner -> persistence -> dashboard chain end to end.
+- Could not reproduce a Copilot-CLI-specific defect in the current code.
+- Kept the diagnosis scoped to the actual dashboard read path and left the issue blocked.
+
+### 2026-03-22: Article TLDR/subtitle UI review
+- The article detail UI renders `article.subtitle` only when present and otherwise omits the subtitle line; there is no TLDR-specific rendering in `src/dashboard/views/article.ts`.
+- Article metadata edit flows normalize blank subtitles to `null`, so the dashboard already treats subtitle as optional.
+- TLDR expectations live in editorial skill/checklist docs (`src/config/defaults/skills/editor-review.md`, `src/config/defaults/skills/publisher.md`) rather than in dashboard validation or article rendering code.
+- Article detail hydration in `src/dashboard/server.ts` reads stage transitions, editor reviews, usage events, stage runs, pinned agents, and artifact names, but does not read `revision_summaries`; iteration history exists in `src/pipeline/conversation.ts` and `src/db/schema.sql` only for agent handoff context right now.
+- Revision visibility and thinking visibility are different dashboard gaps: `*.thinking.md` artifacts already render through article artifact tabs in `src/dashboard/views/article.ts`, while revision iterations are persisted but unsurfaced in the UI.
+- The Advanced audit log already exposes regression reasons via `stage_transitions.notes`, so send-back rationale is visible there even though revision count/history is not.
+- Artifact surfacing is split between a canonical allowlist and raw artifact discovery: tabs are anchored to `ARTIFACT_FILES` plus `panel-*` in `src/dashboard/views/article.ts` / `src/dashboard/server.ts`, which leaves persisted artifacts like `publisher-pass.md`, `fact-validation.md`, and `roster-validation.md` partially or fully unsurfaced on the article page.
+### 2026-03-22T22-07-35Z: Article TLDR/subtitle sync
+- Merged the dashboard subtitle/TLDR note into `.squad/decisions.md`.
+- Keep subtitles optional in the dashboard; enforce any stronger TLDR requirement in editorial/content validation instead.
+### 2026-03-22T22:45:00Z: Revision/thinking visibility investigation
+- Revision loop persistence is split: `src\pipeline\conversation.ts` writes shared turns into `article_conversations` and revision summaries into `revision_summaries`, while `src\pipeline\actions.ts` records writer/editor/publisher turns and editor `REVISE` summaries during stages 5-7.
+- Dashboard article detail (`src\dashboard\server.ts` → `src\dashboard\views\article.ts`) does not read or render `article_conversations` / `revision_summaries`; it only hydrates transitions, editor review rows, usage events, stage runs, artifact names, and pinned agents.
+- Thinking traces are persisted as companion `*.thinking.md` artifacts by `writeAgentResult()` in `src\pipeline\actions.ts`, plus `idea.thinking.md` in `src\dashboard\server.ts` for idea generation.
+- The article artifact route allows fixed pipeline artifacts plus `panel-*.md` and their `.thinking.md` companions, but `renderArtifactTabs()` only renders the fixed `ARTIFACT_FILES` tab set, so extra persisted artifacts such as `publisher-pass.md`, `panel-*`, `panel-factcheck.md`, `roster-validation.md`, and `fact-validation.md` are mostly unsurfaced on the article page.
+- `renderArtifactContent()` can reveal inline `<think>/<reasoning>` blocks inside an artifact, and preview/publish flows strip that thinking via `separateThinking()`, so debug visibility and article output cleanliness are already treated as separate UI concerns.
+- `editor_reviews` cards are rendered if DB rows exist, but the live pipeline path in `src\pipeline\actions.ts` writes `editor-review.md` and conversation turns without calling `recordEditorReview()`, so review summary cards rely on reconciliation/import paths instead of the main runtime write path.
+
+### 2026-03-22T22:16:52Z: Scribe inbox merge
+- Reconfirmed that article TLDR is a contract issue, not a dashboard subtitle rule.
+- Revision visibility and thinking/debug visibility remain separate dashboard seams; the dashboard should keep treating them as different fixes.
+- Inbox findings were merged into `.squad/decisions.md` and deduplicated.
+
+
+### 2026-03-22T22:18:04Z: Revision/thinking visibility investigation merge
+- Merged the revision/thinking visibility investigation into the canonical decision log.
+- Kept revision history hydration and thinking-artifact surfacing as separate dashboard seams.
+
+
+### 2026-03-22T22-21-16Z: Issue #109 dashboard observability pass
+- Confirmed the article-detail fix should be handled as one dashboard pass that still keeps revision-history and thinking/debug surfacing conceptually separate.
+- The article page should hydrate revision history from the existing pipeline persistence and keep debug traces exposed through artifact-aware UI.
+
+### 2026-03-22T22:32:05Z: Scribe orchestration sync — article visibility audit
+
+- Scribe recorded the dashboard visibility audit in `.squad/log/` and emitted orchestration logs for the spawned agents.
+- The audit still points at one article-detail observability pass, with revision history and persisted thinking traces treated as separate seams.
+- No inbox decisions were pending, so `.squad/decisions.md` stayed unchanged.

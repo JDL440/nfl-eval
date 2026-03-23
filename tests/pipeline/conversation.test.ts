@@ -11,6 +11,7 @@ import {
   getRevisionHistory,
   getRevisionCount,
   buildConversationContext,
+  buildRevisionHistoryEntries,
   buildEditorPreviousReviews,
   type ConversationTurn,
   type RevisionSummary,
@@ -156,6 +157,93 @@ describe('conversation', () => {
     });
   });
 
+  describe('buildRevisionHistoryEntries', () => {
+    it('pairs each revision summary with the writer/editor loop that produced it', () => {
+      const turns: ConversationTurn[] = [
+        {
+          id: 1,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 1,
+          content: '# Draft 1\n\nOpening version',
+          token_count: 120,
+          created_at: '2025-01-01 10:00:00',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 2,
+          content: '## Verdict\nREVISE\n\nFix the intro and verify EPA.',
+          token_count: 80,
+          created_at: '2025-01-01 10:05:00',
+        },
+        {
+          id: 3,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 3,
+          content: '# Draft 2\n\nReworked version',
+          token_count: 140,
+          created_at: '2025-01-01 10:10:00',
+        },
+        {
+          id: 4,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 4,
+          content: '## Verdict\nREVISE\n\nAdd salary-cap context.',
+          token_count: 80,
+          created_at: '2025-01-01 10:15:00',
+        },
+      ];
+      const revisions: RevisionSummary[] = [
+        {
+          id: 10,
+          article_id: 'test',
+          iteration: 1,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: JSON.stringify(['Fix intro']),
+          feedback_summary: 'Fix the intro and verify EPA.',
+          created_at: '2025-01-01 10:05:00',
+        },
+        {
+          id: 11,
+          article_id: 'test',
+          iteration: 2,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: JSON.stringify(['Add salary-cap context']),
+          feedback_summary: 'Add salary-cap context.',
+          created_at: '2025-01-01 10:15:00',
+        },
+      ];
+
+      const history = buildRevisionHistoryEntries(turns, revisions);
+
+      expect(history).toHaveLength(2);
+      expect(history[0].writerTurn?.turn_number).toBe(1);
+      expect(history[0].editorTurn?.turn_number).toBe(2);
+      expect(history[0].keyIssues).toEqual(['Fix intro']);
+      expect(history[1].writerTurn?.turn_number).toBe(3);
+      expect(history[1].editorTurn?.turn_number).toBe(4);
+      expect(history[1].keyIssues).toEqual(['Add salary-cap context']);
+    });
+  });
+
   // ── buildConversationContext ─────────────────────────────────────────────
 
   describe('buildConversationContext', () => {
@@ -163,7 +251,7 @@ describe('conversation', () => {
       expect(buildConversationContext([], [])).toBe('');
     });
 
-    it('formats revision summaries', () => {
+    it('formats a shared workflow snapshot from revision summaries', () => {
       const revisions: RevisionSummary[] = [{
         id: 1,
         article_id: 'test',
@@ -178,15 +266,48 @@ describe('conversation', () => {
       }];
 
       const result = buildConversationContext([], revisions);
-      expect(result).toContain('## Article Conversation History');
-      expect(result).toContain('### Revision Summary');
+      expect(result).toContain('## Shared Article Handoff');
+      expect(result).toContain('### Workflow Snapshot');
       expect(result).toContain('Iteration 1');
       expect(result).toContain('Editor Pass → Panel Discussion');
-      expect(result).toContain('Fix EPA numbers');
+      expect(result).toContain('### Open Must-Fix Items');
       expect(result).toContain('EPA wrong');
     });
 
-    it('formats conversation turns', () => {
+    it('summarizes latest role handoffs without exposing the raw thread', () => {
+      const turns: ConversationTurn[] = [
+        {
+          id: 1,
+          article_id: 'test',
+          stage: 5,
+          agent_name: 'writer',
+          role: 'assistant',
+          turn_number: 1,
+          content: 'Here is the original draft with a strong lede.',
+          token_count: 100,
+          created_at: '2025-01-01',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          stage: 6,
+          agent_name: 'editor',
+          role: 'assistant',
+          turn_number: 2,
+          content: '## Verdict\nREVISE\n\nTighten the opening and fix the EPA table.',
+          token_count: 50,
+          created_at: '2025-01-01',
+        },
+      ];
+
+      const result = buildConversationContext(turns, []);
+      expect(result).toContain('### Latest Role Handoffs');
+      expect(result).toContain('Writer: Here is the original draft');
+      expect(result).toContain('Editor: Verdict REVISE');
+      expect(result).not.toContain('### Conversation Thread');
+    });
+
+    it('adds writer-local continuity only when writer is active', () => {
       const turns: ConversationTurn[] = [{
         id: 1,
         article_id: 'test',
@@ -199,14 +320,16 @@ describe('conversation', () => {
         created_at: '2025-01-01',
       }];
 
-      const result = buildConversationContext(turns, []);
-      expect(result).toContain('### Conversation Thread');
-      expect(result).toContain('[writer]');
-      expect(result).toContain('Article Drafting');
-      expect(result).toContain('Here is the draft...');
+      const writerContext = buildConversationContext(turns, [], { activeAgent: 'writer' });
+      const publisherContext = buildConversationContext(turns, [], { activeAgent: 'publisher' });
+
+      expect(writerContext).toContain('## Your Previous Draft Continuity');
+      expect(writerContext).toContain('Article Drafting');
+      expect(writerContext).toContain('Here is the draft...');
+      expect(publisherContext).not.toContain('## Your Previous Draft Continuity');
     });
 
-    it('truncates very long content', () => {
+    it('truncates very long handoff content', () => {
       const turns: ConversationTurn[] = [{
         id: 1,
         article_id: 'test',
@@ -220,8 +343,29 @@ describe('conversation', () => {
       }];
 
       const result = buildConversationContext(turns, []);
-      expect(result).toContain('[... truncated ...]');
+      expect(result).toContain('…');
       expect(result.length).toBeLessThan(3000);
+    });
+
+    it('adds editor-local review continuity only for editor', () => {
+      const turns: ConversationTurn[] = [{
+        id: 1,
+        article_id: 'test',
+        stage: 6,
+        agent_name: 'editor',
+        role: 'assistant',
+        turn_number: 3,
+        content: '## Verdict\nREVISE\n\nFix the contract comparison table.',
+        token_count: 40,
+        created_at: '2025-01-01',
+      }];
+
+      const editorContext = buildConversationContext(turns, [], { activeAgent: 'editor' });
+      const writerContext = buildConversationContext(turns, [], { activeAgent: 'writer' });
+
+      expect(editorContext).toContain('## Your Previous Reviews');
+      expect(editorContext).toContain('Fix the contract comparison table');
+      expect(writerContext).not.toContain('## Your Previous Reviews');
     });
   });
 
@@ -265,7 +409,7 @@ describe('conversation', () => {
       }];
 
       const result = buildEditorPreviousReviews(editorTurns);
-      expect(result).toContain('[... truncated ...]');
+      expect(result).toContain('…');
     });
   });
 
@@ -286,24 +430,24 @@ describe('conversation', () => {
       // Editor approves
       addConversationTurn(repo, 'test-article', 6, 'editor', 'assistant', 'APPROVED');
 
-      // Publisher sees full history
+      // Publisher sees only the shared handoff summary
       const allTurns = getArticleConversation(repo, 'test-article');
       expect(allTurns).toHaveLength(4);
 
       const revisions = getRevisionHistory(repo, 'test-article');
       expect(revisions).toHaveLength(1);
 
-      const context = buildConversationContext(allTurns, revisions);
+      const context = buildConversationContext(allTurns, revisions, { activeAgent: 'publisher' });
       expect(context).toContain('Iteration 1');
-      expect(context).toContain('[writer]');
-      expect(context).toContain('[editor]');
+      expect(context).toContain('Writer:');
+      expect(context).toContain('Editor:');
       expect(context).toContain('Fix EPA');
+      expect(context).not.toContain('### Conversation Thread');
 
       // Editor can see its own previous reviews
-      const editorTurns = getArticleConversation(repo, 'test-article', { agentName: 'editor' });
-      expect(editorTurns).toHaveLength(2);
-      const editorContext = buildEditorPreviousReviews(editorTurns);
+      const editorContext = buildConversationContext(allTurns, revisions, { activeAgent: 'editor' });
       expect(editorContext).toContain('EPA is wrong');
+      expect(editorContext).toContain('## Your Previous Reviews');
     });
   });
 });

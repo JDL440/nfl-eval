@@ -8,86 +8,96 @@
 - **Repo:** JDL440/nfl-eval
 - **Key paths:** `src/` (core), `src/config/defaults/charters/nfl/` (47 pipeline agents), `src/dashboard/` (Hono UI), `src/pipeline/` (article pipeline), `tests/` (vitest)
 
-## Learnings
+## Core Context
 
 - Team initialized 2025-07-18 with functional role names (Lead, Code, Data, Publisher, Research, DevOps, UX)
-- @copilot enabled with auto-assignment for well-scoped issues
+- @copilot is enabled with auto-assignment for well-scoped issues
 - Joe Robinson is the human Product Owner / Tech Lead with final decision authority
+- Issue #85 is intentionally limited to static knowledge assets and validation; runtime integration and refresh automation moved to #91
+- Issue #88 established shared article conversation history; the safer next step is a hybrid summary/handoff model rather than raw transcript sharing
+- Issue #92 confirmed the same hybrid context approach for charter isolation risk
+- Issue #93 article usage panels need full per-article usage history; the regression came from the repository read cap, not missing persistence
+- Persisted `*.thinking.md` artifacts are the canonical article debug source
+- The v2 platform already shipped #72 and #73, so backlog triage should verify code before assuming an issue is still open
 
-### 2026-03-22: Issue #85 — Structured Domain Knowledge Scope Lock
+### 2026-03-22T19:20:00Z: Issue #93 token usage seam
 
-- Issue #85 is intentionally limited to static proof-of-concept assets plus docs/tests: glossary YAML files under `src/config/defaults/glossaries/` and initial team sheets under `content/data/team-sheets/`.
-- Keep #85 out of runtime code paths: no `src/agents/runner.ts`, `src/pipeline/actions.ts`, or refresh automation changes unless strictly needed for lightweight references or validation.
-- Treat `tests/config/` as the likely home for structure-validation tests, since this slice validates seeded/static knowledge assets rather than pipeline behavior.
-- The repo currently has no YAML dependency in `package.json`, so glossary structure should stay simple enough for lightweight validation without introducing runtime integration.
-- Deferred Phases 4-5 are now tracked in GitHub issue `#91` (runtime glossary/team-sheet injection plus refresh automation).
+- The article usage gap was caused by the repository read seam (`Repository.getUsageEvents()` defaulting article reads to the newest 100 rows), not by provider token creation or dashboard chart rendering.
+- Future usage investigations should verify repository defaults first so early provider events are not clipped out of article-level history views.
 
-### 2025-07-19: Triage Round 1 — 5 non-article project issues
+### 2026-03-22T18:35:21Z: Thinking/debug visibility regression
 
-**Closed as complete (already implemented in v2):**
-- **#73** (nflverse integration) — Fully shipped: 11 MCP tools, 11 Python query scripts, TypeScript DataService, 20+ cached parquet files. Every research question answered.
-- **#72** (Substack Notes) — Fully shipped: `publish_note_to_substack` MCP tool, `SubstackService.createNote()`, `notes` DB table, dashboard Note composer, API endpoint.
+- Investigated the missing collapsible agent-thinking/debug section on article detail pages.
+- Confirmed the main artifact view should read companion `*.thinking.md` files first; inline `<think>` / `<reasoning>` extraction is only a legacy fallback.
+- Relevant files: `src/dashboard/views/article.ts`, `src/dashboard/server.ts`, `src/pipeline/actions.ts`, `src/pipeline/context-config.ts`, `src/agents/runner.ts`.
+- Restoration guidance for Code: preserve the collapsible debug UI and treat the persisted thinking artifact as the canonical trace.
 
-**Routed for work:**
-- **#81** (Token Usage UX broken) → `squad:ux`. Usage tracking infrastructure exists (`usage_events` table, `renderUsagePanel`) but likely has display/accuracy bugs, especially with multi-provider cost reporting. Imagen provider throws runtime error.
-- **#76** (Mass Document Update Service) → `squad:code`. Significant 4-phase feature. Some batch processing exists (PipelineScheduler, migration) but not the full catalog-wide find-and-replace with Substack sync described in the issue.
-- **#70** (Social link image generation) → `squad:ux`. Cover image generation works (Gemini 3 Pro) but needs style standardization using Witherspoon article as reference, plus platform-specific OG preview auditing.
+### 2026-03-22T19:14:56Z: Issue #93 blocked / not reproducible follow-up
+- Re-reviewed the issue after the rejected debug-visibility diff and concluded the wrong bug had been targeted.
+- Enforced reassignment away from the prior hydration diagnosis because the current codebase did not reproduce a Copilot-CLI-specific defect.
+- No issue-specific code changes landed.
 
-**Key finding:** The v2 platform is more capable than the backlog reflects. Two major research spikes (#72, #73) were fully implemented but never closed. Future triage should cross-check the codebase before assuming issues are still open work.
+## Learnings
 
-### 2026-03-22: Issue #88 — Pipeline Conversation Context (Investigation & Triage)
+- Issue #103 is a bounded follow-up to the #92 / PR #97 hybrid handoff design: only `buildEditorPreviousReviews()` should gain a cap, and the runtime shared handoff must stay newest-first and summary-only.
+- Preserve the existing adv-stage/context-config behavior from #92 / PR #97; the follow-up should not reintroduce raw shared transcript injection or change stage routing.
+- Useful review anchors for this issue are `src/pipeline/conversation.ts` and `tests/pipeline/conversation.test.ts`, with `src/pipeline/actions.ts` only needing verification that the current editor-review artifact still flows through unchanged.
+- Issue #103 validated the safer prompt-history pattern for editor self-review: when limiting conversation history, query newest-first before applying the cap, then keep the formatter bounded and deterministic as a second guard.
+- Issue #108 should stay a post-stage retrospective artifact/process rather than becoming a new numbered pipeline stage; `src/types.ts` hard-codes stages `1..8`, so stage expansion would create avoidable cross-surface churn in the dashboard, scheduler, MCP layer, and tests.
+- For article-level retrospectives, keep the human-readable markdown separate from structured DB findings: store one article-linked retrospective plus queryable per-finding rows/records so later cross-article analysis can aggregate churn causes and next-time actions without parsing blobs.
 
-**By:** Lead (🏗️)
+### 2026-03-22T20:05:00Z: Issue #93 PR topology review
 
-**What:** Created comprehensive GitHub issue (#88) for a 4-phase feature to add persistent per-article conversation history and agent context reuse across revision cycles.
+- For issue-board triage, combine GitHub PR metadata with local `git worktree list`, `git branch -vv`, `git merge-base`, and `git cherry` before treating competing PRs as independent options.
+- Direct, clean branches for this batch were backed by dedicated local worktrees: `C:\github\nfl-eval-issue92` (`code/issue-92-hybrid-context`), `C:\github\nfl-eval\worktrees\issue93-token-usage` (`code/issue-93-token-usage`), `C:\github\nfl-eval\.worktrees\issue93-clean` (`code/issue-93-article-usage-fix`), and `C:\github\nfl-eval\.worktrees\issue93` (`code/issue-93-article-page-usage`).
+- The repo root worktree `C:\github\nfl-eval` is on the reused branch `ux/issue-93-copilot-usage`, which is ahead of `origin/ux/issue-93-copilot-usage` by local maintenance commits and shares the same remote head across PRs #98 and #100.
+- Same-head multi-base PRs are a strong warning sign: #100 was explicitly stacked on `code/issue-85-structured-knowledge`, while #98 pointed the same head at `main`, dragging duplicate #85 ancestry because #85 merged to `main` through different commit history.
+- Practical Lead heuristic: when one issue has several open PRs, prefer a single canonical PR that is `main`-based, mergeable clean, and backed by a dedicated worktree; retarget or close reused/stale head branches and narrower superseded alternatives.
 
-**Investigation Findings:**
-- **Current revision flow (actions.ts lines 605-850):** Detects revision by checking if `editor-review.md` exists, includes current editor feedback in writer prompt, but no multi-iteration history. When editor sends back REVISE, system regresses to stage 4 but rebuilds entire context from scratch on next writer call—losing the trail of "what did editor say in iteration 1, 2, 3?"
-- **AgentRunner prompt composition (runner.ts lines 279-381):** Rebuilds system prompt from scratch on every call by loading charter, skills, and global agent memories. Messages array (lines 378-381) contains only `[system, user]`—no conversation history. No per-article context stack mechanism.
-- **Database schema (schema.sql):** `editor_reviews` table tracks review number (line 169) but doesn't store full review text or context. `stage_runs` records execution metadata but not per-iteration agent context or conversation state. No table for "conversation thread" or "agent context stack" per article.
-- **Agent memory (src/agents/memory.ts):** Stores learnings globally by agent, not per-article. Recall doesn't prioritize article-specific context.
+### 2026-03-22T21:46:04Z: Issue #93 PR topology decision
 
-**Problem Statement:**
-1. Writer doesn't see editor's *previous* feedback—only current feedback
-2. Editor doesn't see its own prior reviews ("I already flagged this in iteration 1")
-3. Context re-injected on every call (re-reads panel discussion, draft, feedback, roster)—wastes ~30% of tokens per agent call
-4. No mechanism to maintain coherent feedback loops across iterations
+- The canonical PR choice for #93 should be recorded in the decisions inbox before board movement so future triage has a durable explanation for why stacked and reused branches were not treated as merge-ready.
+- When a reused branch still carries merged-through-other-history commits, the right triage action is retarget/rebase or close, not merge-by-default.
 
-**Proposed Solution (4 phases):**
-1. **Schema:** Add `article_conversations` (store per-article message history), `article_context_stack` (per-iteration context), `revision_summaries` (iteration outcomes)
-2. **Agent Runner:** Accept `conversationHistory` parameter, pass full message chain to LLM Gateway instead of just system + user
-3. **Pipeline Actions:** Update `writeDraft()` and `runEditor()` to load/store conversation, build revision summary context block
-4. **Observability:** Add conversation view to dashboard, track iteration count, measure token savings
+### 2026-03-22T22:00:00Z: TLDR Enforcement Investigation
 
-**Scope:** Affects ALL agents and stages (writer, editor, publisher, future research agents)—not just editor pass.
+- **Architecture:** `src/pipeline/engine.ts` is the strongest enforcement point for structural constraints (`requireDraft` guard).
+- **Pattern:** Prefer deterministic code guards over LLM prompt instructions for non-negotiable format requirements (like TLDR blocks).
+- **Files:** `src/config/defaults/skills/substack-article.md` is the canonical source for article structure, but `writer.md` needs to explicitly reference key constraints to ensure compliance.
+- **Testing:** `tests/pipeline/engine.test.ts` is the place to verify pipeline transition logic.
 
-**Goals:**
-1. Improve article generation quality—coherent feedback across iterations
-2. Reduce revision count—better context → fewer back-and-forth cycles
-3. Reduce token usage—conversation history vs. re-injection saves ~30% per call
-4. Increase observability—see full revision history
+### 2026-03-22T22-07-35Z: Issue #104 review sync
+- Approved the `issue-104-usage-history` patch and recorded the review in `.squad/decisions.md`.
+- The residual risk remains the SQLite autoincrement `id` tie-breaker for same-second rows, which is acceptable for the current single-writer pattern.
 
-**Status:** Issue #88 created and triaged. Labeled `squad:lead,squad:code`. TLDR comment posted per team decision. Ready for architectural review before assignment.
+### 2026-03-22T22-09-11Z: Issue #103 review follow-through
+- Approved the cap-only follow-up for editor previous reviews and kept the scope bounded to the newest-first path.
+- Lead context now reflects that the runtime prompt-assembly fetch cap belongs with the bounded review history change.
 
-### 2026-03-22: Session Completion & Issue #88 Status
+### 2026-03-22T22-11-23Z: TLDR enforcement follow-through
+- Reinforced the recommended fix: enforce structure at the deterministic stage guard/shared validator layer, not only in prompt text.
+- Charter updates and regression tests remain the right companion changes for durable coverage.
 
-**Session context:** 7-agent spawn manifest completed. Code implemented 2 issues (#82 publish fix, #83 fact-check pipeline). Research/DevOps/UX completed investigations for issues #85, #83, #76, #70 — all labeled go:yes.
+### 2026-03-22T22:14:03Z: TLDR enforcement triage
 
-**Issue #88 status:** Created and triaged. Awaiting architectural review and PO decision on 4-phase approach before assignment.
+- Opened GitHub issue #107 (`Enforce TLDR article structure contract before editor approval`) for the durable fix path.
+- Confirmed the regression is normalized by fixtures today: `src/llm/providers/mock.ts` returns a TLDR-less draft and permissive editor approval, so current pipeline tests do not catch the missing structure.
+- Recommended implementation scope for Code: align Writer/Editor/Publisher references to `src/config/defaults/skills/substack-article.md`, add stage-level draft-structure validation plus targeted Writer retry/send-back behavior, and update mock/test coverage under `tests/pipeline/` and `tests/llm/`.
 
-### 2026-03-22: Issue #85 Scope Split — Runtime Integration and Refresh Deferred
+### 2026-03-22T22:25:00Z: Dashboard revisions + thinking visibility triage
 
-**By:** Lead (🏗️)
+- Opened GitHub issue #109 (`Dashboard article detail: surface revision history and persisted thinking traces`) for the durable article-detail follow-up.
+- Confirmed revision history is already persisted in `article_conversations` and `revision_summaries` (`src/pipeline/conversation.ts`), but the article detail page does not hydrate either store today.
+- Confirmed the current `Editor Reviews` section in `src/dashboard/views/article.ts` is backed by the legacy `editor_reviews` metadata table, while the live pipeline path in `src/pipeline/actions.ts` writes full writer/editor iteration content to the conversation tables instead.
+- Confirmed persisted `*.thinking.md` sidecars remain the authoritative current debug source (`writeAgentResult()` in `src/pipeline/actions.ts`), but `renderArtifactContent()` only extracts inline `<think>` / `<reasoning>` blocks and does not auto-pair the companion sidecar with the main artifact view.
+- Recommended implementation path: one article-detail observability pass across `src/dashboard/server.ts` and `src/dashboard/views/article.ts` that surfaces revision history from existing conversation data and restores clear, collapsible thinking visibility; treat historical per-iteration thinking as a separate follow-up only if versioned persistence is later required.
 
-**What:** Joe explicitly narrowed `#85` to Phases 1-3 plus docs/testing (Phase 6). Created follow-up issue `#91` to hold the deferred Phase 4 runtime integration work and Phase 5 monthly refresh automation.
+### 2026-03-22T22:32:05Z: Scribe orchestration sync — article visibility audit
 
-**Phases deferred to #91:**
-- **Phase 4:** Load glossaries in `src/agents/runner.ts`, generate/inject `team-identity.md` from `src/pipeline/actions.ts`, and route that artifact through `src/pipeline/context-config.ts` so runtime prompts actually receive the new knowledge assets.
-- **Phase 5:** Add `scripts/refresh-domain-knowledge.ts` plus scheduled workflow automation and refresh audit logging so glossary/index facts can be kept current without manual edits.
+- Scribe recorded the lead triage and retry runs in `.squad/orchestration-log/` and captured the article visibility audit in `.squad/log/`.
+- No inbox files were present, so no decision merge or archive rollover was needed.
+- Keep the dashboard fix framed as one observability pass while preserving the revision-history and thinking/debug seams.
 
-**Pattern to reuse:** When a multi-phase architecture issue is intentionally narrowed midstream, keep the active issue tightly scoped to the approved phases, create a separate linked backlog issue for the deferred phases, and leave a short TL;DR comment on the parent issue so future implementers do not blur the boundaries.
-
-### 2026-03-22T18-23-26Z: Issue #85 decision sync
-- Scribe completed the decision inbox merge, archived old decision history, and logged the session/orchestration notes.
-- The active #85 record now stays centered on static KB assets and their validation surface.
-- Deferred runtime integration remains outside the current scope boundary.
+### 2026-03-22T22:18:04Z: TLDR / retrospective decision merge
+- Merged the TLDR contract decision and the post-revision retrospective scope note into the canonical decision log.
+- Keep the TLDR gate deterministic and the retrospective post-stage with structured persistence.

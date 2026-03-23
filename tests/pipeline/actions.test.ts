@@ -14,20 +14,27 @@ import { PipelineAuditor } from '../../src/pipeline/audit.js';
 import { AgentRunner } from '../../src/agents/runner.js';
 import { AgentMemory } from '../../src/agents/memory.js';
 import { LLMGateway } from '../../src/llm/gateway.js';
+import type { LLMProvider, ChatRequest, ChatResponse } from '../../src/llm/gateway.js';
 import { StubProvider } from '../../src/llm/providers/stub.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 import type { AppConfig } from '../../src/config/index.js';
 import type { Stage } from '../../src/types.js';
+import { createApp } from '../../src/dashboard/server.js';
 
 import {
   STAGE_ACTIONS,
   executeTransition,
+  autoAdvanceArticle,
   resetContextConfigCache,
   recordAgentUsage,
   parsePanelComposition,
   type ActionContext,
   type PanelMember,
 } from '../../src/pipeline/actions.js';
+import {
+  addConversationTurn,
+  addRevisionSummary,
+} from '../../src/pipeline/conversation.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -65,7 +72,38 @@ interface TestFixtures {
   ctx: ActionContext;
 }
 
-function createFixtures(): TestFixtures {
+interface CreateFixturesOptions {
+  providers?: LLMProvider[];
+}
+
+class CopilotCLIUsageTestProvider implements LLMProvider {
+  readonly id = 'copilot-cli';
+  readonly name = 'Copilot CLI Usage Test Provider';
+
+  async chat(_request: ChatRequest): Promise<ChatResponse> {
+    return {
+      content: '# Discussion Prompt\n\n' + longText(220),
+      model: 'gpt-5.4',
+      provider: this.id,
+      usage: {
+        promptTokens: 1234,
+        completionTokens: 567,
+        totalTokens: 1801,
+      },
+      finishReason: 'stop',
+    };
+  }
+
+  listModels(): string[] {
+    return ['*'];
+  }
+
+  supportsModel(_model: string): boolean {
+    return true;
+  }
+}
+
+function createFixtures(options: CreateFixturesOptions = {}): TestFixtures {
   const tempDir = mkdtempSync(join(tmpdir(), 'nfl-actions-test-'));
   const articlesDir = join(tempDir, 'articles');
   const chartersDir = join(tempDir, 'charters');
@@ -91,7 +129,7 @@ function createFixtures(): TestFixtures {
   const policy = loadPolicy();
   const gateway = new LLMGateway({
     modelPolicy: policy,
-    providers: [new StubProvider()],
+    providers: options.providers ?? [new StubProvider()],
   });
   const runner = new AgentRunner({ gateway, memory, chartersDir, skillsDir });
 
@@ -365,6 +403,29 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-wd', 'draft.md')).toBeTruthy();
     });
+
+    it('passes hybrid handoff context to writer instead of the raw shared thread', async () => {
+      createArticleWithStage(fixtures, 'test-wd-handoff', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+      });
+      addConversationTurn(fixtures.repo, 'test-wd-handoff', 5, 'writer', 'assistant', 'First draft with a long explanatory middle.');
+      addConversationTurn(fixtures.repo, 'test-wd-handoff', 6, 'editor', 'assistant', '## Verdict\nREVISE\n\nCut the middle and sharpen the opening.');
+      addRevisionSummary(fixtures.repo, 'test-wd-handoff', 1, 6, 4, 'editor', 'REVISE', ['Sharpen the opening']);
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-handoff', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const writerCall = runSpy.mock.calls.find((call) => call[0].agentName === 'writer')?.[0];
+      expect(writerCall?.conversationContext).toContain('## Shared Article Handoff');
+      expect(writerCall?.conversationContext).toContain('## Your Previous Draft Continuity');
+      expect(writerCall?.conversationContext).not.toContain('### Conversation Thread');
+      expect(writerCall?.conversationContext).not.toContain('## Your Previous Reviews');
+      runSpy.mockRestore();
+    });
   });
 
   // ── runEditor (5→6) ──────────────────────────────────────────────────────
@@ -383,6 +444,30 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-re', 'editor-review.md')).toBeTruthy();
+    });
+
+    it('passes shared summary plus editor-local history to editor', async () => {
+      createArticleWithStage(fixtures, 'test-re-handoff', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': longText(1000),
+      });
+      addConversationTurn(fixtures.repo, 'test-re-handoff', 5, 'writer', 'assistant', 'Initial draft focused too much on cap.');
+      addConversationTurn(fixtures.repo, 'test-re-handoff', 6, 'editor', 'assistant', '## Verdict\nREVISE\n\nRebalance the article and fix one stale stat.');
+      addRevisionSummary(fixtures.repo, 'test-re-handoff', 1, 6, 4, 'editor', 'REVISE', ['Fix stale stat']);
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+      const result = await STAGE_ACTIONS.runEditor('test-re-handoff', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const editorCall = runSpy.mock.calls.find((call) => call[0].agentName === 'editor')?.[0];
+      expect(editorCall?.conversationContext).toContain('## Shared Article Handoff');
+      expect(editorCall?.conversationContext).toContain('## Your Previous Reviews');
+      expect(editorCall?.conversationContext).not.toContain('### Conversation Thread');
+      expect(editorCall?.conversationContext).not.toContain('## Your Previous Draft Continuity');
+      runSpy.mockRestore();
     });
   });
 
@@ -403,6 +488,31 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-rp', 'publisher-pass.md')).toBeTruthy();
+    });
+
+    it('passes only the shared handoff summary to publisher', async () => {
+      createArticleWithStage(fixtures, 'test-rp-handoff', 6 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': longText(1000),
+        'editor-review.md': '## Verdict\nAPPROVED\n\nLooks great.',
+      });
+      addConversationTurn(fixtures.repo, 'test-rp-handoff', 5, 'writer', 'assistant', 'Approved draft ready for production.');
+      addConversationTurn(fixtures.repo, 'test-rp-handoff', 6, 'editor', 'assistant', '## Verdict\nAPPROVED\n\nLooks great.');
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+      const result = await STAGE_ACTIONS.runPublisherPass('test-rp-handoff', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const publisherCall = runSpy.mock.calls.find((call) => call[0].agentName === 'publisher')?.[0];
+      expect(publisherCall?.conversationContext).toContain('## Shared Article Handoff');
+      expect(publisherCall?.conversationContext).not.toContain('## Your PreviousReviews');
+      expect(publisherCall?.conversationContext).not.toContain('## Your Previous Reviews');
+      expect(publisherCall?.conversationContext).not.toContain('## Your Previous Draft Continuity');
+      expect(publisherCall?.conversationContext).not.toContain('### Conversation Thread');
+      runSpy.mockRestore();
     });
   });
 
@@ -794,6 +904,49 @@ describe('Token usage recording', () => {
     expect(event.prompt_tokens).toBe(500);
     expect(event.output_tokens).toBe(200);
   });
+
+  it('persists copilot-cli stage usage and renders it on article pages', async () => {
+    const copilotFixtures = createFixtures({
+      providers: [new CopilotCLIUsageTestProvider()],
+    });
+
+    createArticleWithStage(copilotFixtures, 'test-copilot-persist', 1 as Stage, {
+      'idea.md': '# Great Idea\nAnalyze the Seahawks draft.',
+    });
+
+    try {
+      const result = await STAGE_ACTIONS.generatePrompt('test-copilot-persist', copilotFixtures.ctx);
+      expect(result.success).toBe(true);
+
+      const events = copilotFixtures.repo.getUsageEvents('test-copilot-persist');
+      expect(events).toHaveLength(1);
+      expect(events[0].provider).toBe('copilot-cli');
+      expect(events[0].model_or_tool).toBe('gpt-5.4');
+      expect(events[0].surface).toBe('generatePrompt');
+      expect(events[0].prompt_tokens).toBe(1234);
+      expect(events[0].output_tokens).toBe(567);
+
+      const app = createApp(copilotFixtures.repo, copilotFixtures.config);
+
+      const articleRes = await app.request('/articles/test-copilot-persist');
+      expect(articleRes.status).toBe(200);
+      const articleHtml = await articleRes.text();
+      expect(articleHtml).toContain('Token Usage');
+      expect(articleHtml).toContain('copilot-cli');
+      expect(articleHtml).toContain('gpt-5.4');
+
+      const sidebarRes = await app.request('/htmx/articles/test-copilot-persist/live-sidebar');
+      expect(sidebarRes.status).toBe(200);
+      const sidebarHtml = await sidebarRes.text();
+      expect(sidebarHtml).toContain('Token Usage');
+      expect(sidebarHtml).toContain('copilot-cli');
+      expect(sidebarHtml).toContain('gpt-5.4');
+    } finally {
+      copilotFixtures.memory.close();
+      copilotFixtures.repo.close();
+      rmSync(copilotFixtures.tempDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ── Fact-check preflight in writeDraft ──────────────────────────────────────
@@ -883,5 +1036,134 @@ describe('writeDraft fact-check preflight', () => {
     expect(fixtures.repo.artifacts.get('test-fc-skip', 'panel-factcheck.md')).toBeNull();
 
     runSpy.mockRestore();
+  });
+});
+
+describe('post-revision retrospective automation', () => {
+  let fixtures: TestFixtures;
+
+  beforeEach(() => {
+    fixtures = createFixtures();
+  });
+
+  afterEach(() => {
+    fixtures.memory.close();
+    fixtures.repo.close();
+    rmSync(fixtures.tempDir, { recursive: true, force: true });
+  });
+
+  function createPublisherReadyArticle(slug: string): void {
+    createArticleWithStage(fixtures, slug, 6 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': longText(1000),
+      'editor-review.md': '## Verdict\nAPPROVED\n\nReady for publisher pass.',
+    });
+  }
+
+  it('does not create a retrospective when revision_count is 0', async () => {
+    createPublisherReadyArticle('retro-zero');
+
+    const result = await autoAdvanceArticle('retro-zero', fixtures.ctx, { maxStage: 7 });
+
+    expect(result.finalStage).toBe(7);
+    expect(fixtures.repo.artifacts.get('retro-zero', 'revision-retrospective-r1.md')).toBeNull();
+    expect(fixtures.repo.getArticleRetrospectives('retro-zero')).toHaveLength(0);
+  });
+
+  it('creates one retrospective after a single revisioned completion path', async () => {
+    createPublisherReadyArticle('retro-one');
+    addConversationTurn(fixtures.repo, 'retro-one', 5, 'writer', 'assistant', 'Initial draft.');
+    addConversationTurn(fixtures.repo, 'retro-one', 6, 'editor', 'assistant', '## Verdict\nREVISE\n\nFix the EPA section.');
+    addRevisionSummary(
+      fixtures.repo,
+      'retro-one',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      ['Fix the EPA section'],
+      'Fix the EPA section before publish.',
+    );
+
+    const result = await autoAdvanceArticle('retro-one', fixtures.ctx, { maxStage: 7 });
+
+    expect(result.finalStage).toBe(7);
+    const artifact = fixtures.repo.artifacts.get('retro-one', 'revision-retrospective-r1.md');
+    expect(artifact).toContain('# Post-Revision Retrospective');
+    expect(artifact).toContain('Writer Perspective');
+    expect(artifact).toContain('Editor Perspective');
+    expect(artifact).toContain('Lead Perspective');
+
+    const retrospectives = fixtures.repo.getArticleRetrospectives('retro-one');
+    expect(retrospectives).toHaveLength(1);
+    expect(retrospectives[0].completion_stage).toBe(7);
+    expect(retrospectives[0].revision_count).toBe(1);
+    expect(JSON.parse(retrospectives[0].participant_roles)).toEqual(['editor', 'lead', 'writer']);
+
+    const findings = fixtures.repo.getRetrospectiveFindings(retrospectives[0].id);
+    expect(findings.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(findings.map((finding) => finding.role))).toEqual(new Set(['writer', 'editor', 'lead']));
+  });
+
+  it('captures multiple revisions and stays idempotent on rerun', async () => {
+    createPublisherReadyArticle('retro-multi');
+    addRevisionSummary(
+      fixtures.repo,
+      'retro-multi',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      ['Fix stale contract figures'],
+      'Fix stale contract figures.',
+    );
+    addRevisionSummary(
+      fixtures.repo,
+      'retro-multi',
+      2,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      ['Fix stale contract figures'],
+      'Fix stale contract figures and tighten the opening.',
+    );
+
+    await autoAdvanceArticle('retro-multi', fixtures.ctx, { maxStage: 7 });
+    await autoAdvanceArticle('retro-multi', fixtures.ctx, { maxStage: 7 });
+
+    const retrospectives = fixtures.repo.getArticleRetrospectives('retro-multi');
+    expect(retrospectives).toHaveLength(1);
+    expect(retrospectives[0].revision_count).toBe(2);
+
+    const findings = fixtures.repo.getRetrospectiveFindings(retrospectives[0].id);
+    expect(findings.some((finding) => finding.finding_text.includes('Fix stale contract figures'))).toBe(true);
+  });
+
+  it('marks force-approved completion paths in the retrospective', async () => {
+    createPublisherReadyArticle('retro-force');
+    fixtures.repo.artifacts.put(
+      'retro-force',
+      'editor-review.md',
+      '## Editor Review\n\n**Auto-approved after 3 revision cycles.** The editor requested further changes, but the maximum revision limit has been reached. The draft has been iteratively improved and is being moved forward.\n\n## Verdict\nAPPROVED',
+    );
+    addRevisionSummary(fixtures.repo, 'retro-force', 1, 6, 4, 'editor', 'REVISE', ['Fix stale stat'], 'Fix stale stat');
+    addRevisionSummary(fixtures.repo, 'retro-force', 2, 6, 4, 'editor', 'REVISE', ['Fix stale stat'], 'Fix stale stat again');
+    addRevisionSummary(fixtures.repo, 'retro-force', 3, 6, 4, 'editor', 'REVISE', ['Fix stale stat'], 'Fix stale stat once more');
+
+    const result = await autoAdvanceArticle('retro-force', fixtures.ctx, { maxStage: 7 });
+
+    expect(result.finalStage).toBe(7);
+    const retrospectives = fixtures.repo.getArticleRetrospectives('retro-force');
+    expect(retrospectives).toHaveLength(1);
+    expect(retrospectives[0].force_approved_after_max_revisions).toBe(1);
+
+    const artifact = fixtures.repo.artifacts.get('retro-force', 'revision-retrospective-r3.md');
+    expect(artifact).toContain('**Force-approved after max revisions:** Yes');
   });
 });

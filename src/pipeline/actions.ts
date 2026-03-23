@@ -27,7 +27,6 @@ import {
   getRevisionHistory,
   getRevisionCount,
   buildConversationContext,
-  buildEditorPreviousReviews,
 } from './conversation.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -57,6 +56,20 @@ export interface PanelMember {
   role: string;
 }
 
+interface RetrospectiveIssueSummary {
+  text: string;
+  count: number;
+  firstIteration: number;
+}
+
+interface RetrospectiveFindingDraft {
+  role: 'writer' | 'editor' | 'lead';
+  findingType: 'churn_cause' | 'repeated_issue' | 'next_time_action' | 'process_improvement';
+  findingText: string;
+  sourceIteration?: number | null;
+  priority?: 'high' | 'medium' | 'low' | null;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function readArtifact(repo: Repository, articleId: string, filename: string): string {
@@ -69,6 +82,233 @@ function readArtifact(repo: Repository, articleId: string, filename: string): st
 
 function writeArtifact(repo: Repository, articleId: string, filename: string, content: string): void {
   repo.artifacts.put(articleId, filename, content);
+}
+
+function summarizeMarkdownLine(text: string | null | undefined, maxLength = 180): string | null {
+  if (!text) return null;
+  const normalized = text
+    .replace(/\r\n/g, '\n')
+    .replace(/^#+\s+/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return null;
+  if (normalized.length <= maxLength) return normalized;
+  return normalized.slice(0, maxLength).trimEnd() + '…';
+}
+
+function parseRevisionIssues(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeIssueKey(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function collectRevisionIssues(
+  revisions: ReturnType<typeof getRevisionHistory>,
+): RetrospectiveIssueSummary[] {
+  const issues = new Map<string, RetrospectiveIssueSummary>();
+
+  for (const revision of revisions) {
+    const candidates = [
+      ...parseRevisionIssues(revision.key_issues),
+      summarizeMarkdownLine(revision.feedback_summary, 160),
+    ].filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+
+    for (const candidate of candidates) {
+      const key = normalizeIssueKey(candidate);
+      if (!key) continue;
+      const existing = issues.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        issues.set(key, {
+          text: candidate,
+          count: 1,
+          firstIteration: revision.iteration,
+        });
+      }
+    }
+  }
+
+  return [...issues.values()].sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.firstIteration - b.firstIteration;
+  });
+}
+
+function detectForceApprovedAfterMaxRevisions(repo: Repository, articleId: string): boolean {
+  const editorReview = repo.artifacts.get(articleId, 'editor-review.md') ?? '';
+  return /Auto-approved after \d+ revision cycles/i.test(editorReview);
+}
+
+function buildPostRevisionRetrospective(
+  repo: Repository,
+  articleId: string,
+): {
+  artifactName: string;
+  artifactContent: string;
+  overallSummary: string;
+  revisionCount: number;
+  completionStage: number;
+  forceApprovedAfterMaxRevisions: boolean;
+  participantRoles: Array<'writer' | 'editor' | 'lead'>;
+  findings: RetrospectiveFindingDraft[];
+} | null {
+  const article = repo.getArticle(articleId);
+  if (!article) return null;
+
+  const revisions = getRevisionHistory(repo, articleId);
+  if (revisions.length === 0) return null;
+
+  const revisionCount = revisions.length;
+  const completionStage = 7;
+  const forceApprovedAfterMaxRevisions = detectForceApprovedAfterMaxRevisions(repo, articleId);
+  const issueSummaries = collectRevisionIssues(revisions);
+  const primaryIssue = issueSummaries[0]?.text ?? 'editor feedback landed late in the loop';
+  const repeatedIssues = issueSummaries.filter((issue) => issue.count > 1);
+  const repeatedIssueSummary = repeatedIssues.length > 0
+    ? repeatedIssues.map((issue) => issue.text).join('; ')
+    : primaryIssue;
+  const latestRevision = revisions[revisions.length - 1];
+
+  const findings: RetrospectiveFindingDraft[] = [
+    {
+      role: 'writer',
+      findingType: 'churn_cause',
+      findingText: `The draft needed ${revisionCount} revision cycle(s) because the first pass did not fully address ${primaryIssue}.`,
+      sourceIteration: issueSummaries[0]?.firstIteration ?? latestRevision.iteration,
+      priority: revisionCount > 1 ? 'high' : 'medium',
+    },
+    {
+      role: 'writer',
+      findingType: 'next_time_action',
+      findingText: `Before handing the draft to the editor, run a writer self-check that explicitly verifies ${primaryIssue}.`,
+      sourceIteration: latestRevision.iteration,
+      priority: 'medium',
+    },
+    {
+      role: 'editor',
+      findingType: 'repeated_issue',
+      findingText: repeatedIssues.length > 0
+        ? `The same concerns repeated across iterations: ${repeatedIssueSummary}.`
+        : `The revision loop concentrated on one dominant concern: ${repeatedIssueSummary}.`,
+      sourceIteration: repeatedIssues[0]?.firstIteration ?? latestRevision.iteration,
+      priority: repeatedIssues.length > 0 ? 'high' : 'medium',
+    },
+    {
+      role: 'editor',
+      findingType: 'next_time_action',
+      findingText: `Future editor passes should convert must-fix items into a tighter first-pass checklist so ${primaryIssue} is surfaced sooner.`,
+      sourceIteration: latestRevision.iteration,
+      priority: 'medium',
+    },
+    {
+      role: 'lead',
+      findingType: 'churn_cause',
+      findingText: forceApprovedAfterMaxRevisions
+        ? `The article hit the revision cap and was force-approved, which signals unresolved churn around ${primaryIssue}.`
+        : `The workflow reached Stage 7 only after ${revisionCount} revision cycle(s), showing that ${primaryIssue} was not closed early enough.`,
+      sourceIteration: latestRevision.iteration,
+      priority: forceApprovedAfterMaxRevisions ? 'high' : 'medium',
+    },
+    {
+      role: 'lead',
+      findingType: 'process_improvement',
+      findingText: `Add a bounded pre-editor checkpoint for ${primaryIssue} and reuse the revision summary history before the next similar article enters Stage 6.`,
+      sourceIteration: issueSummaries[0]?.firstIteration ?? latestRevision.iteration,
+      priority: 'medium',
+    },
+  ];
+
+  const overallSummary = forceApprovedAfterMaxRevisions
+    ? `Article completed the Stage 7 publisher handoff after ${revisionCount} revision cycle(s). The main churn centered on ${primaryIssue}, and the final handoff required a force-approval after the max revision limit.`
+    : `Article completed the Stage 7 publisher handoff after ${revisionCount} revision cycle(s). The main churn centered on ${primaryIssue}, with repeated fixes focused on ${repeatedIssueSummary}.`;
+
+  const artifactName = `revision-retrospective-r${revisionCount}.md`;
+  const evidence = revisions.map((revision) => {
+    const issueList = parseRevisionIssues(revision.key_issues);
+    const detail = issueList.length > 0
+      ? issueList.join('; ')
+      : summarizeMarkdownLine(revision.feedback_summary, 180) ?? 'No structured issue text recorded.';
+    return `- Iteration ${revision.iteration}: ${detail}`;
+  }).join('\n');
+
+  const artifactContent = [
+    '# Post-Revision Retrospective',
+    '',
+    `- **Article:** ${article.title} (\`${articleId}\`)`,
+    `- **Completion stage:** Stage ${completionStage} — ${STAGE_NAMES[completionStage as Stage]}`,
+    `- **Revision count:** ${revisionCount}`,
+    `- **Force-approved after max revisions:** ${forceApprovedAfterMaxRevisions ? 'Yes' : 'No'}`,
+    '',
+    '## Overall Summary',
+    overallSummary,
+    '',
+    '## Writer Perspective (synthesized from revision summaries and final artifacts)',
+    `- **Why churn happened:** ${findings[0].findingText}`,
+    `- **Next time:** ${findings[1].findingText}`,
+    '',
+    '## Editor Perspective (synthesized from revision summaries and final artifacts)',
+    `- **What repeated:** ${findings[2].findingText}`,
+    `- **Next time:** ${findings[3].findingText}`,
+    '',
+    '## Lead Perspective (synthesized from revision summaries and final artifacts)',
+    `- **Why churn persisted:** ${findings[4].findingText}`,
+    `- **Process improvement:** ${findings[5].findingText}`,
+    '',
+    '## Revision Evidence',
+    evidence,
+  ].join('\n');
+
+  return {
+    artifactName,
+    artifactContent,
+    overallSummary,
+    revisionCount,
+    completionStage,
+    forceApprovedAfterMaxRevisions,
+    participantRoles: ['writer', 'editor', 'lead'],
+    findings,
+  };
+}
+
+export function recordPostRevisionRetrospectiveIfEligible(
+  repo: Repository,
+  articleId: string,
+): boolean {
+  const retrospective = buildPostRevisionRetrospective(repo, articleId);
+  if (!retrospective) return false;
+
+  repo.artifacts.put(articleId, retrospective.artifactName, retrospective.artifactContent);
+  repo.saveArticleRetrospective({
+    articleId,
+    completionStage: retrospective.completionStage,
+    revisionCount: retrospective.revisionCount,
+    forceApprovedAfterMaxRevisions: retrospective.forceApprovedAfterMaxRevisions,
+    participantRoles: retrospective.participantRoles,
+    overallSummary: retrospective.overallSummary,
+    artifactName: retrospective.artifactName,
+    findings: retrospective.findings.map((finding) => ({
+      role: finding.role,
+      findingType: finding.findingType,
+      findingText: finding.findingText,
+      sourceIteration: finding.sourceIteration ?? null,
+      priority: finding.priority ?? null,
+    })),
+  });
+
+  return true;
 }
 
 /** Save agent result: main artifact + separate thinking trace if present. */
@@ -627,10 +867,12 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       content = content + '\n\n## Previous Draft (REVISE this — do not start over)\n' + previousDraft;
     }
 
-    // Build conversation context: revision history + prior agent interactions
+    // Build role-aware handoff context instead of injecting the full shared transcript.
     const conversationTurns = getArticleConversation(ctx.repo, articleId);
     const revisions = getRevisionHistory(ctx.repo, articleId);
-    const conversationCtx = buildConversationContext(conversationTurns, revisions);
+    const conversationCtx = buildConversationContext(conversationTurns, revisions, {
+      activeAgent: 'writer',
+    });
 
     // If this is a revision and editor feedback exists, record it as a conversation turn
     // (only if not already recorded — check by looking for recent editor turns)
@@ -721,19 +963,18 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       content = content + '\n\n---\n\n' + factCheckArtifact;
     }
 
-    // Build conversation context: full article history + editor's own previous reviews
+    // Build compact shared handoff context plus editor-local review continuity.
     const conversationTurns = getArticleConversation(ctx.repo, articleId);
     const revisions = getRevisionHistory(ctx.repo, articleId);
-    const conversationCtx = buildConversationContext(conversationTurns, revisions);
-    const editorTurns = getArticleConversation(ctx.repo, articleId, { agentName: 'editor' });
-    const editorPreviousReviews = buildEditorPreviousReviews(editorTurns);
-    const fullConversationCtx = [conversationCtx, editorPreviousReviews].filter(Boolean).join('\n\n---\n\n') || undefined;
+    const conversationCtx = buildConversationContext(conversationTurns, revisions, {
+      activeAgent: 'editor',
+    }) || undefined;
 
     const result = await ctx.runner.run({
       agentName: 'editor',
       task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
       skills: ['editor-review'],
-      conversationContext: fullConversationCtx,
+      conversationContext: conversationCtx,
       articleContext: {
         slug: articleId,
         title: article.title,
@@ -812,10 +1053,12 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
       ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
       : null;
 
-    // Build conversation context so the publisher sees the full revision journey
+    // Build compact shared handoff context so Publisher gets only what it needs.
     const conversationTurns = getArticleConversation(ctx.repo, articleId);
     const revisions = getRevisionHistory(ctx.repo, articleId);
-    const conversationCtx = buildConversationContext(conversationTurns, revisions) || undefined;
+    const conversationCtx = buildConversationContext(conversationTurns, revisions, {
+      activeAgent: 'publisher',
+    }) || undefined;
 
     const result = await ctx.runner.run({
       agentName: 'publisher',
@@ -1284,6 +1527,10 @@ export async function autoAdvanceArticle(
   }
 
   current = repo.getArticle(articleId)!;
+  if (current.current_stage >= 7) {
+    recordPostRevisionRetrospectiveIfEligible(repo, articleId);
+  }
+
   return {
     steps,
     finalStage: current.current_stage,

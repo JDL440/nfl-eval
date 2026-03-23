@@ -85,6 +85,65 @@ gh project field-list 1 --owner JDL440 --format json
 4. **ALWAYS** tag @JDL440 in comments when moving to "Pending User"
 5. Archive "Done" issues after 7 days (Ralph handles this automatically)
 
+## Ralph Monitoring Patterns
+
+### Board drift reconciliation
+
+If an issue is already closed or its linked PR is already merged, do not leave the project item in `Todo` or `In Progress`.
+
+1. Verify the issue state and linked PR state.
+2. Move the project item to `Done` immediately.
+3. Remove stale blocker labels like `pending-user` if the work is actually complete.
+
+### Competing PR fan-out for one issue
+
+If one issue has multiple open PRs at the same time:
+
+1. Post a `TLDR:` issue comment that names the candidate PRs and the reason the queue is ambiguous.
+2. Move the issue to `Pending User` rather than `For Review`.
+3. Keep it there until one PR is selected as the canonical path and the redundant PRs are closed.
+
+### Owner follow-up after review started
+
+If an issue or linked PR is already in `For Review` and the owner asks a new blocking question:
+
+1. Treat that as active work again, not passive review wait.
+2. Post a `TLDR:` comment noting the question and the board correction.
+3. Move the project item back to `In Progress` until the author responds or updates the PR.
+
+### Overlapping auto-triage on new issues
+
+If a newly opened squad issue picks up conflicting `squad:*` labels from overlapping automation passes or never makes it onto the project board:
+
+1. Treat the workflow that matched the issue domain as authoritative, and remove the stray `squad:*` label(s).
+2. Add the issue to the project immediately and set its first board status explicitly (usually `Todo` unless work already started).
+3. Post a `TLDR:` issue comment describing the cleanup and naming the resulting board status.
+
+### Investigation completed, implementation slice not chosen
+
+If an issue has research/investigation comments but no active PR and no narrowed first implementation slice:
+
+1. Do not leave it in `In Progress`.
+2. Post a `TLDR:` comment that the issue now needs a scope choice from the owner.
+3. Add/keep `pending-user` and move the project item to `Pending User`.
+
+### Reviewed and verified PRs
+
+If a PR has already been reviewed and verified:
+
+1. Treat it as merge-ready work during the sweep; do not wait for an extra nudge.
+2. Merge it, then move the linked issue/project item to `Done` if the work is actually complete.
+3. If the review or merge reveals additional work, create or confirm a follow-up GitHub issue so the queue stays explicit.
+
+### Canonical PR chosen from a competing cluster
+
+If several PRs exist for one issue and a clear winner is now merge-ready:
+
+1. Merge the canonical PR.
+2. Close the redundant or superseded PRs immediately with a short `TLDR:` explanation.
+3. Convert any non-blocking review notes from the winning PR into tracked follow-up issues instead of leaving them buried in PR comments.
+4. Re-check issue and PR state before each action because another sweep or user action may already have merged or closed one of them.
+
 ## Labels
 
 | Label | Purpose |

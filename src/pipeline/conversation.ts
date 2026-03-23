@@ -1,8 +1,9 @@
 /**
- * conversation.ts — Per-article conversation context and revision history.
+ * conversation.ts — Per-article conversation persistence and handoff shaping.
  *
- * All agents working on the same article share one conversation thread.
- * Each entry is tagged with the agent name and pipeline stage.
+ * All agents working on the same article share one stored conversation thread,
+ * but runtime prompt injection should prefer compact role-aware handoff summaries
+ * over the raw shared transcript.
  */
 
 import type { Repository } from '../db/repository.js';
@@ -34,10 +35,22 @@ export interface RevisionSummary {
   created_at: string;
 }
 
+export interface RevisionHistoryEntry {
+  revision: RevisionSummary;
+  writerTurn: ConversationTurn | null;
+  editorTurn: ConversationTurn | null;
+  keyIssues: string[];
+}
+
 export interface GetConversationOptions {
   sinceStage?: number;
   agentName?: string;
   limit?: number;
+}
+
+export interface BuildConversationContextOptions {
+  activeAgent?: 'writer' | 'editor' | 'publisher' | string;
+  localHistoryLimit?: number;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -45,6 +58,72 @@ export interface GetConversationOptions {
 /** Rough token estimate: ~4 chars per token. */
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+function summarizeText(text: string, maxLength = 280): string {
+  const normalized = text
+    .replace(/\r\n/g, '\n')
+    .replace(/^#+\s+/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (normalized.length <= maxLength) return normalized;
+  return normalized.slice(0, maxLength).trimEnd() + '…';
+}
+
+function parseKeyIssues(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function extractVerdictFromContent(content: string): 'APPROVED' | 'REVISE' | 'REJECT' | null {
+  const verdictBlock = content.match(/##\s*Verdict\s+([A-Z]+)/i);
+  if (!verdictBlock) return null;
+  const verdict = verdictBlock[1].toUpperCase();
+  return verdict === 'APPROVED' || verdict === 'REVISE' || verdict === 'REJECT'
+    ? verdict
+    : null;
+}
+
+function normalizeRevisionOutcome(outcome: string): 'APPROVED' | 'REVISE' | 'REJECT' | null {
+  const verdict = outcome.toUpperCase();
+  if (verdict === 'APPROVE') return 'APPROVED';
+  return verdict === 'APPROVED' || verdict === 'REVISE' || verdict === 'REJECT'
+    ? verdict
+    : null;
+}
+
+function findLatestTurn(turns: ConversationTurn[], agentName: string): ConversationTurn | null {
+  for (let i = turns.length - 1; i >= 0; i -= 1) {
+    if (turns[i].agent_name === agentName) return turns[i];
+  }
+  return null;
+}
+
+function buildAgentLocalHistory(
+  heading: string,
+  turns: ConversationTurn[],
+  maxLength: number,
+): string {
+  if (turns.length === 0) return '';
+
+  const parts: string[] = [heading];
+  for (const turn of turns) {
+    const stageLabel = STAGE_LABELS[turn.stage] ?? `Stage ${turn.stage}`;
+    parts.push(
+      `### ${stageLabel} (turn ${turn.turn_number})\n${summarizeText(turn.content, maxLength)}`,
+    );
+  }
+
+  return parts.join('\n\n');
 }
 
 // ── Conversation functions ──────────────────────────────────────────────────
@@ -172,6 +251,46 @@ export function getRevisionCount(
   return row.count;
 }
 
+/**
+ * Join revision summaries with the writer/editor turns that produced each loop.
+ * This powers dashboard history views without adding new persistence tables.
+ */
+export function buildRevisionHistoryEntries(
+  turns: ConversationTurn[],
+  revisions: RevisionSummary[],
+): RevisionHistoryEntry[] {
+  let previousEditorTurnNumber = 0;
+
+  return revisions.map((revision) => {
+    const normalizedOutcome = normalizeRevisionOutcome(revision.outcome);
+    const candidateEditorTurns = turns.filter(turn =>
+      turn.agent_name === revision.agent_name
+      && turn.turn_number > previousEditorTurnNumber,
+    );
+    const editorTurn = candidateEditorTurns.find(turn =>
+      normalizedOutcome != null && extractVerdictFromContent(turn.content) === normalizedOutcome,
+    ) ?? candidateEditorTurns[0] ?? null;
+
+    const writerCandidates = turns.filter(turn =>
+      turn.agent_name === 'writer'
+      && turn.turn_number > previousEditorTurnNumber
+      && turn.turn_number < (editorTurn?.turn_number ?? Number.POSITIVE_INFINITY),
+    );
+    const writerTurn = writerCandidates[writerCandidates.length - 1] ?? null;
+
+    if (editorTurn) {
+      previousEditorTurnNumber = editorTurn.turn_number;
+    }
+
+    return {
+      revision,
+      writerTurn,
+      editorTurn,
+      keyIssues: parseKeyIssues(revision.key_issues),
+    };
+  });
+}
+
 // ── Context formatting ──────────────────────────────────────────────────────
 
 /** Stage name lookup for formatting. */
@@ -187,50 +306,89 @@ const STAGE_LABELS: Record<number, string> = {
 };
 
 /**
- * Build a formatted markdown context block from conversation history.
- * Designed for injection into the user message (works with all LLM providers).
+ * Build a compact, role-aware conversation context block.
+ * Designed for injection into the user message without exposing the full shared transcript.
  */
 export function buildConversationContext(
   turns: ConversationTurn[],
   revisions: RevisionSummary[],
+  options: BuildConversationContextOptions = {},
 ): string {
   if (turns.length === 0 && revisions.length === 0) return '';
 
-  const parts: string[] = ['## Article Conversation History'];
+  const activeAgent = options.activeAgent;
+  const localHistoryLimit = options.localHistoryLimit ?? 2;
+  const latestTurn = turns[turns.length - 1] ?? null;
+  const latestRevision = revisions[revisions.length - 1] ?? null;
+  const latestWriterTurn = findLatestTurn(turns, 'writer');
+  const latestEditorTurn = findLatestTurn(turns, 'editor');
+  const latestPublisherTurn = findLatestTurn(turns, 'publisher');
+  const latestEditorVerdict = latestEditorTurn
+    ? extractVerdictFromContent(latestEditorTurn.content)
+    : null;
 
-  // Revision summary section
-  if (revisions.length > 0) {
-    parts.push('### Revision Summary');
-    for (const rev of revisions) {
-      const fromLabel = STAGE_LABELS[rev.from_stage] ?? `Stage ${rev.from_stage}`;
-      const toLabel = STAGE_LABELS[rev.to_stage] ?? `Stage ${rev.to_stage}`;
-      parts.push(`**Iteration ${rev.iteration}** (${fromLabel} → ${toLabel}): ${rev.outcome}`);
-      if (rev.feedback_summary) {
-        parts.push(`> ${rev.feedback_summary}`);
-      }
-      if (rev.key_issues) {
-        try {
-          const issues = JSON.parse(rev.key_issues) as string[];
-          if (issues.length > 0) {
-            parts.push('Key issues: ' + issues.map(i => `• ${i}`).join(' '));
-          }
-        } catch { /* ignore parse errors */ }
-      }
-    }
-    parts.push('');
+  let readiness = 'No downstream handoff recorded yet.';
+  if (latestPublisherTurn) {
+    readiness = 'Publisher pass has already been recorded.';
+  } else if (latestEditorVerdict === 'APPROVED') {
+    readiness = 'Editor approved the draft; ready for publisher pass.';
+  } else if (latestEditorVerdict === 'REVISE') {
+    readiness = 'Editor requested a revision before publish.';
+  } else if (latestEditorVerdict === 'REJECT') {
+    readiness = 'Editor rejected the draft; substantial rewrite or re-research is required.';
+  } else if (latestEditorTurn) {
+    readiness = 'Editor feedback exists, but the latest verdict was not parsed.';
+  } else if (latestWriterTurn) {
+    readiness = 'A draft exists and is ready for editor review.';
   }
 
-  // Conversation turns section
-  if (turns.length > 0) {
-    parts.push('### Conversation Thread');
-    for (const turn of turns) {
-      const stageLabel = STAGE_LABELS[turn.stage] ?? `Stage ${turn.stage}`;
-      // Truncate very long content to keep context manageable
-      const preview = turn.content.length > 2000
-        ? turn.content.slice(0, 2000) + '\n[... truncated ...]'
-        : turn.content;
-      parts.push(`**[${turn.agent_name}]** (${stageLabel}, turn ${turn.turn_number}):\n${preview}`);
-    }
+  const latestIssues = latestRevision ? parseKeyIssues(latestRevision.key_issues) : [];
+  const parts: string[] = ['## Shared Article Handoff'];
+  const snapshotLines = [
+    latestTurn
+      ? `- Latest pipeline activity: ${latestTurn.agent_name} at ${STAGE_LABELS[latestTurn.stage] ?? `Stage ${latestTurn.stage}`}`
+      : '- Latest pipeline activity: none recorded',
+    `- Revision iterations recorded: ${revisions.length}`,
+    latestRevision
+      ? `- Latest revision loop: Iteration ${latestRevision.iteration} (${STAGE_LABELS[latestRevision.from_stage] ?? `Stage ${latestRevision.from_stage}`} → ${STAGE_LABELS[latestRevision.to_stage] ?? `Stage ${latestRevision.to_stage}`})`
+      : '- Latest revision loop: none recorded',
+    `- Publish readiness: ${readiness}`,
+  ];
+  parts.push('### Workflow Snapshot\n' + snapshotLines.join('\n'));
+
+  const issueLines = latestIssues.length > 0
+    ? latestIssues.map((issue) => `- ${issue}`)
+    : [];
+  if (latestRevision?.feedback_summary) {
+    issueLines.push(`- ${summarizeText(latestRevision.feedback_summary, 240)}`);
+  }
+  if (issueLines.length === 0) {
+    issueLines.push('- No structured must-fix items are currently recorded.');
+  }
+  parts.push('### Open Must-Fix Items\n' + issueLines.join('\n'));
+
+  const handoffLines: string[] = [];
+  if (latestWriterTurn) {
+    handoffLines.push(`- Writer: ${summarizeText(latestWriterTurn.content)}`);
+  }
+  if (latestEditorTurn) {
+    handoffLines.push(`- Editor: ${summarizeText(latestEditorTurn.content)}`);
+  }
+  if (latestPublisherTurn) {
+    handoffLines.push(`- Publisher: ${summarizeText(latestPublisherTurn.content)}`);
+  }
+  if (handoffLines.length > 0) {
+    parts.push('### Latest Role Handoffs\n' + handoffLines.join('\n'));
+  }
+
+  if (activeAgent === 'writer') {
+    const writerTurns = turns.filter((turn) => turn.agent_name === 'writer').slice(-localHistoryLimit);
+    const localHistory = buildAgentLocalHistory('## Your Previous Draft Continuity', writerTurns, 500);
+    if (localHistory) parts.push(localHistory);
+  } else if (activeAgent === 'editor') {
+    const editorTurns = turns.filter((turn) => turn.agent_name === 'editor').slice(-localHistoryLimit);
+    const localHistory = buildEditorPreviousReviews(editorTurns);
+    if (localHistory) parts.push(localHistory);
   }
 
   return parts.join('\n\n');
@@ -247,10 +405,9 @@ export function buildEditorPreviousReviews(
 
   const parts: string[] = ['## Your Previous Reviews'];
   for (const turn of editorTurns) {
-    const preview = turn.content.length > 1500
-      ? turn.content.slice(0, 1500) + '\n[... truncated ...]'
-      : turn.content;
-    parts.push(`### Review at Stage ${turn.stage} (turn ${turn.turn_number})\n${preview}`);
+    parts.push(
+      `### Review at Stage ${turn.stage} (turn ${turn.turn_number})\n${summarizeText(turn.content, 500)}`,
+    );
   }
 
   return parts.join('\n\n');

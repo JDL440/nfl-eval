@@ -89,6 +89,30 @@ export interface PublisherPass {
   no_stale_refs: number;
 }
 
+export interface ArticleRetrospective {
+  id: number;
+  article_id: string;
+  completion_stage: number;
+  revision_count: number;
+  force_approved_after_max_revisions: number;
+  participant_roles: string;
+  overall_summary: string;
+  artifact_name: string | null;
+  generated_at: string;
+  updated_at: string;
+}
+
+export interface ArticleRetrospectiveFinding {
+  id: number;
+  retrospective_id: number;
+  article_id: string;
+  role: string;
+  finding_type: string;
+  finding_text: string;
+  source_iteration: number | null;
+  priority: string | null;
+}
+
 // ── Validation constant arrays ───────────────────────────────────────────────
 
 export const VALID_STATUSES: readonly ArticleStatus[] = [

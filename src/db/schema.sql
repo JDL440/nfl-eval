@@ -312,6 +312,42 @@ CREATE TABLE IF NOT EXISTS revision_summaries (
 CREATE INDEX IF NOT EXISTS idx_revision_summaries_article
     ON revision_summaries(article_id, iteration);
 
+-- ─────────────────────────────────────────────
+-- ARTICLE RETROSPECTIVES
+-- Post-stage learnings captured after revisioned articles complete Stage 7.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS article_retrospectives (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id      TEXT NOT NULL,
+    completion_stage INTEGER NOT NULL,
+    revision_count  INTEGER NOT NULL,
+    force_approved_after_max_revisions INTEGER NOT NULL DEFAULT 0,
+    participant_roles TEXT NOT NULL,
+    overall_summary TEXT NOT NULL,
+    artifact_name   TEXT,
+    generated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(article_id, completion_stage, revision_count)
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_retrospectives_article
+    ON article_retrospectives(article_id, generated_at DESC);
+
+CREATE TABLE IF NOT EXISTS article_retrospective_findings (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    retrospective_id INTEGER NOT NULL,
+    article_id      TEXT NOT NULL,
+    role            TEXT NOT NULL,
+    finding_type    TEXT NOT NULL,
+    finding_text    TEXT NOT NULL,
+    source_iteration INTEGER,
+    priority        TEXT,
+    FOREIGN KEY (retrospective_id) REFERENCES article_retrospectives(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_retrospective_findings_parent
+    ON article_retrospective_findings(retrospective_id, role, finding_type);
+
 -- ── Charter edit history ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS charter_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
