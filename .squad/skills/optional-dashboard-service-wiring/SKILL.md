@@ -50,4 +50,10 @@ Ask these questions in order:
 
 ## Recommendation
 
-For this repo, wire optional dashboard integrations at startup using the same pattern every time: read env once, instantiate if the required vars exist, inject into `createApp(...)`, and log a non-fatal unavailable state. In UX, prefer an actionable unavailable/config state over a generic 500 whenever the condition is expected or operator-fixable.
+For this repo, keep optional dashboard integrations wired at startup, not hidden inside `createApp(...)`. Use a small helper such as `createSubstackServiceFromEnv()` inside `startServer()` to read env, instantiate the service only when required vars exist, log a non-fatal unavailable state, and pass the resolved service into `createApp(...)`. In UX, prefer an actionable unavailable/config state over a generic 500 whenever the condition is expected or operator-fixable.
+
+## Concrete example
+
+- `src/dashboard/server.ts` calls `createSubstackServiceFromEnv()` from `startServer()` and passes the result into `createApp(...)`.
+- Route tests keep explicit mock injection, so test/runtime wiring stays deterministic and `createApp(...)` does not silently pick up ambient env.
+- Keep one focused helper regression plus one HTMX publish-route regression proving missing config swaps an actionable fragment while non-HTMX callers still get JSON 500s.

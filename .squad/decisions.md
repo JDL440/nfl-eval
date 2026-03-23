@@ -1,7 +1,31 @@
-# Code Decision — Issue #118 Retrospective Finding Promotion
+# Code Decision — Wire Substack Startup
 
-**Date:** 2026-03-23  
+**Date:** 2026-03-25  
 **Owner:** Code  
+**Status:** ✅ IMPLEMENTED  
+
+## Decision
+
+Treat `SubstackService` as an optional dashboard runtime dependency that is resolved during normal startup from environment variables and then injected into `createApp(...)`.
+
+## Why
+
+- Publish routes already guard on dependency presence, so startup needs to own service construction instead of forcing route-level env lookups.
+- This preserves the improved HTMX recovery UI while fixing the real production path that previously never supplied `substackService`.
+- Explicitly injected services must still win so tests and alternate bootstraps remain deterministic.
+
+## Implementation Notes
+
+- `src/dashboard/server.ts` now exposes `createSubstackServiceFromEnv(...)` and `resolveDashboardDependencies(...)`.
+- `createApp(...)` uses the shared resolver, and `startServer()` logs whether Substack publishing is available after dependency resolution.
+- Focused regression coverage lives in `tests/dashboard/publish.test.ts`.
+
+---
+
+# Code Decision — Issue #118 Retrospective Finding Promotion (Revised)
+
+**Date:** 2026-03-23 (Revised 2026-03-25)  
+**Owner:** Code + Lead (replacement implementer)  
 **Status:** ✅ IMPLEMENTED  
 **Related:** Issue #117 (Retrospective Digest CLI), Issue #118 (Promotion logic)
 
@@ -20,12 +44,20 @@ Both candidate types include evidence, reason, and source fields for human revie
 - Evidence fields enable human judgment before any auto-issue creation in future phases
 - Clear, deterministic rules prevent ambiguity about which findings are promotion-ready
 
-## Implementation
+## Implementation (Original + Revision)
 
+### Original (Issue #118 v1)
 - `src/cli.ts`: Added `promoteIssueCandidates()` and `promoteLearningUpdates()` functions with evidence collection
 - `src/types.ts`: New shared types `IssueCandidate` and `LearningUpdate` with structured evidence/reason fields
 - `tests/cli.test.ts`: Focused coverage for both promotion pathways
 - Validation: `npm run v2:test` and `npm run v2:build` passing
+
+### Revision (Issue #118 fix — Lead implementation)
+- **Bug fixed:** Repeated `process_improvement` findings were not auto-promoting to issue-ready when author was non-Lead and priority was non-high.
+- **Root cause:** The approved rule uses "lead-authored OR repeated across 2+ articles" as a promotion signal, but implementation only applied repetition check to `churn_cause`/`repeated_issue` groups.
+- **Fix:** Added explicit repeated-`process_improvement` promotion check in `src/cli.ts` with clear reason string.
+- **Test coverage:** Focused regression test added for repeated writer-authored `process_improvement` across 2 articles with non-high priorities.
+- **Validation:** `npm run v2:test` (147/147) and `npm run v2:build` passing.
 
 **Key Files:** src/cli.ts, src/types.ts, tests/cli.test.ts, .squad/skills/manual-retro-digest-first/SKILL.md
 

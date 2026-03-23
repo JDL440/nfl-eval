@@ -22,6 +22,8 @@ tools: [view, rg, vitest]
    - Tell the user to restart if required.
    - Link to the dashboard page that confirms status (here: `/config`).
 3. Preserve backend error payloads unless there is a product reason to change API semantics.
+4. If the page can detect the missing dependency before the action fires, render the same recovery copy on the initial GET and disable the controls that would just fail.
+   - This is especially important for mixed HTMX + `fetch(...)` pages, where one code path may still expose a raw 500 string.
 
 ## Why It Works Here
 

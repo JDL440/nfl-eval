@@ -67,3 +67,5 @@ The application architecture supports passing `substackService` as optional depe
 **Code team action:** Implement SubstackService initialization. Reference code provided in decisions.md ("DevOps Decision — Substack Publishing 500 Error Root Cause").
 
 **Validation complete:** Environment variables verified, application architecture reviewed, implementation pattern documented.
+
+- 2026-03-25 — Accepted publish regression pattern: keep optional service wiring in `startServer()` via `createSubstackServiceFromEnv()`, and for HTMX draft/publish requests without Substack config return the swapped `renderPublishWorkflow()` fragment with setup guidance while non-HTMX callers still receive JSON 500s. Validation: `npx vitest run tests/dashboard/publish.test.ts --testNamePattern "createSubstackServiceFromEnv|returns an actionable HTMX message"` and `npm run v2:build`.

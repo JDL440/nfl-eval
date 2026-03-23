@@ -20,6 +20,7 @@
 ## Recent Learnings
 
 - 2026-03-25 — Dashboard Substack config triage: confirmed the missing `SubstackService` wiring in `startServer()` is the root cause, and that the route tests are not exercising the real startup path.
+- 2026-03-25 — Issue #118 promotion rule fix (Lead-implemented revision): repeated `process_improvement` findings must promote to issue-ready independent of author or priority. Added explicit repetition check to `promoteIssueCandidates()` with focused regression test. Validation passed (147/147 tests, build passing).
 - 2026-03-24 — Issue #117 digest CLI approved: keep the data seam read-only, group by role + finding_type, and dedupe normalized findings in TypeScript.
 - 2026-03-24 — Issue #107 validation refresh: canonical contract enforcement still passes, and the one-source TLDR/image policy remains the source of truth.
 - 2026-03-23 — Publish warning investigation: the Stage 7 warning copy is intentional when no draft exists; the recovery path is create draft, then publish.
@@ -29,3 +30,4 @@
 - 2026-03-23 — Issue #118 promotion layer: keep retrospective digest promotion read-only, emit disjoint process-improvement vs learning-update candidate arrays, and attach review evidence (`articleCount`, priorities, recency, sample articles, force-approval count) for manual follow-up.
 - 2026-03-25 — Optional dashboard services should resolve through a shared app-seam helper. `src/dashboard/server.ts` now uses `resolveDashboardDependencies()` so env-configured Substack publishing works even when callers only invoke `createApp(...)`.
 - 2026-03-25 — Preserve explicit dependency precedence over env fallback. This keeps `tests/dashboard/publish.test.ts` and any alternate runtime bootstrap deterministic while still fixing production startup wiring.
+- 2026-03-23 — Publish-page UX should preflight optional Substack availability on the initial GET render, not only after a failing POST. `src/dashboard/views/publish.ts` now shows the actionable config hint inline and disables publish/draft controls (including Publish All) when `src/dashboard/server.ts` has no `substackService`.

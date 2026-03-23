@@ -38,6 +38,15 @@
 - Review outcome: behavior fix is good, but the current diff is not a narrow hotfix. `src/dashboard/server.ts` and `tests/dashboard/server.test.ts` also carry broader publish-workflow, revision-history, and artifact-rendering changes, and there is still no direct regression test for `createSubstackServiceFromEnv()` / startup DI wiring.
 - **Status:** REJECTED pending narrowed scope and startup DI regression test.
 
+### 2026-03-25: Issue #118 retrospective promotion fix (Lead implementation)
+- Authorized as replacement implementer because original Code author was reviewer-locked for this revision cycle.
+- Fixed misclassification: repeated `process_improvement` findings were not auto-promoting to issue-ready when the author was not Lead and priority was not high.
+- Root cause: the approved rule uses "lead-authored OR repeated across 2+ articles" as a promotion signal, but implementation only checked repetition for `churn_cause`/`repeated_issue` groups with high priority.
+- Implementation: added explicit repeated-`process_improvement` check to `promoteIssueCandidates()` with reason string; added focused regression test for repeated writer-authored finding across 2 articles with non-high priorities.
+- Validation: `npm run v2:test` (147/147), `npm run v2:build` passing, Coordinator validation approved.
+- Status: ✅ COMPLETED and merged to decisions.md.
+
 ## Learnings
 
 - 2026-03-25 — Dashboard publish missing-config review: approve HTMX operator guidance only when draft/publish actions swap an inline recovery fragment with exact env vars and `/config` verification, but reject “scoped” fixes that bundle unrelated publish-flow changes. Relevant files: `src/dashboard/server.ts`, `src/dashboard/views/publish.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/server.test.ts`. Follow-up concern: keep a direct startup wiring regression around `createSubstackServiceFromEnv()` / dashboard DI so route-level config copy does not mask service-initialization regressions.
+- 2026-03-25 — Retrospective digest promotion rule: treat `process_improvement` findings as issue-ready when they are lead-authored or repeated across 2+ articles, independent of the higher-threshold churn/repeated-issue heuristic. Relevant files: `src/cli.ts`, `tests/cli.test.ts`, `.squad/decisions.md`, `.squad/skills/manual-retro-digest-first/SKILL.md`.
