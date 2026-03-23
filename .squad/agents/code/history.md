@@ -11,6 +11,7 @@
 ## Learnings
 
 - 2026-03-23 — PR #113 cleanup: Stage 7 manual publish readiness belongs to the dashboard action panel (`src/dashboard/views/article.ts`) and should key off `substack_draft_url`, with the regression anchored in `tests/dashboard/server.test.ts`.
+- 2026-03-23 — Issue #110 triage: article detail timing is already derivable from `stage_runs.started_at/completed_at` loaded by `repo.getStageRuns()` in `src/dashboard/server.ts`; total article time and per-stage retry/revision totals are dashboard aggregation/surfacing work in `src/dashboard/views/article.ts`, not a schema migration.
 - Team initialized 2025-07-18
 - Issue #92 writer revisions should receive the full latest `editor-review.md` artifact in `articleContext` while keeping `conversationContext` limited to the compact revision handoff. That preserves anti-role-bleed for writer/editor/publisher without hiding exact editor instructions from the writer.
 - 47 article pipeline agents live in `src/config/defaults/charters/nfl/` — these are SEPARATE from Squad agents
@@ -65,3 +66,6 @@
 - **Issue #103 editor-review cap:** `src/pipeline/conversation.ts` now exposes `MAX_EDITOR_PREVIOUS_REVIEWS = 10`; editor self-history is bounded newest-first both when queried (`getArticleConversation(..., { newestFirst: true, limit })`) and when formatted (`buildEditorPreviousReviews()`). `src/pipeline/actions.ts` applies that capped query during editor runtime prompt assembly, and `writeDraft` now uses `newestFirst: true` for its recent-editor dedupe check. Focused regression coverage lives in `tests/pipeline/conversation.test.ts` and validated with `npm run v2:test -- tests/pipeline/conversation.test.ts tests/pipeline/actions.test.ts` plus `npm run v2:build`.
 
 - **Issue #103 final check:** No extra worktree edits were needed beyond the existing branch commit. Keep the `src/pipeline/actions.ts` runtime query cap plus `newestFirst: true` — the formatter cap alone is not enough because runtime prompt assembly must fetch the newest bounded editor reviews, and `writeDraft` dedupe must compare against the latest editor turn rather than the oldest limited row.
+### 2026-03-23T01:23:06Z: Issue #110 code triage
+- Confirmed article timing totals can be derived from existing `stage_runs` rows on the dashboard seam.
+- Kept the follow-up scoped to aggregation/presentation work and logged the separate persistence boundary for per-state timing.

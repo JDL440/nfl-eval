@@ -389,3 +389,124 @@ volatility:
 ## Phase Boundary
 
 This decision covers only Phases 1–3 content authoring. It does **not** imply runtime loading, artifact injection, refresh automation, or source-provenance indexing; those remain follow-up implementation work.
+---
+
+# Decision: Issue #103 bounded editor review context
+
+**Issue:** #103
+**Status:** IMPLEMENTED
+**Submitted by:** Code (🔧 Dev)
+**Date:** 2026-03-23
+
+## Decision
+
+Bound editor self-history at 10 prior reviews, prefer newest reviews deterministically, and enforce newest-first ordering when applying limits.
+
+## Why
+
+This keeps runtime editor prompts predictable without changing the existing adv-stage/context-config behavior introduced by PR #97. Bounding only in the formatter would still let the runtime load an unnecessarily large editor turn set before formatting.
+
+## Validation
+
+- `npm run v2:test -- tests/pipeline/conversation.test.ts tests/pipeline/actions.test.ts`
+- `npm run v2:build`
+
+## Follow-up
+
+Existing PR #105 already references issue #103 as a PR #97 follow-up.
+
+---
+
+# Decision: Issue #92 should use summary-only shared handoffs at runtime
+
+**Issue:** #92 — charter isolation in shared article conversation context
+**Status:** IMPLEMENTED
+**Submitted by:** Code (🔧 Dev)
+**Date:** 2026-03-22
+
+## TLDR
+
+Keep storing full per-article conversation history, but stop injecting that raw shared transcript into Writer, Editor, and Publisher by default. Runtime handoffs should use a compact revision-summary block, with Editor additionally receiving only its own previous reviews and Writer revisions still receiving the current `editor-review.md` artifact as an explicit handoff.
+
+## Decision
+
+Use `buildRevisionSummaryContext()` in `src/pipeline/conversation.ts` as the default shared cross-role prompt surface.
+
+- Writer: shared revision summary only
+- Writer revisions: explicit current `editor-review.md` handoff + previous draft + shared revision summary
+- Editor: shared revision summary + `buildEditorPreviousReviews()`
+- Publisher: shared revision summary only
+
+## Why
+
+The practical bleed risk came from `src/pipeline/actions.ts` prepending the full raw writer/editor/publisher transcript to later user messages. `revision_summaries` already contain the lowest-risk cross-agent continuity data we need, so no schema migration was necessary.
+
+## Scope boundary
+
+Keep `article_conversations` and `buildConversationContext()` for storage, debugging, and any future explicit full-history surfaces.
+
+---
+
+# Decision: Article usage summaries must read full per-article history
+
+**Issue:** #93 — article page missing token usage for Copilot CLI provider
+**Status:** IMPLEMENTED
+**Submitted by:** Code (🔧 Dev)
+**Date:** 2026-03-22
+
+## TLDR
+
+When the dashboard renders an article-level token usage summary, it must aggregate from the full `usage_events` history for that article, not an arbitrary recent-row cap.
+
+## Decision
+
+Change `Repository.getUsageEvents(articleId)` so the default call returns all usage rows for the article. Keep the `limit` parameter only for explicit callers that truly want truncation.
+
+## Why
+
+Article detail and live-sidebar routes hydrate their summary panels with `repo.getUsageEvents(articleId)`, and the old default limit of 100 rows silently dropped early-stage usage once later panel/editor events accumulated.
+
+## Guardrail
+
+Any UI or report that presents article-wide token totals, provider breakdowns, or cost summaries must read the full per-article usage history unless it also performs a correctness-preserving aggregate query in the database.
+
+---
+
+# Decision: Issue #110 article timing totals
+
+**Status:** ACCEPTED
+**Issue:** #110 — stage runs should show a total of time spent on an article
+**Date:** 2026-03-23
+
+## TLDR
+
+Treat #110 as a dashboard aggregation/presentation task over existing `stage_runs` rows. The work should surface article-level totals from the current stage-run data, not add schema or repository persistence.
+
+## Decision
+
+- Remove `go:needs-research`.
+- Keep the scope focused on an article-level total-time summary for stage runs.
+- Route implementation to UX after #109 lands.
+
+## Why
+
+`stage_runs` already stores `article_id`, `stage`, `surface`, `status`, `started_at`, and `completed_at`, and the article page already hydrates those rows. Current UI only renders per-row durations, so the missing work is aggregation and presentation.
+
+## Boundary
+
+Any deeper split for retry/self-heal timing inside a stage action remains a separate persistence enhancement.
+
+## Next step for Ralph
+
+After #109 lands, queue #110 as the next article-detail follow-up and hand it to UX for implementation.
+
+---
+
+# Decision: Rebase PR #113 to replay only the Stage 7 publish fix
+
+- **Issue:** #111 / PR #113
+- **Context:** PR #113 was opened from a branch still stacked on `ux/issue-93-copilot-usage`, so after PR #112 landed the PR still carried unrelated history and showed a dirty merge state against `main`.
+- **Decision:** Rebase `fix/issue-111-publish-ui` directly onto `origin/main` and keep only the Stage 7 manual publish action-panel change plus its focused regression.
+- **Why:** The actual bug is local to the article detail action panel: Stage 7 manual publish should be enabled when `substack_draft_url` exists, even though the pipeline advance guard still expects `substack_url` for Stage 7→8 advancement.
+- **Implementation paths:** `src/dashboard/views/article.ts`, `tests/dashboard/server.test.ts`.
+

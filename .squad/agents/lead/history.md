@@ -91,3 +91,11 @@
 - Scribe completed the decision inbox merge, archived old decision history, and logged the session/orchestration notes.
 - The active #85 record now stays centered on static KB assets and their validation surface.
 - Deferred runtime integration remains outside the current scope boundary.
+
+### 2026-03-23: Issue #110 triage — stage-run total timing
+- Confirmed the request is a UI aggregation pass over existing `stage_runs` timestamps, not a persistence problem.
+- The next implementation owner should be UX once #109 lands, because the change belongs in the article detail timing presentation rather than new backend storage.
+- Keep the scope limited to a clear article-level total, with any per-state breakdown treated as optional follow-up if it stays cheap.
+### 2026-03-23T01:23:06Z: Issue #110 routing follow-up
+- Routed #110 as a UX dashboard follow-up after #109, with no new schema work required.
+- Kept the timing-total work aligned with the existing article-detail implementation seam.

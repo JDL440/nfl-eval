@@ -20,11 +20,15 @@
 - Dashboard preview (`src/dashboard/views/preview.ts`) has no OG meta tag rendering — opportunity to add social preview card to Publisher view
 - Platform cropping varies: Twitter/X crops to 2:1, LinkedIn to 1.91:1 — center-weight critical visual elements in cover images
 - Substack API may support a separate `cover_image` field in draft payload (not yet implemented in our SubstackService)
+- 2026-03-23 — Article detail stage-run data is already hydrated in `src/dashboard/server.ts` for both `/articles/:id` and the live sidebar HTMX partial via `repo.getStageRuns(id)`.
+- 2026-03-23 — `src/dashboard/views/article.ts` already computes per-run elapsed time in `renderStageRunsPanel()` from `StageRun.started_at` and `completed_at` using the local `formatDuration()` helper, so an article-total clock can be derived without new UI-side primitives.
+- 2026-03-23 — Issue #110 triage: article-total time looks like a presentation-layer aggregation over existing `stage_runs`, while per-state or revision-aware timing likely needs mixed shaping from `stage_runs` plus `stage_transitions`.
 
 ### 2026-03-22: Issue #70 Investigation Outcome
 
 **Status:** Investigation complete. Label updated to go:yes. Opportunity identified: add social preview card to Publisher dashboard view to showcase OG meta tags before publishing.
 
 **Technical findings:** Substack API may support separate \cover_image\ field (opportunity for future enhancement).
-
-
+### 2026-03-23T01:23:06Z: Issue #110 UX triage
+- Confirmed the article detail page already has the rendering seam and timing helpers needed for a presentation-only totals pass.
+- Kept revision history and debug traces separate from the new article timing summary work.
