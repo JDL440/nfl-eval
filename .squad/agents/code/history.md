@@ -31,6 +31,7 @@
 
 ## Learnings
 
+- 2026-03-24 — Issue #117 manual digest: keep the retrospective CLI read-only and source it from a single joined repository query over `article_retrospectives` + `article_retrospective_findings` + article metadata, then do role+finding_type grouping plus normalized-text dedupe in TypeScript so markdown and JSON outputs share one bounded report builder. Focused validation passed with `npm run v2:test -- tests\cli.test.ts tests\db\repository.test.ts` and `npm run v2:build`.
 - 2026-03-24 — Issue #107 follow-up: keep `src/config/defaults/skills/substack-article.md` as the only TLDR/order contract, and make Writer/Editor/Publisher docs point to that file instead of `~/.nfl-lab` aliases or duplicated checklist wording. `tests/pipeline/actions.test.ts` needs an explicit fact-check fixture before draft fixtures whenever `writeDraft()` uses `RecordingProvider`, because the lead preflight consumes the first canned response before the writer draft call.
 - 2026-03-24 — Issue #108 port triage: committed `main` (HEAD `991c66b`) still lacks retrospective automation, but the current checkout already has a local WIP port across `src/pipeline/actions.ts`, `src/db/repository.ts`, `src/db/schema.sql`, `src/types.ts`, `tests/pipeline/actions.test.ts`, and `tests/db/repository.test.ts`. The safe slice is backend-only: keep the post-Stage-7 artifact + structured persistence seam, but do **not** copy the worktree branch's older `buildConversationContext`/draft-repair code or its `usage_events` ordering changes (`ORDER BY created_at DESC` without `id DESC`), because current checkout has newer handoff/validation behavior and deterministic usage-history guarantees.
 - 2026-03-23 — Publish warning investigation: the Stage 7 article-detail warning `Create a Substack draft in the publish workspace before publishing` is intentional. It appears when `article.current_stage === 7` and `article.substack_draft_url` is null; the expected recovery path is `GET /articles/:id/publish` → `POST /api/articles/:id/draft` → `repo.setDraftUrl(...)`.
@@ -75,4 +76,32 @@
 **Decision Status:** "Lead Decision — Retrospective Port Boundary" merged to `.squad/decisions.md`.
 
 **Next:** Broader reconcile/review needed before mainline integration; Code to validate #114 merge readiness.
-- 2026-03-24T03:25:00Z — **Issue #107 orchestration complete**: Lead approved Issue #107 TLDR contract enforcement with non-blocking tech-debt notes (diagnostic cleanup opportunity, redundant clearArtifacts call). Scribe consolidated all session logs, orchestration records, and decision documentation. Issue #107 ready for merge. Orchestration logs: `.squad/orchestration-log/2026-03-24T03-25-00Z-{code,lead}.md`. Session log: `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md`.
+
+### 2026-03-24T02-40-39Z: Scribe Orchestration Log — Issue #107 Completion
+
+**Session:** Scribe processed Issue #107 completion orchestration.
+
+**Tasks Completed:**
+- Wrote orchestration log: `.squad/orchestration-log/2026-03-24T02-40-39Z-code.md` — Code agent completion record
+- Wrote orchestration log: `.squad/orchestration-log/2026-03-24T02-40-39Z-lead.md` — Lead agent ready-for-review record
+- Wrote session log: `.squad/log/2026-03-24T02-40-39Z-issue-107.md` — Comprehensive session summary
+- Merged decision inbox into `.squad/decisions.md` and deduplicated (code-issue-107 matched primary record)
+- Updated agent history with cross-team outcomes
+
+**Status:** Issue #107 orchestration complete. Code and Lead deliverables logged. Ready for validation pass.
+
+### 2026-03-23T04:09:08Z: Scribe Cross-Agent Update — TLDR Contract Canonicalization
+
+**Decision logged:** "Code Decision — Issue #107 TLDR Contract Canonicalization" (already in decisions.md as primary record).
+
+**Canonical source:** `src/config/defaults/skills/substack-article.md` — single source of truth for article top-of-article order, including required `> **📋 TLDR**` block and four-bullet minimum.
+
+**Why this matters for Code:**
+- Runtime enforcement already present in `src/pipeline/engine.ts` via `inspectDraftStructure()`.
+- Prompt docs, tests, and agent charters should all reference the same rule to prevent drift.
+- Writer repair prompts, Editor expectations, Publisher verification, and test fixtures stay aligned.
+
+**Follow-through commitments:**
+- Writer, Editor, and Publisher charters all point to `src/config/defaults/skills/substack-article.md`.
+- Publisher verification focuses on checking the canonical contract rather than redefining it.
+- Regression coverage for Stage 5→6 TLDR guards and writer prompt composition maintained.

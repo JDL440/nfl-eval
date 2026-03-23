@@ -15,6 +15,7 @@
 - Team initialized 2025-07-18 with functional role names (Lead, Code, Data, Publisher, Research, DevOps, UX)
 - @copilot enabled with auto-assignment for well-scoped issues
 - Joe Robinson is the human Product Owner / Tech Lead with final decision authority
+- Closed reconcile-only issues should shed active-state and routing labels (`go:*`, `squad:*`) once the execution chain moves on, to keep backlog signals accurate.
 
 ### 2026-03-22: Issue #85 — Structured Domain Knowledge Scope Lock
 
@@ -109,6 +110,11 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 - Locked v1 follow-up for retrospectives to a **manual CLI digest** rather than a scheduled job or workflow-owned path.
 - Confirmed the source of truth should be structured retrospective tables (`article_retrospectives` + `article_retrospective_findings`, with article metadata) instead of scraping `revision-retrospective-rN.md`.
 - Split the work into child issues: **#116** (Research digest heuristics/spec), **#117** (Code CLI/query surface), and **#118** (Code candidate-promotion layer), with implementation explicitly downstream of **#114** landing the base retrospective runtime in mainline.
+
+### 2026-03-23: Retrospective issue-chain reconciliation
+- Verified the retrospective automation seam is already on mainline (`src/pipeline/actions.ts`, `src/db/schema.sql`, `src/db/repository.ts`) with focused passing coverage in `tests/pipeline/actions.test.ts` and `tests/db/repository.test.ts`.
+- Re-scoped and closed **#114** as a reconcile/verification issue rather than keeping it alive as a fresh port task.
+- Unblocked **#117** completely (`go:yes`) and removed **#114** as a dependency for **#118**, which now stays blocked only on **#116** for the digest heuristic/spec.
 
 ### 2026-03-24: Publish-overhaul team coordination and decision lock
 
@@ -205,3 +211,65 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 - Orchestration: `.squad/orchestration-log/2026-03-24T03-25-00Z-lead.md`
 - Session: `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md`
 - Decision: `.squad/decisions.md` — "Code Decision — Issue #107 TLDR Contract Enforcement"
+
+### 2026-03-23T02:40:22Z: Retrospective Worktree Final Port Review
+
+**By:** Lead (🏗️) — Architecture comparison against mainline
+
+**Analysis:** Compared `worktrees/issue-108-retrospectives` runtime slice (actions.ts, repository.ts, schema, tests) against current mainline to determine smallest coherent port boundary.
+
+**Findings:** Mainline already contains necessary retrospective infrastructure:
+- `recordPostRevisionRetrospectiveIfEligible()` in `src/pipeline/actions.ts` (Stage 7 artifact generation)
+- SQLite schema tables in `src/db/schema.sql`
+- Repository read/write seams in `src/db/repository.ts`
+- Focused test coverage in `tests/pipeline/actions.test.ts` and `tests/db/repository.test.ts`
+
+**Recommendation:** **Port nothing now**. Worktree contains unrelated drift:
+- `actions.ts` has ordering/execution changes that would regress draft validation repair flow
+- `repository.ts` has index/determinism changes that would weaken usage-history ordering
+
+**Decision:** Treat the minimal coherent port as **zero code changes**. The retrospective runtime is already on mainline and ready for v1 CLI digest work. Mark issue-108 worktree complete and close without merge.
+
+**Related Logs:**
+- Orchestration: `.squad/orchestration-log/2026-03-23T02-40-22Z-lead.md`
+- Session: `.squad/log/2026-03-23T02-40-22Z-retrospective-port-analysis.md`
+
+### 2026-03-24T02-40-39Z: Scribe Orchestration — Issue #107 Completion and Inbox Merge
+
+**By:** Scribe (📋) — Session log consolidation
+
+**Tasks Completed:**
+- Wrote orchestration log: `.squad/orchestration-log/2026-03-24T02-40-39Z-code.md` — Code agent Issue #107 completion
+- Wrote orchestration log: `.squad/orchestration-log/2026-03-24T02-40-39Z-lead.md` — Lead agent ready for guardrail review
+- Wrote session log: `.squad/log/2026-03-24T02-40-39Z-issue-107.md` — Summary of TLDR contract enforcement completion
+- Merged decision inbox into `.squad/decisions.md` — Deduplicated code-issue-107 (already present as primary decision record)
+- Updated agent history files with cross-team outcomes
+
+**Status:** Issue #107 orchestration complete. All logs written. Decisions merged. Ready for validation pass.
+
+**Related Documents:**
+- `.squad/decisions.md` — Consolidated with decision inbox (no new entries, dedup only)
+- Code agent history updated with orchestration milestone
+- Lead agent history updated with orchestration completion
+
+### 2026-03-24: Retrospective digest issue-chain reconciliation
+- Confirmed **#114** stays closed as reconcile/verification only; its retitled scope already matches mainline reality and should not re-enter the execution chain.
+- Closed **#116** as completed research after accepting the implementation-ready heuristic/spec: group by `role + finding_type`, normalize/hash finding text for deduping, and promote by repeated evidence thresholds.
+- Kept **#117** as the active implementation slice and re-blocked **#118** only on **#117**'s digest scaffold rather than on closed research or stale runtime-port assumptions.
+- Recorded the team-level execution-order decision in `.squad/decisions/inbox/lead-retro-chain.md` and updated `.squad/skills/manual-retro-digest-first/SKILL.md` with the reusable scaffold-before-promotion pattern.
+
+### 2026-03-23T04:09:08Z: Scribe Cross-Agent Update — Retrospective Digest Execution Order Locked
+
+**Decision logged:** "Lead Decision — Retrospective Digest Execution Order" (merged to decisions.md).
+
+**Execution chain clarified:**
+1. **#114** — Closed as verification-only; no new runtime port work.
+2. **#116** — Ready to close after research/spec completion.
+3. **#117** → **#118** (active execution order) — Digest scaffold (#117) must land before promotion logic (#118).
+
+**Why this matters for the team:**
+- Removes stale port dependency from backlog signals.
+- #115 (parent) should drop `go:needs-research` state.
+- Clear architectural sequencing: establish digest surface first, then layer promotion onto that surface.
+
+**Decision status:** Locked and recorded. All affected agents have context updated.

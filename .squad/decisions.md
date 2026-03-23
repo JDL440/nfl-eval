@@ -558,3 +558,62 @@ Issue #107 TLDR contract enforcement is complete and approved. Code agent delive
 - `.squad/orchestration-log/2026-03-24T03-25-00Z-code.md` — Code agent orchestration
 - `.squad/orchestration-log/2026-03-24T03-25-00Z-lead.md` — Lead agent orchestration
 - `.squad/log/2026-03-24T03-25-00Z-issue-107-tldr-contract.md` — Session summary
+
+---
+
+# Scribe Inbox Merge Notice — 2026-03-24T02-40-39Z
+
+**Inbox file:** `.squad/decisions/inbox/code-issue-107.md` (MERGED)
+
+**Status:** Deduplicated. The inbox contained an exact match of the primary **"Code Decision — Issue #107 TLDR Contract Enforcement"** record already present at line 1. No new information; inbox file deleted per merge completion.
+
+---
+
+# Lead Decision — Retrospective Digest Execution Order
+
+**By:** Lead (🏗️)  
+**Date:** 2026-03-24  
+**Related issues:** #114, #115, #116, #117, #118
+
+## Decision
+
+Treat the retrospective digest chain as:
+
+1. **#114** — already reconciled and closed as verification only; no new runtime port work remains.
+2. **#116** — research/spec complete and ready to close.
+3. **#117** — active next implementation slice for the manual CLI digest/query scaffold.
+4. **#118** — remains blocked only on **#117** landing the digest scaffold, while consuming the accepted heuristic/spec from **#116**.
+
+## Why
+
+The mainline retrospective runtime seam is already present, so the backlog should not keep pointing at a stale port dependency. With the heuristics/spec complete, the remaining architectural dependency is implementation order: establish the digest surface first, then layer promotion logic onto that surface.
+
+## Backlog effects
+
+- Parent issue **#115** should no longer carry a `go:needs-research` state.
+- **#117** is the executable code issue now.
+- **#118** should stay clearly blocked, but on scaffold sequencing rather than on closed research or a non-existent port task.
+
+---
+
+# DevOps Decision — Publish Overhaul Ship
+
+**By:** DevOps  
+**Date:** 2026-03-24  
+**Related:** Feature branch eature/publish-overhaul-ship
+
+## Decision
+
+When local `main` is dirty and ahead of `origin/main`, isolate ship-ready dashboard changes in a fresh worktree created from `origin/main`, then validate and push a dedicated feature branch instead of pushing `main`.
+
+## Why
+
+- Prevents unrelated local commits and workspace edits from leaking into the pushed branch.
+- Keeps shipping work non-destructive when the primary worktree has many in-flight changes.
+- Makes it easy to validate exactly the isolated diff before opening a PR.
+
+## Strategy
+
+- Branch: `feature/publish-overhaul-ship`
+- Validation: `npm run v2:build` and `npx vitest run tests/dashboard/publish.test.ts tests/dashboard/server.test.ts`
+- Worktree isolation prevents workspace pollution during active development.
