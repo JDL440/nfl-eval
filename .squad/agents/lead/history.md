@@ -46,6 +46,15 @@
 - Validation: `npm run v2:test` (147/147), `npm run v2:build` passing, Coordinator validation approved.
 - Status: ✅ COMPLETED and merged to decisions.md.
 
+### 2026-03-23T04:32:51Z: Issue #118 review (Lead approval)
+- Reviewed issue #118 correctness/scope: repeated process_improvement auto-promotion in CLI retrospective digest
+- Files reviewed: src/cli.ts, tests/cli.test.ts, src/db/repository.ts
+- Validation confirmed:
+  - Repeated non-Lead process_improvement findings now correctly route to issue-ready promotion
+  - Manual read-only retrospective digest behavior safe from regression  
+  - Test coverage (147/147 passing) validates new promotion logic
+- **Outcome:** ✅ APPROVED for merge
+
 ## Learnings
 
 - 2026-03-25 — Dashboard publish missing-config review: approve HTMX operator guidance only when draft/publish actions swap an inline recovery fragment with exact env vars and `/config` verification, but reject “scoped” fixes that bundle unrelated publish-flow changes. Relevant files: `src/dashboard/server.ts`, `src/dashboard/views/publish.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/server.test.ts`. Follow-up concern: keep a direct startup wiring regression around `createSubstackServiceFromEnv()` / dashboard DI so route-level config copy does not mask service-initialization regressions.
