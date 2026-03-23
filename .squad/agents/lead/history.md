@@ -111,3 +111,12 @@ Research completed comprehensive analysis of issue #102 (dashboard auth hardenin
 **Why:** Current dashboard has no auth seam. Recommendation aligns with owner's preference ("simple local login for now"), fits Hono + SQLite architecture, and defers OAuth/RBAC to future.
 
 **Deferred for Code:** Implementation tracked as Issue #102 follow-up after decision lock.
+
+### 2026-03-23: Issue #102 triage refresh — current auth seam and routing
+
+- The current checked-in dashboard app layer is effectively open: `src/dashboard/server.ts` registers SSE (`/events`), static assets, generated images, HTML pages, HTMX fragments, and JSON API routes directly from `createApp()` with no auth middleware, login/logout routes, cookie parsing, or session checks. If a temporary shared-password gate exists, it is outside the current `src/` runtime or no longer present in this branch.
+- The minimum repo-consistent long-term direction remains a **single-operator local login**: Hono middleware, explicit login/logout routes, opaque `httpOnly` cookie, and a small SQLite `dashboard_sessions` persistence seam in `src/db/schema.sql` + `src/db/repository.ts`.
+- Keep the first pass config-driven in `src/config/index.ts` with a small surface such as auth mode (`off|local`), admin username, password hash, and session secret. Avoid OAuth, RBAC, or broader user management until the editorial workstation product shape changes.
+- Protect all dashboard surfaces consistently, including `src/dashboard/sse.ts` (`/events`) and `src/dashboard/server.ts` image serving at `/images/:slug/:file`; these currently expose live dashboard state and unpublished assets if left outside the auth gate.
+- Existing tests prove current open-access assumptions: `tests/dashboard/server.test.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/config.test.ts`, and `tests/e2e/live-server.test.ts` construct `createApp(repo, config)` and hit routes directly. Auth should therefore stay off by default in tests/dev unless explicitly enabled, with focused auth regression coverage added separately.
+- Recommended routing for implementation: **Code** owns middleware, login/logout handlers, config wiring, schema/repository changes, and auth tests; **UX** owns login page/form states and copy; **DevOps** owns deployment/env-secret documentation and cookie/security defaults review; **Lead** reviews architecture and confirms scope stays local-login only.

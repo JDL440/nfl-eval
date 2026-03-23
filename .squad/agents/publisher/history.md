@@ -39,3 +39,9 @@
 
 **Key paths:** `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`, `src/dashboard/server.ts`, `src/pipeline/actions.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/server.test.ts`, `tests/e2e/pipeline.test.ts`.
 
+
+### 2026-03-23T02:17:46Z: Publish-flow decision submitted
+
+**Decision:** Treat Stage 7 publishing as explicitly **manual two-step** (create draft → publish draft), and standardize terminology for /articles/:id/publish page to reduce editor confusion (recommend "Publish Page", "Publish Console", or "Publish Workspace" — but use only one).
+
+**Status:** Decision merged to .squad/decisions.md as "Publisher publish-flow review — Stage 7 mental models".
