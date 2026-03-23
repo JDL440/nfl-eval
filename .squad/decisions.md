@@ -1120,3 +1120,86 @@ Reviewed only:
 
 - Ran focused existing coverage: 
 px vitest run tests/cli.test.ts -t "retrospective digest command" — passed.
+
+---
+
+# Publisher Decision Inbox — Substack Output Gap Trace
+
+**Date:** 2026-03-25  
+**Owner:** Publisher  
+**Status:** 📋 Proposed  
+**Type:** Payload parity / validation strategy
+
+## Decision
+
+Treat the Stage 7 problem as a **combined payload-builder + preview-parity gap**, not a styling-only issue.
+
+Fix order should be:
+
+1. Make the Substack draft payload the source of truth for article presentation-critical elements.
+2. Then align local preview so it reflects what the payload actually contains, instead of masking gaps with preview-only chrome.
+
+## Why
+
+- `src/dashboard/server.ts:262-317` forks the same draft into:
+  - `htmlBody` for preview via `proseMirrorToHtml(doc)`
+  - `substackBody` for Substack via `JSON.stringify(doc)`
+- `src/dashboard/views/preview.ts:89-151` adds cover image, interspersed inline images, a bottom subscribe CTA, and footer copy outside the payload path.
+- `src/dashboard/views/publish.ts:42-92` does not render payload-native `subscribeWidget`, `paywall`, or button nodes, so preview cannot verify whether those v1 affordances actually survive into Substack.
+- `src/services/substack.ts:135-173` sends `draft_body` only; `uploadImage()` exists but is not used by draft creation/update, so local or manifest-only images never become publishable Substack assets automatically.
+- Content quality also matters: several strong draft candidates contain `::subscribe` and image references, but this checkout has no `content/images/` asset tree, so relative image references cannot validate end-to-end image delivery as-is.
+
+## Classification
+
+- **Primary:** payload builder / payload assembly gap
+- **Secondary:** preview-only chrome masking real payload state
+- **Contributing:** article asset/content readiness (missing actual image assets or payload-side upload/rewrites)
+- **Not primary:** markdown-to-HTML conversion, because Substack publish does not use the HTML path
+
+## Validation recommendation
+
+Use `content/articles/sea-emmanwori-rookie-eval/draft.md` for the first real republish after fixes.
+
+### Rationale
+
+- Two explicit `::subscribe` markers already exist (`draft.md:23`, `draft.md:202`), so payload-native subscribe widgets can be validated directly.
+- The body includes multiple inline image references (`draft.md:52`, `draft.md:126`, `draft.md:144`), so a single run can confirm image upload/rewrite behavior.
+- The article is long enough for mid-article affordance placement to matter, which makes preview/payload parity problems obvious.
+
+### Required precondition
+
+Before republish validation, ensure real image assets exist for that slug or the publish path uploads and rewrites them into Substack-hosted URLs. Without that, image validation will produce another false negative.
+
+---
+
+# Decision Inbox — Data publish 500 final
+
+## Decision
+
+Keep the accepted missing-config behavior exactly as-is, but in `POST /api/articles/:id/publish` validate the article markdown prerequisite before checking for a linked Substack draft.
+
+## Why
+
+- The publish page already has the correct recoverable UX for missing Substack config: HTMX callers get actionable panel HTML and non-HTMX callers keep the JSON 500 contract.
+- When both prerequisites are absent, missing markdown is the earlier and more actionable failure than a missing linked draft, so it should win the error precedence.
+
+## Validation
+
+- `npm run test -- tests/dashboard/publish.test.ts`
+- `npm run v2:build`
+
+---
+
+# Decision — Devops publish-substack-progress branch strategy
+
+## Decision
+
+Created and used `devops/publish-substack-progress` instead of committing on `main`.
+
+## Why
+
+`main` had a large dirty working tree with mixed changes, including unrelated retrospective, runner, and squad history edits. Isolating the commit on a dedicated branch reduced the risk of sweeping unrelated work into the publish/Substack progress snapshot.
+
+## Commit scope rule
+
+Only stage publish/Substack workflow changes and directly related tests/docs. Leave unrelated retrospective, runner, revision-history, and agent history changes uncommitted.
