@@ -36,3 +36,8 @@
 - Verified the original failure path on `POST /api/articles/:id/draft` and `POST /api/articles/:id/publish`: when `substackService` was undefined, HTMX callers received HTTP 500 before any publish-panel fragment render, so the page surfaced a raw failure instead of actionable guidance.
 - Current route behavior now returns `renderPublishWorkflow()` for HTMX requests with concrete recovery steps (`SUBSTACK_PUBLICATION_URL`, `SUBSTACK_TOKEN`, restart dashboard, check `/config`) while JSON callers still receive 500 JSON errors.
 - Review outcome: behavior fix is good, but the current diff is not a narrow hotfix. `src/dashboard/server.ts` and `tests/dashboard/server.test.ts` also carry broader publish-workflow, revision-history, and artifact-rendering changes, and there is still no direct regression test for `createSubstackServiceFromEnv()` / startup DI wiring.
+- **Status:** REJECTED pending narrowed scope and startup DI regression test.
+
+## Learnings
+
+- 2026-03-25 — Dashboard publish missing-config review: approve HTMX operator guidance only when draft/publish actions swap an inline recovery fragment with exact env vars and `/config` verification, but reject “scoped” fixes that bundle unrelated publish-flow changes. Relevant files: `src/dashboard/server.ts`, `src/dashboard/views/publish.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/server.test.ts`. Follow-up concern: keep a direct startup wiring regression around `createSubstackServiceFromEnv()` / dashboard DI so route-level config copy does not mask service-initialization regressions.

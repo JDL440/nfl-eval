@@ -986,3 +986,60 @@ Approve the operator-facing HTMX behavior, but reject the change as a narrow sco
 ## Required next step
 
 Split or restack the missing-config fix so it can be approved independently from the broader publish-overhaul work.
+
+---
+
+# Decision Inbox — Code wire Substack startup
+
+**Date:** 2026-03-25
+**Owner:** Code
+**Status:** Proposed
+
+## Decision
+
+Resolve optional dashboard services at the app seam, with explicit injections taking precedence over env fallback.
+
+For Substack specifically:
+
+1. `createApp(...)` should auto-resolve `substackService` from env when callers do not inject one.
+2. `startServer()` should use the same resolver instead of carrying a parallel one-off wiring path.
+3. Route-level publish/draft handlers should keep treating a missing service as an unavailable integration and preserve the current HTMX recovery panel behavior.
+
+## Why
+
+- The real failure mode was not the publish handlers themselves; it was that app startup paths could build the dashboard without a Substack dependency even when env existed.
+- Centralizing resolution at the app seam closes the DI gap for both production startup and test/programmatic startup.
+- Preserving explicit dependency precedence keeps tests and future alternate runtimes deterministic.
+
+## Consequences
+
+- Env-configured publish actions work without every caller having to manually thread `substackService`.
+- Existing mock-injection tests remain stable because an explicit mock still wins over env fallback.
+- Missing or invalid env still degrades safely into the existing “not configured” UX instead of crashing publish routes.
+
+---
+
+# Lead Review — dashboard publish missing-config fix
+
+**Date:** 2026-03-25
+**Owner:** Lead
+**Status:** Rejected for scope, behavior approved
+
+## Outcome
+
+Approve the operator-facing HTMX behavior, but reject the change as a narrow scoped fix because it is bundled with broader publish-flow and test changes.
+
+## Why
+
+- The exact failure path is the early `!substackService` guard in `POST /api/articles/:id/draft` and `POST /api/articles/:id/publish`: HTMX callers previously hit a 500 before the publish panel could swap to guidance.
+- The new HTMX behavior is clear and actionable: it renders `renderPublishWorkflow()` with `SUBSTACK_PUBLICATION_URL`, `SUBSTACK_TOKEN`, restart instructions, and a `/config` verification link, while JSON callers still receive 500 JSON errors.
+- The diff is not tightly scoped. It also carries broader publish-workflow, revision-history, artifact-rendering, and test churn beyond the missing-config UX fix.
+- Coverage is improved but still misses a direct startup DI regression that proves the dashboard service wiring path cannot silently break again.
+
+## Required next step
+
+Restack the missing-config fix so it only includes:
+
+1. the HTMX missing-config fragment behavior,
+2. the minimum startup wiring/helper change needed for `SubstackService`, and
+3. focused regressions for HTMX vs JSON behavior plus direct env-to-service/dashboard wiring coverage.

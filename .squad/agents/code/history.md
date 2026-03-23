@@ -23,3 +23,9 @@
 - 2026-03-24 — Issue #117 digest CLI approved: keep the data seam read-only, group by role + finding_type, and dedupe normalized findings in TypeScript.
 - 2026-03-24 — Issue #107 validation refresh: canonical contract enforcement still passes, and the one-source TLDR/image policy remains the source of truth.
 - 2026-03-23 — Publish warning investigation: the Stage 7 warning copy is intentional when no draft exists; the recovery path is create draft, then publish.
+
+## Learnings
+
+- 2026-03-23 — Issue #118 promotion layer: keep retrospective digest promotion read-only, emit disjoint process-improvement vs learning-update candidate arrays, and attach review evidence (`articleCount`, priorities, recency, sample articles, force-approval count) for manual follow-up.
+- 2026-03-25 — Optional dashboard services should resolve through a shared app-seam helper. `src/dashboard/server.ts` now uses `resolveDashboardDependencies()` so env-configured Substack publishing works even when callers only invoke `createApp(...)`.
+- 2026-03-25 — Preserve explicit dependency precedence over env fallback. This keeps `tests/dashboard/publish.test.ts` and any alternate runtime bootstrap deterministic while still fixing production startup wiring.
