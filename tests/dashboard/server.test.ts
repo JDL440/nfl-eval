@@ -491,7 +491,6 @@ describe('Dashboard Server', () => {
 
     it('renders artifact tabs with htmx attributes', async () => {
       repo.createArticle({ id: 'tabs-test', title: 'Tabs Test' });
-
       const res = await app.request('/articles/tabs-test');
       const html = await res.text();
       expect(html).toContain('tab-bar');
@@ -642,12 +641,11 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/stage7-publish');
       const html = await res.text();
 
-      expect(html).toContain('Open Publish Workspace');
-      expect(html).toContain('Publish to Substack');
-      expect(html).toContain('Substack draft ready for manual publish');
+      expect(html).toContain('Open Publish Page');
+      expect(html).not.toContain('Publish to Substack');
+      expect(html).toContain('Substack draft saved. Open the Publish Page');
       expect(html).not.toContain('substack_url not set on article');
-      expect(html).toContain('Draft ↗');
-      expect(html).not.toContain('disabled>Publish to Substack');
+      expect(html).toContain('Open Draft ↗');
     });
   });
 

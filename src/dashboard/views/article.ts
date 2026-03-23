@@ -509,8 +509,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
   if (article.current_stage === 7) {
     const hasDraft = !!article.substack_draft_url;
     const publishStatus = hasDraft
-      ? 'Substack draft ready for manual publish'
-      : 'Create a Substack draft in the publish workspace before publishing';
+      ? 'Substack draft saved. Open the Publish Page to review it, sync updates, or publish it live.'
+      : 'No Substack draft yet. Open the Publish Page to save a draft or publish the article live.';
     const canRegress = true; // Stage 7 can always go back
     const regressOptions = Array.from({ length: article.current_stage - 1 }, (_, i) => {
       const stage = (i + 1) as Stage;
@@ -527,19 +527,10 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         <h2>Actions</h2>
         <div class="action-bar">
           ${article.substack_draft_url
-            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Draft ↗</a>`
+            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Open Draft ↗</a>`
             : ''}
-          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-secondary">Open Publish Workspace</a>
+          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-primary">Open Publish Page</a>
           ${previewLink}
-          <button class="btn btn-publish"
-            hx-post="/api/articles/${escapeHtml(article.id)}/publish"
-            hx-target="#advance-result-${escapeHtml(article.id)}"
-            hx-swap="innerHTML"
-            hx-confirm="Publish this article to Substack?"
-            hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 2000); }"
-            ${hasDraft ? '' : 'disabled title="Create a Substack draft first"'}>
-            Publish to Substack
-          </button>
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
             <form class="send-back-form"
