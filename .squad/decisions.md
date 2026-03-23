@@ -756,3 +756,150 @@ The repo-root `dev.ps1` should launch `npm run v2:serve`, not `v2:dev`, and it s
 
 Keep the PowerShell wrapper thin: resolve the repo root from the script location, print the exact npm command being run, and pass a port override through to `serve` when needed for local validation.
 
+
+---
+
+### 2026-03-23T00:00:00Z: Dashboard auth direction
+**By:** Code (via Copilot)
+**What:** Adopt a minimum-viable long-term dashboard auth layer built around Hono middleware, login/logout routes, an opaque `httpOnly` session cookie, and a SQLite-backed `dashboard_sessions` table. Avoid a client-only password flag or a full multi-user account system for the first pass.
+**Why:** Current dashboard routing in `src/dashboard/server.ts` has no auth middleware, no cookie/session handling, and no auth-related repository/schema support, yet it exposes article editing, publishing, memory, and config surfaces. This recommendation fits the existing Hono + `loadConfig()` + Repository architecture with the least churn and gives a stable seam for future multi-user expansion.
+
+---
+
+# Publisher publish-flow review
+
+## Proposed team decision
+
+Treat Stage 7 publishing as an explicitly **manual two-step dashboard workflow**:
+
+1. open `/articles/:id/publish`
+2. create the Substack draft
+3. publish the draft to advance to Stage 8
+
+## Why this matters
+
+Current implementation already works this way:
+
+- `src/pipeline/actions.ts:896-919` shows Stage 7→8 is not an automated pipeline action; it requires `substack_url` to already exist from dashboard publishing.
+- `src/dashboard/server.ts:1318-1438` separates draft creation from final publish.
+- `src/dashboard/views/article.ts:508-563` disables the publish button until a draft exists and routes users to `/articles/:id/publish`.
+
+## UX implication
+
+If the team keeps the current implementation, product copy should describe `/articles/:id/publish` consistently as either:
+
+- **Publish page**
+- **Publish console**
+- **Publish workspace**
+
+Using multiple labels for the same surface creates avoidable editor confusion.
+
+---
+
+# Research proposal — Issue #102 dashboard auth direction
+
+**Issue:** `#102` — Dashboard auth hardening: replace shared password gate with proper login controls  
+**Status:** Research recommendation for Lead/PO review  
+**Date:** 2026-03-23
+
+## Context
+
+- Issue `#102` asks for a durable replacement for the current shared-password dashboard protection.
+- Joe's issue comment sets the product direction for now: **"We can use simple local login control mechanism with user and password control for now."**
+- The current v2 app is a Hono + HTMX dashboard backed by SQLite, with no existing auth/session subsystem in the runtime config or repository schema.
+
+## Grounded findings
+
+1. **The dashboard is effectively open at the app layer today.**
+   - `src/dashboard/server.ts` registers `/`, `/articles/:id`, `/config`, `/agents`, `/memory`, `/runs`, many `htmx/*` routes, and `api/*` routes directly from `createApp()`.
+   - `src/dashboard/sse.ts` exposes `/events` without any auth seam.
+   - `src/dashboard/server.ts` also serves `/images/:slug/:file`, which can reveal unpublished article assets.
+
+2. **There is no existing auth/session persistence seam.**
+   - `src/db/repository.ts` has no user or session methods.
+   - `src/db/schema.sql` has no auth/session tables.
+
+3. **The config surface is still small and can absorb a minimal auth mode cleanly.**
+   - `src/config/index.ts` currently centralizes env-driven runtime config and is the natural place for dashboard-auth settings.
+
+4. **Tests assume unauthenticated direct route access today.**
+   - `tests/dashboard/server.test.ts`
+   - `tests/dashboard/publish.test.ts`
+   - `tests/dashboard/config.test.ts`
+   - `tests/e2e/live-server.test.ts`
+
+## Recommended direction
+
+Adopt a **single-operator local login** design as the repo's long-term baseline for issue `#102`, implemented later through the existing Hono + SQLite seams:
+
+### 1) Auth model
+
+- Start with **local username + password login only**.
+- Treat this as a **single-operator / small-admin dashboard**, not a general multi-user product.
+- Do **not** introduce OAuth, GitHub login, or role-heavy RBAC in the first pass.
+
+### 2) Enforcement seam
+
+- Add **server-enforced Hono middleware** in `src/dashboard/server.ts`.
+- Protect:
+  - HTML dashboard pages
+  - HTMX endpoints
+  - JSON API endpoints
+  - SSE stream at `src/dashboard/sse.ts` (`/events`)
+  - unpublished image route `/images/:slug/:file`
+- Leave open only:
+  - `/static/*`
+  - explicit login/logout endpoints
+  - any future health check route if one is added intentionally
+
+### 3) Session design
+
+- Use an **opaque session id** in an `httpOnly` cookie.
+- Back sessions with a small SQLite table (for example `dashboard_sessions`) rather than a client-side boolean flag.
+- Session rows should support:
+  - session id
+  - username or operator identifier
+  - created/updated timestamps
+  - expiration / revocation
+- Cookie defaults should be secure-by-default for public deployment:
+  - `HttpOnly`
+  - `SameSite=Lax` (or stricter if compatible)
+  - `Secure` in production
+  - explicit max age / expiry
+
+### 4) Config shape
+
+- Keep auth **config-driven** from `src/config/index.ts`.
+- Recommended direction is a small auth mode surface, e.g.:
+  - auth mode (`off|local`)
+  - admin username
+  - password hash
+  - session secret
+- Keep auth **off by default in tests/dev unless explicitly enabled**, because current tests construct `createApp(repo, config)` and call routes immediately.
+
+### 5) Scope boundary
+
+- This issue should deliver a durable **local login/session foundation**.
+- Defer until later unless product needs change:
+  - OAuth / SSO
+  - multiple user roles
+  - fine-grained authorization matrices
+  - external identity providers
+
+## Why this direction fits the repo
+
+- It matches the owner's stated preference for a simple local login for now.
+- It fits the current architecture: Hono middleware for request gating, SQLite for durable state, and env/config loading through `src/config/index.ts`.
+- It avoids overbuilding a public SaaS-style auth system for what is currently an internal/editorial workstation.
+
+## Key file paths
+
+- `src/dashboard/server.ts`
+- `src/dashboard/sse.ts`
+- `src/config/index.ts`
+- `src/db/repository.ts`
+- `src/db/schema.sql`
+- `tests/dashboard/server.test.ts`
+- `tests/dashboard/publish.test.ts`
+- `tests/dashboard/config.test.ts`
+- `tests/e2e/live-server.test.ts`

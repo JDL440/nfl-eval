@@ -27,3 +27,11 @@
 - 2026-03-22: Issue #70 Investigation Outcome
 - Status: Investigation complete. Label updated to go:yes. Opportunity identified: add social preview card to Publisher dashboard view to showcase OG meta tags before publishing.
 - Technical findings: Substack API may support separate `cover_image` field (opportunity for future enhancement).
+- 2026-03-24: Stage 7 Publish Flow Wording Review
+- **Review completed:** "Publish workspace" term is ambiguous and used only once (article.ts:513 tooltip).
+- **Mental model gap:** Two-step workflow (Draft → Publish) not clearly explained to users.
+- **Warning copy mismatch:** Article detail says "create draft first" (blocker language), but Publish Preview says "then post Note/Tweet" (optional language).
+- **Files with wording issues:** article.ts (lines 511–513, 532), publish.ts (lines 161, 219, 349, 360).
+- **Key finding:** Users conflate the lab's publish preview page with Substack's live draft editor—no clear separation of concerns in messaging.
+- **Bonus finding:** "Publish All" button has redundant disabled-state tooltip because the page itself gates draft-less articles.
+- **Charter scope:** Fully within UX responsibilities (dashboard UI, flows, interaction patterns). See .squad/decisions/inbox/ux-publish-wording.md.

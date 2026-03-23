@@ -71,3 +71,11 @@
 - Inbox decisions were merged into `.squad/decisions.md`; the older pre-2026 decision history was archived to `.squad/decisions-archive.md`.
 - The canonical Phase 1-3 asset shape remains the static glossary + team-sheet content layer, with runtime integration still deferred.
 - Keep future planning aligned to docs/testing scope unless the follow-up runtime issue explicitly expands scope.
+
+### 2026-03-23: Issue #102 auth direction research
+
+- GitHub issue `#102` asks to replace the temporary shared-password dashboard gate with proper authentication that also protects HTMX, API, and SSE surfaces; Joe clarified in the issue comments that the near-term target is **a simple local login control mechanism with user and password control for now**.
+- Current repo architecture has no real dashboard auth seam yet: `src/dashboard/server.ts` registers `/events`, `/images/:slug/:file`, HTML pages, HTMX endpoints, and API routes directly from `createApp()`; `src/config/index.ts` exposes runtime/provider config only; `src/db/repository.ts` and `src/db/schema.sql` contain no auth/session/user persistence.
+- README constraints reinforce a small first pass: this is a single-operator Hono + SQLite editorial workstation (`README.md`, `src/dashboard/`, `src/db/`), so the grounded long-term direction is **server-enforced Hono middleware + login/logout routes + opaque SQLite-backed sessions**, not OAuth/SSO or a large user-management subsystem.
+- Recommended auth pattern for future implementation: keep auth config-driven and disabled by default in tests/dev, protect all dashboard surfaces except static assets and explicit login/logout endpoints, use secure cookie defaults, and treat `/events` plus unpublished image routes as protected dashboard data rather than public endpoints.
+- Key file paths for issue `#102`: `src/dashboard/server.ts`, `src/dashboard/sse.ts`, `src/config/index.ts`, `src/db/repository.ts`, `src/db/schema.sql`, `tests/dashboard/server.test.ts`, `tests/dashboard/publish.test.ts`, `tests/dashboard/config.test.ts`, `tests/e2e/live-server.test.ts`, `.squad/skills/hono-dashboard-auth-seam/SKILL.md`, `.squad/decisions/inbox/research-auth-issue-102.md`.
