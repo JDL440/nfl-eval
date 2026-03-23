@@ -507,6 +507,10 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
 
   // Stage 7 — publish flow (no retry button, uses publish button instead)
   if (article.current_stage === 7) {
+    const hasDraft = !!article.substack_draft_url;
+    const publishStatus = hasDraft
+      ? 'Substack draft ready for manual publish'
+      : 'Create a Substack draft in the publish workspace before publishing';
     const canRegress = true; // Stage 7 can always go back
     const regressOptions = Array.from({ length: article.current_stage - 1 }, (_, i) => {
       const stage = (i + 1) as Stage;
@@ -525,6 +529,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           ${article.substack_draft_url
             ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Draft ↗</a>`
             : ''}
+          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-secondary">Open Publish Workspace</a>
           ${previewLink}
           <button class="btn btn-publish"
             hx-post="/api/articles/${escapeHtml(article.id)}/publish"
@@ -532,7 +537,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             hx-swap="innerHTML"
             hx-confirm="Publish this article to Substack?"
             hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 2000); }"
-            ${canAdvance ? '' : 'disabled'}>
+            ${hasDraft ? '' : 'disabled title="Create a Substack draft first"'}>
             Publish to Substack
           </button>
           <details class="send-back-dropdown">
@@ -551,7 +556,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             </form>
           </details>
         </div>
-        ${renderGuardStatus(canAdvance, guardReason)}
+        ${renderGuardStatus(hasDraft, publishStatus)}
         ${stageRunErrorHtml}
         <div id="advance-result-${escapeHtml(article.id)}"></div>
         ${renderDangerZone(article)}
