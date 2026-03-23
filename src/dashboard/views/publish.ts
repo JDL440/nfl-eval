@@ -82,6 +82,13 @@ function renderProseMirrorNode(node: ProseMirrorNode): string {
     }
     case 'caption':
       return children;
+    case 'subscribeWidget': {
+      const caption = node.content?.find(n => n.type === 'ctaCaption');
+      const captionHtml = caption?.content?.map(renderProseMirrorNode).join('') ?? '';
+      return `<div class="subscribe-widget">${captionHtml ? `<p>${captionHtml}</p>` : ''}<button type="button">Subscribe</button></div>`;
+    }
+    case 'ctaCaption':
+      return children;
     default:
       return children;
   }

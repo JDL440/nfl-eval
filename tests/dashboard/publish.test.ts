@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Repository } from '../../src/db/repository.js';
@@ -8,7 +8,7 @@ import {
   createSubstackServiceFromEnv,
 } from '../../src/dashboard/server.js';
 import { proseMirrorToHtml } from '../../src/dashboard/views/publish.js';
-import { markdownToProseMirror } from '../../src/services/prosemirror.js';
+import { markdownToProseMirror, validateProseMirrorBody } from '../../src/services/prosemirror.js';
 import type { AppConfig } from '../../src/config/index.js';
 import {
   type SubstackDraft,
@@ -286,7 +286,13 @@ describe('Publish Workflow', () => {
       expect(mockService.createDraft).toHaveBeenCalledOnce();
       const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(callArgs.title).toBe('Draft Test');
-      expect(callArgs.bodyHtml).not.toContain('trace');
+      
+      // Parse the JSON to validate ProseMirror structure and verify thinking is removed
+      const bodyJson = callArgs.bodyHtml as string;
+      const doc = JSON.parse(bodyJson);
+      expect(doc.type).toBe('doc');
+      const html = proseMirrorToHtml(doc);
+      expect(html).not.toContain('trace');
 
       // Draft URL should be stored on the article
       const updated = repo.getArticle('draft-test');
@@ -395,16 +401,22 @@ describe('Publish Workflow', () => {
 
       expect(mockService.createDraft).toHaveBeenCalledOnce();
       const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      const body = callArgs.bodyHtml as string;
+      const bodyJson = callArgs.bodyHtml as string;
 
-      // Should contain subscribe CTA (using test config value)
-      expect(body).toContain('Test');
-      expect(body).toContain('Subscribe');
+      // Parse the JSON to validate ProseMirror structure
+      const doc = JSON.parse(bodyJson);
+      expect(doc.type).toBe('doc');
+      expect(doc.content).toBeDefined();
+      expect(Array.isArray(doc.content)).toBe(true);
+      expect(validateProseMirrorBody(doc).valid).toBe(true);
 
-      // Should contain footer blurb
-      expect(body).toContain('virtual front office');
-      expect(body).toContain('specialized AI analysts');
-      expect(body).toContain('Drop it in the comments');
+      // Convert to HTML to verify content is present
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('Test');
+      expect(html).toContain('Subscribe');
+      expect(html).toContain('virtual front office');
+      expect(html).toContain('specialized AI analysts');
+      expect(html).toContain('Drop it in the comments');
     });
 
     it('uploads and includes cover image when manifest present', async () => {
@@ -424,14 +436,17 @@ describe('Publish Workflow', () => {
       expect(res.status).toBe(200);
 
       const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      const body = callArgs.bodyHtml as string;
+      const bodyJson = callArgs.bodyHtml as string;
 
-      // Should have attempted to upload cover (mock returns CDN URL)
-      if (mockService.uploadImage) {
-        // Note: uploadImage will fail gracefully if file doesn't exist
-        // but the enrichment logic should still run
-        expect(body).toContain('<h1>Article</h1>');
-      }
+      // Parse the JSON to validate ProseMirror structure
+      const doc = JSON.parse(bodyJson);
+      expect(doc.type).toBe('doc');
+      expect(doc.content).toBeDefined();
+      expect(validateProseMirrorBody(doc).valid).toBe(true);
+      
+      // Convert to HTML to verify content
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('<h1>Article</h1>');
     });
 
     it('uploads and intersperses inline images when manifest present', async () => {
@@ -452,11 +467,52 @@ describe('Publish Workflow', () => {
       expect(res.status).toBe(200);
 
       const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      const body = callArgs.bodyHtml as string;
+      const bodyJson = callArgs.bodyHtml as string;
 
-      // Body should contain article content
-      expect(body).toContain('First para');
-      expect(body).toContain('Fourth para');
+      // Parse the JSON to validate ProseMirror structure
+      const doc = JSON.parse(bodyJson);
+      expect(doc.type).toBe('doc');
+      expect(validateProseMirrorBody(doc).valid).toBe(true);
+      
+      // Convert to HTML to verify content
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('First para');
+      expect(html).toContain('Fourth para');
+    });
+
+    it('rewrites markdown image nodes to uploaded Substack URLs without duplicating them', async () => {
+      const mockService = createMockSubstackService();
+      const imagesDir = join(tempDir, 'images');
+      const slugDir = join(imagesDir, 'rewrite-test');
+      mkdirSync(slugDir, { recursive: true });
+      writeFileSync(join(slugDir, 'rewrite-1.png'), 'fake-image');
+      config = makeTestConfig({ dbPath: config.dbPath, articlesDir, imagesDir });
+
+      repo.createArticle({ id: 'rewrite-test', title: 'Rewrite Test' });
+      advanceToStage(repo, 'rewrite-test', 7);
+      writeArticleDraft(
+        repo,
+        'rewrite-test',
+        '# Article\n\n![Rewrite alt|Rewrite caption](../../images/rewrite-test/rewrite-1.png)\n\nBody paragraph.',
+      );
+
+      const app = createApp(repo, config, { substackService: mockService });
+      const res = await app.request('/api/articles/rewrite-test/draft', { method: 'POST' });
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockService.createDraft as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const bodyJson = callArgs.bodyHtml as string;
+      const doc = JSON.parse(bodyJson);
+      expect(validateProseMirrorBody(doc).valid).toBe(true);
+
+      const images = doc.content.filter((node: { type: string }) => node.type === 'captionedImage');
+      expect(images).toHaveLength(1);
+      expect(images[0].content[0].attrs.src).toBe('https://cdn.substack.com/image.png');
+      expect(mockService.uploadImage).toHaveBeenCalledOnce();
+
+      const html = proseMirrorToHtml(doc);
+      expect(html).toContain('https://cdn.substack.com/image.png');
+      expect(html).not.toContain('../../images/rewrite-test/rewrite-1.png');
     });
 
   });

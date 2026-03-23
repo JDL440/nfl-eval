@@ -62,7 +62,15 @@ import {
   renderTweetComposer,
   CHECKLIST_ITEMS,
 } from './views/publish.js';
-import { markdownToProseMirror } from '../services/prosemirror.js';
+import {
+  buildCaptionedImage,
+  createSubscribeWidget,
+  isFooterParagraph,
+  markdownToProseMirror,
+  validateProseMirrorBody,
+  type ProseMirrorDoc,
+  type ProseMirrorNode,
+} from '../services/prosemirror.js';
 import { markdownToHtml } from '../services/markdown.js';
 import { renderArticlePreview, renderArticlePreviewFrame, parseImageManifest } from './views/preview.js';
 import { SubstackService } from '../services/substack.js';
@@ -263,17 +271,17 @@ export function createApp(
     htmlBody: string;
     coverImageUrl: string | null;
     inlineImageUrls: string[];
-    substackBody: string | null;
+    substackDoc: ProseMirrorDoc | null;
   } {
     const rawDraft = repo.artifacts.get(articleId, 'draft.md');
     let htmlBody = '<p class="empty-state">No article draft found yet. Re-run drafting or send the article back to editing.</p>';
-    let substackBody: string | null = null;
+    let substackDoc: ProseMirrorDoc | null = null;
 
     if (rawDraft) {
       const cleanDraft = separateThinking(rawDraft).output;
       const doc = markdownToProseMirror(cleanDraft);
       htmlBody = proseMirrorToHtml(doc);
-      substackBody = proseMirrorToHtml(doc);
+      substackDoc = doc;
     }
 
     let coverImageUrl: string | null = null;
@@ -285,107 +293,175 @@ export function createApp(
       inlineImageUrls = parsed.inlines;
     }
 
-    return { htmlBody, coverImageUrl, inlineImageUrls, substackBody };
+    return { htmlBody, coverImageUrl, inlineImageUrls, substackDoc };
   }
 
   /**
-   * Enrich Substack body with uploaded images and subscribe/footer elements.
-   * Uploads images to Substack, rewrites URLs, intersperses them in the body,
-   * and adds subscribe CTA + publication blurb.
+   * Build a ProseMirror horizontal rule node.
    */
-  async function enrichSubstackBody(
-    baseBody: string,
+  function buildHorizontalRule(): ProseMirrorNode {
+    return { type: 'horizontal_rule' };
+  }
+
+  /**
+   * Build publication blurb as ProseMirror nodes.
+   */
+  function buildBlurbNode(labName: string): ProseMirrorNode {
+    return {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'The ', marks: [{ type: 'em' }] },
+        { type: 'text', text: labName, marks: [{ type: 'em' }] },
+        { type: 'text', text: ' is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement ', marks: [{ type: 'em' }] },
+        { type: 'text', text: 'is', marks: [{ type: 'em' }, { type: 'strong' }] },
+        { type: 'text', text: ' the analysis. Welcome to the Lab. Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.', marks: [{ type: 'em' }] },
+      ],
+    };
+  }
+
+  /**
+   * Insert inline images between content nodes in a ProseMirror document.
+   * Distributes images evenly throughout the article.
+   */
+  function intersperseImagesInDoc(content: ProseMirrorNode[], imageNodes: ProseMirrorNode[]): void {
+    if (imageNodes.length === 0 || content.length < 3) {
+      for (const imageNode of imageNodes) {
+        content.push(imageNode);
+      }
+      return;
+    }
+
+    const startIdx = Math.max(3, Math.floor(content.length * 0.2));
+    const endIdx = Math.floor(content.length * 0.85);
+    const range = Math.max(endIdx - startIdx, 1);
+
+    for (let i = 0; i < imageNodes.length; i++) {
+      const pos = startIdx + Math.floor((i + 0.5) * range / imageNodes.length);
+      const insertAt = Math.min(pos, content.length);
+      content.splice(insertAt, 0, imageNodes[i]);
+    }
+  }
+
+  function hasSubscribeWidget(content: ProseMirrorNode[]): boolean {
+    return content.some((node) => node.type === 'subscribeWidget');
+  }
+
+  function hasFooterBlurb(content: ProseMirrorNode[]): boolean {
+    return content.some((node) => isFooterParagraph(node));
+  }
+
+  function resolveDraftImagePath(imageSrc: string): string | null {
+    if (!imageSrc || /^https?:\/\//i.test(imageSrc)) {
+      return null;
+    }
+
+    const normalized = imageSrc.replace(/\\/g, '/');
+    let relativePath = normalized;
+    if (relativePath.startsWith('/images/')) {
+      relativePath = relativePath.slice('/images/'.length);
+    } else if (relativePath.startsWith('../../images/')) {
+      relativePath = relativePath.slice('../../images/'.length);
+    } else if (relativePath.startsWith('content/images/')) {
+      relativePath = relativePath.slice('content/images/'.length);
+    }
+
+    return resolve(config.imagesDir, relativePath);
+  }
+
+  function getCaptionedImageNode(node: ProseMirrorNode): ProseMirrorNode | null {
+    if (node.type !== 'captionedImage') {
+      return null;
+    }
+    const imageNode = node.content?.find((child) => child.type === 'image2');
+    return imageNode ?? null;
+  }
+
+  async function rewriteDocImageUrls(doc: ProseMirrorDoc, articleId: string): Promise<ProseMirrorDoc> {
+    if (!substackService) {
+      return doc;
+    }
+
+    const cloned = JSON.parse(JSON.stringify(doc)) as ProseMirrorDoc;
+    for (const node of cloned.content) {
+      const imageNode = getCaptionedImageNode(node);
+      const currentSrc = typeof imageNode?.attrs?.src === 'string' ? imageNode.attrs.src : '';
+      const absPath = resolveDraftImagePath(currentSrc);
+      if (!imageNode || !absPath || !existsSync(absPath)) {
+        continue;
+      }
+
+      try {
+        const uploadedUrl = await substackService.uploadImage(absPath);
+        imageNode.attrs = {
+          ...imageNode.attrs,
+          src: uploadedUrl,
+          srcNoWatermark: uploadedUrl,
+        };
+      } catch (err) {
+        console.warn(`[publish] Image upload failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+
+    return cloned;
+  }
+
+  /**
+   * Enrich Substack ProseMirror document with uploaded images and publish-only chrome.
+   * Rewrites existing markdown image nodes to Substack CDN URLs and only falls back
+   * to manifest-driven image placement when the markdown contains no image nodes.
+   */
+  async function enrichSubstackDoc(
+    baseDoc: ProseMirrorDoc,
     coverImagePath: string | null,
     inlineImagePaths: string[],
     articleId: string
-  ): Promise<string> {
-    let enrichedBody = baseBody;
+  ): Promise<ProseMirrorDoc> {
+    const enrichedContent = [...baseDoc.content];
+    const hasEmbeddedImages = enrichedContent.some((node) => node.type === 'captionedImage');
+    if (!hasEmbeddedImages) {
+      const fallbackImages: ProseMirrorNode[] = [];
+      if (coverImagePath) {
+        fallbackImages.push(buildCaptionedImage(coverImagePath, 'Cover image'));
+      }
+      fallbackImages.push(
+        ...inlineImagePaths.map((imagePath, index) =>
+          buildCaptionedImage(imagePath, `Inline image ${index + 1}`),
+        ),
+      );
 
-    // Upload and prepend cover image if present
-    if (coverImagePath && substackService) {
-      try {
-        const absPath = resolve(coverImagePath.replace(/^\/images\//, config.imagesDir + '/'));
-        if (existsSync(absPath)) {
-          const coverUrl = await substackService.uploadImage(absPath);
-          enrichedBody = `<figure><img src="${escapeHtml(coverUrl)}" alt="Cover image" /></figure>\n\n${enrichedBody}`;
+      if (fallbackImages.length > 0) {
+        const [coverNode, ...inlineNodes] = fallbackImages;
+        if (coverNode) {
+          enrichedContent.unshift(coverNode);
         }
-      } catch (err) {
-        console.warn(`[publish] Cover image upload failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
+        intersperseImagesInDoc(enrichedContent, inlineNodes);
       }
     }
 
-    // Upload and intersperse inline images
-    if (inlineImagePaths.length > 0 && substackService) {
-      const uploadedUrls: string[] = [];
-      for (const imagePath of inlineImagePaths) {
-        try {
-          const absPath = resolve(imagePath.replace(/^\/images\//, config.imagesDir + '/'));
-          if (existsSync(absPath)) {
-            const url = await substackService.uploadImage(absPath);
-            uploadedUrls.push(url);
-          }
-        } catch (err) {
-          console.warn(`[publish] Inline image upload failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
-        }
-      }
+    const enrichedDoc = await rewriteDocImageUrls(
+      {
+        ...baseDoc,
+        content: enrichedContent,
+      },
+      articleId,
+    );
 
-      if (uploadedUrls.length > 0) {
-        enrichedBody = intersperseImages(enrichedBody, uploadedUrls);
-      }
-    }
-
-    // Append subscribe CTA
     const labName = config.leagueConfig.substackConfig.labName;
     const subscribeCaption = config.leagueConfig.substackConfig.subscribeCaption;
-    const subscribeCta = `
-<div style="margin: 2rem 0; padding: 1.5rem; background: #f8f9fa; border-radius: 4px; text-align: center;">
-  <p style="margin: 0 0 1rem 0; font-size: 1rem; color: #333;">${escapeHtml(subscribeCaption)}</p>
-  <p style="margin: 0;"><a href="#" style="display: inline-block; padding: 0.75rem 2rem; background: #1a73e8; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">Subscribe</a></p>
-</div>`;
-
-    enrichedBody += '\n\n' + subscribeCta;
-
-    // Append publication blurb
-    const blurb = `
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;" />
-<div style="margin: 2rem 0; font-style: italic; color: #666;">
-  <p><em>The ${escapeHtml(labName)} is a virtual front office — specialized AI analysts who debate every angle of every move, moderated and fact-checked by a human editor. When they disagree, that disagreement <strong>is</strong> the analysis. Welcome to the Lab.</em></p>
-  <p><em>Got a trade, signing, or draft scenario you want us to break down? Drop it in the comments.</em></p>
-</div>`;
-
-    enrichedBody += '\n' + blurb;
-
-    return enrichedBody;
-  }
-
-  /**
-   * Insert inline images between block-level elements in the HTML body.
-   * Distributes images evenly throughout the article (matches preview.ts logic).
-   */
-  function intersperseImages(htmlBody: string, imageUrls: string[]): string {
-    if (imageUrls.length === 0) return htmlBody;
-
-    const blocks = htmlBody.split(/(?<=<\/(?:p|h[1-6]|blockquote|ul|ol|figure|pre)>)/);
-    if (blocks.length < 3) {
-      const imgs = imageUrls.map((url, i) =>
-        `<figure><img src="${escapeHtml(url)}" alt="Inline image ${i + 1}" style="max-width: 100%; height: auto;" /></figure>`
-      ).join('\n');
-      return htmlBody + '\n' + imgs;
+    if (!hasSubscribeWidget(enrichedDoc.content)) {
+      enrichedDoc.content.push(createSubscribeWidget(subscribeCaption));
+    }
+    if (!hasFooterBlurb(enrichedDoc.content)) {
+      enrichedDoc.content.push(buildHorizontalRule());
+      enrichedDoc.content.push(buildBlurbNode(labName));
     }
 
-    const startIdx = Math.max(3, Math.floor(blocks.length * 0.2));
-    const endIdx = Math.floor(blocks.length * 0.85);
-    const range = Math.max(endIdx - startIdx, 1);
-
-    const result = [...blocks];
-    for (let i = 0; i < imageUrls.length; i++) {
-      const pos = startIdx + Math.floor((i + 0.5) * range / imageUrls.length);
-      const insertAt = Math.min(pos, result.length - 1);
-      const img = `<figure><img src="${escapeHtml(imageUrls[i])}" alt="Inline image ${i + 1}" style="max-width: 100%; height: auto;" /></figure>`;
-      result[insertAt] = result[insertAt] + '\n' + img;
+    const validation = validateProseMirrorBody(enrichedDoc);
+    if (!validation.valid) {
+      throw new Error(`Publish payload validation failed: ${validation.issues.join('; ')}`);
     }
 
-    return result.join('');
+    return enrichedDoc;
   }
 
   async function saveOrUpdateSubstackDraft(article: Article): Promise<{ id: string; editUrl: string }> {
@@ -394,17 +470,20 @@ export function createApp(
     }
 
     const presentation = buildPublishPresentation(article.id);
-    if (!presentation.substackBody) {
+    if (!presentation.substackDoc) {
       throw new Error('No article draft found yet. Re-run drafting or send the article back to editing before publishing.');
     }
 
-    // Enrich the body with uploaded images, subscribe CTA, and footer
-    const enrichedBody = await enrichSubstackBody(
-      presentation.substackBody,
+    // Enrich the ProseMirror document with uploaded images, subscribe CTA, and footer
+    const enrichedDoc = await enrichSubstackDoc(
+      presentation.substackDoc,
       presentation.coverImageUrl,
       presentation.inlineImageUrls,
       article.id
     );
+
+    // Convert enriched document to JSON string for Substack API
+    const bodyJson = JSON.stringify(enrichedDoc);
 
     const existingDraftId = article.substack_draft_url ? extractDraftId(article.substack_draft_url) : null;
     const draft = existingDraftId
@@ -412,12 +491,12 @@ export function createApp(
           draftId: existingDraftId,
           title: article.title,
           subtitle: article.subtitle ?? undefined,
-          bodyHtml: enrichedBody,
+          bodyHtml: bodyJson,
         })
       : await substackService.createDraft({
           title: article.title,
           subtitle: article.subtitle ?? undefined,
-          bodyHtml: enrichedBody,
+          bodyHtml: bodyJson,
         });
 
     repo.setDraftUrl(article.id, draft.editUrl);
@@ -1532,7 +1611,7 @@ export function createApp(
 
     try {
       const presentation = buildPublishPresentation(id);
-      if (!presentation.substackBody) {
+      if (!presentation.substackDoc) {
         throw new Error('No article draft found yet. Re-run drafting or send the article back to editing before publishing.');
       }
 
