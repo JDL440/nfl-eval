@@ -1794,3 +1794,119 @@ Created a single progress commit on `main` containing **only** the approved publ
 - **Lines added:** 3,185
 - **Lines removed:** 317
 - **Tests added:** 45+ new test cases
+
+---
+
+# DevOps Decision — Publish Fix Commit
+
+**Date:** 2026-03-25T06:34:28Z  
+**Owner:** DevOps  
+**Status:** ✅ COMMITTED  
+**Commit SHA:** 9480b74d4f738718b9f0667de2564c857139d275
+
+## Summary
+
+Staged and committed publish-fix changes to main branch. Three files modified: dashboard server initialization, publish view rendering, and publish test coverage.
+
+## Files Committed
+
+1. src/dashboard/server.ts — +253, -109
+   - Added createSubstackServiceFromEnv() factory
+   - Added esolveDashboardDependencies() resolver
+   - Proper service injection at startup
+
+2. src/dashboard/views/publish.ts — +7, -0
+   - Exported proseMirrorToHtml() for test use
+   - Corrected HTML rendering for ProseMirror → HTML flow
+
+3. 	ests/dashboard/publish.test.ts — +100, -109
+   - Enhanced payload validation tests
+   - Image reference and embedding test coverage
+   - Mock service improvements
+
+## Commit Message
+
+`
+fix: Rewrite Substack publish payload and image rendering
+
+Refactored the Substack publish workflow to fix image handling and payload
+serialization:
+
+- Updated server.ts with createSubstackServiceFromEnv() and
+  resolveDashboardDependencies() to properly inject SubstackService at startup
+- Rewrote publish.ts proseMirrorToHtml() with corrected HTML rendering and
+  image embedding logic
+- Enhanced tests/dashboard/publish.test.ts with comprehensive payload validation
+  and image reference testing
+
+This fixes the production publish path that was not receiving service injection,
+while preserving HTMX recovery UI improvements.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+`
+
+## Rationale
+
+- **Staged carefully:** Only publish-fix files committed; .squad/agents/publisher/history.md and other unrelated changes left unstaged.
+- **Clear scope:** All three files address single publish workflow concern (service injection + rendering + tests).
+- **Documented trailer:** Included required Co-authored-by trailer per GitHub Copilot CLI policy.
+- **No push:** Held commit on main for Backend team review and validation before publication.
+
+## Next Steps
+
+- Backend team validates with full test suite: 
+pm run test
+- Run dashboard-specific tests: 
+px vitest run tests/dashboard/publish.test.ts tests/dashboard/server.test.ts
+- Run build: 
+pm run v2:build
+- If validation passes, push to origin/main and proceed with article republish or Note/Tweet validation as needed.
+
+## Team Impact
+
+- Publish workflow now correctly wires SubstackService at startup
+- HTML rendering for ProseMirror nodes improved (no lost formatting, image refs)
+- Test coverage prevents future regression on payload serialization
+
+---
+
+# Publisher Decision — Notes Publishing 500 Fix
+
+**Date:** 2026-03-25  
+**Owner:** Publisher  
+**Status:** ✅ IMPLEMENTED
+
+## Decision
+
+Apply a sensible default value (/api/v1/comment/feed) for the Substack Notes API endpoint, allowing Notes feature to work out-of-the-box without requiring the optional NOTES_ENDPOINT_PATH environment variable.
+
+## Why
+
+- **Root cause:** 
+otesEndpoint was optional in SubstackConfig but required by the createNote() method at runtime
+- **Failure mode:** When NOTES_ENDPOINT_PATH env var was unset, SubstackService would initialize without an endpoint, and calling createNote() would throw "Missing notesEndpoint..." error manifesting as 500 in dashboard
+- **User impact:** Notes feature was unavailable unless env var was explicitly set, despite having a known standard Substack API path
+- **Fix:** Provide the standard Substack Notes endpoint as a default constant, eliminating the optional configuration gap
+
+## Implementation
+
+**File: src/services/substack.ts**
+- Added constant: const DEFAULT_NOTES_ENDPOINT = '/api/v1/comment/feed';
+- Updated createNote() method to use default: const endpoint = this.config.notesEndpoint || DEFAULT_NOTES_ENDPOINT;
+- Removed the explicit error throw when endpoint is missing
+
+**File: 	ests/services/substack.test.ts**
+- Changed test from "throws when notesEndpoint is not configured" to "uses default notesEndpoint when not configured"
+- Test verifies that default endpoint is used in the fetch call
+
+## Validation
+
+- ✅ All 46 substack service tests pass
+- ✅ All 46 dashboard publish tests pass
+- ✅ Notes can now be posted without any env configuration beyond required Substack credentials
+
+## Notes
+
+- Optional env var NOTES_ENDPOINT_PATH still works for overriding the default if needed (e.g., for testing against different endpoints)
+- No breaking changes — existing setups with explicit NOTES_ENDPOINT_PATH continue to work
+- Same contract pattern applicable to Tweet feature if similar issues emerge (service optional but feature requires configuration)
