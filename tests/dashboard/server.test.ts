@@ -631,6 +631,24 @@ describe('Dashboard Server', () => {
       const article = repo.getArticle('adv-ok');
       expect(article!.current_stage).toBe(2);
     });
+
+    it('uses draft readiness for stage 7 publish actions instead of the stage guard failure', async () => {
+      repo.createArticle({ id: 'stage7-publish', title: 'Stage 7 Publish' });
+      for (let s = 2; s <= 7; s++) {
+        repo.advanceStage('stage7-publish', s - 1, s, 'test');
+      }
+      repo.setDraftUrl('stage7-publish', 'https://test.substack.com/publish/post/12345');
+
+      const res = await app.request('/articles/stage7-publish');
+      const html = await res.text();
+
+      expect(html).toContain('Open Publish Workspace');
+      expect(html).toContain('Publish to Substack');
+      expect(html).toContain('Substack draft ready for manual publish');
+      expect(html).not.toContain('substack_url not set on article');
+      expect(html).toContain('Draft ↗');
+      expect(html).not.toContain('disabled>Publish to Substack');
+    });
   });
 
   // ── Regress endpoints ───────────────────────────────────────────────────

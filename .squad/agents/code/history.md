@@ -10,6 +10,7 @@
 
 ## Learnings
 
+- 2026-03-23 — PR #113 cleanup: Stage 7 manual publish readiness belongs to the dashboard action panel (`src/dashboard/views/article.ts`) and should key off `substack_draft_url`, with the regression anchored in `tests/dashboard/server.test.ts`.
 - Team initialized 2025-07-18
 - Issue #92 writer revisions should receive the full latest `editor-review.md` artifact in `articleContext` while keeping `conversationContext` limited to the compact revision handoff. That preserves anti-role-bleed for writer/editor/publisher without hiding exact editor instructions from the writer.
 - 47 article pipeline agents live in `src/config/defaults/charters/nfl/` — these are SEPARATE from Squad agents
