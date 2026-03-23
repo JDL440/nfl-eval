@@ -3,21 +3,38 @@
 ## Project Context
 
 - **Project:** NFL Lab (nfl-eval) — AI-powered NFL analytics and content platform
-- **Stack:** TypeScript, Node.js, MCP tools for Substack/image generation
+- **Stack:** TypeScript, Node.js, MCP tools for Substack/image gen
 - **Owner:** Joe Robinson
 - **Repo:** JDL440/nfl-eval
 - **Key paths:** `content/` (pipeline output), `mcp/` (MCP tools), `src/services/` (publishing services)
 
 ## Core Context
 
-- Stage 7 publishing is a manual two-step flow: create or update the Substack draft first, then publish that linked draft.
-- `/articles/:id/publish` is the draft-first workspace; copy should clearly distinguish draft state, publish action, and optional Notes/Tweets.
-- The current failure mode is startup wiring, not route logic: `createApp()` can accept `substackService`, but normal `startServer()` startup does not construct or pass it.
-- For local article publishing, the meaningful env vars are `SUBSTACK_TOKEN` and `SUBSTACK_PUBLICATION_URL`; stage-target and Notes support are separate paths.
-- The publish page should keep the richer preview/error guidance aligned with the actual dashboard state so editors see whether publishing is unavailable, draft-ready, or live.
+### Stage 7 Publishing Architecture
+- Manual two-step flow: Create Substack draft → Publish live
+- `runPublisherPass()` prepares artifacts/checklist but does not create draft; dashboard routes handle draft creation + publish
+- Routes at `src/dashboard/server.ts:1277-1438` distinguish missing draft, service unavailability, stale URLs, API failures
+- Currently uses mixed terminology ("publish workspace", "Review & Publish", "Publish Actions")
 
-## Recent Learnings
+### Draft-First Model (Approved Decision)
+- Treat Stage 7 as explicit two-step: idempotent save/create draft (never publishes), then publish-now (publishes existing linked draft)
+- Substack service already exposes `createDraft` and `updateDraft` APIs
+- Benefits: prevents divergence between reviewed/published content, single draft lifecycle, idempotent saves prevent side effects
+- Publish page should upgrade to high-fidelity preview reusing richer rendering from `/articles/:id/preview`
 
-- 2026-03-25 — Substack config trace: confirmed the missing `SubstackService` injection is the root cause of the dashboard publish failure path; route tests pass because they inject a mock service directly.
-- 2026-03-24 — Publish-overhaul coordination: the draft-first model, preview expectations, and error-state copy were aligned across Publisher, UX, and Code.
-- 2026-03-23 — Stage 7 publish UX review: terminology like “publish workspace” should be replaced with clearer action/state labels.
+### Substack Dashboard Config Wiring Issue (Critical)
+- **Root cause:** `startServer()` builds `imageService` only; calls `createApp()` without constructing/passing `SubstackService`
+- **Result:** Draft/publish routes return HTTP 500 even when `.env` contains valid keys
+- **Required keys:** `SUBSTACK_TOKEN`, `SUBSTACK_PUBLICATION_URL` (stage/notes vars optional)
+- **UX gap:** Current UI hint misleads when env is already configured; better approach is detect service availability before rendering actions
+- **Testing gap:** Existing route tests inject mock `substackService` directly, so real startup wiring never tested
+
+### Issue #107 Revision — Skill Deduplication (COMPLETED)
+- Removed duplicated image-policy text from `src/config/defaults/skills/publisher.md`
+- Publisher now references `../substack-article.md` Phase 4b as canonical policy source
+- Retained only publisher-specific verification: syntax, filenames, file existence, alt text quality, links
+- Division of responsibility: substack-article.md states policy, publisher.md verifies compliance
+
+## Learnings
+
+- 2026-03-23T04:12:59Z — **UX Dashboard Publish Review findings integrated into Code decisions**: UX submitted read-only findings; HTMX 500 responses don't swap the publish panel. Publisher decision aligned with Code/UX recommendations: treat startup wiring as precondition, distinguish missing-env from service-unavailable states. See decisions.md for full coordination.
