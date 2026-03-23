@@ -19,6 +19,7 @@
 
 ## Recent Learnings
 
+- 2026-03-25T10:30:00Z — **Publish payload decisions merged to decisions.md**: Three inbox items consolidated documenting HTML→ProseMirror regression analysis, fix implementation (refactored enrichment to operate on document nodes), and validation evidence (45 passing tests). Payload structure ready for staging/commit. Dashboard Substack wiring completed in prior pass. Active investigation: Note and Tweet publishing 500s.
 - 2026-03-25 — Dashboard Substack config triage: confirmed the missing `SubstackService` wiring in `startServer()` is the root cause, and that the route tests are not exercising the real startup path.
 - 2026-03-25 — Issue #118 promotion rule fix (Lead-implemented revision): repeated `process_improvement` findings must promote to issue-ready independent of author or priority. Added explicit repetition check to `promoteIssueCandidates()` with focused regression test. Validation passed (147/147 tests, build passing).
 - 2026-03-24 — Issue #117 digest CLI approved: keep the data seam read-only, group by role + finding_type, and dedupe normalized findings in TypeScript.

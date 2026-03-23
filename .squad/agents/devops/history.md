@@ -25,22 +25,18 @@
 
 - 2026-03-24: For publish-overhaul shipping on dirty local `main`, use a fresh worktree from `origin/main`, copy only the target files, validate with `npm run v2:build` plus `npx vitest run tests/dashboard/publish.test.ts tests/dashboard/server.test.ts`, then push a feature branch instead of pushing local `main`.
 
-### 2026-03-25: Substack Publishing 500 Error Investigation
+### 2026-03-25T10:30:00Z: Publish Payload Fixes Staged and Decision-Merged
 
-**Reported issue:** "Getting 500 error trying to publish draft or article: Substack publishing is not configured for this environment."
+**Context:** Publisher payload ProseMirror regression fix and validation complete, staged for commit.
 
-**Root cause:** Code bug in `src/dashboard/server.ts:2494`. The `startServer()` function:
-- ✅ Initializes `imageService` (lines 2455–2471)
-- ❌ Does NOT initialize `SubstackService` (missing entirely)
-- ✅ User's `.env` is correctly configured (SUBSTACK_TOKEN, SUBSTACK_PUBLICATION_URL both present)
+**Decision artifacts merged to decisions.md:**
+- `publisher-html-regression.md` — Root cause: Substack's `draft_body` API expects ProseMirror JSON, not HTML strings
+- `publisher-prosemirror-payload-fix.md` — Implementation: reverted to JSON format, refactored enrichment to operate on document nodes
+- `publisher-stage-verify-prosemirror.md` — Validation: 45 passing tests, correct payload structure confirmed
 
-The application architecture supports passing `substackService` as optional dependency to `createApp()`, but `startServer()` never creates it. Handlers for `/api/articles/:id/draft` and `/api/articles/:id/publish` check `if (!substackService)` and return HTTP 500 with "Substack publishing is not configured for this environment."
+**Impact:** Publishing system ready for production republish. Payload/image rewrite fixes pass validation and are staged for commit.
 
-**User impact:** Publishing feature is unavailable despite correct environment configuration.
-
-**Recommendation:** Code team should add SubstackService initialization pattern (lines 2455–2471 as reference) to `startServer()` at same location as imageService. Check `SUBSTACK_TOKEN` && `SUBSTACK_PUBLICATION_URL` before instantiation. Non-fatal service (like imageService) — log warning if missing, don't crash startup.
-
-**Dev action required:** Issue for Code team. No env/CI changes needed from DevOps.
+**Next phase:** Code and Publisher teams investigating Note/Tweet publishing 500s.
 
 ### 2026-03-23T04:09:08Z: Scribe Cross-Agent Update — Publish Overhaul Ship Strategy
 
@@ -71,3 +67,20 @@ The application architecture supports passing `substackService` as optional depe
 - 2026-03-25 — Accepted publish regression pattern: keep optional service wiring in `startServer()` via `createSubstackServiceFromEnv()`, and for HTMX draft/publish requests without Substack config return the swapped `renderPublishWorkflow()` fragment with setup guidance while non-HTMX callers still receive JSON 500s. Validation: `npx vitest run tests/dashboard/publish.test.ts --testNamePattern "createSubstackServiceFromEnv|returns an actionable HTMX message"` and `npm run v2:build`.
 - 2026-03-25 — For progress commits on dirty `main`, isolate in a fresh worktree branch from current `HEAD`, copy only the scoped files, hand-patch mixed files (`src/dashboard/views/article.ts`, `tests/dashboard/server.test.ts`) to avoid unrelated dashboard/pipeline work, then validate with `npm run v2:build` plus `npx vitest run tests/dashboard/publish.test.ts tests/dashboard/server.test.ts` before committing.
 - 2026-03-23T05:00:39Z — **Publish wave reconciliation**: DevOps isolated approved payload fixes to feature branch from `origin/main`, validated with focused test suite (`npm run test -- tests/dashboard/publish.test.ts`, `npm run v2:build`). All 45 tests pass. Pre-existing `server.test.ts` revision history failures unrelated to payload wave — not blocking. Ready for live article republish validation before Note/Tweet 500 fixes queued.
+
+### 2026-03-25T06:34:28Z: Publish Fix Commit
+
+**Commit:** `9480b74d4f738718b9f0667de2564c857139d275`  
+**Message:** "fix: Rewrite Substack publish payload and image rendering"
+
+**Files committed:**
+- `src/dashboard/server.ts` (253 insertions, 109 deletions)
+- `src/dashboard/views/publish.ts` (7 insertions, 0 deletions)
+- `tests/dashboard/publish.test.ts` (100 insertions, 109 deletions)
+
+**What fixed:**
+- Added `createSubstackServiceFromEnv()` and `resolveDashboardDependencies()` for proper service injection at startup
+- Rewrote `proseMirrorToHtml()` with corrected HTML rendering and image embedding
+- Enhanced publish tests with payload validation and image reference testing
+
+**Status:** Staged to `main`. Did not push per request — ready for validation and team review before publication.
