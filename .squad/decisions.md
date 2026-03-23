@@ -903,3 +903,81 @@ Adopt a **single-operator local login** design as the repo's long-term baseline 
 - `tests/dashboard/publish.test.ts`
 - `tests/dashboard/config.test.ts`
 - `tests/e2e/live-server.test.ts`
+
+---
+
+# Decision: Dashboard auth direction — Issue #102
+
+**By:** Research (via Copilot)  
+**Date:** 2026-03-23  
+**Issue:** #102  
+
+## TLDR
+
+Adopt a **single-operator local login** design as the repo's long-term baseline for issue #102:
+- Server-enforced Hono middleware protecting all dashboard surfaces except login/logout and static assets
+- Opaque session id in `httpOnly` cookie
+- SQLite-backed `dashboard_sessions` table
+- Config-driven auth mode (off by default in tests/dev)
+
+Defer OAuth, multi-user RBAC, and external identity providers to future issues.
+
+## Why
+
+Current dashboard has no auth middleware or session persistence seam. The architecture is Hono + HTMX + SQLite, which naturally accommodates a minimal local-login foundation. This recommendation fits the owner's stated preference ("simple local login for now") and avoids overbuilding SaaS-style auth for an internal editorial workstation.
+
+## Scope
+
+This decision defines the direction; implementation is deferred for Code team. Key files:
+- `src/dashboard/server.ts` — middleware enforcement
+- `src/config/index.ts` — auth config shape
+- `src/db/schema.sql`, `src/db/repository.ts` — session persistence
+- `tests/` — auth-aware test helpers and disable-by-default fixtures
+
+---
+
+# Decision: Code auth seam implementation — Issue #102
+
+**By:** Code (via Copilot)  
+**Date:** 2026-03-23  
+**Issue:** #102  
+
+## TLDR
+
+Implement a minimum-viable long-term dashboard auth layer:
+- Hono middleware protecting all dashboard + API routes
+- Login/logout endpoints with session cookie
+- SQLite `dashboard_sessions` table (id, username, created/updated/expires)
+- Config-driven enable/disable from `src/config/index.ts`
+- Secure cookie defaults: `HttpOnly`, `SameSite=Lax`, `Secure` in production
+
+Avoid client-only password flag or multi-user account system in the first pass.
+
+## Why
+
+Current dashboard routing in `src/dashboard/server.ts` has no auth middleware, no cookie/session handling, and no auth-related repository/schema support, yet it exposes article editing, publishing, memory, and config surfaces. This design fits the existing Hono + `loadConfig()` + Repository architecture with the least churn and gives a stable seam for future multi-user expansion.
+
+---
+
+# Decision: Publisher publish-flow review — Stage 7 mental models
+
+**By:** Publisher  
+**Date:** 2026-03-23  
+
+## TLDR
+
+Treat Stage 7 publishing as an explicitly **manual two-step dashboard workflow**:
+
+1. Open `/articles/:id/publish`
+2. Create the Substack draft
+3. Publish the draft to advance to Stage 8
+
+Current implementation already works this way. Product copy should use consistent terminology for the publish page (`/articles/:id/publish`) — either "Publish Page", "Publish Console", or "Publish Workspace" — to avoid editor confusion.
+
+## Why
+
+- Stage 7→8 transition in `src/pipeline/actions.ts:896-919` is not automated; it requires `substack_url` to already exist from dashboard publishing.
+- Dashboard separates draft creation (`POST /api/articles/:id/draft`) from final publish (`POST /api/articles/:id/publish`).
+- Tests verify the two-step behavior.
+
+Using multiple labels for the same surface creates avoidable confusion. Standardize on one term.

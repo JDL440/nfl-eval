@@ -99,3 +99,15 @@
 ### 2026-03-23T01:23:06Z: Issue #110 routing follow-up
 - Routed #110 as a UX dashboard follow-up after #109, with no new schema work required.
 - Kept the timing-total work aligned with the existing article-detail implementation seam.
+
+### 2026-03-23T02:17:46Z: Issue #102 auth direction locked
+
+**By:** Lead (🏗️)
+
+Research completed comprehensive analysis of issue #102 (dashboard auth hardening). Decision submitted to `.squad/decisions.md`:
+
+**Direction:** Single-operator local login with Hono middleware, opaque session cookies, SQLite persistence, and config-driven enable/disable.
+
+**Why:** Current dashboard has no auth seam. Recommendation aligns with owner's preference ("simple local login for now"), fits Hono + SQLite architecture, and defers OAuth/RBAC to future.
+
+**Deferred for Code:** Implementation tracked as Issue #102 follow-up after decision lock.
