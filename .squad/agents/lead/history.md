@@ -28,6 +28,7 @@
 
 ## Recent Learnings
 
+- 2026-03-25 — **Issue #107 Follow-up Approved (Publisher implementation)**: Publisher completed narrow-scope deduplication of TLDR contract clarification. Removed duplicated image-policy text from `src/config/defaults/skills/publisher.md`; now references `substack-article.md` Phase 4b as canonical policy source. Retained only publisher-specific verification (syntax, filenames, existence, alt text, links). Division of responsibility: `substack-article.md` states policy, `publisher.md` verifies compliance. Decision merged to decisions.md. Orchestration log written. Ready for commit.
 - 2026-03-25 — **TLDR Retry Revision Contract Finalized (Code agent implementation)**: Code agent completed the Lead-approved narrow-scope fix for TLDR retry. Updated Writer charter clarity, Editor hard guard for missing TLDR (🔴 ERROR), writeDraft revision safety. Implementation uses `## Failed Draft To Revise` section to preserve working analysis rather than forcing rewrites. Regression coverage complete (147 tests, build clean). Decision merged to decisions.md.
 - 2026-03-24 — Retrospective worktree triage: mainline already contains the approved minimal runtime slice, so unrelated worktree drift should not be ported.
 - 2026-03-24 — Publish-overhaul isolation strategy: branch from `origin/main`, stash unrelated work, and keep the dashboard publish commit publish-only.
