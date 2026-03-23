@@ -10,6 +10,7 @@ import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
 import type { Article, Stage, StageTransition, StageRun, EditorReview, UsageEvent } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
+import type { RevisionHistoryEntry } from '../../pipeline/conversation.js';
 import { markdownToHtml } from '../../services/markdown.js';
 
 const DEPTH_LABELS: Record<number, string> = {
@@ -36,6 +37,7 @@ export interface ArticleDetailData {
   article: Article;
   transitions: StageTransition[];
   reviews: EditorReview[];
+  revisionHistory?: RevisionHistoryEntry[];
   advanceCheck?: AdvanceCheck;
   usageEvents?: UsageEvent[];
   stageRuns?: StageRun[];
@@ -155,7 +157,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive, pinnedAgents } = data;
+  const { config, article, transitions, reviews, revisionHistory, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive, pinnedAgents } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -187,6 +189,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
       <div class="detail-grid">
         <div class="detail-main">
           ${renderActionPanel(article, advanceCheck, stageRuns)}
+          ${(revisionHistory?.length ?? 0) > 0 ? renderRevisionHistory(revisionHistory ?? []) : ''}
           ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
           <div id="live-artifacts"
             hx-get="/htmx/articles/${eid}/live-artifacts"
@@ -195,7 +198,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
             hx-indicator="#pipeline-activity">
             ${renderArtifactTabs(article, artifactNames)}
           </div>
-          ${reviews.length > 0 ? renderEditorReviews(reviews) : ''}
+          ${(revisionHistory?.length ?? 0) === 0 && reviews.length > 0 ? renderEditorReviews(reviews) : ''}
         </div>
         <div class="detail-sidebar"
           hx-get="/htmx/articles/${eid}/live-sidebar"
@@ -349,15 +352,8 @@ function renderArtifactTabs(article: Article, artifactNames?: string[]): string 
                 data-tab="${escapeHtml(name)}"
                 onclick="this.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">
                 ${escapeHtml(name.replace('.md', ''))}
+                ${hasThinking ? '<span class="artifact-trace-badge">💭 trace</span>' : ''}
               </button>
-              ${hasThinking ? `
-              <button class="tab-btn tab-btn-thinking" role="tab"
-                hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(thinkName)}"
-                hx-target="#artifact-content-${escapeHtml(article.id)}"
-                hx-swap="innerHTML"
-                data-tab="${escapeHtml(thinkName)}"
-                onclick="this.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')"
-                title="View thinking trace">💭</button>` : ''}
             `;
           }).join('')}
         </div>
@@ -398,17 +394,23 @@ function renderArtifactLinks(article: Article): string {
 }
 
 /** Render artifact file content as an HTML fragment (htmx partial). */
-export function renderArtifactContent(name: string, content: string | null): string {
+export function renderArtifactContent(
+  name: string,
+  content: string | null,
+  persistedThinkingContent?: string | null,
+): string {
   if (content == null) {
     return `<p class="empty-state">Not yet created</p>`;
   }
 
-  // Separate thinking/reasoning blocks from output content
-  const { thinking, output } = extractThinking(content);
+  const extracted = extractThinking(content);
+  const hasPersistedThinking = !!persistedThinkingContent && !name.endsWith('.thinking.md');
+  const thinking = hasPersistedThinking ? persistedThinkingContent : extracted.thinking;
+  const output = extracted.output;
 
   const thinkingHtml = thinking
     ? `<details class="thinking-block">
-        <summary>💭 Model Thinking <span class="thinking-hint">(click to expand)</span></summary>
+        <summary>${hasPersistedThinking ? '💭 Persisted Thinking Trace' : '💭 Extracted Thinking Trace'} <span class="thinking-hint">(click to expand)</span></summary>
         <div class="thinking-content">${name.endsWith('.md') ? markdownToHtml(thinking) : `<pre>${escapeHtml(thinking)}</pre>`}</div>
       </details>`
     : '';
@@ -419,6 +421,71 @@ export function renderArtifactContent(name: string, content: string | null): str
     : `<pre class="artifact-pre">${escapeHtml(output)}</pre>`;
 
   return thinkingHtml + outputHtml;
+}
+
+function summarizeMarkdown(content: string, maxLength = 220): string {
+  const compact = content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`~-]/g, ' ')
+    .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (compact.length <= maxLength) return compact;
+  return compact.slice(0, maxLength).replace(/\s+\S*$/, '') + '…';
+}
+
+function renderRevisionTurn(
+  label: string,
+  turn: RevisionHistoryEntry['writerTurn'],
+): string {
+  if (!turn) {
+    return `<div class="revision-turn revision-turn-missing"><strong>${escapeHtml(label)}:</strong> <span class="empty-state">No persisted ${escapeHtml(label.toLowerCase())} turn found for this iteration.</span></div>`;
+  }
+
+  return `
+    <div class="revision-turn">
+      <div class="revision-turn-header">
+        <strong>${escapeHtml(label)}</strong>
+        <span class="meta-date">${escapeHtml(formatDate(turn.created_at))}</span>
+      </div>
+      <p class="revision-turn-summary">${escapeHtml(summarizeMarkdown(turn.content))}</p>
+      <details class="revision-turn-details">
+        <summary>View full ${escapeHtml(label.toLowerCase())}</summary>
+        <div class="artifact-rendered">${markdownToHtml(turn.content)}</div>
+      </details>
+    </div>`;
+}
+
+function renderRevisionHistory(history: RevisionHistoryEntry[]): string {
+  return `
+    <section class="detail-section">
+      <h2>Revision History</h2>
+      <div class="review-list revision-history-list">
+        ${history.map(entry => {
+          const { summary, keyIssues, writerTurn, editorTurn } = entry;
+          const outcomeClass = summary.outcome.toLowerCase();
+          return `
+            <div class="review-card review-${escapeHtml(outcomeClass)} revision-history-card">
+              <div class="review-header">
+                <span class="verdict-badge verdict-${escapeHtml(outcomeClass)}">🔁 Iteration ${summary.iteration}</span>
+                <span class="review-number">${escapeHtml(STAGE_NAMES[summary.from_stage as Stage] ?? `Stage ${summary.from_stage}`)} → ${escapeHtml(STAGE_NAMES[summary.to_stage as Stage] ?? `Stage ${summary.to_stage}`)}</span>
+                <span class="meta-date">${escapeHtml(formatDate(summary.created_at))}</span>
+              </div>
+              <div class="review-stats">
+                <span class="stat stat-note">${escapeHtml(summary.outcome)}</span>
+                <span class="stat stat-note">${escapeHtml(summary.agent_name)}</span>
+              </div>
+              ${summary.feedback_summary ? `<p class="revision-feedback"><strong>Summary:</strong> ${escapeHtml(summary.feedback_summary)}</p>` : ''}
+              ${keyIssues.length > 0 ? `<ul class="revision-issues">${keyIssues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('')}</ul>` : ''}
+              <div class="revision-turn-grid">
+                ${renderRevisionTurn('Writer pass', writerTurn)}
+                ${renderRevisionTurn('Editor pass', editorTurn)}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </section>`;
 }
 
 /** Extract thinking/reasoning blocks from LLM output. */
@@ -509,8 +576,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
   if (article.current_stage === 7) {
     const hasDraft = !!article.substack_draft_url;
     const publishStatus = hasDraft
-      ? 'Substack draft ready for manual publish'
-      : 'Create a Substack draft in the publish workspace before publishing';
+      ? 'Substack draft saved. Open the Publish Page to review it, sync updates, or publish it live.'
+      : 'No Substack draft yet. Open the Publish Page to save a draft or publish the article live.';
     const canRegress = true; // Stage 7 can always go back
     const regressOptions = Array.from({ length: article.current_stage - 1 }, (_, i) => {
       const stage = (i + 1) as Stage;
@@ -527,19 +594,10 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         <h2>Actions</h2>
         <div class="action-bar">
           ${article.substack_draft_url
-            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Draft ↗</a>`
+            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Open Draft ↗</a>`
             : ''}
-          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-secondary">Open Publish Workspace</a>
+          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-primary">Open Publish Page</a>
           ${previewLink}
-          <button class="btn btn-publish"
-            hx-post="/api/articles/${escapeHtml(article.id)}/publish"
-            hx-target="#advance-result-${escapeHtml(article.id)}"
-            hx-swap="innerHTML"
-            hx-confirm="Publish this article to Substack?"
-            hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 2000); }"
-            ${hasDraft ? '' : 'disabled title="Create a Substack draft first"'}>
-            Publish to Substack
-          </button>
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
             <form class="send-back-form"
