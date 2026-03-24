@@ -169,3 +169,4 @@ _Last updated: 2026-03-12_
 📌 Media update (2026-03-13): Signed Arnold Ebiketie (1yr/$7.3M EDGE) and Jonathan Jones (1yr CB). Pass rush and CB depth addressed.
 
 📌 Media update (2026-03-14): Signed Michael Carter II (CB, restructured). Minor secondary depth addition.
+📌 Team update (2026-03-24T08:03:03Z): Lead also selected PHI for a focused case study inside the 2023 first-round fifth-year options article to frame the middle-ground option decision for that roster — decided by Lead

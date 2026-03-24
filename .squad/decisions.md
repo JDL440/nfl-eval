@@ -2946,9 +2946,88 @@ The original fix (commit `fcd6daa`) introduced `tableFramePaddingX: 4` and switc
 - Canvas width for ≤3-column mobile tables: 508 → 520px (+12px)
 - Effective font size at 375px viewport: ~15.7px (vs ~16.2px before) — well above 10px readability floor
 - All existing mobile images should be re-rendered when their articles next pass through the pipeline
-- Emmanwori article images re-rendered and verified clean
+ - Emmanwori article images re-rendered and verified clean
+
+ ---
+
+ ### 2026-03-23: 2023 First-Round Fifth-Year Options Article Kickoff
+
+**By:** Lead
+
+**What:**
+1. Greenlit the discussion prompt for a flagship article covering every 31 picks from the 2023 first-round class with the May 1 fifth-year option deadline as the narrative beat.
+2. Framed the report around decision-difficulty tiers—Slam Dunks, Uncomfortable Yeses, Coin Flips, Decliners—and directed Cap + PlayerRep to be the primary voices while entrusting HOU, PHI, and IND agents with the most consequential cases; Draft remains optional for historical color.
+3. Required tables to be the backbone, a 3,500–4,500 word length target, and hedging of the eight high-risk claims flagged in the prompt so the piece stays on brand and defensible.
+4. Closed the brief with a concrete three-tier verdict and a real "Next from the panel" teaser that connects to the Witherspoon extension follow-on.
+
+**Why:**
+- The fifth-year option sweep has a built-in deadline, and the polarized 2023 class benefits from a tension-driven, table-heavy narrative rather than another draft-order recap.
+- Positioning Cap and PlayerRep as the expert pair highlights the uncomfortable middle (high-dollar, uncertain decisions) while HOU/PHI/IND cases keep the story grounded in the loudest option battles.
+- Tables, mitigated claims, and the extension teaser ensure this article functions as the flagship panel piece it was commissioned to be.
+
+**Status:** Approved
+
+**Files changed:**
+- `content/articles/2023-first-round-fifth-year-options/discussion-prompt.md`
+- `content/articles/2023-first-round-fifth-year-options/cap-position.md`
+- `content/articles/2023-first-round-fifth-year-options/draft-position.md`
+- `content/articles/2023-first-round-fifth-year-options/analytics-position.md`
+- `content/articles/2023-first-round-fifth-year-options/playerrep-position.md`
+- `content/articles/2023-first-round-fifth-year-options/ind-position.md`
+- `content/articles/2023-first-round-fifth-year-options/draft.md`
+- `editor-review.md`
+- `editor-review-2.md`
+
+**Impact:**
+- Adds the `2023-first-round-fifth-year-options` slug to the pipeline (flagship depth, tables required, high-risk claims on fact-check radar).
+- Next step: panel spawn (Cap + PlayerRep, selective team agents, optional Draft) and writer/editor approval ahead of the early-to-mid April publish window.
 
 ---
+### 2026-03-23: Structural decisions for the 2023 first-round fifth-year options article
 
+**By:** Writer (Claude Sonnet 4.6)
 
+**What:**
+1. Collapsed the 🟡 and 🟠 tiers into a single "Uncomfortable Middle" section to preserve narrative momentum while still calling out gradations through player write-ups.
+2. Spotlighted Anthony Richardson as the centerpiece case study and used the $19 million Kincaid-to-Carter spread as the organizing metaphor; positioned Bryce Young as the "Uncomfortable Yes" counterpoint to reinforce the central thesis.
+3. Built three major tables (tier explainer, 31-player master table, class report card) plus a career stats subsection, keeping verdict icons consistent with the cap table legend.
+4. Hedged every high-risk claim flagged in the prompt (Richardson job loss, Forbes trade, exercising options, extension projections) per Lead's request to avoid overstating uncertain facts.
+5. Closed with a three-tier verdict, actionable guidance for GMs, and a live panel teaser pointing to the Witherspoon extension article; maintained a data-dense yet narrative-driven voice with expert block quotes for Cap, Draft, Analytics, PlayerRep, and IND.
+6. Respected the explicit instruction not to include a cover image placeholder.
+
+**Why:**
+- Unifying the uncomfortable middle and leaning on the spread metaphor keeps the focus on tension rather than a taxonomy, while tables keep the dense analysis scannable.
+- The blended writer panel format lets the expert block quotes support the narrative without disrupting the primary voice.
+
+**Status:** Completed
+
+**Metrics:**
+- Word count: ~4,200 (target 3,500–4,500)
+- Expert voices referenced: Cap, Draft, Analytics, PlayerRep, IND
+- Tables: 3 tier/backbone tables + 1 inline career stats table
+- High-risk claims softened: 6
+
+---
+---
+### 2026-01-20: Substack publish fix for 2023 first-round fifth-year options
+
+**By:** Writer
+
+**What:**
+1. Backend attempted to publish the approved draft but Substack blocked the 8-column comparison table near line 38, so production would lose the layout if published as-is.
+2. Ran 
+ode fix-dense-tables.mjs --slug 2023-first-round-fifth-year-options after installing dependencies and classified the three densest tables (comparison master table, season/games/starts table, class report card) for rendering.
+3. Rendered desktop + mobile PNGs for each dense table, replaced the markdown in draft.md with image markdown, and stored the images in content/images/2023-first-round-fifth-year-options/.
+
+**Why:**
+- Substack's inline parser rejects dense markdown tables at scale, so converting them to images retains layout meaning while satisfying the editor validator.
+
+**Status:** Implemented
+
+**Files changed:**
+- content/articles/2023-first-round-fifth-year-options/draft.md
+- content/images/2023-first-round-fifth-year-options/ (3 table PNGs + mobile variants)
+
+**Impact:**
+- The publish-blocking tables were resolved, so the backend can rerun publish_to_substack against the updated draft and Substack will accept it.
 

@@ -26,6 +26,22 @@
 
 ## Recent Sessions
 
+### 2023 First-Round Fifth-Year Options — Discussion Prompt (2026-03-23)
+**Status:** ✅ COMPLETED — Discussion prompt created for league-wide fifth-year option article covering all 31 picks from the 2023 first round.
+
+- Created `content/articles/2023-first-round-fifth-year-options/discussion-prompt.md`
+- Researched all 31 players: option values ($8.1M–$27.3M), exercise/decline status, extension negotiations
+- Defined four-tier grouping: Slam Dunks (~7-8), Uncomfortable Yeses (~6-8), Coin Flips (~4-5), Decliners (~8-10)
+- Central tension: the $19M spread between cheapest and most expensive option exposes structural limits of the mechanism
+- Flagged 8 high-risk claims requiring fact-check preflight (option dollar amounts, "already exercised" statuses, extension projections)
+- Recommended panel: Cap + PlayerRep primary; HOU, PHI, IND team agents secondary; Draft optional for historical context
+- Length target: 3,500–4,500 words (largest scope article to date)
+
+## Learnings
+- Fifth-year option tier system creates counterintuitive pricing: Zay Flowers (WR, $27.3M) costs more than C.J. Stroud (QB, $25.9M) due to 2× Pro Bowl escalator. This will confuse readers — always pre-empt with tier explanation.
+- For league-wide articles covering 31+ players, the four-tier grouping (slam dunk / uncomfortable yes / coin flip / decliner) provides the cleanest narrative structure. Avoid organizing by draft order — it buries the analytical insight.
+- "Already exercised" claims for fifth-year options are the highest-risk fact-check items because they change daily during the March-May window. Always verify against Sharp Football tracker at time of publication, not time of drafting.
+
 ### Dashboard Fact-Check UI Plumbing (2026-03-19T05:00:14Z)
 **Status:** ✅ COMPLETED — Dashboard UI now classifies `panel-factcheck.md` artifact with verification badge.
 

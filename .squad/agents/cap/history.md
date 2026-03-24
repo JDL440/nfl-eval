@@ -128,3 +128,21 @@ The "missing 1st-round pick scenario analysis" — mapping pick #19 to specific 
 - **Post-June 1 designations weren't an option** — Baltimore had no "safe cut" candidates with >  savings; the dead-money table (.2M total) shows no single player with enough cap hit to create meaningful space without crippling a position group
 - **Historical first-rounder trades create draft-pick opportunity cost** — Two consecutive years (2026 + 2027) without first-round picks = zero cheap rookie contracts at premium positions, zero trade-up ammunition, and zero margin for EDGE injury; if Crosby misses 2026 with injury, Baltimore has no draft capital to pivot
 - **Article panel work — three-scenario cap modeling for trade analysis** — wrote position for BAL Crosby article modeling (1) retain Linderbaum+Likely [impossible without 2027 cap destruction], (2) retain Linderbaum only [viable but tight], (3) retain neither [actual outcome]. Core finding: the hardest cap constraint wasn't Crosby's .7M hit — it was Lamar's .5M 2027 balloon payment that made every 2026 restructure a future-cap poison pill.
+
+### 2026-03-23: 2023 First-Round Class — Fifth-Year Option Analysis
+
+- **Wrote class-wide cap position** for 2023 first-round fifth-year options article (`content/articles/2023-first-round-fifth-year-options/cap-position.md`)
+- Covered all 31 first-rounders with option values, performance tiers, and exercise/decline recommendations
+- Grouped into 4 decision tiers: Extend Now (6), Exercise & Evaluate (12), Coin Flip (7), Decline (4)
+- Key finding: 6 players (Stroud, Anderson, Carter, Witherspoon, JSN, Robinson) already worth $200M+ combined in extension value — class surplus value over 3 years ≈ $180M
+- Richardson at $22.5M is the clearest decline — can't guarantee that for a QB who lost his job to Daniel Jones
+- Gonzalez at $12.6M is the best value option in the class (46–52% below projected market)
+- Expected exercises: 22–24 of 31 (71–77%)
+
+## Learnings
+
+- **Performance-based option tiers create massive value dispersion within a single draft class** — the 2023 class ranges from $7.4M (Robinson, RB Tier 1) to $25.9M (Young/Stroud, QB Tier 3) based solely on position and Pro Bowl history, not draft slot. This means option analysis must be position-aware, not pick-aware.
+- **The "option discount" is the key metric for exercise decisions** — compare option value to projected FA market AAV at the position. If the discount is >15%, it's almost always an exercise. If the discount is 0% or negative, the option is just deferring a decision, not buying value.
+- **Class-wide option analysis is a reusable article format** — the tier framework (Extend Now / Exercise & Evaluate / Coin Flip / Decline) with positional market comps works for any draft class approaching the option deadline. Can be templated for the 2024 class next year.
+- **QB options are the most binary decisions** — either the QB is a franchise player (exercise is a formality before extension) or he's not (decline is obvious). There's almost no middle ground where a $22–26M fully guaranteed year for a borderline QB makes cap sense.
+📌 Team update (2026-03-24T08:03:03Z): Lead greenlit the 2023 first-round fifth-year options flagship article, pairing Cap + PlayerRep as the primary voices, leaning on Cap for the uncomfortable-middle option math/tables, and hedging the flagged high-risk claims within the 3,500–4,500 word plan — decided by Lead

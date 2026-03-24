@@ -94,3 +94,4 @@ _Last updated: 2026-03-12_
 - **Impact on previous analyses:** The "Seattle = top-5 FA destination" and "$20M in SEA = $23M in SF" narratives require revision for contracts extending past 2027. Short-term deals (1–2 years) signed in 2026 are unaffected. 4–5 year deals signed now will have 2–3 years under the new tax regime.
 - **PlayerRep recommendation:** Agents should front-load cash and guarantees in years 1–2 (pre-2028) for any multi-year Seahawks deal. Push for higher AAV to offset the 2028+ tax cliff. Consider shorter deal terms.
 - **Action required:** Decision filed to .squad/decisions/inbox/ flagging all affected analyses for revision.
+📌 Team update (2026-03-24T08:03:03Z): Lead positioned PlayerRep as the secondary expert voice for the 2023 first-round fifth-year options article, forcing the uncomfortable-middle tension and extension leverage alongside Cap while the selective team agents lock in the most contested cases — decided by Lead

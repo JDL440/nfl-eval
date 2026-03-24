@@ -212,3 +212,4 @@ _Last updated: 2026-03-12_
 - The "JAX won the division" angle adds competitive urgency beyond pure roster construction logic
 - Framing gaps through the extension window (cost now vs. cost post-extension) is the most persuasive argument for draft-heavy strategy
 - Position files follow `{agent-name}-position.md` naming pattern in article folder
+📌 Team update (2026-03-24T08:03:03Z): Lead picked HOU as one of the three team case studies for the 2023 first-round fifth-year options article so the panel can spotlight the most contested fifth-year option narratives — decided by Lead
