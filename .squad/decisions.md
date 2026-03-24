@@ -1,3 +1,37 @@
+# Lead Decision Inbox — Issue #124
+
+**Date:** 2026-03-25  
+**Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
+**Status:** Proposed triage decision
+
+## Decision
+
+Issue #124 should no longer sit with `squad:lead` as the next actionable owner. The next exact routing, once the prerequisite signals exist, is **Research**.
+
+## Why
+
+- The fallback path is policy-first work before it is implementation work.
+- The issue body explicitly depends on structured blocker tracking, and its acceptance criteria also assume a repeat-blocker escalation trigger.
+- Without durable blocker IDs (`#120`) and a true escalation seam (`#123`), a fallback/claim-mode would be ambiguous and risky: the pipeline would not know when it is safe to stop retrying normal evidence-seeking behavior.
+
+## Routing
+
+- **Current state:** Blocked
+- **Blockers:** `#120` structured blocker tracking, `#123` repeated blocker escalation
+- **When unblocked:** Route to **Research** for the bounded fallback policy:
+  - entry criteria for switching modes
+  - Lead approval handoff
+  - Writer reframe prompt/contract
+  - operator/article disclosure requirements
+
+## GitHub action taken
+
+- Relabeled issue `#124` from `squad:lead` to `squad:research`
+- Added a triage comment documenting the blockers and next owner
+
+
+---
+
 # Lead Review Decision — Issue #125 Slice 3 (Verified)
 
 **Date:** 2026-03-25  
@@ -3180,3 +3214,4 @@ pm run test -- tests/pipeline/actions.test.ts — PASS
 pm run test -- tests/pipeline/writer-factcheck.test.ts — PASS
 - 
 pm run v2:build — PASS
+
