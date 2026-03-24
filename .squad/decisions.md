@@ -3677,3 +3677,35 @@ Dashboard idea form's expert agent selector (src/dashboard/server.ts lines 847-8
 
 **APPROVE** infrastructure changes listed above. Code is functionally correct but needs hygiene cleanup before merge.
 
+---
+
+## Code Decision — Generate-Idea NFL Selector Support
+
+**Date:** 2026-03-24  
+**Agent:** Code  
+**Status:** ✅ Implemented
+
+### Decision
+
+Keep the existing team-agent filter for the expert pin selector, but treat the league-wide `nfl` charter as a selectable exception.
+
+### Rationale
+
+- `/ideas/new` already has a separate static team picker for team focus
+- Surfacing every team charter in the pinned-agent picker would be noisy
+- Allowing `nfl` gives operators a direct way to pin the league-wide analyst when that charter exists at runtime
+
+### Implementation Seam
+
+`src/dashboard/server.ts` GET `/ideas/new` filters `runner.listAgents()` before passing `expertAgents` into `renderNewIdeaPage()`
+
+### Validation
+
+- ✅ Minimal selector support added for league-wide NFL team selection
+- ✅ `nfl` team classification support in `src/dashboard/views/agents.ts`
+- ✅ `NFL` team grid option in `src/dashboard/views/new-idea.ts`
+- ✅ Expert picker server filter updated in `src/dashboard/server.ts`
+- ✅ Focused tests passed (`tests/dashboard/agents.test.ts`, focused `tests/dashboard/new-idea.test.ts` selector tests)
+- ✅ Build passed (`npm run v2:build`)
+- ✅ Runtime `nfl` charter remains selectable (not filtered out)
+

@@ -48,9 +48,9 @@ Ask these questions in order:
 
 ## Current Example
 
-On `/ideas/new`, `src/dashboard/server.ts` builds `expertAgents` from `runner.listAgents()`, excludes PROD roles and team abbreviations, and passes the array into `renderNewIdeaPage()`. The view renders `.agent-badge` buttons, tracks selected names in a `Set`, mirrors them into `#selected-agents`, and submits `pinnedAgents` in the `/api/ideas` JSON body.
+On `/ideas/new`, `src/dashboard/server.ts` builds `expertAgents` from `runner.listAgents()`, excludes PROD roles and most team abbreviations, and passes the array into `renderNewIdeaPage()`. The view renders `.agent-badge` buttons, tracks selected names in a `Set`, mirrors them into `#selected-agents`, and submits `pinnedAgents` in the `/api/ideas` JSON body.
 
-The same page also has a separate team-like selector driven by the static `NFL_TEAMS` array in `src/dashboard/views/new-idea.ts`. For league-wide coverage, the UI key is `NFL` but the runtime agent/charter key is lowercase `nfl`, so any team-style filtering must keep both forms aligned or the NFL-wide agent will drift into the expert picker.
+The same page also has a separate team-like selector driven by the static `NFL_TEAMS` array in `src/dashboard/views/new-idea.ts`. For league-wide coverage, the UI key is `NFL` but the runtime agent/charter key is lowercase `nfl`, so any team-style filtering must keep both forms aligned. If the product wants the league-wide analyst selectable while still hiding the 32 team charters from the expert picker, keep the team filter and carve out `nfl` as an explicit exception.
 
 ## Watch-outs
 
