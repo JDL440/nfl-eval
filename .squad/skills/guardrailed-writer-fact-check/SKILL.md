@@ -49,6 +49,9 @@ tools: [view, rg, typescript, vitest]
 ## Implementation notes
 
 - Prefer a helper such as `resolveApprovedFactSources()` / `fetchApprovedSource()` over handing Writer generic search access.
+- The safest v1.5 runtime seam is **artifact-driven URL reuse**: scan supplied Stage 5 artifacts for explicit approved URLs, resolve them through a domain allowlist, and never invent fresh search targets at runtime.
+- If policy allows official team primary pages, the runtime allowlist must include the curated club domains too — not just `nfl.com` / `*.nfl.com`.
 - Treat local deterministic checks as “free first pass” and budget only the incremental external fetches.
+- Enforce wall-clock caps through each fetch timeout using the **remaining** budget, not just a pre-fetch elapsed-time check.
 - Require inline attribution for volatile facts that come from reference sources.
 - On budget exhaustion or source conflict, force Writer to soften, attribute cautiously, omit, or defer to Editor rather than invent certainty.

@@ -1,9 +1,47 @@
+# Data Decision — Issue #125 Slice 2 Runtime Parity Revision
+
+**Date:** 2026-03-25  
+**Requester:** Backend (Squad Agent)  
+**Issue:** #125 Slice 2  
+**Status:** IMPLEMENTED and VALIDATED  
+**Scope:** Narrow rejected-artifact revision only
+
+## Decision
+
+For Writer fact-check slice 2, runtime enforcement must match the documented approved-source ladder:
+
+1. **Official NFL team primary pages** (e.g., `seahawks.com`, `chiefs.com`) must resolve as `official_primary` sources alongside `nfl.com` / `*.nfl.com`.
+2. **Wall-clock budget enforcement** at the fetch boundary — pass remaining budget into each approved-source fetch timeout so a single slow request cannot overrun the 5-minute Stage 5 verification budget.
+
+## Why
+
+- The design and skill docs already allow official team primary pages, so the runtime allowlist must not reject them.
+- A pre-fetch time check alone leaves a hole where one slow approved-source fetch can silently exceed the Stage 5 budget.
+
+## Implementation
+
+**Files Modified:**
+- `src/pipeline/writer-factcheck.ts` — Updated runtime allowlist resolver to accept official NFL team primary domains; clamped approved-source fetch timeout to remaining wall-clock budget
+- `tests/pipeline/actions.test.ts` — Added focused tests for official team-site allowlisting and wall-clock exhaustion during slow approved-source fetch
+- `tests/pipeline/writer-factcheck.test.ts` — Updated to reflect new runtime behavior
+
+## Validation
+
+✅ `npm run test -- tests/pipeline/actions.test.ts` — All focused tests pass  
+✅ `npm run test -- tests/pipeline/writer-factcheck.test.ts` — All tests pass  
+✅ `npm run v2:build` — Build clean  
+
+## Status: COMPLETE
+Filesystem evidence confirms all changes persisted; validation passed.
+
+---
+
 # Code & Lead Decision — TLDR Retry Revision & Contract Clarity
 
 **Date:** 2026-03-25  
 **Agents:** Code, Lead  
 **Status:** Implemented and Validated  
-**Related Issues:** Self-heal retry fix; TLDR contract clarity  
+**Related Issues:** Self-heal retry fix; TLDR contract clarity
 
 ## Context
 
