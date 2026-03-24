@@ -88,3 +88,36 @@
 - HTMX responses enable in-panel error handling instead of raw 500s
 
 **Validation:** Focused publish and server tests passed. Full build blocked by pre-existing src/cli.ts errors (unrelated). Both decisions merged to .squad/decisions.md.
+
+- **2026-03-24: Generate Idea Page Inspection — Agent Selector Architecture**
+
+**Focus:** UI/rendering path for the agent pin-selector on the New Idea page.
+
+**Findings:**
+- **Rendering files:** `src/dashboard/views/new-idea.ts` (renderNewIdeaPage, renderIdeaSuccess) and `src/dashboard/server.ts` (route `/ideas/new`)
+- **Data source:** Expert agents list populated from `AgentRunner.listAgents()` filtered server-side (lines 849–860 in server.ts)
+- **Filter logic:** Excludes two categories—PROD agents (lead, writer, editor, scribe, coordinator, panel-moderator, publisher) and TEAMS agents (32 lowercase team abbreviations: ari, atl, bal, buf, etc.)
+- **NFL-wide agents (expert agents) visible in selector:** analytics, cap, collegescout, defense, draft, injury, media, offense, playerrep, specialteams (10 specialists)
+- **Team agents:** 32 separate file-based agents with lowercase 3-letter abbreviations (sea, sf, gb, kc, etc.); separately selected via team grid (lines 166–172)
+- **UI pattern:** Client-side JS toggle mechanics (toggleAgent, renderAgentChips) persist selection in hidden input `#pinned-agents`; CSS `.agent-badge` (lines 1017–1041 in styles.css) uses border-based chip design with selected state highlight
+- **Mental model clarity:** Expert agents are labeled "Pin Expert Agents" (optional); teams are labeled separately as checkboxes; mental model is clear — agents pinned at idea-generation time, but teams are context separate from panel selection
+- **No architectural issues found:** Selector properly gates NFL-wide agents, team agents remain available as roster context, no UI redress or logic errors detected
+- **Data freshness:** Agent list is live from runner state; no stale agent names in markup — rendering happens fresh each request
+- 2026-03-24 — Generate Idea selector UI path is still anchored in `src/dashboard/server.ts` GET `/ideas/new` and `src/dashboard/views/new-idea.ts`; the selector is server-rendered as plain buttons from `expertAgents`, then maintained client-side with `toggleAgent()`, `renderAgentChips()`, and `removeAgent()`.
+- 2026-03-24 — The selector list is driven by `AgentRunner.listAgents()` against `config.chartersDir` (`<dataDir>\agents\charters\nfl`), not by a hardcoded frontend constant. Default seeded repo charters live in `src/config/defaults/charters/nfl/`, and the visible specialist set is whatever remains after the route excludes PROD names plus 32 team abbreviations.
+- 2026-03-24 — New Idea does not sort `expertAgents` before rendering, so chip order follows filesystem / `readdirSync` order from the charters directory. If deterministic UX ordering matters, Code should sort in the route before calling `renderNewIdeaPage()`.
+- 2026-03-24 — `src/dashboard/public/styles.css` defines `.agent-grid` twice: once for the New Idea chip row (`flex` layout at lines 1010–1015) and later globally for the Agents directory cards (`grid` layout at line 2009). Because the later selector is unscoped, it can override the selector layout on `/ideas/new`.
+- 2026-03-24 — Current automated coverage in `tests/dashboard/new-idea.test.ts` verifies the page generally renders, but does not specifically assert expert-agent filtering, ordering, or chip rendering. Focused route/view tests would be needed to lock down selector behavior.
+
+## Generate Idea Selector — Architecture Inspection (2026-03-24T05:37:47Z)
+
+**Status:** Confirmed / No issues found
+
+**Render path:** src/dashboard/views/new-idea.ts (renderNewIdeaPage, renderIdeaSuccess)  
+**Server filtering:** src/dashboard/server.ts lines 847–861 (expert agents, live from runner)  
+**Styling:** src/dashboard/public/styles.css (.agent-badge, .agent-grid)
+
+**Assessment:** ✅ Clean architecture. No UX gaps. Mental model clear. Selector correctly separates NFL-wide specialists from production and team agents.
+
+**Recommendation:** No changes required. Ready for implementation.
+

@@ -32,3 +32,18 @@
 - 2026-03-23T21:53:55Z — **Issue #102 Auth Flow Rundown Complete**: Quick technical summary of auth implementation provided. Config loading via `DASHBOARD_AUTH_MODE` from `.env` + `~/.nfl-lab/config/.env`, login/logout via POST routes, session persistence in SQLite with opaque ids, secure cookie settings (httpOnly, SameSite, Secure), centralized middleware enforcement of protected/public route split. All test files documented and passing. Ready for merge. See `.squad/orchestration-log/20260323T215355Z-code.md` and session log `.squad/log/20260323T215355Z-issue-102-auth-review-rundown.md`.
 - 2026-03-24T04:46:45Z — **Issue #102 Local Dashboard Auth Implementation Complete**: Config-driven `DASHBOARD_AUTH_MODE=off|local` auth hardening delivered and validated. Implementation seams: config parsing in `src/config/index.ts`, login/logout routes + centralized middleware in `src/dashboard/server.ts`, session persistence in `src/db/schema.sql` + `src/db/repository.ts`, middleware enforcement of protected/public routes. Secure defaults applied: opaque session ids, `httpOnly` + `SameSite=Lax` cookies with production `Secure` flag, server-side TTL (24h default). All focused auth tests passing across `tests/dashboard/server.test.ts`, `tests/dashboard/config.test.ts`, `tests/dashboard/publish.test.ts`, `tests/e2e/live-server.test.ts`. TypeScript build failure fixed. Ready for merge pending operator docs. See `.squad/orchestration-log/2026-03-24T04-46-45Z-code.md` and `.squad/decisions.md` (Code Decision — Issue #102).
 - 2026-03-25T21:45:00Z — **Issue #123 Closeout & Approval**: Repeated-blocker escalation implementation for Stage 6 handoff completed and approved by Lead. All contract points validated: exact consecutive Editor `REVISE` comparison with normalized blocker fingerprint, repeated case escalates at Stage 6 without new stage, normal loop bypass narrow (skips auto-regress and max-revision force-approve), read paths expose state/artifact appropriately, artifact lifecycle bounded. All focused tests passed. Build passed. Issue ready for merge. See `.squad/orchestration-log/2026-03-24T03-26-23Z-Code.md`.
+- 2026-03-26T22:39:00Z — **Generate-idea selector seam**: `/ideas/new` uses two different sources. Team-like choices come from the static `NFL_TEAMS` array in `src/dashboard/views/new-idea.ts`, while the optional pinned-expert picker is built in `src/dashboard/server.ts` from `runner.listAgents()` (`config.chartersDir`) after filtering production/team agents. League-wide NFL support should use UI key `NFL` for article/team context and agent key `nfl` for charter/runner classification; keep both in sync across `src/dashboard/server.ts`, `src/pipeline/actions.ts`, `src/dashboard/views/agents.ts`, and `tests/dashboard/{new-idea,agents}.test.ts`.
+
+## Generate Idea Selector — Implementation (2026-03-24T05:37:47Z)
+
+**Status:** Filesystem verified; pending lead approval
+
+**UX confirmed:** Clean render path, no UX gaps. Expert selector correctly filters NFL-wide specialists from production and team agents.
+
+**Changes verified:**
+- src/dashboard/views/new-idea.ts (selector integration)
+- src/dashboard/server.ts (expert agents filter, lines 847–861)
+- tests/dashboard/new-idea.test.ts (selector tests)
+
+**Next:** Implement hygiene fixes (DRY, abbreviation) pending Lead approval.
+

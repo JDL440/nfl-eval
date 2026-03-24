@@ -3530,3 +3530,150 @@ pm run v2:build → ✅ PASSED (TypeScript failure fixed)
 5. ✅ Focused tests: cover fallback trigger, reframe path, mode persistence, disclosure render
 
 ---
+
+---
+
+
+
+---
+
+
+
+---
+
+# Decision: Generate Idea Page — Agent Selector Architecture
+
+**Date:** 2026-03-24  
+**Owner:** UX  
+**Status:** Informational (no changes recommended)  
+**Scope:** Dashboard UI; agent pin-selector on /ideas/new
+
+## Summary
+
+Inspection of the New Idea page agent selector confirms clean architecture with no UX gaps. Expert agents (NFL-wide specialists) are correctly separated from production agents and team agents via server-side filtering. UI/rendering path is consistent with existing dashboard patterns.
+
+## Current Architecture
+
+### Files Involved
+
+- **Primary view:** src/dashboard/views/new-idea.ts
+  - Exports enderNewIdeaPage() (form rendering)
+  - Exports enderIdeaSuccess() (confirmation partial)
+  - Client-side JS: 	oggleAgent(), enderAgentChips(), emoveAgent()
+  
+- **Server route:** src/dashboard/server.ts (lines 847–861)
+  - GET /ideas/new builds xpertAgents list from runner
+  - Filters: excludes PROD agents + 32 team agents
+  - Passes list to form renderer
+
+- **Styles:** src/dashboard/public/styles.css
+  - .agent-badge (lines 1017–1041): border-based chip; selected state = solid background + white text
+  - .agent-grid (auto-fill layout, 260px min-width columns)
+
+### Data Source & Filtering
+
+**Expert agents list:**  
+Derived from AgentRunner.listAgents() (line 851) after removing:
+- **PROD agents (7):** lead, writer, editor, scribe, coordinator, panel-moderator, publisher
+- **TEAMS agents (32):** ari, atl, bal, buf, car, chi, cin, cle, dal, den, det, gb, hou, ind, jax, kc, lac, lar, lv, mia, min, ne, no, nyg, nyj, phi, pit, sea, sf, tb, ten, wsh
+
+**Result: 10 NFL-wide specialists**
+- analytics, cap, collegescout, defense, draft, injury, media, offense, playerrep, specialteams
+
+### UI Behavior
+
+- **Selection:** Client-side toggle via onclick="toggleAgent(button, agentName)"
+- **Persistence:** Selected agents stored in hidden input #pinned-agents (comma-separated)
+- **Display:** Real-time chip rendering in #selected-agents container
+- **Removal:** Chip × button calls emoveAgent(name)
+
+Team selection uses separate grid (lines 166–172) with its own toggle mechanics.
+
+## Mental Model Clarity
+
+**Current labels:**
+- "Pin Expert Agents (optional — these agents will always be included on the panel)" — clear opt-in language
+- "Teams (click to select)" — separate control, separate purpose
+
+**Mental model:**
+- Expert agents = NFL-wide specialists pinned **at idea-generation time** to influence team panel composition
+- Teams = roster context for the idea (separate from panel selection; influences Lead routing)
+
+No conflation or ambiguity detected.
+
+## Technical Findings
+
+1. **Filter logic is sound:** Server-side filtering prevents production agents or team agents from appearing in expert selector (lines 852–858)
+2. **No stale data:** Agent list is live from runner state; rendering happens fresh per request
+3. **Data structure is simple:** Plain string array, no rich metadata needed for the selector UX
+4. **Selection behavior is correct:** Hidden input captures selections, form submission includes pinnedAgents in POST body
+
+## Assessment
+
+✅ **No UX issues found**  
+✅ **Selector correctly separates NFL-wide agents from production agents and team agents**  
+✅ **Mental model is clear to users ("optional" + separate team grid)**  
+✅ **Rendering path is consistent with dashboard patterns (HTMX, client-side state, hidden inputs)**
+
+## Recommendation
+
+No changes required. Architecture is clean and user experience is clear. If future feature requests arise (e.g., agent search, favoriting, descriptions), selector has room to scale without refactoring.
+
+---
+
+# Decision: Lead Review — Generate Idea Selector Hygiene
+
+**Status:** Conditional Approval - Requires hygiene fixes  
+**Date:** 2026-03-26T16:00:00Z  
+**Requester:** Backend (Squad Agent)  
+**Reviewer:** Lead  
+
+## Issue
+
+Dashboard idea form's expert agent selector (src/dashboard/server.ts lines 847-861) exposes NFL-wide specialists (analytics, media, defense, etc.) via hardcoded filters. Current implementation is **functionally correct** but has **duplication and maintenance debt**.
+
+## Finding
+
+**Duplication identified:**
+- TEAMS set hardcoded in server.ts (lines 853-857)
+- TEAM_ABBRS already defined in src/dashboard/views/agents.ts (lines 36-41)
+- Inconsistency: server.ts has 'wsh' but agents.ts has 'was' (Washington abbreviation)
+
+**Ad hoc production filtering:**
+- PROD set (line 852) hardcoded with: lead, writer, editor, scribe, coordinator, panel-moderator, publisher
+- No single source of truth for "production tier" agents
+- If new production agent added, must update multiple locations
+
+## Architecture Assessment
+
+### Correctness ✅
+- Experts correctly filtered to specialist agents only
+- Team agents properly excluded (would be named ari.md, sea.md, etc. if they existed)
+- No security or auth issues
+
+### Maintainability ⚠️
+- Duplicate TEAM_ABBRS definition violates DRY
+- 'was' vs 'wsh' inconsistency is a bug waiting to happen
+- PROD list lacks documentation about why these agents are excluded
+
+### Scalability ⚠️
+- Adding new agents requires code changes + knowledge of filter locations
+- No single place to configure what "production tier" means
+
+## Recommendation
+
+**Conditional Approval:** Current approach works but creates maintenance trap.
+
+**Required fixes:**
+1. **Import, don't redefine:** Use classifyCharter and TEAM_ABBRS from gents.ts instead of hardcoding
+2. **Fix abbreviation:** Change 'wsh' to 'was' in agents.ts or server.ts to match NFL standard
+3. **Document PROD set:** Add comment explaining which agents are excluded and why
+
+**Future consideration (non-blocking):**
+- Consider moving PROD to a config file or deriving from charter metadata (look for "Tier: production" in Identity block)
+- This follows the existing pattern of classifyCharter() which classifies agents by metadata
+
+## Verdict
+
+**APPROVE** infrastructure changes listed above. Code is functionally correct but needs hygiene cleanup before merge.
+

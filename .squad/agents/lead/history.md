@@ -23,7 +23,23 @@
 
 ## Learnings
 
+- 2026-03-26T16:00:00Z — **Generate Idea Selector Architecture Review**: Reviewed dashboard idea form's expert agent selector implementation. Current approach (hardcoded PROD and TEAMS filters in `src/dashboard/server.ts` lines 852-858) is **functionally correct** but has **duplication and maintenance risks**. Finding: TEAMS set duplicates TEAM_ABBRS already defined in `src/dashboard/views/agents.ts` (including a 'wsh' vs 'was' inconsistency for Washington). Recommendation: Import `classifyCharter` and `TEAM_ABBRS` from agents.ts instead of redefining, fix the 'was' abbreviation, and consider data-driven approach for production agent classification in future. PROD set (lead, writer, editor, scribe, coordinator, panel-moderator, publisher) is acceptable for now if documented. Experts correctly filtered to show: analytics, cap, collegescout, defense, draft, injury, media, offense, playerrep, specialteams. Approval: **CONDITIONAL on hygiene fixes** (duplication elimination, 'was' correction).
 - 2026-03-23T21:53:55Z — **Issue #102 Auth Review Batch Complete**: High-signal code review of auth implementation found no significant issues. Minor note: image route regex assumes flat `/images/:slug/:file` paths and may treat nested published image paths as protected by default. All contract points validated, test coverage adequate, TypeScript build passing, ready for merge pending operator docs. See `.squad/orchestration-log/20260323T215355Z-lead.md` and session log `.squad/log/20260323T215355Z-issue-102-auth-review-rundown.md`.
 - 2026-03-24T04:46:45Z — **Issue #102 Auth Architecture Complete**: Local dashboard auth hardening approved and implementation-ready. Minimal design confirmed: config-driven `off|local` mode, env-backed username/password, SQLite-backed opaque sessions, centralized Hono middleware protecting dashboard HTML/HTMX/API/SSE/unpublished images with narrow public carve-outs for static assets, login/logout, and published images. Code agent has completed implementation with all tests passing and TypeScript build fixed. Ready for merge pending operator docs confirmation. See `.squad/orchestration-log/2026-03-24T04-46-45Z-lead.md` and `.squad/decisions.md` (Lead Decision — Issue #102).
 - 2026-03-26T03:26:23Z — **Issue #123 Review & Approval**: Code implementation for repeated-blocker escalation reviewed and approved. All contract points verified: exact consecutive Editor `REVISE` comparison only, repeated case escalates at Stage 6 without new stage, normal loop bypass narrow, read paths expose state/artifact where appropriate, artifact lifecycle bounded. Focused tests passed. Build passed. Implementation ready for merge. Out of scope: Issue #124 remains blocked pending Research phase for fallback policy work. See `.squad/orchestration-log/2026-03-24T03-26-23Z-Lead.md`.
 - 2026-03-23T21:43:49-07:00 — **Issue #102 Auth Review**: Minimal approved shape is single-operator local login (`off|local`) with env-backed username/password, SQLite-backed `dashboard_sessions`, and one server middleware protecting dashboard HTML, HTMX, JSON API, SSE, and unpublished `/images/*` while leaving `/static/*`, `/login`, `/logout`, and published images public. Focused auth tests are present and passing (`tests/dashboard/server.test.ts`, `tests/dashboard/config.test.ts`, `tests/dashboard/publish.test.ts`, `tests/e2e/live-server.test.ts`), but current branch is not merge-ready until the TypeScript build failure in `src/config/index.ts` (`AppConfigOverrides` vs `Partial<AppConfig>`) is fixed and operator-facing auth docs are confirmed.
+
+## Generate Idea Selector — Hygiene Review (2026-03-24T05:37:47Z)
+
+**Status:** Conditional Approval  
+**Focus:** Duplication + abbreviation fix
+
+**Finding:** Server filters expert agents by hardcoding TEAMS set, duplicating TEAM_ABBRS from agents.ts. Abbreviation inconsistency: 'wsh' vs 'was' (Washington).
+
+**Required fixes:**
+1. Import TEAM_ABBRS from agents.ts
+2. Fix abbreviation (wsh → was)
+3. Document PROD set
+
+**Verdict:** Approve with hygiene cleanup before merge.
+
