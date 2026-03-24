@@ -8,12 +8,14 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { join, resolve } from 'node:path';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
-import { initDataDir, loadConfig } from '../config/index.js';
+import { initDataDir, loadConfig, resolveDashboardAuthConfig } from '../config/index.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Stage, Article } from '../types.js';
 import { PipelineEngine } from '../pipeline/engine.js';
@@ -123,6 +125,7 @@ import type { MemoryCategory } from '../agents/memory.js';
 import { renderConfigPage } from './views/config.js';
 import type { CharterSummary, SkillSummary } from './views/agents.js';
 import { renderRunsPage, renderRunsTable, type RunsFilters } from './views/runs.js';
+import { renderLoginPage } from './views/login.js';
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
@@ -171,6 +174,26 @@ function buildPipelineSummary(
   return summary;
 }
 
+function constantTimeEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function buildLoginRedirectPath(rawPath: string | undefined): string {
+  if (!rawPath || !rawPath.startsWith('/') || rawPath.startsWith('//') || rawPath.includes('\\')) {
+    return '/';
+  }
+  return rawPath;
+}
+
+function buildLoginUrl(request: Request): string {
+  const url = new URL(request.url);
+  const returnTo = buildLoginRedirectPath(`${url.pathname}${url.search}`);
+  return `/login?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
 // ── App factory ──────────────────────────────────────────────────────────────
 
 export function createApp(
@@ -182,11 +205,14 @@ export function createApp(
   assertPipelineConfigValid();
 
   const app = new Hono();
+  const dashboardAuth = resolveDashboardAuthConfig(config.env, config.dashboardAuth);
   const substackService = deps?.substackService;
   const twitterService = deps?.twitterService;
   const imageService = deps?.imageService;
   const memory = deps?.memory;
   const bus = new EventBus();
+
+  repo.deleteExpiredDashboardSessions();
 
   // Track active auto-advance runs so article pages know whether to show the progress bar
   const activeAdvances = new Map<string, { startedAt: number }>();
@@ -530,9 +556,6 @@ export function createApp(
     return Response.json({ error: missingSubstackConfigMessage }, { status: 500 });
   }
 
-  // Register SSE event stream
-  registerSSE(app, bus);
-
   // ── Static files ──────────────────────────────────────────────────────────
   const publicRoot = join(__dirname, 'public');
   app.use(
@@ -542,6 +565,134 @@ export function createApp(
       rewriteRequestPath: (path: string) => path.replace(/^\/static/, ''),
     }),
   );
+
+  app.get('/login', (c) => {
+    if (dashboardAuth.mode === 'off') {
+      return c.redirect('/');
+    }
+
+    const existingSessionId = getCookie(c, dashboardAuth.sessionCookieName);
+    if (existingSessionId && repo.getDashboardSession(existingSessionId)) {
+      const returnTo = buildLoginRedirectPath(c.req.query('returnTo'));
+      return c.redirect(returnTo);
+    }
+
+    return c.html(renderLoginPage({
+      labName: config.leagueConfig.name,
+      returnTo: buildLoginRedirectPath(c.req.query('returnTo')),
+    }));
+  });
+
+  app.post('/login', async (c) => {
+    if (dashboardAuth.mode === 'off') {
+      return c.redirect('/');
+    }
+
+    const body = await c.req.parseBody();
+    const username = String(body['username'] ?? '').trim();
+    const password = String(body['password'] ?? '');
+    const returnTo = buildLoginRedirectPath(String(body['returnTo'] ?? c.req.query('returnTo') ?? '/'));
+
+    if (
+      !dashboardAuth.username
+      || !dashboardAuth.password
+      || !constantTimeEquals(username, dashboardAuth.username)
+      || !constantTimeEquals(password, dashboardAuth.password)
+    ) {
+      return c.html(renderLoginPage({
+        labName: config.leagueConfig.name,
+        returnTo,
+        username,
+        error: 'Invalid username or password.',
+      }), 401);
+    }
+
+    const sessionId = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + dashboardAuth.sessionTtlHours * 3_600_000);
+    repo.createDashboardSession(
+      sessionId,
+      dashboardAuth.username,
+      expiresAt.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ''),
+    );
+    setCookie(c, dashboardAuth.sessionCookieName, sessionId, {
+      httpOnly: true,
+      path: '/',
+      sameSite: 'Lax',
+      secure: dashboardAuth.secureCookies,
+      maxAge: dashboardAuth.sessionTtlHours * 3_600,
+      expires: expiresAt,
+    });
+    return c.redirect(returnTo);
+  });
+
+  app.post('/logout', (c) => {
+    const sessionId = getCookie(c, dashboardAuth.sessionCookieName);
+    if (sessionId) {
+      repo.deleteDashboardSession(sessionId);
+    }
+    deleteCookie(c, dashboardAuth.sessionCookieName, { path: '/' });
+    return c.redirect(dashboardAuth.mode === 'off' ? '/' : '/login');
+  });
+
+  app.use('*', async (c, next) => {
+    if (dashboardAuth.mode === 'off') {
+      return next();
+    }
+
+    const path = c.req.path;
+    const isPublicRoute = path === '/login' || path === '/logout' || path.startsWith('/static/');
+    if (isPublicRoute) {
+      return next();
+    }
+
+    if (path.startsWith('/images/')) {
+      const imageMatch = /^\/images\/([^/]+)\/[^/]+$/.exec(path);
+      const imageArticle = imageMatch ? repo.getArticle(imageMatch[1]) : null;
+      if (imageArticle?.current_stage === 8 || imageArticle?.status === 'published') {
+        return next();
+      }
+    }
+
+    const sessionId = getCookie(c, dashboardAuth.sessionCookieName);
+    const session = sessionId ? repo.getDashboardSession(sessionId) : null;
+    if (session) {
+      return next();
+    }
+
+    const loginUrl = buildLoginUrl(c.req.raw);
+    const isHtmx = c.req.header('hx-request') === 'true';
+    const isApi = path.startsWith('/api/');
+    const isSse = path === '/events';
+    const isImage = path.startsWith('/images/');
+
+    if (isHtmx) {
+      return new Response(renderAdvanceResult(false, 'Authentication required. Redirecting to login…'), {
+        status: 401,
+        headers: {
+          'Content-Type': 'text/html; charset=UTF-8',
+          'HX-Redirect': loginUrl,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
+    if (isApi) {
+      return c.json({ error: 'Authentication required' }, 401, {
+        'Cache-Control': 'no-store',
+      });
+    }
+
+    if (isSse || isImage) {
+      return c.text('Authentication required', 401, {
+        'Cache-Control': 'no-store',
+      });
+    }
+
+    return c.redirect(loginUrl);
+  });
+
+  // Register SSE event stream
+  registerSSE(app, bus);
 
   // Serve generated images from the images directory
   app.get('/images/:slug/:file', async (c) => {
@@ -718,11 +869,30 @@ export function createApp(
       'SUBSTACK_PUBLICATION_URL',
       'TWITTER_API_KEY',
       'DATA_SOURCE',
+      'DASHBOARD_AUTH_MODE',
+      'DASHBOARD_AUTH_USERNAME',
+      'DASHBOARD_AUTH_PASSWORD',
+      'DASHBOARD_SESSION_COOKIE',
+      'DASHBOARD_SESSION_TTL_HOURS',
     ];
 
     // Non-secret env vars whose values we can safely display
-    const displayableVars = new Set(['LLM_PROVIDER', 'LMSTUDIO_URL', 'SUBSTACK_PUBLICATION_URL', 'DATA_SOURCE']);
-    const envDefaultValues: Record<string, string> = { DATA_SOURCE: 'scripts' };
+    const displayableVars = new Set([
+      'LLM_PROVIDER',
+      'LMSTUDIO_URL',
+      'SUBSTACK_PUBLICATION_URL',
+      'DATA_SOURCE',
+      'DASHBOARD_AUTH_MODE',
+      'DASHBOARD_AUTH_USERNAME',
+      'DASHBOARD_SESSION_COOKIE',
+      'DASHBOARD_SESSION_TTL_HOURS',
+    ]);
+    const envDefaultValues: Record<string, string> = {
+      DATA_SOURCE: 'scripts',
+      DASHBOARD_AUTH_MODE: dashboardAuth.mode,
+      DASHBOARD_SESSION_COOKIE: dashboardAuth.sessionCookieName,
+      DASHBOARD_SESSION_TTL_HOURS: String(dashboardAuth.sessionTtlHours),
+    };
 
     const envStatus = envVars.map((key) => {
       const rawVal = process.env[key] ? String(process.env[key]).trim() : '';

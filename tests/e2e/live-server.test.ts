@@ -57,6 +57,42 @@ afterAll(() => {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('Live Server E2E', () => {
+  it('supports end-to-end login before accessing protected routes', async () => {
+    const authApp = createApp(repo, {
+      ...config,
+      dashboardAuth: {
+        mode: 'local',
+        username: 'joe',
+        password: 'secret-pass',
+        sessionCookieName: 'live_server_auth',
+        sessionTtlHours: 12,
+        secureCookies: false,
+      },
+    });
+
+    const unauthenticated = await authApp.fetch(new Request('http://localhost:3456/'));
+    expect(unauthenticated.status).toBe(302);
+    expect(unauthenticated.headers.get('location')).toBe('/login?returnTo=%2F');
+
+    const loginRes = await authApp.fetch(new Request('http://localhost:3456/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        username: 'joe',
+        password: 'secret-pass',
+        returnTo: '/',
+      }).toString(),
+    }));
+    const sessionCookie = loginRes.headers.get('set-cookie')?.split(';', 1)[0];
+    expect(sessionCookie).toBeTruthy();
+
+    const homeRes = await authApp.fetch(new Request('http://localhost:3456/', {
+      headers: { Cookie: sessionCookie! },
+    }));
+    expect(homeRes.status).toBe(200);
+    expect(await homeRes.text()).toContain('NFL Lab');
+  });
+
   // ── Home page ───────────────────────────────────────────────────────────
 
   it('GET / returns 200 with dashboard HTML', async () => {

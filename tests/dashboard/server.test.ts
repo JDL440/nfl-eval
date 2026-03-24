@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Repository } from '../../src/db/repository.js';
@@ -34,6 +34,11 @@ function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
     env: 'development',
     ...overrides,
   };
+}
+
+function parseSessionCookie(setCookieHeader: string | null): string {
+  expect(setCookieHeader).toBeTruthy();
+  return setCookieHeader!.split(';', 1)[0];
 }
 
 describe('Dashboard Server', () => {
@@ -88,6 +93,137 @@ describe('Dashboard Server', () => {
   }
 
   // ── HTML pages ──────────────────────────────────────────────────────────────
+
+  describe('authentication', () => {
+    it('redirects protected HTML requests to /login when auth is enabled', async () => {
+      const authApp = createApp(repo, makeTestConfig({
+        dbPath: join(tempDir, 'test.db'),
+        articlesDir: join(tempDir, 'articles'),
+        dashboardAuth: {
+          mode: 'local',
+          username: 'joe',
+          password: 'secret-pass',
+          sessionCookieName: 'test_dashboard_session',
+          sessionTtlHours: 12,
+          secureCookies: false,
+        },
+      }));
+
+      const res = await authApp.request('/');
+      expect(res.status).toBe(302);
+      expect(res.headers.get('location')).toBe('/login?returnTo=%2F');
+    });
+
+    it('allows login, protects SSE/API/HTMX, and clears the session on logout', async () => {
+      repo.createArticle({ id: 'auth-image', title: 'Auth Image Test' });
+      repo.artifacts.put('auth-image', 'draft.md', '# Draft');
+      const imageDir = join(tempDir, 'images', 'auth-image');
+      mkdirSync(imageDir, { recursive: true });
+      const pngBytes = Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      ]);
+      writeFileSync(join(imageDir, 'cover.png'), pngBytes);
+
+      const authApp = createApp(repo, makeTestConfig({
+        dbPath: join(tempDir, 'test.db'),
+        articlesDir: join(tempDir, 'articles'),
+        imagesDir: join(tempDir, 'images'),
+        dashboardAuth: {
+          mode: 'local',
+          username: 'joe',
+          password: 'secret-pass',
+          sessionCookieName: 'test_dashboard_session',
+          sessionTtlHours: 12,
+          secureCookies: false,
+        },
+      }));
+
+      const apiRes = await authApp.request('/api/articles');
+      expect(apiRes.status).toBe(401);
+
+      const htmxRes = await authApp.request('/htmx/ready-to-publish', {
+        headers: { 'HX-Request': 'true' },
+      });
+      expect(htmxRes.status).toBe(401);
+      expect(htmxRes.headers.get('HX-Redirect')).toBe('/login?returnTo=%2Fhtmx%2Fready-to-publish');
+
+      const sseRes = await authApp.request('/events');
+      expect(sseRes.status).toBe(401);
+
+      const imageRes = await authApp.request('/images/auth-image/cover.png');
+      expect(imageRes.status).toBe(401);
+
+      const loginPage = await authApp.request('/login');
+      expect(loginPage.status).toBe(200);
+      expect(await loginPage.text()).toContain('Dashboard Login');
+
+      const loginRes = await authApp.request('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          username: 'joe',
+          password: 'secret-pass',
+          returnTo: '/config',
+        }).toString(),
+      });
+      expect(loginRes.status).toBe(302);
+      const sessionCookie = parseSessionCookie(loginRes.headers.get('set-cookie'));
+      expect(loginRes.headers.get('set-cookie')).toContain('HttpOnly');
+      expect(loginRes.headers.get('set-cookie')).toContain('SameSite=Lax');
+      expect(loginRes.headers.get('location')).toBe('/config');
+
+      const authedConfigRes = await authApp.request('/config', {
+        headers: { Cookie: sessionCookie },
+      });
+      expect(authedConfigRes.status).toBe(200);
+
+      const authedImageRes = await authApp.request('/images/auth-image/cover.png', {
+        headers: { Cookie: sessionCookie },
+      });
+      expect(authedImageRes.status).toBe(200);
+
+      const logoutRes = await authApp.request('/logout', {
+        method: 'POST',
+        headers: { Cookie: sessionCookie },
+      });
+      expect(logoutRes.status).toBe(302);
+      expect(logoutRes.headers.get('set-cookie')).toContain('test_dashboard_session=;');
+
+      const loggedOutRes = await authApp.request('/config', {
+        headers: { Cookie: sessionCookie },
+      });
+      expect(loggedOutRes.status).toBe(302);
+    });
+
+    it('keeps published image routes public while auth is enabled', async () => {
+      repo.createArticle({ id: 'published-image', title: 'Published Image Test' });
+      for (let s = 2; s <= 8; s++) {
+        repo.advanceStage('published-image', s - 1, s, 'test');
+      }
+      const imageDir = join(tempDir, 'images', 'published-image');
+      mkdirSync(imageDir, { recursive: true });
+      writeFileSync(join(imageDir, 'cover.png'), Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      ]));
+
+      const authApp = createApp(repo, makeTestConfig({
+        dbPath: join(tempDir, 'test.db'),
+        articlesDir: join(tempDir, 'articles'),
+        imagesDir: join(tempDir, 'images'),
+        dashboardAuth: {
+          mode: 'local',
+          username: 'joe',
+          password: 'secret-pass',
+          sessionCookieName: 'test_dashboard_session',
+          sessionTtlHours: 12,
+          secureCookies: false,
+        },
+      }));
+
+      const imageRes = await authApp.request('/images/published-image/cover.png');
+      expect(imageRes.status).toBe(200);
+    });
+  });
 
   describe('HTML pages', () => {
     it('home page returns 200 with HTML', async () => {

@@ -353,6 +353,20 @@ CREATE TABLE IF NOT EXISTS article_retrospective_findings (
 CREATE INDEX IF NOT EXISTS idx_article_retrospective_findings_parent
     ON article_retrospective_findings(retrospective_id, role, finding_type);
 
+-- ─────────────────────────────────────────────
+-- DASHBOARD SESSIONS
+-- Local dashboard auth sessions backed by opaque cookie ids.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS dashboard_sessions (
+    session_id       TEXT PRIMARY KEY,
+    username         TEXT NOT NULL,
+    created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at       TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_dashboard_sessions_expires
+    ON dashboard_sessions(expires_at);
+
 -- ── Charter edit history ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS charter_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

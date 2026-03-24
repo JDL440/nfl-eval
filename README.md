@@ -68,7 +68,28 @@ Optional service integrations:
 - `SUBSTACK_PUBLICATION_URL`
 - `TWITTER_API_KEY`
 
+Dashboard auth:
+
+- `DASHBOARD_AUTH_MODE` — `off` (default) or `local`
+- `DASHBOARD_AUTH_USERNAME` — required when `DASHBOARD_AUTH_MODE=local`
+- `DASHBOARD_AUTH_PASSWORD` — required when `DASHBOARD_AUTH_MODE=local`
+- `DASHBOARD_SESSION_COOKIE` — optional cookie name override
+- `DASHBOARD_SESSION_TTL_HOURS` — session lifetime, default `24`
+
 The app loads `.env` from both the repo root and `~/.nfl-lab/config/.env`.
+
+### Dashboard auth
+
+The dashboard stays open by default so existing tests and solo local development continue to work. For any shared box or public deployment, enable:
+
+```bash
+DASHBOARD_AUTH_MODE=local
+DASHBOARD_AUTH_USERNAME=operator
+DASHBOARD_AUTH_PASSWORD=change-me
+NODE_ENV=production
+```
+
+That switches the dashboard to a simple local login flow backed by SQLite sessions and an `httpOnly` cookie. Protected dashboard pages, HTMX endpoints, JSON APIs, SSE, and unpublished image routes require a valid session. Static assets, `/login`, and published image URLs remain public.
 
 ## Architecture
 

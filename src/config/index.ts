@@ -28,11 +28,26 @@ export interface AppConfig {
   cacheDir: string;
   port: number;
   env: 'development' | 'production';
+  dashboardAuth?: DashboardAuthConfig;
 }
+
+export interface DashboardAuthConfig {
+  mode: 'off' | 'local';
+  username?: string;
+  password?: string;
+  sessionCookieName: string;
+  sessionTtlHours: number;
+  secureCookies: boolean;
+}
+
+export type AppConfigOverrides = Partial<Omit<AppConfig, 'dashboardAuth'>> & {
+  dashboardAuth?: Partial<DashboardAuthConfig>;
+};
 
 const DEFAULT_DATA_DIR = join(homedir(), '.nfl-lab');
 const DEFAULT_LEAGUE = 'nfl';
 const DEFAULT_PORT = 3456;
+const DEFAULT_DASHBOARD_SESSION_COOKIE = 'nfl_lab_dashboard_session';
 
 /**
  * Load .env file if it exists (simple key=value parser, no dependency needed)
@@ -182,7 +197,43 @@ export function seedKnowledge(dataDir: string, league: string = DEFAULT_LEAGUE):
 /**
  * Load application configuration from environment and data directory.
  */
-export function loadConfig(overrides?: Partial<AppConfig>): AppConfig {
+export function resolveDashboardAuthConfig(
+  env: 'development' | 'production',
+  overrides?: Partial<DashboardAuthConfig>,
+): DashboardAuthConfig {
+  const rawMode = (overrides?.mode ?? process.env.DASHBOARD_AUTH_MODE ?? 'off').trim().toLowerCase();
+  if (rawMode !== 'off' && rawMode !== 'local') {
+    throw new Error(`Invalid DASHBOARD_AUTH_MODE "${rawMode}". Expected "off" or "local".`);
+  }
+
+  const sessionTtlHours = overrides?.sessionTtlHours
+    ?? parseInt(process.env.DASHBOARD_SESSION_TTL_HOURS ?? '24', 10);
+  if (!Number.isFinite(sessionTtlHours) || sessionTtlHours <= 0) {
+    throw new Error('DASHBOARD_SESSION_TTL_HOURS must be a positive number of hours.');
+  }
+
+  const username = overrides?.username ?? process.env.DASHBOARD_AUTH_USERNAME ?? '';
+  const password = overrides?.password ?? process.env.DASHBOARD_AUTH_PASSWORD ?? '';
+
+  if (rawMode === 'local' && (!username.trim() || !password)) {
+    throw new Error(
+      'Local dashboard auth requires both DASHBOARD_AUTH_USERNAME and DASHBOARD_AUTH_PASSWORD.',
+    );
+  }
+
+  return {
+    mode: rawMode,
+    username: username.trim() || undefined,
+    password: password || undefined,
+    sessionCookieName: overrides?.sessionCookieName
+      ?? process.env.DASHBOARD_SESSION_COOKIE
+      ?? DEFAULT_DASHBOARD_SESSION_COOKIE,
+    sessionTtlHours,
+    secureCookies: overrides?.secureCookies ?? env === 'production',
+  };
+}
+
+export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
   const dataDir = resolve(overrides?.dataDir ?? process.env.NFL_DATA_DIR ?? DEFAULT_DATA_DIR);
 
   // Load .env from data dir config
@@ -200,6 +251,7 @@ export function loadConfig(overrides?: Partial<AppConfig>): AppConfig {
 
   const port = overrides?.port ?? parseInt(process.env.NFL_PORT ?? String(DEFAULT_PORT), 10);
   const env = (overrides?.env ?? process.env.NODE_ENV ?? 'development') as 'development' | 'production';
+  const dashboardAuth = resolveDashboardAuthConfig(env, overrides?.dashboardAuth);
 
   return {
     dataDir,
@@ -216,5 +268,6 @@ export function loadConfig(overrides?: Partial<AppConfig>): AppConfig {
     port,
     env,
     ...overrides,
+    dashboardAuth,
   };
 }

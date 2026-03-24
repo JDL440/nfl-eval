@@ -44,6 +44,10 @@ describe('Config Viewer Page', () => {
   beforeEach(() => {
     savedEnv = { ...process.env };
     process.env['MOCK_LLM'] = '1';
+    process.env['DASHBOARD_AUTH_MODE'] = 'local';
+    process.env['DASHBOARD_AUTH_USERNAME'] = 'joe';
+    process.env['DASHBOARD_AUTH_PASSWORD'] = 'secret-pass';
+    process.env['DASHBOARD_SESSION_TTL_HOURS'] = '12';
 
     tempDir = mkdtempSync(join(tmpdir(), 'nfl-config-test-'));
     const dbPath = join(tempDir, 'test.db');
@@ -88,6 +92,12 @@ describe('Config Viewer Page', () => {
       skillsDir,
       logsDir: join(dataDir, 'logs'),
       memoryDbPath: join(dataDir, 'memory.db'),
+      dashboardAuth: {
+        mode: 'off',
+        sessionCookieName: 'config_test_session',
+        sessionTtlHours: 24,
+        secureCookies: false,
+      },
     }));
   });
 
@@ -114,5 +124,9 @@ describe('Config Viewer Page', () => {
     const html = await res.text();
     expect(html).toContain('Environment Status');
     expect(html).toContain('LLM_PROVIDER');
+    expect(html).toContain('DASHBOARD_AUTH_MODE');
+    expect(html).toContain('local');
+    expect(html).toContain('DASHBOARD_AUTH_USERNAME');
+    expect(html).toContain('joe');
   });
 });

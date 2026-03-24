@@ -47,6 +47,11 @@ function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
   };
 }
 
+function parseSessionCookie(setCookieHeader: string | null): string {
+  expect(setCookieHeader).toBeTruthy();
+  return setCookieHeader!.split(';', 1)[0];
+}
+
 function createMockSubstackService(overrides?: Partial<SubstackService>): SubstackService {
   return {
     createDraft: vi.fn().mockResolvedValue({
@@ -195,6 +200,63 @@ describe('Publish Workflow', () => {
   // ── GET /articles/:id/publish (preview page) ──────────────────────────────
 
   describe('GET /articles/:id/publish', () => {
+    it('redirects publish preview to login when dashboard auth is enabled', async () => {
+      repo.createArticle({ id: 'protected-publish', title: 'Protected Publish' });
+      advanceToStage(repo, 'protected-publish', 7);
+      writeArticleDraft(repo, 'protected-publish', '# Draft');
+
+      const authApp = createApp(repo, makeTestConfig({
+        ...config,
+        dashboardAuth: {
+          mode: 'local',
+          username: 'joe',
+          password: 'secret-pass',
+          sessionCookieName: 'publish_auth_session',
+          sessionTtlHours: 12,
+          secureCookies: false,
+        },
+      }));
+
+      const res = await authApp.request('/articles/protected-publish/publish');
+      expect(res.status).toBe(302);
+      expect(res.headers.get('location')).toBe('/login?returnTo=%2Farticles%2Fprotected-publish%2Fpublish');
+    });
+
+    it('allows authenticated publish preview access after login', async () => {
+      repo.createArticle({ id: 'authed-publish', title: 'Authed Publish' });
+      advanceToStage(repo, 'authed-publish', 7);
+      writeArticleDraft(repo, 'authed-publish', '# Draft');
+
+      const authApp = createApp(repo, makeTestConfig({
+        ...config,
+        dashboardAuth: {
+          mode: 'local',
+          username: 'joe',
+          password: 'secret-pass',
+          sessionCookieName: 'publish_auth_session',
+          sessionTtlHours: 12,
+          secureCookies: false,
+        },
+      }));
+
+      const loginRes = await authApp.request('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          username: 'joe',
+          password: 'secret-pass',
+          returnTo: '/articles/authed-publish/publish',
+        }).toString(),
+      });
+      const sessionCookie = parseSessionCookie(loginRes.headers.get('set-cookie'));
+
+      const res = await authApp.request('/articles/authed-publish/publish', {
+        headers: { Cookie: sessionCookie },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain('Authed Publish');
+    });
+
     it('renders publish preview page with article content', async () => {
       repo.createArticle({ id: 'pub-preview', title: 'Publish Preview Test' });
       advanceToStage(repo, 'pub-preview', 7);

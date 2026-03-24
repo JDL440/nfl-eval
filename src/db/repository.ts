@@ -135,6 +135,13 @@ interface SaveArticleRetrospectiveParams {
   findings: ArticleRetrospectiveFindingInput[];
 }
 
+export interface DashboardSessionRecord {
+  session_id: string;
+  username: string;
+  created_at: string;
+  expires_at: string;
+}
+
 // ── Repository ───────────────────────────────────────────────────────────────
 
 export class Repository {
@@ -355,6 +362,40 @@ export class Repository {
   getDistinctTeams(): string[] {
     const stmt = this.db.prepare('SELECT DISTINCT primary_team FROM articles WHERE primary_team IS NOT NULL ORDER BY primary_team');
     return (stmt.all() as { primary_team: string }[]).map(r => r.primary_team);
+  }
+
+  createDashboardSession(sessionId: string, username: string, expiresAt: string): DashboardSessionRecord {
+    this.deleteExpiredDashboardSessions();
+    const stmt = this.db.prepare(
+      `INSERT INTO dashboard_sessions (session_id, username, expires_at)
+       VALUES (?, ?, ?)`,
+    );
+    stmt.run(sessionId, username, expiresAt);
+    return this.getDashboardSession(sessionId)!;
+  }
+
+  getDashboardSession(sessionId: string): DashboardSessionRecord | null {
+    const stmt = this.db.prepare(
+      'SELECT session_id, username, created_at, expires_at FROM dashboard_sessions WHERE session_id = ?',
+    );
+    const row = stmt.get(sessionId) as DashboardSessionRecord | undefined;
+    if (!row) return null;
+    if (row.expires_at <= nowISO()) {
+      this.deleteDashboardSession(sessionId);
+      return null;
+    }
+    return row;
+  }
+
+  deleteDashboardSession(sessionId: string): void {
+    this.db.prepare('DELETE FROM dashboard_sessions WHERE session_id = ?').run(sessionId);
+  }
+
+  deleteExpiredDashboardSessions(referenceTime = nowISO()): number {
+    const result = this.db.prepare(
+      'DELETE FROM dashboard_sessions WHERE expires_at <= ?',
+    ).run(referenceTime);
+    return Number(result.changes ?? 0);
   }
 
   // ── Draft URL management ───────────────────────────────────────────────────

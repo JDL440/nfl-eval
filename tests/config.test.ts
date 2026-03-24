@@ -95,4 +95,30 @@ describe('config', () => {
     expect(config.port).toBe(8080);
     expect(config.env).toBe('production');
   });
+
+  it('defaults dashboard auth off with secure cookies only in production', () => {
+    const devConfig = loadConfig({ dataDir: tempDir, env: 'development' });
+    const prodConfig = loadConfig({ dataDir: tempDir, env: 'production' });
+    expect(devConfig.dashboardAuth?.mode).toBe('off');
+    expect(devConfig.dashboardAuth?.secureCookies).toBe(false);
+    expect(prodConfig.dashboardAuth?.secureCookies).toBe(true);
+  });
+
+  it('loads local dashboard auth from env vars', () => {
+    const saved = { ...process.env };
+    process.env.DASHBOARD_AUTH_MODE = 'local';
+    process.env.DASHBOARD_AUTH_USERNAME = 'joe';
+    process.env.DASHBOARD_AUTH_PASSWORD = 'secret-pass';
+    process.env.DASHBOARD_SESSION_TTL_HOURS = '12';
+    try {
+      const config = loadConfig({ dataDir: tempDir, env: 'production' });
+      expect(config.dashboardAuth?.mode).toBe('local');
+      expect(config.dashboardAuth?.username).toBe('joe');
+      expect(config.dashboardAuth?.password).toBe('secret-pass');
+      expect(config.dashboardAuth?.sessionTtlHours).toBe(12);
+      expect(config.dashboardAuth?.secureCookies).toBe(true);
+    } finally {
+      process.env = saved;
+    }
+  });
 });
