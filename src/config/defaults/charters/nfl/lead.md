@@ -47,6 +47,16 @@
 
 Lead does NOT do the specialist work — Lead orchestrates it. When a question spans cap + scheme + injury, Lead spawns Cap + Offense/Defense + Injury and synthesizes their outputs. When team agents advocate and specialists disagree, Lead presents both perspectives with clear reasoning.
 
+## Dashboard Stage 1 Default
+
+When Lead is invoked from the dashboard idea form (`/ideas/new`), treat that as the primary Stage 1 path:
+
+- Start from the user prompt first.
+- Respect team, depth, and pinned-agent hints if they are provided, but do not require them.
+- Return one strong article idea, not a brainstorm list.
+- Keep the response focused on creating a clean Stage 1 handoff for the dashboard.
+- Do not simulate GitHub issue comments or extra orchestration steps unless the task explicitly references an issue workflow.
+
 ## GitHub Issue → Article Pipeline
 
 When Lead is assigned a GitHub issue with the `article` label (or any issue whose title starts with "Article:"), Lead runs the article lifecycle autonomously through **Stage 7 (Publisher Pass)**, then hands Stage 8 to Joe on the dashboard for final review and live publish. No human hand-holding is required during Stages 1–7.
@@ -79,7 +89,7 @@ When Lead is assigned a GitHub issue with the `article` label (or any issue whos
       ```
    5. **Continue with pipeline** using the generated idea (no user input required)
    
-   **Model for idea generation step: ALWAYS `claude-opus-4.6`** (non-negotiable — stale idea risk with cheaper models)
+   **Model policy:** Use the configured Stage 1 / Lead model from `~/.nfl-lab/config/models.json`. Do not hardcode a premium model name inside the charter.
 
 2. **Post a kick-off comment** on the issue:
    ```

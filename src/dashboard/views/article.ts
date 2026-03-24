@@ -625,8 +625,8 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
   if (article.current_stage === 7) {
     const hasDraft = !!article.substack_draft_url;
     const publishStatus = hasDraft
-      ? 'Substack draft saved. Open the Publish Page to review it, sync updates, or publish it live.'
-      : 'No Substack draft yet. Open the Publish Page to save a draft or publish the article live.';
+      ? 'Substack draft ready. Continue to Publish to review it, sync updates, or publish it live.'
+      : 'No Substack draft yet. Continue to Publish to save a draft first, then publish it live.';
     const canRegress = true; // Stage 7 can always go back
     const regressOptions = Array.from({ length: article.current_stage - 1 }, (_, i) => {
       const stage = (i + 1) as Stage;
@@ -643,9 +643,9 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         <h2>Actions</h2>
         <div class="action-bar">
           ${article.substack_draft_url
-            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Open Draft ↗</a>`
+            ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">View Draft ↗</a>`
             : ''}
-          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-primary">Open Publish Page</a>
+          <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-primary">Continue to Publish</a>
           ${previewLink}
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
