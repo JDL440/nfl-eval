@@ -602,6 +602,7 @@ export function parsePanelComposition(content: string): PanelMember[] {
 
 import {
   CONTEXT_CONFIG as DEFAULT_STAGE_CONTEXT,
+  getContextConfigDefaults,
   getArticleContextOverrides,
   type StageContextEntry,
 } from './context-config.js';
@@ -634,7 +635,8 @@ export function resetContextConfigCache(): void {
 /** Resolve the context config for an action, merging defaults with overrides. */
 function getContextConfig(actionName: string, config: AppConfig): StageContextEntry {
   const overrides = loadContextConfig(config);
-  return overrides[actionName] ?? DEFAULT_STAGE_CONTEXT[actionName] ?? { primary: '', include: [] };
+  const defaults = getContextConfigDefaults(config.contextPreset);
+  return overrides[actionName] ?? defaults[actionName] ?? DEFAULT_STAGE_CONTEXT[actionName] ?? { primary: '', include: [] };
 }
 
 /**
@@ -738,17 +740,12 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const idea = readArtifact(ctx.repo, articleId, 'idea.md');
-
-    // Inject current roster data so the LLM doesn't use stale training data
     const team = article.primary_team;
-    let ideaWithRoster = idea;
     if (team) {
-      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team);
-      if (rosterCtx) {
-        ideaWithRoster = idea + '\n\n---\n\n' + rosterCtx;
-      }
+      ensureRosterContext(ctx.repo, articleId, team);
     }
+
+    const ideaWithRoster = gatherContext(ctx.repo, articleId, 'generatePrompt', ctx.config);
 
     const result = await ctx.runner.run({
       agentName: 'lead',
@@ -860,6 +857,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const rosterCtx = article.primary_team
       ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
       : null;
+    const discussionContext = gatherContext(ctx.repo, articleId, 'runDiscussion', ctx.config);
 
     // Try to parse individual panelists for parallel execution
     const panelists = parsePanelComposition(panel);
@@ -867,9 +865,6 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     if (panelists.length === 0) {
       // Fallback: single-moderator approach when composition can't be parsed
       console.warn(`[runDiscussion] Could not parse panel-composition.md for '${articleId}', falling back to single-moderator`);
-
-      const contentParts = [`## Discussion Prompt\n${prompt}\n\n## Panel\n${panel}`];
-      if (rosterCtx) contentParts.push(`\n\n---\n\n${rosterCtx}`);
 
       const result = await ctx.runner.run({
         agentName: 'panel-moderator',
@@ -880,7 +875,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
           slug: articleId,
           title: article.title,
           stage: article.current_stage,
-          content: contentParts.join(''),
+          content: discussionContext,
         },
       });
 
@@ -895,7 +890,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
         try {
           const result = await ctx.runner.run({
             agentName: panelist.agentName,
-            task: `You are participating in a panel discussion.\n\nYour assigned lane: ${panelist.role}\n\nDiscussion prompt:\n${prompt}\n\nProvide your expert analysis from your specific perspective. Be direct, cite specific data points, and don't hedge. If you disagree with conventional wisdom, say so.`,
+            task: `You are participating in a panel discussion.\n\nYour assigned lane: ${panelist.role}\n\nDiscussion context:\n${discussionContext}\n\nProvide your expert analysis from your specific perspective. Be direct, cite specific data points, and don't hedge. If you disagree with conventional wisdom, say so.`,
             rosterContext: rosterCtx ?? undefined,
             articleContext: {
               title: article.title,
@@ -919,9 +914,6 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       // Fall back to single-moderator with the full panel context instead of throwing.
       console.warn(`[runDiscussion] All ${panelists.length} panelists failed for '${articleId}', falling back to single-moderator`);
 
-      const contentParts = [`## Discussion Prompt\n${prompt}\n\n## Panel\n${panel}`];
-      if (rosterCtx) contentParts.push(`\n\n---\n\n${rosterCtx}`);
-
       const fallbackResult = await ctx.runner.run({
         agentName: 'panel-moderator',
         task: 'Moderate the panel discussion and produce a summary. Play each analyst role yourself and provide a comprehensive multi-perspective analysis.',
@@ -931,7 +923,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
           slug: articleId,
           title: article.title,
           stage: article.current_stage,
-          content: contentParts.join(''),
+          content: discussionContext,
         },
       });
 
@@ -958,14 +950,14 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       agentName: 'panel-moderator',
       task: `Synthesize these panel contributions into a coherent discussion summary. Preserve disagreements and tension — don't smooth over conflicts.\n\n${individualContributions}`,
       skills: ['article-discussion'],
-      rosterContext: rosterCtx ?? undefined,
-      articleContext: {
-        title: article.title,
-        slug: articleId,
-        stage: article.current_stage,
-        content: prompt,
-      },
-    });
+        rosterContext: rosterCtx ?? undefined,
+        articleContext: {
+          title: article.title,
+          slug: articleId,
+          stage: article.current_stage,
+          content: discussionContext,
+        },
+      });
 
     writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', synthesisResult);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runDiscussion-synthesis', synthesisResult);

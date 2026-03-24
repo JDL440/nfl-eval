@@ -82,7 +82,7 @@ import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdv
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
 import { buildTeamRosterContext } from '../pipeline/roster-context.js';
 import {
-  CONTEXT_CONFIG,
+  getContextConfigDefaults,
   getArticleContextOverrides,
   saveArticleContextOverrides,
   deleteArticleContextOverrides,
@@ -1440,9 +1440,10 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
 
-    const stageNames = Object.keys(CONTEXT_CONFIG);
+    const defaultConfig = getContextConfigDefaults(config.contextPreset);
+    const stageNames = Object.keys(defaultConfig);
     const defaults: Record<string, string[]> = {};
-    for (const s of stageNames) defaults[s] = CONTEXT_CONFIG[s]?.include ?? [];
+    for (const s of stageNames) defaults[s] = defaultConfig[s]?.include ?? [];
 
     const overrides = getArticleContextOverrides(repo, id);
     const artifactChoices = listContextArtifactChoices(id);
@@ -1453,6 +1454,7 @@ export function createApp(
       artifactChoices,
       defaults,
       overrides,
+      preset: config.contextPreset ?? 'balanced',
     }));
   });
 
@@ -1468,7 +1470,8 @@ export function createApp(
 
     try {
       const body = await c.req.parseBody();
-      const stageNames = Object.keys(CONTEXT_CONFIG);
+      const defaultConfig = getContextConfigDefaults(config.contextPreset);
+      const stageNames = Object.keys(defaultConfig);
       const artifactChoices = listContextArtifactChoices(id);
       const allowed = new Set(artifactChoices);
 
@@ -1490,7 +1493,7 @@ export function createApp(
       saveArticleContextOverrides(repo, id, overridesToSave);
 
       const defaults: Record<string, string[]> = {};
-      for (const s of stageNames) defaults[s] = CONTEXT_CONFIG[s]?.include ?? [];
+      for (const s of stageNames) defaults[s] = defaultConfig[s]?.include ?? [];
 
       const isHtmx = c.req.header('hx-request') === 'true';
       if (isHtmx) {
@@ -1500,6 +1503,7 @@ export function createApp(
           artifactChoices,
           defaults,
           overrides: overridesToSave,
+          preset: config.contextPreset ?? 'balanced',
         }));
       }
 
@@ -1525,9 +1529,10 @@ export function createApp(
 
     deleteArticleContextOverrides(repo, id);
 
-    const stageNames = Object.keys(CONTEXT_CONFIG);
+    const defaultConfig = getContextConfigDefaults(config.contextPreset);
+    const stageNames = Object.keys(defaultConfig);
     const defaults: Record<string, string[]> = {};
-    for (const s of stageNames) defaults[s] = CONTEXT_CONFIG[s]?.include ?? [];
+    for (const s of stageNames) defaults[s] = defaultConfig[s]?.include ?? [];
 
     const isHtmx = c.req.header('hx-request') === 'true';
     if (isHtmx) {
@@ -1537,6 +1542,7 @@ export function createApp(
         artifactChoices: listContextArtifactChoices(id),
         defaults,
         overrides: null,
+        preset: config.contextPreset ?? 'balanced',
       }));
     }
 

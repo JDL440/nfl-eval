@@ -8,6 +8,9 @@
 import type { Repository } from '../db/repository.js';
 
 export const CONTEXT_CONFIG_ARTIFACT = '_config.json';
+export const DEFAULT_CONTEXT_PRESET = 'rich' as const;
+
+export type ContextPreset = 'balanced' | 'rich';
 
 /** Per-action context configuration (primary artifact + optional upstream includes). */
 export interface StageContextEntry {
@@ -28,6 +31,28 @@ export const CONTEXT_CONFIG: Record<string, StageContextEntry> = {
   runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
   runPublisherPass: { primary: 'draft.md',              include: ['editor-review.md', 'roster-context.md'] },
 };
+
+export const CONTEXT_CONFIG_PRESETS: Record<ContextPreset, Record<string, StageContextEntry>> = {
+  balanced: CONTEXT_CONFIG,
+  rich: {
+    generatePrompt:   { primary: 'idea.md',               include: ['roster-context.md'] },
+    composePanel:     { primary: 'discussion-prompt.md',  include: ['idea.md', 'roster-context.md'] },
+    runDiscussion:    { primary: 'discussion-prompt.md',  include: ['idea.md', 'panel-composition.md', 'roster-context.md'] },
+    writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+    runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+    runPublisherPass: { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md', 'editor-review.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+  },
+};
+
+export function normalizeContextPreset(value: string | null | undefined): ContextPreset {
+  return value === 'balanced' ? 'balanced' : DEFAULT_CONTEXT_PRESET;
+}
+
+export function getContextConfigDefaults(
+  preset?: ContextPreset | null,
+): Record<string, StageContextEntry> {
+  return CONTEXT_CONFIG_PRESETS[preset ?? 'balanced'];
+}
 
 export type ArticleContextOverrides = Record<string, string[]>;
 

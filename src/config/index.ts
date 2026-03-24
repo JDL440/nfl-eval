@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, cpSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
+import { normalizeContextPreset, type ContextPreset } from '../pipeline/context-config.js';
 
 export interface LeagueConfig {
   name: string;
@@ -29,6 +30,7 @@ export interface AppConfig {
   port: number;
   env: 'development' | 'production';
   dashboardAuth?: DashboardAuthConfig;
+  contextPreset?: ContextPreset;
 }
 
 export interface DashboardAuthConfig {
@@ -252,6 +254,7 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
   const port = overrides?.port ?? parseInt(process.env.NFL_PORT ?? String(DEFAULT_PORT), 10);
   const env = (overrides?.env ?? process.env.NODE_ENV ?? 'development') as 'development' | 'production';
   const dashboardAuth = resolveDashboardAuthConfig(env, overrides?.dashboardAuth);
+  const contextPreset = overrides?.contextPreset ?? normalizeContextPreset(process.env.NFL_CONTEXT_PRESET);
 
   return {
     dataDir,
@@ -267,6 +270,7 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
     cacheDir: join(dataDir, 'leagues', league, 'data-cache'),
     port,
     env,
+    contextPreset,
     ...overrides,
     dashboardAuth,
   };
