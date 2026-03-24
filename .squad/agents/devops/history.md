@@ -124,3 +124,4 @@
 - Pre-push status: 34 commits ahead of `origin/main`
 - Post-push status: Branch up to date with `origin/main`
 - Working tree: Clean (only untracked debug files and modified `.squad/agents/devops/history.md` remain, per normal session state)
+- 2026-03-24 — Issue #123 repeat-blocker validation complete. Targeted tests pass (repeat detection, hold guards, artifact cleanup). Build clean. Dashboard artifact serving verified. One pre-existing thinking-sidecar failure unrelated to scope. Production-ready.

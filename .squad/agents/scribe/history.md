@@ -46,3 +46,6 @@
 - **Inbox cleanup:** Removed `lead-issue-123-triage.md` after merge.
 - **Scope locked:** Repeated blocker detection (consecutive editor summaries) → `lead-review.md` artifact → `needs_lead_review` status at Stage 6 (no new stage).
 - **Routing:** Code owns implementation; affects `src/pipeline/actions.ts` + tests, no DevOps changes.
+
+### 2026-03-26T12-05-00Z: Issue #123 closeout
+- **Closeout:** Issue #123 is implemented and Lead-approved; exact repeated blocker signatures now escalate to `lead-review.md` at Stage 6 with `needs_lead_review`, while non-repeat cases keep the existing path.

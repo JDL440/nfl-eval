@@ -2,11 +2,11 @@
 
 **Date:** 2026-03-26 (decision) → 2026-03-24 (completion)  
 **Issue:** #123 — Escalate repeated blockers to Lead for decision instead of infinite loop  
-**Status:** ✅ COMPLETE (Code owner)  
+**Status:** ✅ COMPLETE (Code owner, Lead approved)  
 
 ## Decision & Implementation
 
-Issue #123 repeated-blocker escalation is complete and validated.
+Issue #123 repeated-blocker escalation is complete, validated, and Lead-approved.
 
 ### Implementation Summary
 - **Detection:** `src/pipeline/conversation.ts` normalizes `blocker_type` + `blocker_ids` into exact fingerprint; `src/pipeline/actions.ts` detects consecutive repeat across last two editor `REVISE` summaries
