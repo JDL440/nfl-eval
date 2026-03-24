@@ -81,6 +81,27 @@ export interface PanelMember {
   role: string;
 }
 
+interface PanelSizeLimits {
+  min: number;
+  max: number;
+  default: number;
+}
+
+interface AvailableAgentRoster {
+  specialists: string[];
+  teamAgents: string[];
+  allAgents: Set<string>;
+}
+
+type PanelArchetype =
+  | 'contract'
+  | 'draft'
+  | 'trade'
+  | 'coaching'
+  | 'roster'
+  | 'market'
+  | 'general';
+
 interface RetrospectiveIssueSummary {
   text: string;
   count: number;
@@ -108,6 +129,14 @@ function readArtifact(repo: Repository, articleId: string, filename: string): st
 function writeArtifact(repo: Repository, articleId: string, filename: string, content: string): void {
   repo.artifacts.put(articleId, filename, content);
 }
+
+const GENERATE_DISCUSSION_PROMPT_TASK = [
+  'Generate a discussion prompt from the following idea.',
+  'Use the discussion-prompt skill as the canonical structure and quality bar for this stage.',
+  'Cross-reference player names and team assignments against the roster context provided.',
+  'If the roster data shows a player on a different team, correct the premise.',
+  'If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
+].join(' ');
 
 function buildLeadReviewHandoff(
   repo: Repository,
@@ -201,6 +230,234 @@ function summarizeMarkdownLine(text: string | null | undefined, maxLength = 180)
   if (!normalized) return null;
   if (normalized.length <= maxLength) return normalized;
   return normalized.slice(0, maxLength).trimEnd() + '…';
+}
+
+function normalizeAgentName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
+function getPanelSizeLimits(ctx: ActionContext, depthLevel: number): PanelSizeLimits {
+  const limits = ctx.runner.gateway.getModelPolicy().getPanelSizeLimits(depthLevel);
+  return {
+    min: limits.min,
+    max: limits.max,
+    default: limits.default,
+  };
+}
+
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  analytics: 'Analytics',
+  cap: 'Cap',
+  collegescout: 'CollegeScout',
+  defense: 'Defense',
+  draft: 'Draft',
+  injury: 'Injury',
+  media: 'Media',
+  offense: 'Offense',
+  playerrep: 'PlayerRep',
+  specialteams: 'SpecialTeams',
+};
+
+const SPECIALIST_ROLE_LANES: Record<string, string> = {
+  analytics: 'Analytics lens: efficiency, historical comps, and probabilistic tradeoffs',
+  cap: 'Salary cap analysis: market comps, structure, and flexibility',
+  collegescout: 'Prospect evaluation: traits, development curve, and scheme translation',
+  defense: 'Defensive fit: role, usage, and matchup consequences',
+  draft: 'Draft capital strategy: pick value, board alternatives, and class context',
+  injury: 'Availability lens: durability, recovery timelines, and risk tolerance',
+  media: 'Narrative framing: expectations, leverage, and market perception',
+  offense: 'Offensive fit: usage, play design, and deployment tradeoffs',
+  playerrep: 'Player valuation: leverage, guarantees, and negotiation pressure points',
+  specialteams: 'Hidden roster value: special teams role, depth pressure, and game-day math',
+};
+
+const PANEL_RECIPE_BY_ARCHETYPE: Record<PanelArchetype, string[]> = {
+  contract: ['cap', 'playerrep', 'analytics', 'offense', 'defense'],
+  draft: ['draft', 'collegescout', 'analytics', 'offense', 'defense'],
+  trade: ['cap', 'playerrep', 'analytics', 'offense', 'defense'],
+  coaching: ['offense', 'defense', 'analytics', 'specialteams'],
+  roster: ['cap', 'analytics', 'offense', 'defense', 'draft'],
+  market: ['cap', 'analytics', 'playerrep', 'offense', 'defense'],
+  general: ['analytics', 'cap', 'offense', 'defense', 'draft'],
+};
+
+function inferPanelArchetype(text: string): PanelArchetype {
+  const normalized = text.toLowerCase();
+  if (/\btrade|traded|swap\b/.test(normalized)) return 'trade';
+  if (/\bdraft|mock draft|prospect|pick\b/.test(normalized)) return 'draft';
+  if (/\bextend|extension|contract|free agent|free-agency|free agency|signing|aav|guarantee\b/.test(normalized)) return 'contract';
+  if (/\bcoach|coaching|coordinator|scheme|play-caller|playcaller|play caller\b/.test(normalized)) return 'coaching';
+  if (/\bmarket|ranking|value\b/.test(normalized)) return 'market';
+  if (/\broster|offseason plan|competitive window|cap space|team building\b/.test(normalized)) return 'roster';
+  return 'general';
+}
+
+function getAvailableAgentRoster(runner: AgentRunner): AvailableAgentRoster {
+  const specialists: string[] = [];
+  const teamAgents: string[] = [];
+  const allAgents = new Set<string>();
+
+  for (const rawName of runner.listAgents()) {
+    const name = normalizeAgentName(rawName);
+    if (PRODUCTION_AGENTS.has(name)) continue;
+    allAgents.add(name);
+    if (TEAM_ABBRS.has(name)) {
+      teamAgents.push(name);
+    } else {
+      specialists.push(name);
+    }
+  }
+
+  specialists.sort();
+  teamAgents.sort();
+  return { specialists, teamAgents, allAgents };
+}
+
+function buildPanelMemberRole(
+  agentName: string,
+  article: NonNullable<ReturnType<Repository['getArticle']>>,
+): string {
+  if (TEAM_ABBRS.has(agentName)) {
+    return `${agentName.toUpperCase()} team context: roster needs, timeline, and competitive window`;
+  }
+  return SPECIALIST_ROLE_LANES[agentName] ?? `${agentName} specialist perspective`;
+}
+
+function buildPanelArtifact(members: PanelMember[]): string {
+  return [
+    '## Panel',
+    '',
+    ...members.map((member) => {
+      const displayName = TEAM_ABBRS.has(member.agentName)
+        ? member.agentName.toUpperCase()
+        : (AGENT_DISPLAY_NAMES[member.agentName] ?? member.agentName);
+      return `- **${displayName}** — ${member.role}`;
+    }),
+  ].join('\n');
+}
+
+function buildRecipeCandidateNames(
+  article: NonNullable<ReturnType<Repository['getArticle']>>,
+  promptContent: string,
+  roster: AvailableAgentRoster,
+  archetype: PanelArchetype,
+): string[] {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  const add = (name: string | null | undefined) => {
+    if (!name) return;
+    const normalized = normalizeAgentName(name);
+    if (!roster.allAgents.has(normalized) || seen.has(normalized)) return;
+    seen.add(normalized);
+    candidates.push(normalized);
+  };
+
+  add(article.primary_team);
+
+  if (archetype === 'trade') {
+    for (const team of roster.teamAgents) {
+      if (team === normalizeAgentName(article.primary_team ?? '')) continue;
+      if (new RegExp(`\\b${team}\\b`, 'i').test(promptContent)) {
+        add(team);
+        break;
+      }
+    }
+  }
+
+  for (const specialist of PANEL_RECIPE_BY_ARCHETYPE[archetype]) {
+    add(specialist);
+  }
+
+  for (const specialist of roster.specialists) {
+    add(specialist);
+  }
+
+  return candidates;
+}
+
+function normalizePanelMembers(
+  article: NonNullable<ReturnType<Repository['getArticle']>>,
+  promptContent: string,
+  roster: AvailableAgentRoster,
+  initialMembers: PanelMember[],
+  pinnedAgents: Array<{ agent_name: string; role: string | null }>,
+  limits: PanelSizeLimits,
+): PanelMember[] | null {
+  const membersByName = new Map<string, PanelMember>();
+  const pushMember = (agentName: string, role?: string | null) => {
+    const normalized = normalizeAgentName(agentName);
+    if (!roster.allAgents.has(normalized) || membersByName.has(normalized)) return;
+    membersByName.set(normalized, {
+      agentName: normalized,
+      role: role?.trim() || buildPanelMemberRole(normalized, article),
+    });
+  };
+
+  const requiredNames = new Set<string>();
+  for (const pinned of pinnedAgents) {
+    const normalized = normalizeAgentName(pinned.agent_name);
+    if (!roster.allAgents.has(normalized)) continue;
+    requiredNames.add(normalized);
+    pushMember(normalized, pinned.role);
+  }
+
+  const primaryTeam = normalizeAgentName(article.primary_team ?? '');
+  if (primaryTeam && roster.allAgents.has(primaryTeam)) {
+    requiredNames.add(primaryTeam);
+  }
+
+  for (const member of initialMembers) {
+    pushMember(member.agentName, member.role);
+  }
+
+  if (primaryTeam && !membersByName.has(primaryTeam)) {
+    pushMember(primaryTeam);
+  }
+
+  const archetype = inferPanelArchetype(`${article.title}\n${promptContent}`);
+  for (const candidate of buildRecipeCandidateNames(article, promptContent, roster, archetype)) {
+    if (membersByName.size >= Math.max(limits.default, requiredNames.size)) break;
+    if (!membersByName.has(candidate)) {
+      pushMember(candidate);
+    }
+  }
+
+  const members = [...membersByName.values()];
+  const hasTeamAgent = members.some((member) => TEAM_ABBRS.has(member.agentName));
+  const hasSpecialist = members.some((member) => !TEAM_ABBRS.has(member.agentName));
+  if (!hasTeamAgent || !hasSpecialist || members.length < limits.min) {
+    return null;
+  }
+
+  const targetCount = Math.max(limits.min, Math.max(limits.default, requiredNames.size));
+  const hardCap = Math.max(limits.max, requiredNames.size);
+  const recipePriority = new Map<string, number>(
+    buildRecipeCandidateNames(article, promptContent, roster, archetype).map((name, index) => [name, index]),
+  );
+
+  const prioritized = members
+    .map((member, index) => ({ member, index }))
+    .sort((a, b) => {
+      const aRequired = requiredNames.has(a.member.agentName) ? 1 : 0;
+      const bRequired = requiredNames.has(b.member.agentName) ? 1 : 0;
+      if (aRequired !== bRequired) return bRequired - aRequired;
+
+      const aPriority = recipePriority.get(a.member.agentName) ?? Number.MAX_SAFE_INTEGER;
+      const bPriority = recipePriority.get(b.member.agentName) ?? Number.MAX_SAFE_INTEGER;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      return a.index - b.index;
+    })
+    .map(({ member }) => member);
+
+  const kept = prioritized.slice(0, Math.min(hardCap, Math.max(targetCount, limits.min)));
+  const keptHasTeam = kept.some((member) => TEAM_ABBRS.has(member.agentName));
+  const keptHasSpecialist = kept.some((member) => !TEAM_ABBRS.has(member.agentName));
+  if (!keptHasTeam || !keptHasSpecialist || kept.length < limits.min) {
+    return null;
+  }
+
+  return kept;
 }
 
 function parseRevisionIssues(raw: string | null): string[] {
@@ -623,7 +880,7 @@ export function parsePanelComposition(content: string): PanelMember[] {
     }
 
     if (agentName) {
-      const normalized = agentName.trim().toLowerCase().replace(/\s+/g, '-');
+      const normalized = normalizeAgentName(agentName);
       if (normalized && role.trim() && !seen.has(normalized)) {
         seen.add(normalized);
         members.push({ agentName: normalized, role: role.trim() });
@@ -740,13 +997,11 @@ const TEAM_ABBRS = new Set([
 
 /** Build a categorized roster string from available agent charters. */
 function buildAgentRoster(runner: AgentRunner): string {
-  const agents = runner.listAgents();
+  const roster = getAvailableAgentRoster(runner);
   const specialists: string[] = [];
   const teamAgents: string[] = [];
 
-  for (const name of agents) {
-    if (PRODUCTION_AGENTS.has(name)) continue;
-
+  for (const name of [...roster.specialists, ...roster.teamAgents]) {
     const charter = runner.loadCharter(name);
     const identity = charter?.identity ?? '';
     const summary = identity.split('\n')[0]?.slice(0, 120) || name;
@@ -785,7 +1040,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const result = await ctx.runner.run({
       agentName: 'lead',
-      task: 'Generate a discussion prompt from the following idea. Cross-reference player names and team assignments against the roster context provided. If the roster data shows a player on a different team, correct the premise. If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
+      task: GENERATE_DISCUSSION_PROMPT_TASK,
       skills: ['discussion-prompt'],
       articleContext: {
         slug: articleId,
@@ -816,11 +1071,26 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
 
     const promptContent = gatherContext(ctx.repo, articleId, 'composePanel', ctx.config);
 
-    const roster = buildAgentRoster(ctx.runner);
     const depthLevel = article.depth_level ?? 2;
+    const limits = getPanelSizeLimits(ctx, depthLevel);
+    const roster = getAvailableAgentRoster(ctx.runner);
 
     // Check for pinned agents
     const pinnedAgents = ctx.repo.getPinnedAgents(articleId);
+    const deterministicPanel = normalizePanelMembers(
+      article,
+      promptContent,
+      roster,
+      [],
+      pinnedAgents,
+      limits,
+    );
+
+    if (deterministicPanel) {
+      writeArtifact(ctx.repo, articleId, 'panel-composition.md', buildPanelArtifact(deterministicPanel));
+      return { success: true, duration: Date.now() - start };
+    }
+
     const pinnedSection = pinnedAgents.length > 0
       ? [
           '',
@@ -833,20 +1103,21 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       : '';
 
     const task = [
-      'Select a panel of analysts for this discussion from the available roster.',
+      'Compose a panel of analysts for this discussion from the available roster.',
       '',
-      `Depth Level: ${depthLevel} (${depthLevel === 1 ? '2 agents max' : depthLevel === 2 ? '3-4 agents' : '4-5 agents'})`,
+      `Depth Level: ${depthLevel} (default ${limits.default}, hard max ${Math.max(limits.max, pinnedAgents.length)})`,
       pinnedSection,
       '',
       '## Available Agents',
-      roster,
+      buildAgentRoster(ctx.runner),
       '',
       'Rules:',
       '- Always include the relevant team agent for the primary team',
       '- Always include at least one specialist',
       pinnedAgents.length > 0 ? '- Always include the required/pinned agents listed above' : '',
       '- Select agents whose expertise matches the article topic',
-      '- Panel size must respect the depth level limits',
+      `- Default to ${limits.default} panelists unless pinned agents force a larger panel`,
+      '- Panel size must respect the depth-level limits',
       '- Each panelist should have a distinct analytical lane',
       '',
       '⚠️ CRITICAL OUTPUT FORMAT: List each panelist as a markdown bullet with bold agent name, em-dash, and role. Example:',
@@ -867,7 +1138,16 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       },
     });
 
-    writeAgentResult(ctx.repo, articleId, 'panel-composition.md', result);
+    const parsed = parsePanelComposition(result.content);
+    const normalizedPanel = parsed.length > 0
+      ? normalizePanelMembers(article, promptContent, roster, parsed, pinnedAgents, limits)
+      : null;
+
+    if (normalizedPanel) {
+      writeArtifact(ctx.repo, articleId, 'panel-composition.md', buildPanelArtifact(normalizedPanel));
+    } else {
+      writeAgentResult(ctx.repo, articleId, 'panel-composition.md', result);
+    }
     recordAgentUsage(ctx, articleId, article.current_stage, 'composePanel', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
@@ -888,6 +1168,10 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
 
     const prompt = readArtifact(ctx.repo, articleId, 'discussion-prompt.md');
     const panel = readArtifact(ctx.repo, articleId, 'panel-composition.md');
+    const depthLevel = article.depth_level ?? 2;
+    const limits = getPanelSizeLimits(ctx, depthLevel);
+    const pinnedAgents = ctx.repo.getPinnedAgents(articleId);
+    const roster = getAvailableAgentRoster(ctx.runner);
 
     // Inject roster context for panel discussion accuracy
     const rosterCtx = article.primary_team
@@ -896,7 +1180,10 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const discussionContext = gatherContext(ctx.repo, articleId, 'runDiscussion', ctx.config);
 
     // Try to parse individual panelists for parallel execution
-    const panelists = parsePanelComposition(panel);
+    const parsedPanelists = parsePanelComposition(panel);
+    const panelists = parsedPanelists.length > 0
+      ? normalizePanelMembers(article, `${prompt}\n${panel}`, roster, parsedPanelists, pinnedAgents, limits) ?? parsedPanelists
+      : [];
 
     if (panelists.length === 0) {
       // Fallback: single-moderator approach when composition can't be parsed

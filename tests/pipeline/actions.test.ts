@@ -444,6 +444,42 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-cp', 'panel-composition.md')).toBeTruthy();
     });
+
+    it('uses the deterministic default recipe when the roster supports it', async () => {
+      const provider = new RecordingProvider(['# This response should not be used']);
+      setRunnerProvider(fixtures, provider);
+
+      writeFileSync(join(fixtures.chartersDir, 'sea.md'),
+        '# SEA\n\n## Identity\nSeahawks team agent.\n\n## Responsibilities\n- Analyze roster\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+      writeFileSync(join(fixtures.chartersDir, 'cap.md'),
+        '# Cap\n\n## Identity\nCap specialist.\n\n## Responsibilities\n- Analyze contracts\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+      writeFileSync(join(fixtures.chartersDir, 'playerrep.md'),
+        '# PlayerRep\n\n## Identity\nPlayer valuation specialist.\n\n## Responsibilities\n- Analyze leverage\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+      writeFileSync(join(fixtures.chartersDir, 'analytics.md'),
+        '# Analytics\n\n## Identity\nAnalytics specialist.\n\n## Responsibilities\n- Analyze efficiency\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
+
+      fixtures.repo.createArticle({
+        id: 'test-cp-deterministic',
+        title: 'Should Seattle extend its star receiver now?',
+        primary_team: 'sea',
+        depth_level: 2,
+      });
+      fixtures.repo.advanceStage('test-cp-deterministic', 1, 2 as Stage, 'test-setup');
+      fixtures.repo.artifacts.put('test-cp-deterministic', 'idea.md', '# Idea\nPay the receiver now or wait a year?');
+      fixtures.repo.artifacts.put(
+        'test-cp-deterministic',
+        'discussion-prompt.md',
+        '# Prompt\n## The Core Question\nShould Seattle extend its receiver now or wait?\n\n## Data Anchors\n- Market comps\n- Guarantees\n',
+      );
+
+      const result = await STAGE_ACTIONS.composePanel('test-cp-deterministic', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(provider.lastRequest).toBeNull();
+      expect(fixtures.repo.artifacts.get('test-cp-deterministic', 'panel-composition.md')).toBe(
+        '## Panel\n\n- **SEA** — SEA team context: roster needs, timeline, and competitive window\n- **Cap** — Salary cap analysis: market comps, structure, and flexibility\n- **PlayerRep** — Player valuation: leverage, guarantees, and negotiation pressure points',
+      );
+    });
   });
 
   // ── runDiscussion (3→4) ──────────────────────────────────────────────────
@@ -539,6 +575,46 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-rd-think', 'panel-sea.md')).toBeTruthy();
       expect(fixtures.repo.artifacts.get('test-rd-think', 'discussion-summary.md')).toBeTruthy();
+    });
+
+    it('trims oversized depth-2 panels back to the default discussion size', async () => {
+      for (const [name, identity] of [
+        ['sea', 'Seahawks team agent.'],
+        ['cap', 'Cap specialist.'],
+        ['playerrep', 'Player valuation specialist.'],
+        ['analytics', 'Analytics specialist.'],
+      ] as const) {
+        writeFileSync(join(fixtures.chartersDir, `${name}.md`),
+          `# ${name}\n\n## Identity\n${identity}\n\n## Responsibilities\n- Analyze assigned lane\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n`);
+      }
+
+      fixtures.repo.createArticle({
+        id: 'test-rd-trim',
+        title: 'Should Seattle extend its receiver now?',
+        primary_team: 'sea',
+        depth_level: 2,
+      });
+      fixtures.repo.advanceStage('test-rd-trim', 1, 2 as Stage, 'test-setup');
+      fixtures.repo.advanceStage('test-rd-trim', 2, 3 as Stage, 'test-setup');
+      fixtures.repo.artifacts.put('test-rd-trim', 'idea.md', '# Idea');
+      fixtures.repo.artifacts.put(
+        'test-rd-trim',
+        'discussion-prompt.md',
+        '# Prompt\n## The Core Question\nShould Seattle extend its receiver now or wait?\n\n## Data Anchors\n- Market comps',
+      );
+      fixtures.repo.artifacts.put(
+        'test-rd-trim',
+        'panel-composition.md',
+        '## Panel\n- **SEA** — Seahawks context\n- **Cap** — Cap analysis\n- **PlayerRep** — Player leverage\n- **Analytics** — Historical comps',
+      );
+
+      const result = await STAGE_ACTIONS.runDiscussion('test-rd-trim', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-sea.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-cap.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-playerrep.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-analytics.md')).toBeNull();
     });
   });
 
