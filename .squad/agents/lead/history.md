@@ -19,6 +19,7 @@
 **2026-03-23T17-14-24Z:** TLDR follow-up decision merged to decisions.md; orchestration log written.  
 **2026-03-23T18:18:11Z:** Issue #115 scope narrowed to operator-facing documentation; Code routed for implementation.  
 **2026-03-23T04:32:51Z:** Issue #118 review approved; repeated process_improvement auto-promotion validated in CLI.
+- 2026-03-23T19:30:28Z — **Issue #125 Slice 3 Complete & Ready for Review**: Code completed final planned slice. Editor can now consume writer-factcheck.md as advisory upstream context. Three-slice arc complete: Slice 1 (Policy/typed contract), Slice 2 (Runtime enforcement with approved-source parity), Slice 3 (Editor consumption + focused tests). Ready for Lead review and final approval per Ralph orchestration.
 
 ### Team & Project Context
 
@@ -88,4 +89,5 @@
 - 2026-03-25 — Retrospective digest promotion rule: treat `process_improvement` findings as issue-ready when they are lead-authored or repeated across 2+ articles, independent of the higher-threshold churn/repeated-issue heuristic. Relevant files: `src/cli.ts`, `tests/cli.test.ts`, `.squad/decisions.md`, `.squad/skills/manual-retro-digest-first/SKILL.md`.
 - 2026-03-25 — Issue #118 review confirmed the current CLI keeps the retrospective digest lane manual/read-only: `handleRetrospectiveDigest()` only calls `repo.listRetrospectiveDigestFindings(limit)`, builds the digest in memory, and prints JSON/markdown, while `Repository.listRetrospectiveDigestFindings()` is a bounded SELECT over `article_retrospectives` + `article_retrospective_findings` with no backlog/knowledge mutations. Focused evidence came from `src/cli.ts`, `src/db/repository.ts`, and `tests/cli.test.ts` (`prints a bounded markdown digest for manual review`, `supports json output through the command dispatcher`, `promotes repeated non-lead process improvements to issue-ready candidates`).
 - 2026-03-25 — TLDR follow-up: keep the repair path revision-first, but restate the structural obligation in every layer that can hand the draft back. Writer charter should say the pipeline blocks missing TLDR and Writer must verify it on every handoff; editor guidance should treat missing/incomplete TLDR as a mandatory `## 🔴 ERRORS` + `REVISE` case; revision prompts should explicitly preserve or restore the canonical four-bullet TLDR block so send-backs do not depend on Editor repeating the reminder.
+
 
