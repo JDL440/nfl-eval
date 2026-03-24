@@ -3730,3 +3730,38 @@ Keep the existing team-agent filter for the expert pin selector, but treat the l
 - ✅ Build passed (`npm run v2:build`)
 - ✅ Runtime `nfl` charter remains selectable (not filtered out)
 
+
+## Code Decision — Stage Runs Panel Stage Number Alignment (2026-03-24)
+
+**Date:** 2026-03-24  
+**Requester:** Backend (Squad Agent)  
+**Status:** IMPLEMENTED  
+
+### Decision
+
+Stage Runs panel (\enderStageRunsPanel()\) must render persisted \stage_runs.stage\ directly without transformation. This stage value is the persisted article/dashboard stage, not a "next stage" target, and must maintain semantic alignment with \rticle.current_stage\.
+
+### Rationale
+
+The dashboard header badge shows \rticle.current_stage\. Stage Runs panel was incorrectly adding 1 to \stage_runs.stage\, creating a mismatch. The fix is narrow: remove the transformation and render stored stage directly.
+
+### Implementation
+
+- **src/dashboard/views/article.ts:** Removed \+ 1\ transformation in \enderStageRunsPanel()\
+- **tests/dashboard/wave2.test.ts:** Updated stage assertions to expect persisted values
+- **tests/db/repository.test.ts:** Added round-trip validation for stage persistence
+
+### Validation
+
+- ✅ Focused tests: \
+pm run v2:test -- tests/dashboard/wave2.test.ts\
+- ✅ Focused tests: \
+pm run v2:test -- tests/db/repository.test.ts\  
+- ✅ Build: \
+pm run v2:build\
+
+### Key Seams
+
+- \src/dashboard/views/article.ts\ — render path
+- \src/db/repository.ts\ — persistence layer
+- \src/types.ts\ — type definitions
