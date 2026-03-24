@@ -64,3 +64,4 @@
 - Recommended bounded output shape with deduping, limits, and promotion reasons.
 - Proposed limiting scope to docs and refinements, not new stages or automation.
 - Decision merged to decisions.md. Orchestration log written.
+- 2026-03-24T02-58-58Z — Issue #124 routing remains blocked behind #120 structured blocker tracking and #123 repeated-blocker escalation; once unblocked, Research should define the fallback/claim-mode entry criteria, Lead handoff, Writer reframe contract, and disclosure requirements.
