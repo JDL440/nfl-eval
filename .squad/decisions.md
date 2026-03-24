@@ -1,3 +1,40 @@
+# Code Decision — Writer Runtime / Editor Alignment Plan
+
+- **Date:** 2026-03-24
+- **Owner:** Backend (via Code)
+- **Scope:** Stage 5 seam improvements for first-pass draft quality
+
+## Decision
+
+Keep `src/agents/runner.ts` generic and place the change in the Stage 5 pipeline seam:
+
+1. Add a small shared helper for an **editor-style preflight checklist** plus a **deterministic Stage 5 linter**.
+2. Inject that checklist from `src/pipeline/actions.ts` `writeDraft()` into the Writer runtime/task so the guidance is explicit on every draft/revision.
+3. Run the linter immediately after Writer output, before Editor, and reuse the existing bounded retry/self-heal path.
+
+## Why This Seam
+
+- `writeDraft()` already owns the Writer-specific runtime assembly, `panel-factcheck.md` / `writer-factcheck.md` inputs, and the current structural repair retry.
+- `src/agents/runner.ts` is shared infrastructure; specializing it for one role raises blast radius without clear upside.
+- A shared Stage 5 helper can stay deterministic, testable, and later be reused by Editor or dashboard diagnostics without prompt duplication.
+
+## Initial Blocker Set to Target
+
+Start with common high-signal, bounded checks already reflected in Writer + Editor policy:
+
+- canonical top-of-article TLDR structure (existing)
+- direct-quote discipline
+- unsupported superlatives / absolutes
+- prose/table contradiction guardrails when a simple deterministic mismatch is detectable
+- explicit handling of flagged cautions from Stage 5 artifacts
+
+## Validation
+
+- `npm run v2:test -- tests/pipeline/actions.test.ts tests/pipeline/engine.test.ts tests/agents/runner.test.ts tests/pipeline/writer-factcheck.test.ts`
+- `npm run v2:build`
+
+---
+
 # Code Decision — Stage Runs badge semantics
 
 - **Date:** 2026-03-26
@@ -16,6 +53,72 @@ The article header already treats the current dashboard stage as the canonical a
 
 - Stage badges in Stage Runs now match article/dashboard stage semantics.
 - Focused tests lock the contract that a stored stage 5 run renders as `Stage 5 — Article Drafting`.
+
+---
+
+# Code Decision — Writer Preflight Artifact Ownership
+
+- **Date:** 2026-03-27
+- **Scope:** Stage 5 writer/editor alignment
+
+## Decision
+
+Keep the editor-aligned writer preflight policy and persisted `writer-preflight.md` artifact format in `src/pipeline/writer-preflight.ts`, with `src/pipeline/actions.ts` only supplying initial/final validation state and whether the deterministic repair path triggered.
+
+## Why
+
+- The checklist text and artifact contract are one policy surface; splitting them across `actions.ts` and tests would drift quickly.
+- `src/agents/runner.ts` stays generic, while Stage 5-specific behavior remains localized to the pipeline seam that already owns Writer retries.
+- Focused tests can now lock the four important behaviors cleanly: prompt checklist injection, retry trigger, artifact persistence, and clean first-pass success.
+
+## Key Files
+
+- `src/pipeline/writer-preflight.ts`
+- `src/pipeline/actions.ts`
+- `tests/pipeline/actions.test.ts`
+
+---
+
+# Lead Decision — Writer preflight alignment
+
+- **Date:** 2026-03-24
+- **Owner:** Lead
+- **Scope:** Writer/Editor runtime alignment for first-pass draft quality
+
+## Decision
+
+Prefer the existing Stage 5 runtime seam over a new stage or broad charter rewrite:
+
+1. Add a **shared, concise editor-style preflight skill** that Writer receives at runtime.
+2. Add a **deterministic Stage 5 blocker inspector** in the current draft-validation path.
+3. Keep the blocker set **small and bounded**: catch only high-signal misses that are cheap to detect before Editor.
+
+## Recommended implementation seam
+
+- **Prompt/runtime seam:** `src/pipeline/actions.ts` (`writeDraft()`, retry instruction path)
+- **Deterministic lint seam:** `src/pipeline/engine.ts` (alongside `inspectDraftStructure()` / `requireDraft()`)
+- **Shared prompt content:** new skill file such as `src/config/defaults/skills/editor-preflight.md`
+
+## Scope guard
+
+- No new numbered stage
+- No open-ended Writer research
+- No attempt to replace Editor judgment with deterministic heuristics
+- No duplication of the full editor-review skill inside the Writer charter
+
+## Minimum blocker set
+
+- Canonical TLDR contract still missing / too low / too short
+- Missing `**Next from the panel:**` ending hook
+- Obvious draft leakage such as `TODO`, `TBD`, placeholder text, or editorial notes left in body copy
+
+## Why
+
+This is the narrowest path that improves first-pass quality while preserving the current architecture:
+
+- `writeDraft()` already owns Writer prompt assembly and self-heal.
+- `engine.ts` already owns cheap deterministic article guards.
+- `writer-factcheck.md` already handles bounded risky-claim verification; the new lint should complement that path, not duplicate it.
 
 ---
 
