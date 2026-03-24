@@ -3765,3 +3765,278 @@ pm run v2:build\
 - \src/dashboard/views/article.ts\ — render path
 - \src/db/repository.ts\ — persistence layer
 - \src/types.ts\ — type definitions
+---
+# Lead Decision Proposal — V3 Stage 5-7 Minimal Architecture
+
+## Scope
+Pipeline Stages 5 Writer, 6 Editor, 7 Publisher simplification review only.
+
+## Proposed minimal architecture
+
+1. **Keep one canonical instruction source for article shape and publish-facing structure:** `src/config/defaults/skills/substack-article.md`.
+   - Writer, Editor, and Publisher charters/skills should reference it for TLDR order, byline placement, image count/placement, and footer contract.
+   - Do not keep parallel copies of the full article skeleton in Writer/Editor/Publisher prompts.
+
+2. **Keep role-specific charters/skills only for role-specific behavior:**
+   - Writer: craft + bounded risky-claim verification policy (`writer-fact-check`).
+   - Editor: review protocol + verdict contract (`editor-review`).
+   - Publisher: publish-readiness / dashboard handoff only, not a second editorial policy block.
+
+3. **Move structural and factual hard guards into deterministic runtime checks where possible:**
+   - Stage 5 guard keeps TLDR/word-count/writer-preflight validation before Editor.
+   - Stage 6→7 gate keeps verdict parsing + APPROVED requirement.
+   - Stage 7 keeps deterministic publish-readiness checks (draft exists, linked draft URL rules, image/path/body conversion checks, roster/stat/draft validation artifacts, checklist state).
+   - Prompts should describe expectations, but code should enforce machine-checkable rules.
+
+4. **Collapse stage context for 5-7 to minimum durable artifacts:**
+   - `writeDraft`: primary `discussion-summary.md`; include only artifacts that materially change output (`panel-factcheck.md`, `roster-context.md`, `fact-check-context.md`, `writer-factcheck.md`, latest `editor-review.md` when revising).
+   - `runEditor`: primary `draft.md`; include `writer-factcheck.md` plus only the deterministic evidence needed for verification.
+   - `runPublisherPass`: primary `draft.md`; include `editor-review.md` only if Stage 7 still needs the approval artifact for handoff context. Avoid carrying Idea/Discussion/Writer fact-check material into Publisher by default.
+
+5. **Treat dashboard publish as the real Stage 7/8 operational surface:**
+   - Publisher pass should prepare and record readiness.
+   - Actual Substack draft creation / live publish remains in dashboard routes and views.
+   - Avoid split authority where Publisher prompt and dashboard UI both own the same policy text.
+
+## Keep / collapse / move
+
+### Keep
+- `substack-article` as the single canonical article contract.
+- `writer-fact-check` as the single Writer verification policy.
+- `editor-review` as the single Editor verdict/review policy.
+- Deterministic guards in `engine.ts`, writer preflight, context validation, and dashboard publish runtime checks.
+
+### Collapse
+- Repeated TLDR/image/publisher policy wording across Writer/Editor/Publisher charters and skills.
+- Rich context defaults that re-inject Stage 2-4 artifacts into Stage 7 without changing Publisher behavior.
+- Publisher prompt text that duplicates dashboard/manual publish behavior.
+
+### Move to deterministic validation
+- Any machine-checkable article structure rule.
+- Verdict format parsing.
+- Stage 7 draft existence / linked draft presence / publishability checks.
+- Image path/file existence and claim-validation artifacts.
+
+## Test guidance
+- Keep focused prompt-contract tests that prove Writer gets `substack-article` + `writer-fact-check`, and Editor gets advisory `writer-factcheck.md`.
+- Update context-config tests if Stage 7 default includes are reduced.
+- Add/keep tests that Stage 7 UI owns draft/live publish flows and does not depend on publisher checklist visibility on publish page.
+- Prefer guard/validator tests over prompt-copy assertions for structure rules.
+
+## Risks
+- Removing too much charter text can accidentally drop role boundaries if tests only cover happy-path prompts.
+- Over-collapsing Stage 7 context may hide approval/history needed for operator debugging.
+- If Publisher prompt and dashboard UI diverge, operators will see conflicting Stage 7 expectations.
+
+
+---
+# Lead Decision — V3 Stages 5-7 Minimal Architecture
+
+## Scope
+
+Surgical architecture review for Stage 5 Writer, Stage 6 Editor, and Stage 7 Publisher only. No expansion into Stages 1-4 or post-publish orchestration.
+
+## Decision
+
+Code should simplify around **one canonical instruction source per concern** and keep **deterministic validation in code**, not in repeated prompt prose.
+
+### Stage 5 — Writer
+
+- Keep `src/config/defaults/skills/substack-article.md` as the canonical article structure / TLDR / image contract.
+- Keep `src/config/defaults/skills/writer-fact-check.md` as the canonical bounded verification policy and `writer-factcheck.md` artifact contract.
+- Keep deterministic enforcement in runtime:
+  - `inspectDraftStructure()` in `src/pipeline/engine.ts`
+  - `runWriterPreflight()` in `src/pipeline/writer-preflight.ts`
+  - one self-heal retry in `src/pipeline/actions.ts`
+- Keep Writer prompt/task text focused on runtime-specific behavior only:
+  - fresh draft vs revision mode
+  - revise existing draft instead of rewriting
+  - use bounded fact-check only for risky claims
+
+### Stage 6 — Editor
+
+- Keep `src/config/defaults/skills/editor-review.md` as the single review protocol and output-format contract.
+- Trim duplicated procedural detail from `src/config/defaults/charters/nfl/editor.md`; it should primarily hold persona, authority, and boundaries.
+- Keep only runtime deltas in `src/pipeline/actions.ts`:
+  - roster lag semantics
+  - advisory use of `writer-factcheck.md`
+  - exact verdict parsing requirement
+- Treat `APPROVED` as a true gate outcome: no remaining blockers should be encoded elsewhere.
+
+### Stage 7 — Publisher
+
+- Keep Publisher as a **publication-readiness + dashboard handoff** stage, not a second editor and not an auto-promotion orchestrator.
+- Main prompt/context should stay narrow:
+  - `draft.md`
+  - `editor-review.md`
+  - shared revision summary
+  - roster context only if needed for deterministic validation support
+- Keep deterministic validation in code (`validatePlayerMentions`, stat/draft validation report generation) as the hard guardrail.
+- Keep dashboard actions in `src/dashboard/views/publish.ts` and related server routes as the place for draft save / publish / note / tweet actions; those are downstream of the Stage 7 pass, not part of the Publisher prompt contract.
+
+## Context simplification guidance
+
+### Keep
+
+- `src/pipeline/context-config.ts` as the runtime include map.
+- Revision-only injection of full `editor-review.md` into Writer runtime context.
+- Summary-only conversation handoff between roles.
+
+### Collapse
+
+- Repeated TLDR / article skeleton / image-policy prose across `writer.md`, `editor.md`, `publisher.md`.
+- Repeated bounded fact-check policy prose across `writer.md` and `writer-fact-check.md`.
+- Repeated editor output-format rules across `editor.md`, `editor-review.md`, and inline task text.
+
+### Move to deterministic validation
+
+- Article top-of-file structure / TLDR placement and count
+- placeholder leakage / unsupported name expansion / unsupported precise claims
+- roster mention validation
+- stat / draft claim report generation
+
+## Test implications
+
+Primary files to update when Code implements this simplification:
+
+- `tests/pipeline/actions.test.ts`
+  - Stage 5 prompt composition expectations
+  - Stage 6 prompt composition expectations
+  - Stage 7 prompt composition expectations
+  - context include expectations
+- `tests/pipeline/writer-preflight.test.ts`
+- `tests/pipeline/writer-factcheck.test.ts`
+- `tests/dashboard/publish.test.ts`
+- `tests/dashboard/new-idea.test.ts`
+
+Tests should assert:
+
+- canonical skill references remain present
+- duplicated prompt text is reduced rather than moved around
+- deterministic guards still block malformed drafts and publish-readiness failures
+- Publisher remains a dashboard handoff stage and auto-advance still caps at Stage 7
+
+## Risks to watch
+
+1. **Weakening the Editor gate** by stripping too much from `editor.md` without preserving `editor-review.md` as the real protocol.
+2. **Breaking revision quality** if Writer loses the direct full `editor-review.md` injection on revision runs.
+3. **Prompt drift** if Code removes duplicated prose but does not keep runtime-only deltas in `actions.ts`.
+4. **Stage 7 scope creep** if dashboard publish/note/tweet actions get re-embedded into Publisher prompt requirements.
+5. **Test false positives** if assertions still only check that artifacts exist, rather than that the right sources are being passed.
+
+
+---
+# Lead Decision — V3 Stage 5-7 Simplification
+
+**Date:** 2026-03-26
+**Owner:** Lead
+**Requested by:** Backend
+**Scope:** Stage 5 Writer, Stage 6 Editor, Stage 7 Publisher
+
+## Decision
+
+Code should simplify stages 5-7 by keeping **one canonical instruction source per concern** and moving enforcement to existing deterministic runtime guards.
+
+### Stage 5 — Writer
+- Keep `src/config/defaults/skills/substack-article.md` as the only canonical structure / TLDR / image policy source.
+- Keep `src/config/defaults/skills/writer-fact-check.md` as the only bounded verification policy + `writer-factcheck.md` artifact contract source.
+- Keep deterministic enforcement in code: `inspectDraftStructure()`, `runWriterPreflight()`, and the single targeted self-heal retry in `src/pipeline/actions.ts`.
+- Slim Writer prompt/context to top essentials:
+  - primary: `discussion-summary.md`
+  - default includes: `idea.md`, `panel-factcheck.md`, `writer-factcheck.md`
+  - revision-only explicit append: latest full `editor-review.md`
+- Do not duplicate long structure/fact-check policy blocks across Writer charter, runtime task string, and skills when deterministic checks already enforce them.
+
+### Stage 6 — Editor
+- Use `src/config/defaults/skills/editor-review.md` as the canonical review protocol/output contract.
+- Reduce `src/config/defaults/charters/nfl/editor.md` to persona, scope, and high-level boundary guidance; remove repeated checklist/output text that already lives in the skill or canonical article contract.
+- Keep `src/pipeline/actions.ts` editor task text only for runtime deltas:
+  - roster mismatch vs roster-lag semantics
+  - `writer-factcheck.md` is advisory only
+  - exact verdict formatting requirement
+- Strong approval gate: `APPROVED` means publish-safe with **no remaining blocking errors**. If blockers remain, the verdict must be `REVISE` (or `REJECT` for rewrite/re-research cases).
+
+### Stage 7 — Publisher
+- Treat Stage 7 as a **dashboard handoff / publish-readiness pass**, not a promotion orchestrator.
+- Keep publisher prompt inputs minimal: `draft.md`, `editor-review.md`, and shared revision-summary handoff. Remove nonessential upstream narrative context from default publisher inputs.
+- Keep deterministic pre-publish validation (`roster-validation.md`, `fact-validation.md`) as the hard required checks.
+- Separate optional promotion features (Substack Note, Tweet, Publish All) from required publish readiness wherever feasible. They may stay in the dashboard UI, but must remain non-blocking follow-ons rather than publisher-pass requirements.
+
+## Why
+
+The current shape repeats the same rules across charters, skills, runtime task strings, and context bundles. That raises prompt weight and creates conflict risk without improving safety, because the strongest protections for these stages already come from deterministic guards and parseable artifacts.
+
+## Guardrails
+
+- Do not weaken Stage 5 deterministic validation.
+- Do not remove the Writer revision path that appends the latest full `editor-review.md`.
+- Do not weaken Stage 6 parseable verdict/blocker behavior.
+- Do not make publish readiness depend on Note/Tweet success.
+
+## Test Expectations
+
+Update focused tests to lock the simplified seams:
+- Writer receives canonical structure skill + bounded fact-check skill + short preflight, but no unnecessary duplicated context.
+- Editor prompt proves canonical skill ownership plus strong `APPROVED` gate semantics.
+- Publisher prompt proves minimal context/handoff and non-blocking promotion separation.
+- Existing dashboard tests for optional Note/Tweet behavior and publish-page separation remain green.
+
+
+---
+# Tester Review Proposal — Stage 5/6/7 validation seams
+
+## Proposal
+
+Treat Stage 5/6/7 article-contract rules as runtime validation + focused tests first, and prompt wording second.
+
+## Why
+
+- The TLDR/article-contract seam is already enforced deterministically in `src/pipeline/engine.ts` (`inspectDraftStructure()`, `requireDraft()`) and retried in `src/pipeline/actions.ts` (`writeDraft()`), but the same rule is repeated across `writer.md`, `editor.md`, `substack-article.md`, and `editor-review.md`.
+- The editor-verdict seam is parsed deterministically in `src/pipeline/engine.ts` (`extractVerdict()`, `requireEditorApproval()`), but the exact output contract is also duplicated in `src/config/defaults/charters/nfl/editor.md` and `src/config/defaults/skills/editor-review.md`.
+- Stage 7 publish gating is split between pipeline guard logic (`requirePublisherPass()` + `requireSubstackUrl()`), dashboard article-view gating (`src/dashboard/views/article.ts`), and publish-page behavior (`src/dashboard/views/publish.ts`), which increases regression surface when stages are simplified.
+
+## Recommended direction
+
+1. Keep a single canonical article structure contract in `src/config/defaults/skills/substack-article.md`.
+2. Keep a single runtime structure validator in `inspectDraftStructure()` / `requireDraft()`.
+3. Keep one canonical verdict parser + approval guard in `extractVerdict()` / `requireEditorApproval()`.
+4. Keep publish gating defined by deterministic stage/readiness checks, with dashboard copy reflecting those checks instead of re-describing policy.
+5. If Stage 5–7 are simplified later, update the deterministic guards/tests first, then trim prompt duplication to match.
+
+## Tests most likely to move with simplification
+
+- `tests/pipeline/actions.test.ts`
+  - `passes the canonical TLDR contract to the writer via the substack-article skill`
+  - `self-heals drafts missing the TLDR structure before succeeding`
+  - `fails when the retry draft still misses the TLDR contract`
+  - `returns REVISE and records a revision summary when the editor sends the draft back`
+  - `passes writer-factcheck.md to editor as advisory context`
+  - `calls publisher agent and writes publisher-pass.md`
+  - `passes summary-only handoff to publisher`
+  - `sends stage-5 drafts back to writer when the TLDR contract is missing`
+  - `regresses back to writer when runEditor succeeds with a REVISE verdict`
+  - `runEditor includes idea.md, discussion-summary.md, and writer-factcheck.md by default`
+  - `runPublisherPass includes editor-review.md by default`
+- `tests/pipeline/engine.test.ts`
+  - TLDR guard tests under `requireDraft()` / `inspectDraftStructure()`
+  - verdict parsing tests under `extractVerdict()` / `requireEditorApproval()`
+  - Stage 7→8 guard tests under `requirePublisherPass()` / `requireSubstackUrl()`
+- `tests/dashboard/publish.test.ts`
+  - publish preview/rendering and Substack draft/publish flow tests
+  - any assertions tied to Stage 7 wording or draft-first publish behavior
+- `tests/dashboard/server.test.ts`
+  - `uses draft readiness for stage 7 publish actions instead of the stage guard failure`
+
+## Review note
+
+Before simplifying Stage 5–7, lock the intended contract in deterministic tests for:
+
+- top-of-article structure
+- editor verdict parseability
+- Stage 6 repeated-blocker hold behavior
+- Stage 7 publish readiness and Stage 8 transition
+
+That reduces dependence on long prompt instructions and lowers regression risk in dashboard copy.
+
+
+
