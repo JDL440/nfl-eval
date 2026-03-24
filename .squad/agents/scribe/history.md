@@ -39,3 +39,10 @@
 - Wrote the Research orchestration and session logs for the Packers slug-history investigation.
 - Merged the lead board cleanup inbox decision, deduplicated the identical inbox copies, and removed the inbox files.
 - Archived older decision entries out of `decisions.md` and left the recent board context in place.
+
+### 2026-03-26T12-00-00Z: Issue #123 Scribe pass (Unblock from #120)
+- **Blocker resolution:** Issue #120 (structured blocker seam) complete and merged; Issue #123 now actionable.
+- **Merged decision:** Moved Issue #123 Lead triage decision from inbox to top of `decisions.md` as Code-actionable slice.
+- **Inbox cleanup:** Removed `lead-issue-123-triage.md` after merge.
+- **Scope locked:** Repeated blocker detection (consecutive editor summaries) → `lead-review.md` artifact → `needs_lead_review` status at Stage 6 (no new stage).
+- **Routing:** Code owns implementation; affects `src/pipeline/actions.ts` + tests, no DevOps changes.
