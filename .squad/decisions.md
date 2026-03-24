@@ -1,3 +1,44 @@
+# Lead Review Decision — Issue #125 Slice 3 (Verified)
+
+**Date:** 2026-03-25  
+**Reviewer:** Lead (verified review)  
+**Issue:** #125 — Unbox Writer with guardrailed research and fact-checking access  
+**Slice:** 3 (Editor consumption + focused tests)  
+**Status:** APPROVED — Issue #125 complete and ready to close
+
+## Verified Changes
+
+- **`src/pipeline/context-config.ts:28`**: `writer-factcheck.md` added to `runEditor` default include list. `gatherContext()` gracefully skips missing artifacts (`if (content)` guard at line 584), so articles without a writer fact-check pass are unaffected.
+- **`src/pipeline/actions.ts:1135`**: Editor task prompt updated with advisory instruction: "If `writer-factcheck.md` is present, treat it as an advisory Stage 5 ledger." Preserves Editor as final authority.
+- **`src/config/defaults/charters/nfl/editor.md`**: Charter updated with 4-bullet advisory usage guide and data-source entry for `writer-factcheck.md`. Alignment with skill doc pattern #6 ("Keep Editor as final authority") confirmed.
+- **`tests/pipeline/actions.test.ts:743-772`**: Test `passes writer-factcheck.md to editor as advisory context` verifies the prompt path includes advisory heading + content.
+- **`tests/pipeline/actions.test.ts:1115-1132`**: Test `runEditor includes writer-factcheck.md by default` verifies the context-config routing.
+
+## Scope Check
+
+Slice 3 stays bounded. One minor scope item: the `editor.md` diff also adds TLDR structural-error rules from the separate #107 TLDR decision. This codifies an already-approved policy and does not introduce new behavior — acceptable carry-forward, not harmful scope creep.
+
+## Validation
+
+- Build: `tsc` exits clean (0)
+- Tests: 69/69 passing across `tests/pipeline/actions.test.ts` and `tests/pipeline/writer-factcheck.test.ts`
+
+## Acceptance Criteria — Full #125 Coverage
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Approved source list and guardrails documented | ✅ | `src/config/defaults/skills/writer-fact-check.md` |
+| Writer charter updated for targeted fact-checking | ✅ | `src/config/defaults/charters/nfl/writer.md` §Bounded Stage 5 Verification |
+| Pipeline enforces fact-check budget and captures usage | ✅ | `writer-factcheck.ts` + `recordWriterFactCheckUsage()` in `actions.ts` |
+| Writer outputs cite checked facts or mark unverified | ✅ | `writer-factcheck.md` artifact sections: Verified / Attributed / Omitted |
+| Tests cover allowed-source and citation/uncertainty behavior | ✅ | 69 tests covering team-site allowlist, budget, wall-clock, Editor advisory |
+
+## Closeout
+
+Issue #125 is **complete across all 3 slices** and ready to close once the working-tree changes are committed and merged to `origin/main`.
+
+---
+
 # Code Decision — Issue #125 Slice 2 Narrow Revision (Approved & Implemented)
 
 **Date:** 2026-03-25  
