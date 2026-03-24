@@ -3107,3 +3107,38 @@ Editor should consume `writer-factcheck.md` as **advisory upstream context**, no
 - `npm run test -- tests/pipeline/writer-factcheck.test.ts`
 - `npm run v2:build`
 
+
+
+---
+
+## Code Decision — Issue #125 Slice 3 Editor Consumption
+
+**Date:** 2026-03-25  
+**Requester:** Backend (Squad Agent)  
+**Issue:** #125 Slice 3  
+**Status:** IMPLEMENTED
+
+### Decision
+
+Editor should consume writer-factcheck.md as **advisory upstream context**, not as a replacement for Editor verification.
+
+### Why
+
+- Slice 1/2 already made writer-factcheck.md durable and policy-backed, so leaving it out of Stage 6 wasted the artifact the pipeline was explicitly preserving.
+- Keeping it advisory preserves the original guardrail: Writer can reduce churn on risky claims, but Editor remains the final fact-check authority.
+
+### Implementation
+
+- Added writer-factcheck.md to the default unEditor upstream context include list in src/pipeline/context-config.ts
+- Updated unEditor() task wording in src/pipeline/actions.ts so Editor is told how to use the artifact
+- Updated src/config/defaults/charters/nfl/editor.md to describe the ledger as targeted, reusable evidence rather than final approval
+- Added focused regression coverage in 	ests/pipeline/actions.test.ts
+
+### Validation
+
+- 
+pm run test -- tests/pipeline/actions.test.ts — PASS
+- 
+pm run test -- tests/pipeline/writer-factcheck.test.ts — PASS
+- 
+pm run v2:build — PASS
