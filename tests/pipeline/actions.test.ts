@@ -1351,6 +1351,69 @@ describe('Configurable upstream context', () => {
     const result = await STAGE_ACTIONS.writeDraft('test-ctx-minimal', fixtures.ctx);
     expect(result.success).toBe(true);
   });
+
+  it('generatePrompt respects pipeline-context.json overrides', async () => {
+    const provider = new RecordingProvider(['# Prompt\n\nGenerated prompt.']);
+    setRunnerProvider(fixtures, provider);
+    const configDir = join(fixtures.tempDir, 'config');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
+      generatePrompt: { primary: 'idea.md', include: ['discussion-summary.md'] },
+    }));
+
+    createArticleWithStage(fixtures, 'test-ctx-gp', 1 as Stage, {
+      'idea.md': '# Idea\nPRIMARY IDEA',
+      'discussion-summary.md': '# Summary\nEXTRA SUMMARY CONTEXT',
+    });
+
+    const result = await STAGE_ACTIONS.generatePrompt('test-ctx-gp', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+    expect(userPrompt).toContain('EXTRA SUMMARY CONTEXT');
+  });
+
+  it('runDiscussion respects pipeline-context.json overrides during moderator fallback', async () => {
+    const provider = new RecordingProvider(['# Summary\n\nPanel discussion summary.']);
+    setRunnerProvider(fixtures, provider);
+    const configDir = join(fixtures.tempDir, 'config');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
+      runDiscussion: { primary: 'discussion-prompt.md', include: ['idea.md', 'panel-composition.md'] },
+    }));
+
+    createArticleWithStage(fixtures, 'test-ctx-rd', 3 as Stage, {
+      'idea.md': '# Idea\nDISAGREEMENT ANGLE',
+      'discussion-prompt.md': '# Prompt\nPROMPT BODY',
+      'panel-composition.md': '# Panel\nUnparseable panel text',
+    });
+
+    const result = await STAGE_ACTIONS.runDiscussion('test-ctx-rd', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+    expect(userPrompt).toContain('DISAGREEMENT ANGLE');
+    expect(userPrompt).toContain('panel-composition.md');
+  });
+
+  it('rich context preset widens writeDraft defaults', async () => {
+    const provider = new RecordingProvider([validDraft()]);
+    setRunnerProvider(fixtures, provider);
+    fixtures.ctx.config.contextPreset = 'rich';
+    createArticleWithStage(fixtures, 'test-ctx-rich', 4 as Stage, {
+      'idea.md': '# Idea\nUPSTREAM IDEA',
+      'discussion-prompt.md': '# Prompt\nPROMPT CONTEXT',
+      'panel-composition.md': '# Panel\nPANEL CONTEXT',
+      'discussion-summary.md': '# Summary\nPRIMARY SUMMARY',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-ctx-rich', fixtures.ctx);
+    expect(result.success).toBe(true);
+
+    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+    expect(userPrompt).toContain('PROMPT CONTEXT');
+    expect(userPrompt).toContain('PANEL CONTEXT');
+  });
 });
 
 describe('post-revision retrospective automation', () => {

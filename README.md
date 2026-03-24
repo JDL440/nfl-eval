@@ -52,6 +52,7 @@ Core runtime:
 - `NFL_DATA_DIR` — overrides the default data directory (`~/.nfl-lab`)
 - `NFL_PORT` — dashboard port (default `3456`)
 - `NFL_LEAGUE` — league code (default `nfl`)
+- `NFL_CONTEXT_PRESET` — article context preset: `rich` (default) or `balanced`
 
 LLM selection:
 

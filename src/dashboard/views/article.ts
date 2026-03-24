@@ -976,15 +976,17 @@ export interface ContextConfigPanelData {
   artifactChoices: string[];
   defaults: Record<string, string[]>;
   overrides: Record<string, string[]> | null;
+  preset?: string;
 }
 
 export function renderContextConfigPanel(data: ContextConfigPanelData): string {
-  const { articleId, stageNames, artifactChoices, defaults, overrides } = data;
+  const { articleId, stageNames, artifactChoices, defaults, overrides, preset } = data;
   const hasOverrides = overrides != null && Object.keys(overrides).length > 0;
+  const effectivePreset = preset === 'rich' ? 'rich' : 'balanced';
 
   const statusBadge = hasOverrides
     ? '<span class="ctx-status ctx-status-custom">Custom</span>'
-    : '<span class="ctx-status ctx-status-default">Defaults</span>';
+    : `<span class="ctx-status ctx-status-default">${effectivePreset === 'rich' ? 'Rich defaults' : 'Defaults'}</span>`;
 
   const stagesHtml = stageNames.map((stage) => {
     const defaultSet = defaults[stage] ?? [];
@@ -1016,7 +1018,7 @@ export function renderContextConfigPanel(data: ContextConfigPanelData): string {
           <span class="ctx-header-title">Context Artifacts</span>
           ${statusBadge}
         </div>
-        <p class="ctx-description">Controls which artifacts are injected into agent prompts at each pipeline stage. Override defaults to fine-tune context for this article.</p>
+        <p class="ctx-description">Controls which artifacts are injected into agent prompts at each pipeline stage. Override defaults to fine-tune context for this article.${effectivePreset === 'rich' ? ' The richer preset is currently active for this app.' : ''}</p>
       </div>
       <form class="ctx-form context-config-form"
         hx-post="/api/articles/${escapeHtml(articleId)}/context-config"

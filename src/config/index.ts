@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, cpSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
+import { normalizeContextPreset, type ContextPreset } from '../pipeline/context-config.js';
 
 export interface LeagueConfig {
   name: string;
@@ -28,6 +29,7 @@ export interface AppConfig {
   cacheDir: string;
   port: number;
   env: 'development' | 'production';
+  contextPreset?: ContextPreset;
 }
 
 const DEFAULT_DATA_DIR = join(homedir(), '.nfl-lab');
@@ -200,6 +202,7 @@ export function loadConfig(overrides?: Partial<AppConfig>): AppConfig {
 
   const port = overrides?.port ?? parseInt(process.env.NFL_PORT ?? String(DEFAULT_PORT), 10);
   const env = (overrides?.env ?? process.env.NODE_ENV ?? 'development') as 'development' | 'production';
+  const contextPreset = overrides?.contextPreset ?? normalizeContextPreset(process.env.NFL_CONTEXT_PRESET);
 
   return {
     dataDir,
@@ -215,6 +218,7 @@ export function loadConfig(overrides?: Partial<AppConfig>): AppConfig {
     cacheDir: join(dataDir, 'leagues', league, 'data-cache'),
     port,
     env,
+    contextPreset,
     ...overrides,
   };
 }

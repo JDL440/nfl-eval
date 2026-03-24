@@ -434,6 +434,21 @@ describe('Dashboard Server', () => {
       expect(delCompose).not.toMatch(/name="composePanel" value="discussion-summary\.md" checked/);
     });
 
+    it('GET /htmx/articles/:id/context-config reflects rich preset defaults', async () => {
+      repo.createArticle({ id: 'ctx-rich', title: 'Ctx Rich' });
+      const richApp = createApp(repo, makeTestConfig({
+        dbPath: join(tempDir, 'test.db'),
+        articlesDir: join(tempDir, 'articles'),
+        contextPreset: 'rich',
+      }));
+
+      const res = await richApp.request('/htmx/articles/ctx-rich/context-config');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Rich defaults');
+      expect(html).toContain('The richer preset is currently active');
+    });
+
     it('GET /htmx/published returns HTML fragment', async () => {
       const res = await app.request('/htmx/published');
       expect(res.status).toBe(200);
