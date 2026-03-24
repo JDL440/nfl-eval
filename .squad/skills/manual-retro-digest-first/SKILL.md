@@ -28,6 +28,9 @@ tools: [view, rg, gh]
    - Code implements cross-item queries, CLI output, and tests.
    - Lead locks scope and reviews promotion rules.
    - If the runtime seam is already present and research closes first, unblock the **digest scaffold** issue before the **promotion-layer** issue; do not keep either one blocked on a stale port task.
+6. **After the scaffold ships, narrow the parent issue to docs/operational closeout.**
+   - If the manual trigger, structured query, and bounded digest already exist, the remaining parent-issue gap is usually operator guidance, not more heuristics or automation.
+   - Route that closeout slice to Code unless product scope explicitly changes.
 
 ## Why this works
 
@@ -49,3 +52,5 @@ tools: [view, rg, gh]
 - Bound the report explicitly: cap candidate sections and per-category examples, and prefer evidence fields that help human review (`articleCount`, `priorityCounts`, latest timestamp, sample article titles).
 - When promotion heuristics are layered on later, keep the promoted candidate arrays explicit and human-reviewable: emit separate process-improvement vs learning-update lists, include deterministic `promotionReasons`, and prefer disjoint candidate classes so one normalized finding does not appear in both sections of the same digest.
 - If the approved process-improvement rule is “lead-authored OR repeated across 2+ items,” encode repeated `process_improvement` promotion directly instead of relying on stricter churn/repeated-issue heuristics; otherwise repeated non-lead process fixes can fall through to weaker learning thresholds or disappear entirely.
+- If the repo already ships a manual digest trigger plus typed markdown/JSON output, treat the trigger surface as settled for v1 and focus research on operator workflow, promotion thresholds, and side-effect boundaries instead of proposing a new scheduler or stage.
+- Once the scaffold + promotion layer are in mainline, close the umbrella issue by documenting operator usage (`how to run`, `when to review`, `what to do with candidates`) before considering any workflow wrapper or scheduled automation.

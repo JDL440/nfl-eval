@@ -2482,3 +2482,133 @@ Comprehensive search of 8 open GitHub issues found **zero overlapping duplicates
 3. Editor blockers (consumes Writer findings)
 4. Evidence-deficit routing (fallback for Editor gate failures)
 5. Stage metadata (orchestration; coordinate with #119)
+
+---
+
+## Lead Decision — Issue #115 Retrospective Learning Closeout
+
+# Lead Decision Inbox — Issue #115 Retrospective Learning Closeout
+
+**By:** Lead (🏗️)  
+**Date:** 2026-03-24  
+**Related issue:** #115
+
+## Decision
+
+Treat **#115** as Ralph's current highest-priority actionable retrospective item, but narrow the remaining implementation scope to **operator docs / closeout guidance**, not new runtime seams.
+
+## Locked Recommendation
+
+1. **Trigger surface:** keep the existing manual CLI seam: `retrospective-digest`.
+2. **Source of truth:** keep using structured retrospective rows from `article_retrospectives` + `article_retrospective_findings` with article metadata.
+3. **Output artifact:** keep the bounded digest (markdown first, optional JSON) as the primary operator artifact.
+4. **Automation boundary:** do not add a new numbered stage, scheduled job, or auto-created GitHub issues in this parent issue.
+5. **Routing:** next implementation should route to **Code**, not Research.
+
+## Why
+
+- The core v1 architecture requested by #115 is already present in mainline: a manual trigger, structured query seam, and bounded actionable output.
+- Research work is already embodied in the digest heuristics, promotion rules, and existing squad skill/decision trail; reopening Research here would duplicate closed work.
+- The acceptance-criteria gap that still appears unmet is operator-facing documentation telling a human how to run and use the digest.
+
+## Evidence
+
+- `src/cli.ts` exposes `retrospective-digest [--limit N] [--json]` and renders bounded markdown/JSON output.
+- `src/db/repository.ts` provides `listRetrospectiveDigestFindings(limit)` as a read-only joined query over structured retrospective tables plus article metadata.
+- `src/db/schema.sql` defines `article_retrospectives` and `article_retrospective_findings`.
+- `src/pipeline/actions.ts` persists structured retrospective findings through `recordPostRevisionRetrospectiveIfEligible()`.
+- `README.md` currently does not document the retrospective digest flow, which is the remaining closeout gap for #115.
+
+## Backlog / Triage Effects
+
+- Ralph should treat **#115** as the current highest-priority actionable retrospective item.
+- Issue #115 was relabeled toward **Code** for the next execution pass.
+- A scheduler/workflow wrapper, if still desired after operator usage is proven, should be filed as a separate follow-up issue rather than stretched into #115.
+
+
+---
+
+## Research Proposal — Issue #115 Retrospective Mining
+
+# Research Proposal — Issue #115 Retrospective Mining
+
+**Date:** 2026-03-25  
+**Agent:** Research  
+**Status:** Proposed  
+**Issue:** #115
+
+## Summary
+
+Treat `#115` as a **manual, read-only digest workflow** over already-structured retrospective data. The repo already has the right v1 seams for trigger, input, and bounded output; the remaining work should stay focused on operator guidance and any narrow promotion/output refinements rather than inventing a new stage, scheduler, or freeform markdown scraper.
+
+## Existing Structured Surfaces
+
+- **Trigger surface:** `src/cli.ts`
+  - `retrospective-digest` / `retro-digest`
+  - optional `--limit`
+  - optional `--json`
+- **Input surface:** `src/db/schema.sql`, `src/db/repository.ts`, `src/pipeline/actions.ts`
+  - `article_retrospectives`
+  - `article_retrospective_findings`
+  - findings synthesized from revision summaries + force-approval signals, then persisted
+  - `listRetrospectiveDigestFindings(limit)` already returns joined article metadata + finding rows
+- **Output surface:** `src/types.ts`, `src/cli.ts`
+  - bounded `RetrospectiveDigestReport`
+  - promoted candidate arrays:
+    - `processImprovements`
+    - `learningUpdates`
+  - grouped review section by `role + findingType`
+  - markdown for operators, JSON for later automation
+
+## Recommended v1 Operator Workflow
+
+1. Run `retrospective-digest --limit N` manually on demand.
+2. Review the two promoted candidate sections first:
+   - **Issue-ready Process Improvement Candidates**
+   - **Learning Update Candidates**
+3. Use the grouped `role + findingType` section only as supporting evidence, not as another promotion layer.
+4. Manually promote approved items into:
+   - GitHub issues for process changes
+   - decision inbox notes / team knowledge updates for reusable learnings
+5. Keep all side effects manual in v1; do not auto-open issues or auto-edit knowledge artifacts.
+
+## Recommended Bounded Output Shape
+
+Keep the current v1 shape:
+
+- **Top-level metadata**
+  - `generatedAt`
+  - `retrospectiveLimit`
+  - totals for retrospectives, findings, groupedFindings, articles
+- **Promoted candidates**
+  - max 5 process-improvement candidates
+  - max 5 learning-update candidates
+  - each with:
+    - stable key
+    - role
+    - findingType
+    - representative text
+    - normalizedText
+    - explicit `promotionReasons`
+    - evidence block (`articleCount`, `findingCount`, priority counts, force-approved count, latest timestamp, sample articles)
+- **Supporting grouped section**
+  - grouped by `role + findingType`
+  - max 3 items per group
+
+This is bounded enough for manual review, but structured enough for a later workflow wrapper if the CLI proves useful.
+
+## Scope Boundaries
+
+- **Do not** add a new numbered pipeline stage.
+- **Do not** scrape retrospective markdown as the primary source when structured rows already exist.
+- **Do not** auto-create issues/decisions in v1.
+- **Do** preserve the current manual-review-first posture.
+
+## Follow-up if Needed
+
+If a second slice is wanted later, prefer:
+
+1. operator docs for promotion rules and cadence
+2. optional “emit decision-inbox-ready markdown” helper
+3. only then, a workflow wrapper around the same read-only digest
+

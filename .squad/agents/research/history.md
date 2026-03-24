@@ -24,6 +24,10 @@
 
 ## Learnings
 
+- 2026-03-25 — Issue `#115` already has a strong v1 structured surface: `src/db/schema.sql` persists `article_retrospectives` + `article_retrospective_findings`, `src/db/repository.ts` exposes `listRetrospectiveDigestFindings(limit)`, `src/cli.ts` ships `retrospective-digest` / `retro-digest`, and `src/types.ts` defines the bounded digest report/candidate/category contracts.
+- 2026-03-25 — Retrospective findings are synthesized from revision-loop state, not markdown scraping: `src/pipeline/actions.ts` builds writer/editor/lead findings from `revision_summaries`, revision issue history, and force-approval detection, then stores both a markdown artifact and normalized DB rows.
+- 2026-03-25 — The current digest shape is intentionally bounded and manual-review-first: `src/cli.ts` dedupes by normalized finding text within `role + finding_type`, limits promoted candidates to 5 process-improvement items and 5 learning updates, and caps category examples at 3.
+- 2026-03-25 — Tests already codify the intended operator loop for `#115`: `tests/db/repository.test.ts` covers joined digest rows and retrospective upserts, `tests/cli.test.ts` covers markdown/JSON digest output plus promotion reasons, and `tests/pipeline/actions.test.ts` covers post-revision retrospective generation/idempotence.
 - 2026-03-25 — Slug-history investigation: the exact slug `the-packers-next-big-move-might-be-trading-a-young-receiver` was not found in repo files, hidden state, worktrees, or `.copilot`; the closest live Packers artifact set is `content/articles/gb-2026-offseason/`.
 - 2026-03-25 — For article history, first-draft and thinking traces persist as filesystem artifacts (`content/articles/{slug}/*.md` plus optional `*.thinking.md`), while edit/revision loop context is designed to persist in SQLite tables `article_conversations` and `revision_summaries` (`src/db/schema.sql`, `src/pipeline/conversation.ts`).
 - 2026-03-25 — The local runtime scratch database at `.test-debug-retro/pipeline.db` currently has no schema or rows (4096-byte empty SQLite file), so it cannot recover draft/edit history for Packers investigations.
@@ -51,3 +55,10 @@
 - Confirmed zero duplicates across 8 open issues for all 5 research-driven topic areas.
 - Coordination points documented: #119 artifact provenance ↔ stage routing rules, Writer research ↔ claim mode, Editor gate ↔ evidence-deficit routing.
 - Orchestration log written to .squad/orchestration-log/2026-03-25T17-58-41Z-research.md.
+
+### 2026-03-23T18:18:11Z: Issue #115 structured surface validation (Research proposal)
+- Validated Issue #115 already has strong v1 surfaces: manual CLI (`retrospective-digest`), structured DB layer (`article_retrospectives` + `article_retrospective_findings`), bounded digest output with promotion rules.
+- Confirmed operator workflow: manual on-demand trigger, two promoted candidate sections (process improvements + learning updates), grouped evidence section, manual approval into issues/decisions.
+- Recommended bounded output shape with deduping, limits, and promotion reasons.
+- Proposed limiting scope to docs and refinements, not new stages or automation.
+- Decision merged to decisions.md. Orchestration log written.
