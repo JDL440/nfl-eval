@@ -37,6 +37,7 @@
 
 **Status:** Recommendations merged to `.squad/decisions.md` as "Decision: Publish Flow UX — Two-Step Model with Explicit Workflow". Coordinator implemented all findings. Regressions passing.
 
+- 2026-03-23T22:44:04Z — **Stage Badge Mismatch Investigation**: Investigated dashboard display inconsistency: article header badge used rticle.current_stage while Stage Runs panel showed stage + 1 from stored value. Investigation completed and handed off to Code for implementation. Decision: render Stage Runs using persisted stage_runs.stage directly, aligning with article/dashboard semantics. See .squad/orchestration-log/2026-03-23T22-44-04Z-ux.md.
 - 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Stage 7 publish-flow mental models and terminology review completed. Key findings: "publish workspace" is ambiguous/jargon; warning copy conflicts with intended two-step workflow; success states need stronger language. UX decision merged into decisions.md. Recommendations: rename/clarify workspace term, strengthen warnings, upgrade publish preview, add draft status indicator. Implementation pending Code's create-draft validation and Publisher's draft-first model adoption.
 - 2026-03-23 — Publish config-error review: `src/dashboard/server.ts` intentionally returns HTTP 200 HTMX fragments for missing Substack config via `renderMissingSubstackConfig(...)`, while non-HTMX callers still receive JSON 500s.
 - 2026-03-23 — `src/dashboard/views/publish.ts` follows the better dashboard pattern for operator-fixable publish failures when the primary alert stays terse (`Substack publishing is not configured.`) and the recovery steps live in a separate hint with the exact env vars and `/config` link.
@@ -97,4 +98,5 @@
 **Recommendation:** No changes required. Ready for implementation.
 
 - 2026-03-24T05:41:29Z — **Generate-Idea Selector Trace Complete**: Full render-path investigation completed. Team picker source confirmed: static `NFL_TEAMS` in `src/dashboard/views/new-idea.ts`. Expert picker source confirmed: server-side `runner.listAgents()` filter in `src/dashboard/server.ts` lines 847–861. Render path clean from GET `/ideas/new` → `renderNewIdeaPage()` → team-grid + expert-grid templates. No UX gaps. Styling/layout watch-outs noted for responsive mobile. UX validation complete; handed off to Code for implementation. See `.squad/orchestration-log/2026-03-24T05-41-29Z-ux.md`.
+
 

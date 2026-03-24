@@ -1,3 +1,24 @@
+# Code Decision — Stage Runs badge semantics
+
+- **Date:** 2026-03-26
+- **Owner:** Code
+- **Scope:** `src/dashboard/views/article.ts`, `tests/dashboard/wave2.test.ts`, `tests/db/repository.test.ts`
+
+## Decision
+
+Render the Stage Runs panel using the persisted `stage_runs.stage` value directly, without incrementing it to a target/next stage.
+
+## Why
+
+The article header already treats the current dashboard stage as the canonical article stage (`article.current_stage`). Repository reads also return `stage_runs.stage` unchanged, so incrementing in the view created a semantic mismatch between the stage badge under the title and the Stage Runs panel.
+
+## Impact
+
+- Stage badges in Stage Runs now match article/dashboard stage semantics.
+- Focused tests lock the contract that a stored stage 5 run renders as `Stage 5 — Article Drafting`.
+
+---
+
 # Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
 
 **Date:** 2026-03-26 (decision) → 2026-03-24 (completion)  
