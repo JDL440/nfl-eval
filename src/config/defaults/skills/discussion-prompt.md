@@ -10,7 +10,7 @@ tools: []
 
 ## Purpose
 
-Codifies how Lead writes a discussion prompt — the most important artifact in the pipeline. A bad prompt produces a generic panel. A good prompt produces specific, numeric, disagreement-generating analysis.
+Canonical Stage 2 guidance for how Lead writes a discussion prompt — the most important artifact in the pipeline. A bad prompt produces a generic panel. A good prompt produces specific, numeric, disagreement-generating analysis.
 
 ## Required Sections
 
@@ -30,6 +30,12 @@ Every discussion prompt must have all five:
 - **Missing data anchors:** Saying "the WR market has reset" without citing specific contract comps
 - **No per-panelist differentiation:** If Cap and Team agent both get "analyze the financial implications," expect duplicate analysis
 - **Strawman paths:** Don't make one path obviously wrong — every path should have a legitimate advocate
+
+## Scope
+
+- This skill is the single source of truth for Stage 2 prompt structure and quality signals.
+- `article-discussion.md` should reference this skill instead of restating the full Stage 2 checklist.
+- Keep panel-selection details in `panel-composition.md`, not here.
 
 ## Template
 

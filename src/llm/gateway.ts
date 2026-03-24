@@ -107,6 +107,10 @@ export class LLMGateway {
     return this.providers.get(id);
   }
 
+  getModelPolicy(): ModelPolicy {
+    return this.modelPolicy;
+  }
+
   // -- Chat ----------------------------------------------------------------
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
