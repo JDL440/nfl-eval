@@ -2955,3 +2955,52 @@ Route the next implementation pass to **Code**, but keep scope intentionally nar
 2. no general web search
 3. approved-domain helper only
 4. no blocker-routing dependency in v1 beyond clean deferral notes
+
+---
+
+# Code Decision Note — Issue #125 Slice A
+
+**Date:** 2026-03-25
+**Owner:** Code
+**Scope:** First bounded implementation slice only
+
+# Code Decision Note — Issue #125 Slice A
+
+**Date:** 2026-03-25  
+**Owner:** Code  
+**Scope:** First bounded implementation slice only
+
+## Decision
+
+Implement Issue #125 v1 as an explicit **policy + artifact contract**:
+
+- add typed Writer fact-check policy contracts
+- add a dedicated `writer-fact-check` skill
+- seed a durable `writer-factcheck.md` scaffold during `writeDraft()`
+- include that artifact only in Writer Stage 5 context
+
+## Why
+
+This makes the guardrails enforceable in code and prompting without prematurely shipping the full approved-source fetch helper, external-check execution loop, or Editor-stage consumption. It also preserves the existing panel fact-check behavior and keeps the change surgical.
+
+## Boundaries kept on purpose
+
+- No raw web search access
+- No live Stage 5 external fetch helper
+- No Editor consumption of `writer-factcheck.md`
+- No broader artifact/dashboard refactor
+
+## Key files
+
+- `src/types.ts`
+- `src/pipeline/writer-factcheck.ts`
+- `src/pipeline/actions.ts`
+- `src/pipeline/context-config.ts`
+- `src/config/defaults/charters/nfl/writer.md`
+- `src/config/defaults/skills/writer-fact-check.md`
+- `tests/pipeline/actions.test.ts`
+
+## Follow-up expectation
+
+If later slices add the approved-source helper, they should populate the existing `writer-factcheck.md` sections and budget summary rather than inventing a second artifact shape.
+
