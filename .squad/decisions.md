@@ -1,4 +1,4 @@
-# Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
+﻿# Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
 
 **Date:** 2026-03-26 (decision) → 2026-03-24 (completion)  
 **Issue:** #123 — Escalate repeated blockers to Lead for decision instead of infinite loop  
@@ -3251,3 +3251,121 @@ pm run test -- tests/pipeline/writer-factcheck.test.ts — PASS
 pm run v2:build — PASS
 
 
+
+
+---
+
+# Lead Review — Issue #123
+
+# Lead Review — Issue #123
+
+## Outcome
+
+- **APPROVED**
+
+## Contract Verified
+
+1. **Exact consecutive Editor `REVISE` comparison only**
+   - Repeated-state detection uses normalized `blocker_type` plus sorted/deduped normalized `blocker_ids`.
+   - Only the last two editor `REVISE` revision summaries participate in the comparison.
+
+2. **Repeated case escalates at Stage 6 without a new stage**
+   - `lead-review.md` is written.
+   - Article status flips to `needs_lead_review`.
+   - The article remains at Stage 6.
+
+3. **Normal loop bypass is narrow**
+   - The repeated case skips the normal auto-regress path.
+   - The repeated case also skips max-revision force-approve.
+   - Non-repeated blockers still use the existing revision-cap behavior.
+
+4. **Read paths expose the state/artifact where appropriate**
+   - Dashboard article detail shows the paused Lead-review state and exposes `lead-review.md`.
+   - HTMX artifact serving explicitly allows `lead-review.md`.
+   - `/api/articles/:id` continues to expose revision blocker metadata for operator visibility.
+
+5. **Artifact lifecycle is bounded**
+   - Regressing below Stage 6 clears `lead-review.md`.
+
+## Validation Reviewed
+
+- Focused passing tests:
+  - `tests/pipeline/actions.test.ts`
+  - `tests/pipeline/conversation.test.ts`
+  - `tests/db/repository.test.ts`
+  - targeted issue-123 cases in `tests/dashboard/server.test.ts`
+- `npm run v2:build` passed.
+
+## Scope Note
+
+- `#124` remains out of scope. No fallback-mode or policy-driven reframe behavior is required for this approval.
+
+---
+
+# Research Decision — Issue #124 Re-Triage
+
+**Date:** 2026-03-23  
+**Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
+**Status:** Actionable now; current execution lane: squad:research
+
+## Why it is now actionable
+
+Issue #124 was previously blocked on two foundation seams. Those seams now exist in the current repo state:
+
+1. **Structured blocker tracking (#120)**
+   - Revision summaries carry blocker_type and blocker_ids.
+   - Repository/API/dashboard reads already expose that metadata.
+
+2. **Repeated-blocker escalation (#123)**
+   - Consecutive repeated editor blockers are fingerprinted and escalated.
+   - The pipeline writes lead-review.md, holds Stage 6, and sets needs_lead_review.
+   - Dashboard/operator surfaces already expose the paused Lead-review state.
+
+That means fallback policy no longer needs to invent its own trigger. The bounded research task can proceed on top of the existing Lead-review seam.
+
+## Acceptance criteria (tight)
+
+Treat #124 as complete only when the repo supports all of the following:
+
+1. **Entry criteria**
+   - Opinion/analysis fallback is allowed only after the existing repeated-blocker escalation has fired for an evidence-completion problem.
+   - Lead must explicitly approve the switch; auto-fallback is out of scope.
+
+2. **Writer reframe contract**
+   - Writer receives a dedicated reframe prompt that preserves the article thesis but reframes unsupported hard-proof claims into transparent analysis/opinion language.
+   - The prompt must tell Writer what claims to soften, what proof is still missing, and what disclosure language is required.
+
+3. **Durable mode signal**
+   - The chosen article mode must persist as structured runtime state, not only as prose inside a markdown artifact.
+   - API/dashboard/published surfaces must be able to read that state reliably.
+
+4. **Reader/operator disclosure**
+   - Article detail and published/article views must clearly show that the piece is running in opinion/analysis fallback mode.
+   - Disclosure must explain that some evidence could not be fully completed and that the framing was Lead-approved.
+
+5. **Focused tests**
+   - Tests prove the fallback path only activates from the existing Lead-review seam, reruns Writer with the dedicated reframe contract, persists the mode signal, and renders the disclosure.
+
+## Narrowest safe implementation seam
+
+Do not reopen blocker detection, blocker persistence, or the Stage 6 hold path.
+
+The narrowest safe seam is:
+
+1. Reuse the existing **Stage 6 needs_lead_review + lead-review.md** escalation point from #123.
+2. Define fallback as a **Lead-approved post-escalation outcome** for repeated evidence blockers, not as a new trigger path.
+3. Add the smallest durable **article-mode** signal needed to mark the rerun and downstream display surfaces.
+4. Rerun Writer from the existing revision path with a bounded reframe contract instead of inventing a new stage.
+
+This keeps #124 scoped to fallback policy + execution contract and avoids reopening #120/#123.
+
+## Routing
+
+- **Now:** squad:research
+- **After research lands:** hand off the bounded runtime/UI slice to squad:code (with UX display work kept inside that same narrow implementation seam if needed)
+
+## Scope guard
+
+- Do **not** reopen #120 unless blocker metadata is actually defective.
+- Do **not** reopen #123 unless repeated-blocker escalation or the Stage 6 hold path is actually defective.
+- Keep #124 limited to fallback policy, reframe contract, durable mode signal, and disclosure.
