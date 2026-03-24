@@ -2612,3 +2612,36 @@ If a second slice is wanted later, prefer:
 2. optional “emit decision-inbox-ready markdown” helper
 3. only then, a workflow wrapper around the same read-only digest
 
+
+---
+
+# Lead Decision — Issue #115 Current-Mainline Verification & Closeout
+
+**By:** Lead (🏗️)  
+**Date:** 2026-03-25  
+**Related Issue:** #115  
+**Status:** ACCEPTED — Issue satisfies mainline scope
+
+## Decision
+
+Treat Issue #115 as **already satisfied on current mainline** and ready for issue-state reconciliation / closeout, unless the owner wants an additional follow-up beyond the accepted manual v1 scope.
+
+## Why
+
+- The runtime seam already exists as the manual etrospective-digest / etro-digest CLI flow.
+- Structured retrospective persistence and read-side querying are already implemented over rticle_retrospectives and rticle_retrospective_findings.
+- The bounded actionable output exists in both markdown and JSON forms.
+- README.md now documents the operator workflow, so the previously identified docs-only gap appears closed.
+
+## Evidence
+
+- src/cli.ts dispatches etrospective-digest / etro-digest and renders the digest.
+- src/db/repository.ts implements listRetrospectiveDigestFindings(limit) as the bounded read seam.
+- src/db/schema.sql defines the structured retrospective tables.
+- src/pipeline/actions.ts persists post-revision retrospectives through ecordPostRevisionRetrospectiveIfEligible().
+- 	ests/cli.test.ts, 	ests/db/repository.test.ts, and 	ests/pipeline/actions.test.ts cover CLI output, repository persistence/query behavior, and pipeline-side retrospective creation.
+- README.md includes a dedicated "Retrospective digest workflow" section with commands, read-only boundary, and operator loop.
+
+## Caveat
+
+The prior Lead closeout section in .squad/decisions.md was accurate when written but is now stale on one point: it said README lacked operator documentation. Current mainline README includes that documentation, so the remaining work is backlog/issue reconciliation rather than feature completion.
