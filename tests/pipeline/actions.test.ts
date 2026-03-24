@@ -39,6 +39,9 @@ import {
   addRevisionSummary,
   getRevisionHistory,
 } from '../../src/pipeline/conversation.js';
+import {
+  executeWriterFactCheckPass,
+} from '../../src/pipeline/writer-factcheck.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -218,7 +221,7 @@ function createFixtures(): TestFixtures {
     writeFileSync(join(chartersDir, `${name}.md`), content);
   }
 
-  for (const skillName of ['substack-article', 'editor-review', 'fact-checking']) {
+  for (const skillName of ['substack-article', 'editor-review', 'fact-checking', 'writer-fact-check']) {
     writeFileSync(
       join(skillsDir, `${skillName}.md`),
       readFileSync(join(process.cwd(), 'src', 'config', 'defaults', 'skills', `${skillName}.md`), 'utf-8'),
@@ -309,6 +312,7 @@ describe('STAGE_ACTIONS', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     fixtures.memory.close();
     fixtures.repo.close();
     rmSync(fixtures.tempDir, { recursive: true, force: true });
@@ -542,6 +546,25 @@ describe('STAGE_ACTIONS', () => {
       expect(systemPrompt).toContain('> **📋 TLDR**');
     });
 
+    it('passes the bounded writer fact-check policy to the writer prompt', async () => {
+      const provider = new RecordingProvider([validDraft()]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-factcheck-skill', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nUse current roster facts carefully.',
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-factcheck-skill', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const systemPrompt = provider.lastRequest?.messages.find((message) => message.role === 'system')?.content ?? '';
+      expect(systemPrompt).toContain('### Skill: writer-fact-check');
+      expect(systemPrompt).toContain('Raw open-ended web search');
+      expect(systemPrompt).toContain('External approved-source checks: **max 3**');
+    });
+
     it('self-heals drafts missing the TLDR structure before succeeding', async () => {
       const provider = new RecordingProvider([
         '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
@@ -630,6 +653,7 @@ ${longText(450)}`,
       expect(userPrompt).toContain('## Shared Revision Handoff');
       expect(userPrompt).toContain('Tighten the math.');
       expect(userPrompt).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
+      expect(userPrompt).toContain('Use the bounded writer fact-check contract only for specific risky claims; do not turn this into open-ended research.');
       expect(userPrompt).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
       expect(userPrompt).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
       expect(userPrompt).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
@@ -692,10 +716,11 @@ ${longText(450)}`,
       setRunnerProvider(fixtures, new RecordingProvider([
         `# Editor Review
 
-## 🔴 ERRORS (Must Fix Before Publish)
-- Restore the required TLDR block near the top before another pass.
+        ## 🔴 ERRORS (Must Fix Before Publish)
+        - [BLOCKER structure:missing-tldr] Restore the required TLDR block near the top before another pass.
+        - [BLOCKER evidence:stale-stat] Refresh the stale stat before another pass.
 
-## Verdict
+        ## Verdict
 REVISE`,
       ]));
       createArticleWithStage(fixtures, 'test-re-revise', 5 as Stage, {
@@ -714,6 +739,39 @@ REVISE`,
       expect(history).toHaveLength(1);
       expect(history[0]?.agent_name).toBe('editor');
       expect(history[0]?.outcome).toBe('REVISE');
+      expect(history[0]?.blocker_type).toBe('mixed');
+      expect(history[0]?.blocker_ids).toBe(JSON.stringify(['missing-tldr', 'stale-stat']));
+    });
+
+    it('passes writer-factcheck.md to editor as advisory context', async () => {
+      const provider = new RecordingProvider([
+        `# Editor Review
+
+## Verdict
+APPROVED`,
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-re-writer-fc', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey discussion points.',
+        'draft.md': validDraft(1000),
+        'writer-factcheck.md': [
+          '# Writer Fact-Check',
+          '',
+          '## Verified Facts Used in Draft',
+          '- Geno Smith contract framing — source class: `trusted_reference`',
+        ].join('\n'),
+      });
+
+      const result = await STAGE_ACTIONS.runEditor('test-re-writer-fc', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+      expect(userPrompt).toContain('## Upstream Context: writer-factcheck.md');
+      expect(userPrompt).toContain('## Verified Facts Used in Draft');
+      expect(userPrompt).toContain('treat it as an advisory Stage 5 ledger');
     });
   });
 
@@ -981,10 +1039,10 @@ describe('autoAdvanceArticle draft structure recovery', () => {
       '# Editor Review\n\nNeeds a clearer verdict block.',
       `# Editor Review
 
-## 🔴 ERRORS (Must Fix Before Publish)
-- Tighten the opening and rework the TLDR framing.
+        ## 🔴 ERRORS (Must Fix Before Publish)
+        - [BLOCKER structure:missing-tldr] Tighten the opening and rework the TLDR framing.
 
-## Verdict
+        ## Verdict
 REVISE`,
       '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
       `# Headline
@@ -1019,6 +1077,149 @@ ${longText(450)}`,
       step.type === 'regress' && step.from === 6 && step.to === 4 && /Editor requested revisions/i.test(step.action),
     )).toBe(true);
     expect(fixtures.repo.getArticle('test-auto-editor-revise')!.current_stage).toBe(4);
+    expect(fixtures.repo.getArticle('test-auto-editor-revise')!.status).toBe('revision');
+    expect(fixtures.repo.artifacts.get('test-auto-editor-revise', 'lead-review.md')).toBeNull();
+    expect(result.error).toContain('Writer draft failed validation after self-heal');
+  });
+
+  it('escalates repeated blocker signatures to lead review instead of regressing again', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- [BLOCKER evidence:missing-source] Add the missing source before another pass.
+- [BLOCKER evidence:stale-stat] Refresh the stale stat before another pass.
+
+## Verdict
+REVISE`,
+    ]));
+    createArticleWithStage(fixtures, 'test-auto-lead-review', 5 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+    });
+    addRevisionSummary(
+      fixtures.repo,
+      'test-auto-lead-review',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      null,
+      'Missing evidence remained unresolved.',
+      {
+        blockerType: 'evidence',
+        blockerIds: ['stale-stat', 'missing-source'],
+      },
+    );
+
+    const result = await autoAdvanceArticle('test-auto-lead-review', fixtures.ctx, {
+      maxStage: 6,
+      maxRevisions: 1,
+    });
+
+    const article = fixtures.repo.getArticle('test-auto-lead-review');
+    expect(result.finalStage).toBe(6);
+    expect(result.revisionCount).toBe(0);
+    expect(result.steps.some((step) => step.type === 'regress')).toBe(false);
+    expect(result.steps.some((step) => /Escalated to Lead review/i.test(step.action))).toBe(true);
+    expect(article?.current_stage).toBe(6);
+    expect(article?.status).toBe('needs_lead_review');
+    const handoff = fixtures.repo.artifacts.get('test-auto-lead-review', 'lead-review.md') ?? '';
+    expect(handoff).toContain('Repeated Blocker Fingerprint');
+    expect(handoff).toContain('blocker_type: evidence');
+    expect(handoff).toContain('missing-source, stale-stat');
+    expect(fixtures.repo.artifacts.get('test-auto-lead-review', 'editor-review.md')).not.toContain('Auto-approved after');
+  });
+
+  it('holds stage-6 needs_lead_review articles without force-approving or regressing', async () => {
+    createArticleWithStage(fixtures, 'test-auto-lead-hold', 6 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+      'editor-review.md': '# Editor Review\n\n## Verdict\nREVISE',
+      'lead-review.md': '# Lead Review Handoff',
+    });
+    fixtures.repo.updateArticleStatus('test-auto-lead-hold', 'needs_lead_review');
+
+    const result = await autoAdvanceArticle('test-auto-lead-hold', fixtures.ctx, {
+      maxStage: 7,
+      maxRevisions: 1,
+    });
+
+    const article = fixtures.repo.getArticle('test-auto-lead-hold');
+    expect(result.finalStage).toBe(6);
+    expect(result.revisionCount).toBe(0);
+    expect(result.steps).toEqual([]);
+    expect(article?.current_stage).toBe(6);
+    expect(article?.status).toBe('needs_lead_review');
+    expect(fixtures.repo.artifacts.get('test-auto-lead-hold', 'editor-review.md')).toContain('REVISE');
+  });
+
+  it('keeps non-repeated blockers on the existing revision-cap path', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Editor Review\n\nNeeds a clearer verdict block.',
+      `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- [BLOCKER structure:missing-tldr] Tighten the TLDR framing before another pass.
+
+## Verdict
+REVISE`,
+      '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
+      `# Headline
+
+*Subtitle*
+
+${longText(400)}`,
+      `# Headline
+
+*Subtitle*
+
+${longText(450)}`,
+    ]));
+    createArticleWithStage(fixtures, 'test-auto-no-lead-review', 5 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+    });
+    addRevisionSummary(
+      fixtures.repo,
+      'test-auto-no-lead-review',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      null,
+      'The article still needs a source audit.',
+      {
+        blockerType: 'evidence',
+        blockerIds: ['missing-source'],
+      },
+    );
+
+    const result = await autoAdvanceArticle('test-auto-no-lead-review', fixtures.ctx, {
+      maxStage: 6,
+      maxRevisions: 1,
+    });
+
+    const article = fixtures.repo.getArticle('test-auto-no-lead-review');
+    expect(result.finalStage).toBe(4);
+    expect(result.revisionCount).toBe(1);
+    expect(result.steps.some((step) =>
+      step.type === 'regress' && /Editor requested revisions/i.test(step.action),
+    )).toBe(true);
+    expect(result.steps.some((step) => /Escalated to Lead review/i.test(step.action))).toBe(false);
+    expect(article?.status).not.toBe('needs_lead_review');
+    expect(fixtures.repo.artifacts.get('test-auto-no-lead-review', 'lead-review.md')).toBeNull();
     expect(result.error).toContain('Writer draft failed validation after self-heal');
   });
 });
@@ -1034,6 +1235,7 @@ describe('Configurable upstream context', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     fixtures.memory.close();
     fixtures.repo.close();
     rmSync(fixtures.tempDir, { recursive: true, force: true });
@@ -1056,7 +1258,7 @@ describe('Configurable upstream context', () => {
     expect(draft).toBeTruthy();
   });
 
-  it('runEditor includes idea.md and discussion-summary.md by default', async () => {
+  it('runEditor includes idea.md, discussion-summary.md, and writer-factcheck.md by default', async () => {
     const draft = validDraft(900);
     createArticleWithStage(fixtures, 'test-ctx-ed', 5 as Stage, {
       'idea.md': '# Angle\nSeahawks secondary.',
@@ -1064,6 +1266,7 @@ describe('Configurable upstream context', () => {
       'panel-composition.md': '# Panel',
       'discussion-summary.md': '# Summary\nKey discussion points.',
       'draft.md': draft,
+      'writer-factcheck.md': '# Writer Fact-Check\n\nTracked risky claims.',
     });
 
     const result = await STAGE_ACTIONS.runEditor('test-ctx-ed', fixtures.ctx);
@@ -1071,6 +1274,7 @@ describe('Configurable upstream context', () => {
 
     const review = fixtures.repo.artifacts.get('test-ctx-ed', 'editor-review.md');
     expect(review).toBeTruthy();
+    expect(review).toContain('writer-factcheck.md');
   });
 
   it('runPublisherPass includes editor-review.md by default', async () => {
@@ -1498,6 +1702,286 @@ describe('writeDraft fact-check preflight', () => {
     expect(result.success).toBe(true);
     const factCheck = fixtures.repo.artifacts.get('test-fc-art', 'panel-factcheck.md');
     expect(factCheck).toBeTruthy();
+  });
+
+  it('stores writer-factcheck.md scaffold artifact with fresh-draft budget', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nNo blocking issues.',
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-art', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+      'panel-factcheck.md': '# Existing panel fact-check',
+      'roster-context.md': '# Roster context',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-art', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-art', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('**Mode:** Fresh draft');
+    expect(writerFactCheck).toContain('External approved-source checks | 3');
+    expect(writerFactCheck).toContain('`panel-factcheck.md` — available');
+    expect(writerFactCheck).toContain('`fact-check-context.md` — missing');
+    expect(writerFactCheck).toContain('Claims logged this pass: 0');
+  });
+
+  it('preserves prior writer-factcheck notes while updating the revision contract', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nNo blocking issues.',
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-revision', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+      'draft.md': validDraft(),
+      'editor-review.md': '# Editor Review\n## Verdict\nREVISE',
+      'writer-factcheck.md': '# Previous writer fact-check artifact',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-revision', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-revision', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('**Mode:** Revision');
+    expect(writerFactCheck).toContain('External approved-source checks | 1');
+    expect(writerFactCheck).toContain('## Prior Artifact Notes');
+    expect(writerFactCheck).toContain('# Previous writer fact-check artifact');
+  });
+
+  it('limits revision-mode approved-source fetches to one new check', async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      '<html><head><title>Official Transactions</title></head><body>Roster move.</body></html>',
+      {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    setRunnerProvider(fixtures, new RecordingProvider([
+      [
+        '# Fact Check',
+        '',
+        '- First official update: https://www.seahawks.com/team/transactions/',
+        '- Second official update: https://www.chiefs.com/news/',
+      ].join('\n'),
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-revision-budget', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+      'draft.md': validDraft(),
+      'editor-review.md': '# Editor Review\n## Verdict\nREVISE',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-revision-budget', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-revision-budget', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('External approved-source checks used: 1/1');
+    expect(writerFactCheck).toContain('domain: `seahawks.com`');
+    expect(writerFactCheck).toContain('Approved-source budget exhausted before this fetch could run.');
+  });
+
+  it('records approved-source fetch usage and attributed results in writer-factcheck.md', async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      '<html><head><title>OTC Contract Details</title></head><body>Contract notes.</body></html>',
+      {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nPer OverTheCap, the contract framing is here: https://overthecap.com/player/geno-smith/1234',
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-usage', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-usage', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-usage', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('OTC Contract Details');
+    expect(writerFactCheck).toContain('source class: `trusted_reference`');
+    expect(writerFactCheck).toContain('domain: `overthecap.com`');
+    expect(writerFactCheck).toContain('External approved-source checks used: 1/3');
+
+    const usageEvent = fixtures.repo.getUsageEvents('test-writer-fc-usage')
+      .find(event => event.surface === 'writeDraft-writer-factcheck');
+    expect(usageEvent).toBeDefined();
+    expect(usageEvent?.request_count).toBe(1);
+    const metadata = JSON.parse(usageEvent?.metadata_json ?? '{}') as Record<string, unknown>;
+    expect(metadata.attributedCount).toBe(1);
+    expect(metadata.domainsTouched).toEqual(['overthecap.com']);
+  });
+
+  it('allows official team primary pages as approved sources', async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      '<html><head><title>Team Transactions</title></head><body>Roster move.</body></html>',
+      {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nOfficial update: https://www.seahawks.com/team/transactions/',
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-team-site', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-team-site', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-team-site', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('source class: `official_primary`');
+    expect(writerFactCheck).toContain('source: Official team source: Team Transactions');
+    expect(writerFactCheck).toContain('domain: `seahawks.com`');
+  });
+
+  it('blocks non-approved source domains without fetching them', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    setRunnerProvider(fixtures, new RecordingProvider([
+      '# Fact Check\n\nRumor roundup: https://example.com/fake-report',
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-blocked', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-blocked', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-blocked', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('Blocked non-approved source from panel-factcheck.md');
+    expect(writerFactCheck).toContain('Blocked sources: 1');
+
+    const usageEvent = fixtures.repo.getUsageEvents('test-writer-fc-blocked')
+      .find(event => event.surface === 'writeDraft-writer-factcheck');
+    const metadata = JSON.parse(usageEvent?.metadata_json ?? '{}') as Record<string, unknown>;
+    expect(metadata.blockedSourceCount).toBe(1);
+    expect(usageEvent?.request_count).toBe(0);
+  });
+
+  it('enforces the external approved-source budget when more URLs are supplied', async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      '<html><head><title>Approved Source</title></head><body>Approved body.</body></html>',
+      {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    setRunnerProvider(fixtures, new RecordingProvider([
+      [
+        '# Fact Check',
+        '',
+        '- First source https://www.pro-football-reference.com/players/A/Alpha00.htm',
+        '- Second source https://www.pro-football-reference.com/players/B/Beta00.htm',
+        '- Third source https://www.pro-football-reference.com/players/C/Gamma00.htm',
+        '- Fourth source https://www.pro-football-reference.com/players/D/Delta00.htm',
+      ].join('\n'),
+      validDraft(),
+    ]));
+    createArticleWithStage(fixtures, 'test-writer-fc-budget', 4 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary\nKey discussion findings.',
+    });
+
+    const result = await STAGE_ACTIONS.writeDraft('test-writer-fc-budget', fixtures.ctx);
+
+    expect(result.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const writerFactCheck = fixtures.repo.artifacts.get('test-writer-fc-budget', 'writer-factcheck.md') ?? '';
+    expect(writerFactCheck).toContain('Approved-source budget exhausted before this fetch could run.');
+    expect(writerFactCheck).toContain('External approved-source checks used: 3/3');
+    expect(writerFactCheck).toContain('Remaining status: exhausted');
+
+    const usageEvent = fixtures.repo.getUsageEvents('test-writer-fc-budget')
+      .find(event => event.surface === 'writeDraft-writer-factcheck');
+    const metadata = JSON.parse(usageEvent?.metadata_json ?? '{}') as Record<string, unknown>;
+    expect(metadata.externalChecksUsed).toBe(3);
+    expect(metadata.attributedCount).toBe(3);
+    expect(metadata.omittedCount).toBe(1);
+  });
+
+  it('enforces the remaining wall-clock budget during slow approved-source fetches', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      const signal = init?.signal;
+      expect(signal).toBeInstanceOf(AbortSignal);
+      if (!signal) {
+        reject(new Error('missing abort signal'));
+        return;
+      }
+
+      signal.addEventListener('abort', () => {
+        const error = new Error('aborted');
+        Object.defineProperty(error, 'name', { value: 'AbortError' });
+        reject(error);
+      }, { once: true });
+    }));
+
+    const nowValues = [
+      0,
+      299_995,
+      299_995,
+      300_000,
+    ];
+
+    const reportPromise = executeWriterFactCheckPass({
+      articleTitle: 'Budget Test',
+      mode: 'fresh_draft',
+      availableArtifacts: ['panel-factcheck.md'],
+      urlEvidence: [
+        {
+          claim: 'Official update',
+          url: 'https://www.seahawks.com/team/transactions/',
+          artifactName: 'panel-factcheck.md',
+        },
+      ],
+      fetchImpl: fetchMock as typeof fetch,
+      now: () => new Date(nowValues.shift() ?? 300_000),
+    });
+
+    await vi.advanceTimersByTimeAsync(10);
+    const report = await reportPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(report.verifiedFacts).toHaveLength(0);
+    expect(report.omittedClaims[0]?.note).toBe('Wall-clock budget expired during approved-source fetch.');
+    expect(report.usage.externalChecksUsed).toBe(1);
+    expect(report.usage.fetchFailureCount).toBe(1);
+    expect(report.usage.remainingStatus).toBe('exhausted');
+    expect(report.usage.wallClockMs).toBe(300_000);
   });
 
   it('skips fact-check when discussion-summary.md does not exist', async () => {

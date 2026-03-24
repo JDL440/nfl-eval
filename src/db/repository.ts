@@ -30,6 +30,7 @@ import type {
   UsageEvent,
   UsageEventType,
 } from '../types.js';
+import type { RevisionSummary } from '../pipeline/conversation.js';
 
 import {
   VALID_STAGES,
@@ -153,6 +154,20 @@ export class Repository {
     const schemaPath = join(__dirname, 'schema.sql');
     const sql = readFileSync(schemaPath, 'utf-8');
     this.db.exec(sql);
+    this.ensureRevisionSummaryColumns();
+  }
+
+  private ensureRevisionSummaryColumns(): void {
+    const columns = this.db.prepare('PRAGMA table_info(revision_summaries)').all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+
+    if (!columnNames.has('blocker_type')) {
+      this.db.exec('ALTER TABLE revision_summaries ADD COLUMN blocker_type TEXT');
+    }
+
+    if (!columnNames.has('blocker_ids')) {
+      this.db.exec('ALTER TABLE revision_summaries ADD COLUMN blocker_ids TEXT');
+    }
   }
 
   /** Expose the underlying database for extension modules (conversation, etc.). */
@@ -184,6 +199,21 @@ export class Repository {
       'SELECT * FROM editor_reviews WHERE article_id = ? ORDER BY review_number DESC',
     );
     return stmt.all(articleId) as unknown as EditorReview[];
+  }
+
+  getRevisionSummaries(articleId: string): RevisionSummary[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM revision_summaries WHERE article_id = ? ORDER BY iteration ASC',
+    );
+    return stmt.all(articleId) as unknown as RevisionSummary[];
+  }
+
+  getRevisionSummaryCount(articleId: string): number {
+    const stmt = this.db.prepare(
+      'SELECT COALESCE(MAX(iteration), 0) AS count FROM revision_summaries WHERE article_id = ?',
+    );
+    const row = stmt.get(articleId) as { count: number } | undefined;
+    return row?.count ?? 0;
   }
 
   getUsageEvents(articleId: string, limit?: number): UsageEvent[] {
@@ -408,6 +438,20 @@ export class Repository {
     const sql = `UPDATE articles SET ${setParts.join(', ')}, updated_at = ? WHERE id = ?`;
     const stmt = this.db.prepare(sql);
     stmt.run(...params, now, articleId);
+
+    return this.getArticle(articleId)!;
+  }
+
+  updateArticleStatus(articleId: string, status: ArticleStatus): Article {
+    const article = this.getArticle(articleId);
+    if (article == null) {
+      throw new Error(`Article '${articleId}' not found`);
+    }
+
+    validateStatus(status, VALID_STATUSES, 'status');
+    this.db.prepare(
+      'UPDATE articles SET status = ?, updated_at = ? WHERE id = ?',
+    ).run(status, nowISO(), articleId);
 
     return this.getArticle(articleId)!;
   }
@@ -756,7 +800,9 @@ export class Repository {
       { pattern: /^panel-.*\.md$/, stage: 4 },           // individual panelist contributions
       { pattern: /^discussion-summary\.md$/, stage: 4 },
       { pattern: /^draft\.md$/, stage: 5 },
+      { pattern: /^writer-factcheck\.md$/, stage: 5 },
       { pattern: /^editor-review(-\d+)?\.md$/, stage: 6 }, // numbered reviews too
+      { pattern: /^lead-review\.md$/, stage: 6 },
       { pattern: /^publisher-pass\.md$/, stage: 7 },        // was missing!
       { pattern: /^images\.json$/, stage: 5 },              // image manifest
     ];

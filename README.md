@@ -208,6 +208,30 @@ npm run v2:dev
 npm run v2:status
 ```
 
+### Retrospective digest workflow
+
+Use the manual retrospective digest when you want to mine recent article retrospectives into bounded, human-reviewable follow-up work.
+
+```bash
+npx tsx src/cli.ts retrospective-digest --limit 25
+npx tsx src/cli.ts retro-digest --json --limit 10
+```
+
+- Reads structured data from `article_retrospectives` and `article_retrospective_findings`
+- Produces a bounded digest with:
+  - issue-ready process-improvement candidates
+  - learning-update candidates
+  - grouped supporting evidence by role + finding type
+- Stays read-only in v1: review the output first, then manually turn approved items into GitHub issues or decision/knowledge updates
+- Use `--json` when you want the same bounded report shape for downstream tooling or copy/paste review
+- Use `--limit N` to control how many recent retrospectives are scanned
+
+Recommended operator loop:
+
+1. Run the digest on demand after a meaningful batch of recent article completions.
+2. Review the promoted candidate sections before the grouped evidence section.
+3. Manually promote approved process changes into issues and reusable learnings into team docs/decision inbox entries.
+
 ### Test layout
 
 - `tests/llm/` — provider, routing, and model policy tests

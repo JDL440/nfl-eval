@@ -309,6 +309,8 @@ CREATE TABLE IF NOT EXISTS revision_summaries (
     outcome         TEXT NOT NULL,
     key_issues      TEXT,
     feedback_summary TEXT,
+    blocker_type    TEXT,
+    blocker_ids     TEXT,
     created_at      TEXT DEFAULT (datetime('now'))
 );
 

@@ -14,6 +14,9 @@ import {
   buildRevisionSummaryContext,
   buildEditorPreviousReviews,
   buildRevisionHistoryEntries,
+  parseRevisionBlockerMetadata,
+  getRevisionBlockerSignature,
+  findConsecutiveRepeatedRevisionBlocker,
   MAX_EDITOR_PREVIOUS_REVIEWS,
   type ConversationTurn,
   type RevisionSummary,
@@ -139,6 +142,31 @@ describe('conversation', () => {
       expect(JSON.parse(history[0].key_issues!)).toEqual(['EPA numbers wrong', 'Contract data stale']);
     });
 
+    it('records structured blocker metadata without breaking free-text fields', () => {
+      addRevisionSummary(
+        repo,
+        'test-article',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        ['Missing TLDR'],
+        'Restore the TLDR before the next pass.',
+        {
+          blockerType: 'structure',
+          blockerIds: ['missing-tldr'],
+        },
+      );
+
+      const history = getRevisionHistory(repo, 'test-article');
+      expect(history).toHaveLength(1);
+      expect(history[0].feedback_summary).toBe('Restore the TLDR before the next pass.');
+      expect(JSON.parse(history[0].key_issues!)).toEqual(['Missing TLDR']);
+      expect(history[0].blocker_type).toBe('structure');
+      expect(JSON.parse(history[0].blocker_ids!)).toEqual(['missing-tldr']);
+    });
+
     it('records revision without optional fields', () => {
       addRevisionSummary(repo, 'test-article', 1, 6, 4, 'editor', 'REVISE');
 
@@ -146,6 +174,117 @@ describe('conversation', () => {
       expect(history).toHaveLength(1);
       expect(history[0].key_issues).toBeNull();
       expect(history[0].feedback_summary).toBeNull();
+      expect(history[0].blocker_type).toBeNull();
+      expect(history[0].blocker_ids).toBeNull();
+    });
+  });
+
+  describe('parseRevisionBlockerMetadata', () => {
+    it('returns parsed blocker metadata when JSON is valid', () => {
+      expect(
+        parseRevisionBlockerMetadata('evidence', JSON.stringify(['missing-source', 'stale-stat'])),
+      ).toEqual({
+        blockerType: 'evidence',
+        blockerIds: ['missing-source', 'stale-stat'],
+      });
+    });
+
+    it('returns null when blocker metadata is absent', () => {
+      expect(parseRevisionBlockerMetadata(null, null)).toBeNull();
+    });
+
+    it('returns null for malformed blocker id JSON', () => {
+      expect(parseRevisionBlockerMetadata('structure', '{not-json')).toBeNull();
+    });
+  });
+
+  describe('getRevisionBlockerSignature', () => {
+    it('normalizes blocker ids into a deterministic fingerprint', () => {
+      expect(
+        getRevisionBlockerSignature('Evidence', JSON.stringify([' stale-stat ', 'missing-source', 'stale-stat'])),
+      ).toEqual({
+        blockerType: 'evidence',
+        blockerIds: ['missing-source', 'stale-stat'],
+        fingerprint: 'evidence::missing-source|stale-stat',
+      });
+    });
+
+    it('returns null when structured blocker metadata is absent', () => {
+      expect(getRevisionBlockerSignature(null, null)).toBeNull();
+    });
+  });
+
+  describe('findConsecutiveRepeatedRevisionBlocker', () => {
+    it('detects an exact repeat across the last two editor revise summaries', () => {
+      const repeated = findConsecutiveRepeatedRevisionBlocker([
+        {
+          id: 1,
+          article_id: 'test',
+          iteration: 1,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: null,
+          feedback_summary: 'First pass',
+          blocker_type: 'evidence',
+          blocker_ids: JSON.stringify(['missing-source', 'stale-stat']),
+          created_at: '2026-03-24 00:00:00',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          iteration: 2,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: null,
+          feedback_summary: 'Second pass',
+          blocker_type: 'Evidence',
+          blocker_ids: JSON.stringify([' stale-stat ', 'missing-source']),
+          created_at: '2026-03-24 00:10:00',
+        },
+      ]);
+
+      expect(repeated?.signature.fingerprint).toBe('evidence::missing-source|stale-stat');
+      expect(repeated?.previous.iteration).toBe(1);
+      expect(repeated?.current.iteration).toBe(2);
+    });
+
+    it('ignores non-repeated or unstructured revision summaries', () => {
+      const revisions: RevisionSummary[] = [
+        {
+          id: 1,
+          article_id: 'test',
+          iteration: 1,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: null,
+          feedback_summary: 'First pass',
+          blocker_type: 'structure',
+          blocker_ids: JSON.stringify(['missing-tldr']),
+          created_at: '2026-03-24 00:00:00',
+        },
+        {
+          id: 2,
+          article_id: 'test',
+          iteration: 2,
+          from_stage: 6,
+          to_stage: 4,
+          agent_name: 'editor',
+          outcome: 'REVISE',
+          key_issues: null,
+          feedback_summary: 'Second pass',
+          blocker_type: null,
+          blocker_ids: null,
+          created_at: '2026-03-24 00:10:00',
+        },
+      ];
+
+      expect(findConsecutiveRepeatedRevisionBlocker(revisions)).toBeNull();
     });
   });
 
@@ -183,6 +322,8 @@ describe('conversation', () => {
         outcome: 'REVISE',
         key_issues: JSON.stringify(['EPA wrong']),
         feedback_summary: 'Fix EPA numbers',
+        blocker_type: null,
+        blocker_ids: null,
         created_at: '2025-01-01',
       }];
 
@@ -252,6 +393,8 @@ describe('conversation', () => {
         outcome: 'REVISE',
         key_issues: JSON.stringify(['Fix stale cap number', 'Tighten conclusion']),
         feedback_summary: 'Update the cap math and make the ending more decisive.',
+        blocker_type: null,
+        blocker_ids: null,
         created_at: '2025-01-01',
       }];
 
@@ -263,6 +406,7 @@ describe('conversation', () => {
       expect(result).not.toContain('Conversation Thread');
       expect(result).not.toContain('[writer]');
     });
+
   });
 
   // ── buildRevisionHistoryEntries ───────────────────────────────────────────
@@ -326,6 +470,8 @@ describe('conversation', () => {
           outcome: 'REVISE',
           key_issues: JSON.stringify(['Lead']),
           feedback_summary: 'Need a stronger lead.\n\n## Verdict\nREVISE',
+          blocker_type: null,
+          blocker_ids: null,
           created_at: '2025-01-01 00:00:02',
         },
         {
@@ -338,6 +484,8 @@ describe('conversation', () => {
           outcome: 'REVISE',
           key_issues: JSON.stringify(['Cap math']),
           feedback_summary: 'Fix the cap math.\n\n## Verdict\nREVISE',
+          blocker_type: null,
+          blocker_ids: null,
           created_at: '2025-01-01 00:00:04',
         },
       ];
@@ -410,6 +558,8 @@ describe('conversation', () => {
         outcome: 'REVISE',
         key_issues: null,
         feedback_summary: 'Need fresher stats.\n\n## Verdict\nREVISE',
+        blocker_type: null,
+        blocker_ids: null,
         created_at: '2025-01-01 00:00:05',
       }];
 

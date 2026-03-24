@@ -39,6 +39,7 @@ The canonical article skeleton, TLDR contract, and image placement expectations 
 Open `content/articles/{slug}.md` and verify:
 
 - [ ] Top-of-article order matches the canonical `substack-article` contract: headline → italic subtitle → optional cover image → TLDR block → byline
+- [ ] If this contract is broken, send it back for revision of the current draft rather than requesting a from-scratch rewrite
 - [ ] No `TODO`, `[PLACEHOLDER]`, `{FIXME}`, or `...fill in...` markers remain
 - [ ] No stale date references (e.g., "upcoming Draft" when it already happened)
 - [ ] Boilerplate footer present: "Welcome to the Lab" brand footer (virtual front office + human editor + Lab brand) + CTA + next article tease

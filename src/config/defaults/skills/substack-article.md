@@ -90,15 +90,16 @@ which may be one or more seasons stale.
 
 ### Phase 3: Write the Article (Writer Agent)
 
-**Writer takes the raw expert output and crafts it into a polished Substack article.** Writer follows the house style guide in their charter and the structure template below. Writer does NOT fact-check — that's Editor's job.
+**Writer takes the raw expert output and crafts it into a polished Substack article.** Writer follows the house style guide in their charter and the structure template below. Writer may do a bounded Stage 5 verification pass on specific risky claims under the `writer-factcheck.md` contract, but does not get open-ended research autonomy and does not replace Editor.
 
-**Note on fact-checking preflight:** Before Writer begins, Lead runs a lightweight preflight verification (see [fact-checking SKILL.md](../fact-checking/SKILL.md)) on high-risk claims in the panel outputs, flagging contradictions, missing sources, and unsafe details. Writer receives the `panel-factcheck.md` artifact and uses it to understand which claims are verified, flagged, or problematic — but does not re-verify claims. Editor handles final fact-check at Stage 6.
+**Note on fact-checking preflight:** Before Writer begins, Lead runs a lightweight preflight verification (see [fact-checking SKILL.md](../fact-checking/SKILL.md)) on high-risk claims in the panel outputs, flagging contradictions, missing sources, and unsafe details. Writer receives the `panel-factcheck.md` artifact plus the durable `writer-factcheck.md` contract artifact, then uses them only for a targeted risky-claim pass within approved-source and budget limits. Editor still handles the final fact-check at Stage 6.
 
 Spawn Writer with:
 - The topic brief
 - All raw expert analysis (pasted into the prompt)
 - The structure template below
 - **The `panel-factcheck.md` preflight** — include a summary so Writer knows which claims are verified, flagged, or problematic
+- **The `writer-factcheck.md` contract** — include the bounded verification policy, source ladder, and current claim/budget ledger when present
 - **Model:** Selected by the LLM Gateway model-policy (writer stage key)
 - **Output budget:** 5,000 tokens max. If content is dense, tighten narrative connective tissue first; never drop expert analysis.
 
@@ -293,7 +294,7 @@ The tool auto-creates a Substack draft and returns an editor URL. Hand the URL t
 1. Topic selected from content/article-ideas.md
 2. Expert agents spawned in parallel
 3. Panel outputs collected; fact-check preflight run → panel-factcheck.md saved (gate between Stage 4 & 5)
-4. Writer assembles draft from expert output + preflight guidance
+4. Writer assembles draft from expert output + preflight guidance + the bounded `writer-factcheck.md` contract
 5. Writer calls generate_article_images → images saved to content/images/{slug}/
 6. Editor reviews draft + images — fact-check + style + structure + image review
 7. Fixes applied if needed → re-review if errors

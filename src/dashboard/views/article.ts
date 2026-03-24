@@ -10,7 +10,7 @@ import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
 import type { Article, Stage, StageTransition, StageRun, EditorReview, UsageEvent } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
-import type { RevisionHistoryEntry } from '../../pipeline/conversation.js';
+import { parseRevisionBlockerMetadata, type RevisionHistoryEntry } from '../../pipeline/conversation.js';
 import { markdownToHtml } from '../../services/markdown.js';
 
 const DEPTH_LABELS: Record<number, string> = {
@@ -31,6 +31,10 @@ export const ARTIFACT_FILES = [
 ] as const;
 
 export type ArtifactName = typeof ARTIFACT_FILES[number];
+
+export const OPTIONAL_ARTIFACT_FILES = [
+  'lead-review.md',
+] as const;
 
 export interface ArticleDetailData {
   config: AppConfig;
@@ -334,6 +338,13 @@ function renderStageTimeline(currentStage: Stage, transitions: StageTransition[]
 // ── Artifact Tabs ────────────────────────────────────────────────────────────
 
 function renderArtifactTabs(article: Article, artifactNames?: string[]): string {
+  const tabNames = [
+    ...ARTIFACT_FILES,
+    ...OPTIONAL_ARTIFACT_FILES.filter(name => (artifactNames ?? []).includes(name)),
+  ];
+  const defaultTab = article.status === 'needs_lead_review' && tabNames.includes('lead-review.md')
+    ? 'lead-review.md'
+    : (tabNames[0] ?? ARTIFACT_FILES[0]);
   const thinkingFiles = new Set((artifactNames ?? []).filter(n => n.endsWith('.thinking.md')));
 
   return `
@@ -341,11 +352,11 @@ function renderArtifactTabs(article: Article, artifactNames?: string[]): string 
       <h2>Artifacts</h2>
       <div class="artifact-tabs">
         <div class="tab-bar" role="tablist">
-          ${ARTIFACT_FILES.map((name, i) => {
+          ${tabNames.map((name) => {
             const thinkName = name.replace('.md', '.thinking.md');
             const hasThinking = thinkingFiles.has(thinkName);
             return `
-              <button class="tab-btn ${i === 0 ? 'active' : ''}" role="tab"
+              <button class="tab-btn ${name === defaultTab ? 'active' : ''}" role="tab"
                 hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(name)}"
                 hx-target="#artifact-content-${escapeHtml(article.id)}"
                 hx-swap="innerHTML"
@@ -358,7 +369,7 @@ function renderArtifactTabs(article: Article, artifactNames?: string[]): string 
           }).join('')}
         </div>
         <div class="tab-content" id="artifact-content-${escapeHtml(article.id)}"
-          hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(ARTIFACT_FILES[0])}"
+          hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(defaultTab)}"
           hx-trigger="load"
           hx-swap="innerHTML">
           <p class="empty-state">Loading…</p>
@@ -464,6 +475,7 @@ function renderRevisionHistory(history: RevisionHistoryEntry[]): string {
       <div class="review-list revision-history-list">
         ${history.map(entry => {
           const { summary, keyIssues, writerTurn, editorTurn } = entry;
+          const blockerMetadata = parseRevisionBlockerMetadata(summary.blocker_type, summary.blocker_ids);
           const outcomeClass = summary.outcome.toLowerCase();
           return `
             <div class="review-card review-${escapeHtml(outcomeClass)} revision-history-card">
@@ -477,6 +489,7 @@ function renderRevisionHistory(history: RevisionHistoryEntry[]): string {
                 <span class="stat stat-note">${escapeHtml(summary.agent_name)}</span>
               </div>
               ${summary.feedback_summary ? `<p class="revision-feedback"><strong>Summary:</strong> ${escapeHtml(summary.feedback_summary)}</p>` : ''}
+              ${blockerMetadata ? `<p class="revision-feedback"><strong>Blockers:</strong> ${blockerMetadata.blockerType ? `type=${escapeHtml(blockerMetadata.blockerType)}` : 'type=unclassified'}${blockerMetadata.blockerIds.length > 0 ? ` · ids=${escapeHtml(blockerMetadata.blockerIds.join(', '))}` : ''}</p>` : ''}
               ${keyIssues.length > 0 ? `<ul class="revision-issues">${keyIssues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('')}</ul>` : ''}
               <div class="revision-turn-grid">
                 ${renderRevisionTurn('Writer pass', writerTurn)}
@@ -571,6 +584,42 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
   const stageRunErrorHtml = lastRunError
     ? `<div class="stage-run-error">⚠️ Last run (Stage ${lastRun!.stage}, ${escapeHtml(lastRun!.status)}): ${escapeHtml(lastRunError)}</div>`
     : '';
+
+  if (article.current_stage === 6 && article.status === 'needs_lead_review') {
+    return `
+      <section class="detail-section action-panel"
+        hx-get="/articles/${escapeHtml(article.id)}"
+        hx-trigger="sse:stage_changed, sse:pipeline_complete"
+        hx-select=".action-panel"
+        hx-target="this"
+        hx-swap="outerHTML">
+        <h2>Actions</h2>
+        <div class="action-bar">
+          <span class="badge badge-status badge-status-needs_lead_review">⏸ Needs Lead review</span>
+          ${previewLink}
+          <details class="send-back-dropdown">
+            <summary class="btn btn-danger-outline">↩ Send Back</summary>
+            <form class="send-back-form"
+              hx-post="/htmx/articles/${escapeHtml(article.id)}/regress"
+              hx-target="#advance-result-${escapeHtml(article.id)}"
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
+              hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
+              <label>Send back to:</label>
+              <select name="to_stage"><option value="4">${escapeHtml(STAGE_NAMES[4])}</option></select>
+              <label>Reason:</label>
+              <input type="text" name="reason" placeholder="Reason for sending back..." />
+              <button type="submit" class="btn btn-danger btn-sm">Confirm Send Back</button>
+            </form>
+          </details>
+        </div>
+        ${renderGuardStatus(false, 'Lead review required: repeated editor blocker detected. Review lead-review.md before resuming or sending the article back.')}
+        ${stageRunErrorHtml}
+        <div id="advance-result-${escapeHtml(article.id)}"></div>
+        <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
+        ${renderDangerZone(article)}
+      </section>`;
+  }
 
   // Stage 7 — publish flow (no retry button, uses publish button instead)
   if (article.current_stage === 7) {

@@ -1,4 +1,4 @@
-﻿# Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
+# Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
 
 **Date:** 2026-03-26 (decision) → 2026-03-24 (completion)  
 **Issue:** #123 — Escalate repeated blockers to Lead for decision instead of infinite loop  
@@ -33,36 +33,35 @@ Issue #123 repeated-blocker escalation is complete, validated, and Lead-approved
 
 ---
 
-# Lead Decision Inbox — Issue #124
+# Research Decision — Issue #124 Implementation Handoff
 
-**Date:** 2026-03-25  
+**Date:** 2026-03-26  
 **Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
-**Status:** Proposed triage decision
+**Status:** ACTIONABLE — Prerequisites #120 and #123 merged; handoff from Research to Code ready
 
-## Decision
+## Implementation Scope
 
-Issue #124 should no longer sit with `squad:lead` as the next actionable owner. The next exact routing, once the prerequisite signals exist, is **Research**.
+Research has defined the bounded fallback policy. Implementation is a **policy + runtime slice** off the existing Stage 6 `needs_lead_review` seam:
 
-## Why
-
-- The fallback path is policy-first work before it is implementation work.
-- The issue body explicitly depends on structured blocker tracking, and its acceptance criteria also assume a repeat-blocker escalation trigger.
-- Without durable blocker IDs (`#120`) and a true escalation seam (`#123`), a fallback/claim-mode would be ambiguous and risky: the pipeline would not know when it is safe to stop retrying normal evidence-seeking behavior.
+1. **Entry point:** Explicit Lead approval (no auto-fallback). Reuse existing Stage 6 hold from #123.
+2. **Writer reframe contract:** Dedicated prompt that soften unsupported hard-proof claims into transparent analysis/opinion language while preserving thesis.
+3. **Mode signal:** Durable article-mode field (structured state, not just prose) for reliable API/dashboard/published reads.
+4. **Reader/operator disclosure:** Article detail and published views must clearly surface that piece is running in fallback mode and why (evidence incomplete, Lead-approved).
+5. **Non-evidence blockers:** Stay on original revision path; fallback only applies to evidence-completion blockers.
 
 ## Routing
 
-- **Current state:** Blocked
-- **Blockers:** `#120` structured blocker tracking, `#123` repeated blocker escalation
-- **When unblocked:** Route to **Research** for the bounded fallback policy:
-  - entry criteria for switching modes
-  - Lead approval handoff
-  - Writer reframe prompt/contract
-  - operator/article disclosure requirements
+- **Now:** squad:research (policy definition complete)
+- **Next:** hand off bounded runtime/UI slice to squad:code
+  - Reuse Stage 6 needs_lead_review + lead-review.md escalation (no new seams)
+  - Add smallest durable article-mode signal
+  - Rerun Writer with reframe contract
+  - Expose disclosure in operator/reader views
+  - Tests validate fallback only triggers from Lead-review seam with evidence blockers
 
-## GitHub action taken
-
-- Relabeled issue `#124` from `squad:lead` to `squad:research`
-- Added a triage comment documenting the blockers and next owner
+## Scope guard — Do not reopen:
+- `#120` unless blocker metadata is defective
+- `#123` unless repeated-blocker escalation or Stage 6 hold is defective
 
 
 ---
@@ -3369,3 +3368,165 @@ This keeps #124 scoped to fallback policy + execution contract and avoids reopen
 - Do **not** reopen #120 unless blocker metadata is actually defective.
 - Do **not** reopen #123 unless repeated-blocker escalation or the Stage 6 hold path is actually defective.
 - Keep #124 limited to fallback policy, reframe contract, durable mode signal, and disclosure.
+
+# Lead Decision — Issue #102 Dashboard Auth Hardening
+
+**Date:** 2026-03-23  
+**Issue:** #102 — Dashboard auth hardening: replace shared password gate with proper login controls  
+**Status:** Architecture approved; implementation-ready
+
+## Decision
+
+Issue #102 should use the smallest durable auth model already aligned with the repo:
+
+- **Mode:** config-driven dashboard auth with off | local
+- **Identity model:** single local operator username/password for now
+- **Session model:** opaque session id in cookie, persisted in SQLite dashboard_sessions
+- **Enforcement seam:** one Hono auth middleware in createApp(...)
+
+Do **not** expand this issue into roles, OAuth, SSO, or a broader user system.
+
+## Protection boundary
+
+Protect all operator-only dashboard surfaces when auth mode is local:
+
+- dashboard HTML pages
+- HTMX partials
+- JSON API routes
+- SSE /events
+- unpublished generated images under /images/:slug/:file
+
+Public surfaces may remain:
+
+- /static/*
+- GET /login
+- POST /login
+- POST /logout
+- published image URLs only when the backing article is already published / Stage 8
+
+## Secure defaults
+
+- cookie stores only opaque session id
+- HttpOnly
+- SameSite=Lax
+- Secure=true in production
+- server-side expiry enforcement with bounded TTL (24h default acceptable)
+- logout deletes server-side session
+- auth remains **off by default** unless explicitly enabled, so existing local/test flows stay stable
+
+## Reviewer note to Code
+
+Current working tree matches the approved minimal seam:
+
+- config parses dashboard auth env
+- server has login/logout + auth middleware
+- repository/schema include dashboard_sessions
+- focused auth tests pass across dashboard and e2e flows
+
+Before calling #102 done, Code must still ensure:
+
+1. **Everything protected stays protected:** HTML, HTMX, API, SSE, and unpublished image routes must all fail when unauthenticated.
+2. **Only narrow public surfaces remain public:** /static/*, login/logout, and published images only.
+3. **Secure session defaults remain intact:** opaque cookie, HttpOnly, SameSite=Lax, production-secure cookies, server-side expiry.
+4. **Build is green:** current branch still has a TypeScript typing failure in src/config/index.ts around AppConfigOverrides.
+5. **Documentation is explicit:** operator docs must name the env vars and the login/logout behavior for local deployment.
+
+## Readiness
+
+**Yes — the issue is implementation-ready.**  
+Architecture is settled and narrow. Remaining work is execution/cleanup, not design.
+
+---
+
+# Code Decision — Issue #102 Local Dashboard Auth
+
+**Date:** 2026-03-24  
+**Issue:** #102 — Dashboard auth hardening: single-operator local login  
+**Status:** ✅ COMPLETE (Implementation verified, Lead-approved)
+
+## Implementation
+
+Implemented minimal config-driven dashboard auth per Lead's approved design:
+
+- **Mode:** DASHBOARD_AUTH_MODE=off|local (env-driven, off by default)
+- **Session storage:** SQLite dashboard_sessions table with opaque random session ids
+- **Cookies:** httpOnly, SameSite=Lax, Secure in production, bounded TTL (24h default)
+- **Routes:** /login (GET/POST), /logout (POST)
+- **Protection:** All dashboard HTML, HTMX, JSON API, SSE, unpublished images (Hono middleware)
+- **Public carve-outs:** /static/*, /login, /logout, published image URLs
+
+## Implementation Seams
+
+- **Config:** src/config/index.ts parses DASHBOARD_AUTH_MODE, username, password; AppConfigOverrides typing fixed
+- **Routes:** src/dashboard/server.ts contains login/logout handlers and centralized auth middleware
+- **Persistence:** src/db/schema.sql defines dashboard_sessions; src/db/repository.ts provides session CRUD
+- **Middleware:** Hono middleware in createApp() enforces protection boundary; protected/public routes clearly demarcated
+- **Cookies:** Secure defaults applied; expiry enforced server-side with bounded TTL
+
+## Validation
+
+- Auth tests: 	ests/dashboard/server.test.ts, 	ests/dashboard/config.test.ts, 	ests/dashboard/publish.test.ts, 	ests/e2e/live-server.test.ts → ✅ PASSED
+- Build: 
+pm run v2:build → ✅ PASSED (TypeScript failure fixed)
+- Protected surface enforcement: HTML, HTMX, API, SSE, unpublished images all require auth when enabled
+- Public surfaces: /static/*, /login, /logout, published images accessible without auth
+
+## Notes for Lead
+
+- TypeScript build failure (AppConfigOverrides vs Partial<AppConfig>) has been fixed
+- Operator-facing docs should cover: DASHBOARD_AUTH_MODE env var, login/logout flow, session TTL, production cookie security
+- Current implementation is clean, focused, and ready for merge
+
+---
+
+# Research Handoff Decision — Issue #124 Implementation Ready
+
+**Date:** 2026-03-26  
+**From:** Research  
+**To:** Code  
+**Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
+**Status:** ACTIONABLE — Prerequisites #120 and #123 complete; implementation-ready handoff
+
+## Implementation Contract
+
+### Entry Point
+- Explicit Lead approval only (no auto-fallback)
+- Reuse existing Stage 6 hold + lead-review.md artifact from #123
+- Only for evidence-completion blockers; non-evidence blockers stay on original revision path
+
+### Writer Reframe Contract
+- Dedicated reframe prompt that:
+  - Preserves article thesis
+  - Softens unsupported hard-proof claims into transparent analysis/opinion language
+  - Tells Writer what claims to soften, what proof is missing, why fallback was approved
+  - Includes disclosure language requirements
+
+### Durable Mode Signal
+- Add smallest article-mode field to runtime state (not just prose in markdown)
+- API/dashboard/published surfaces must reliably read this structured state
+- Persist through article lifecycle
+
+### Reader/Operator Disclosure
+- Article detail and published/article views surface fallback mode clearly
+- Disclosure explains: evidence incomplete, framing Lead-approved, which claims are softened to analysis
+- Operator views show decision context from lead-review.md
+
+### Tests
+- Fallback activates only from Stage 6 needs_lead_review seam
+- Evidence blockers trigger reframe; other blockers remain unaffected
+- Mode signal persists and renders in disclosed views
+- Lead approval is required; no auto-fallback paths
+
+## Scope Guard (Do Not Reopen)
+- #120: Only if blocker metadata is defective
+- #123: Only if repeated-blocker escalation or Stage 6 hold is defective
+- Keep #124 to: fallback policy, reframe contract, durable mode signal, disclosure
+
+## Acceptance Criteria
+1. ✅ Entry criteria: explicit Lead approval from Stage 6 needs_lead_review seam
+2. ✅ Writer reframe contract: dedicated prompt, softens claims, includes disclosure rules
+3. ✅ Durable mode signal: structured article-mode field readable by API/dashboard/published
+4. ✅ Reader/operator disclosure: article detail + published views surface fallback mode + reasoning
+5. ✅ Focused tests: cover fallback trigger, reframe path, mode persistence, disclosure render
+
+---

@@ -13,7 +13,7 @@ export const STAGE_NAMES: Record<Stage, string> = {
   8: 'Published',
 };
 
-export type ArticleStatus = 'proposed' | 'approved' | 'in_production' | 'in_discussion' | 'published' | 'archived' | 'revision';
+export type ArticleStatus = 'proposed' | 'approved' | 'in_production' | 'in_discussion' | 'published' | 'archived' | 'revision' | 'needs_lead_review';
 export type EditorVerdict = 'APPROVED' | 'REVISE' | 'REJECT';
 export type RunStatus = 'started' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
 export type UsageEventType = 'planned' | 'started' | 'completed' | 'updated' | 'failed' | 'skipped' | 'stage_transition';
@@ -198,7 +198,7 @@ export interface RetrospectiveDigestReport {
 // ── Validation constant arrays ───────────────────────────────────────────────
 
 export const VALID_STATUSES: readonly ArticleStatus[] = [
-  'proposed', 'approved', 'in_production', 'in_discussion', 'published', 'archived', 'revision',
+  'proposed', 'approved', 'in_production', 'in_discussion', 'published', 'archived', 'revision', 'needs_lead_review',
 ] as const;
 
 export const VALID_VERDICTS: readonly EditorVerdict[] = [
@@ -286,6 +286,59 @@ export interface Note {
   target: NoteTarget;
   created_by: string | null;
   created_at: string;
+}
+
+export type WriterFactCheckMode = 'fresh_draft' | 'revision';
+export type WriterFactCheckSourceClass = 'local_runtime' | 'official_primary' | 'trusted_reference';
+export type WriterFactCheckVolatileFactsRule = 'attribute_soften_or_omit';
+
+export interface WriterFactCheckBudget {
+  localDeterministicPasses: number;
+  externalChecks: number;
+  wallClockMinutes: number;
+}
+
+export interface WriterFactCheckPolicy {
+  artifactName: string;
+  riskyClaimsOnly: boolean;
+  rawWebSearchAllowed: boolean;
+  editorRemainsFinalAuthority: boolean;
+  volatileFactsRule: WriterFactCheckVolatileFactsRule;
+  approvedSourceOrder: WriterFactCheckSourceClass[];
+  freshDraft: WriterFactCheckBudget;
+  revision: WriterFactCheckBudget;
+}
+
+export type WriterFactCheckOutcomeStatus = 'verified' | 'attributed' | 'omitted';
+
+export interface WriterFactCheckEntry {
+  claim: string;
+  status: WriterFactCheckOutcomeStatus;
+  sourceClass: WriterFactCheckSourceClass | null;
+  sourceLabel: string | null;
+  sourceUrl: string | null;
+  domain: string | null;
+  note: string | null;
+  proseTreatment: string | null;
+  asOf: string | null;
+}
+
+export interface WriterFactCheckUsage {
+  localDeterministicPassesUsed: number;
+  externalChecksUsed: number;
+  wallClockMs: number;
+  domainsTouched: string[];
+  remainingStatus: 'unspent' | 'available' | 'exhausted';
+  claimCount: number;
+  blockedSourceCount: number;
+  fetchFailureCount: number;
+}
+
+export interface WriterFactCheckReport {
+  verifiedFacts: WriterFactCheckEntry[];
+  attributedFacts: WriterFactCheckEntry[];
+  omittedClaims: WriterFactCheckEntry[];
+  usage: WriterFactCheckUsage;
 }
 
 // ── Inference helpers ────────────────────────────────────────────────────────

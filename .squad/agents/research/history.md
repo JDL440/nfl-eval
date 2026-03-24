@@ -24,6 +24,8 @@
 
 ## Learnings
 
+- 2026-03-27 — Issue `#124` is now actionable without reopening `#120`/`#123`: `src/pipeline/conversation.ts` already fingerprints repeated structured blockers, `src/pipeline/actions.ts` already pauses Stage 6 in `needs_lead_review` with `lead-review.md`, and `src/dashboard/views/article.ts` plus `src/dashboard/server.ts` already expose that Lead-review seam.
+- 2026-03-27 — The narrowest safe `#124` implementation is to layer a Lead-approved fallback/article-mode signal on top of the existing Stage 6 hold, then branch `writeDraft()` into a dedicated reframe prompt and show durable mode disclosure in operator/publish surfaces; do not reopen blocker detection or escalation mechanics.
 - 2026-03-25 — Issue `#125` design: Writer should get bounded Stage 5 verification access via a source ladder (local/runtime artifacts → official primary sources → trusted references), a small external-check budget, and a durable `writer-factcheck.md` artifact; avoid giving Writer raw web-search autonomy.
 - 2026-03-25 — Existing seams already support `#125` without new architecture: `src/pipeline/actions.ts` injects `panel-factcheck.md`, `roster-context.md`, and `fact-check-context.md`, while `recordAgentUsage()` plus `src/types.ts` usage/stage types can capture verification telemetry.
 - 2026-03-25 — Issue `#115` already has a strong v1 structured surface: `src/db/schema.sql` persists `article_retrospectives` + `article_retrospective_findings`, `src/db/repository.ts` exposes `listRetrospectiveDigestFindings(limit)`, `src/cli.ts` ships `retrospective-digest` / `retro-digest`, and `src/types.ts` defines the bounded digest report/candidate/category contracts.
@@ -65,3 +67,6 @@
 - Proposed limiting scope to docs and refinements, not new stages or automation.
 - Decision merged to decisions.md. Orchestration log written.
 - 2026-03-24T02-58-58Z — Issue #124 routing remains blocked behind #120 structured blocker tracking and #123 repeated-blocker escalation; once unblocked, Research should define the fallback/claim-mode entry criteria, Lead handoff, Writer reframe contract, and disclosure requirements.
+- 2026-03-26 — Issue `#124` is now actionable without reopening `#120/#123`: the repo already has structured blocker metadata plus repeated-blocker escalation into Stage 6 `needs_lead_review` with `lead-review.md`.
+- 2026-03-26 — The narrowest safe seam for `#124` is a Lead-approved post-escalation fallback policy for repeated evidence blockers: reuse the existing Stage 6 hold, add the smallest durable article-mode signal, rerun Writer with a dedicated reframe contract, and expose explicit disclosure in operator/reader views.
+- 2026-03-26 — Issue `#124` handoff to Code ready: implementation as bounded policy/runtime slice reuses Stage 6 needs_lead_review seam, requires explicit Lead approval, includes dedicated Writer reframe contract, keeps non-evidence blockers on original revision path, and surfaces disclosure in reader/operator views. Acceptance criteria locked in decisions.md.

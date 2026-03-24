@@ -18,10 +18,18 @@ import { join } from 'node:path';
 import { ensureRosterContext, validatePlayerMentions } from './roster-context.js';
 import { extractClaims, totalClaimCount } from './claim-extractor.js';
 import { ensureFactCheckContext } from './fact-check-context.js';
+import {
+  buildWriterFactCheckArtifact,
+  executeWriterFactCheckPass,
+  extractUrlEvidence,
+  WRITER_FACTCHECK_ARTIFACT_NAME,
+  WRITER_FACTCHECK_SKILL_NAME,
+} from './writer-factcheck.js';
 import { validateStatClaims, validateDraftClaims, buildValidationReport } from './validators.js';
 import { estimateCost } from '../llm/pricing.js';
 import {
   addConversationTurn,
+  findConsecutiveRepeatedRevisionBlocker,
   getArticleConversation,
   addRevisionSummary,
   getRevisionHistory,
@@ -30,6 +38,7 @@ import {
   buildEditorPreviousReviews,
   MAX_EDITOR_PREVIOUS_REVIEWS,
 } from './conversation.js';
+import type { RevisionBlockerMetadata } from './conversation.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +98,86 @@ function readArtifact(repo: Repository, articleId: string, filename: string): st
 
 function writeArtifact(repo: Repository, articleId: string, filename: string, content: string): void {
   repo.artifacts.put(articleId, filename, content);
+}
+
+function buildLeadReviewHandoff(
+  repo: Repository,
+  articleId: string,
+  repeatedBlocker: ReturnType<typeof findConsecutiveRepeatedRevisionBlocker>,
+): string {
+  if (!repeatedBlocker) {
+    throw new Error('Repeated blocker handoff requested without a repeated blocker');
+  }
+
+  const article = repo.getArticle(articleId);
+  const latestEditorReview = repo.artifacts.get(articleId, 'editor-review.md');
+  const latestFeedback = summarizeMarkdownLine(repeatedBlocker.current.feedback_summary, 300)
+    ?? 'See the latest editor review below.';
+  const blockerType = repeatedBlocker.signature.blockerType ?? 'unclassified';
+  const blockerIds = repeatedBlocker.signature.blockerIds.length > 0
+    ? repeatedBlocker.signature.blockerIds.join(', ')
+    : '(none)';
+
+  return [
+    '# Lead Review Handoff',
+    '',
+    `Article: ${article?.title ?? articleId}`,
+    `Slug: ${articleId}`,
+    `Stage: 6 (${STAGE_NAMES[6]})`,
+    '',
+    '## Escalation Reason',
+    'The editor returned consecutive REVISE summaries with the same structured blocker signature, so the pipeline stopped the normal auto-regress / force-approve loop and escalated for Lead review.',
+    '',
+    '## Repeated Blocker Fingerprint',
+    `- Iterations: ${repeatedBlocker.previous.iteration} → ${repeatedBlocker.current.iteration}`,
+    `- blocker_type: ${blockerType}`,
+    `- blocker_ids: ${blockerIds}`,
+    `- fingerprint: ${repeatedBlocker.signature.fingerprint}`,
+    '',
+    '## Latest Editor Feedback Summary',
+    latestFeedback,
+    '',
+    '## Lead Next Actions',
+    '- `REFRAME` — send the article back to Stage 4 / `revision` with new framing or sourcing direction.',
+    '- `WAIT` / `PAUSE` — keep the article at Stage 6 / `needs_lead_review` until external input lands.',
+    '- `ABANDON` — archive the article if the blocker should not be pursued.',
+    '',
+    '## Latest Editor Review',
+    latestEditorReview?.trim() || '_editor-review.md not found_',
+  ].join('\n');
+}
+
+function maybeEscalateRepeatedRevisionBlocker(
+  repo: Repository,
+  articleId: string,
+): { action: string } | null {
+  const repeatedBlocker = findConsecutiveRepeatedRevisionBlocker(getRevisionHistory(repo, articleId));
+  if (!repeatedBlocker) return null;
+
+  repo.artifacts.put(articleId, 'lead-review.md', buildLeadReviewHandoff(repo, articleId, repeatedBlocker));
+  repo.updateArticleStatus(articleId, 'needs_lead_review');
+
+  const blockerLabel = repeatedBlocker.signature.blockerIds.length > 0
+    ? repeatedBlocker.signature.blockerIds.join(', ')
+    : repeatedBlocker.signature.blockerType ?? 'unclassified blocker';
+
+  return {
+    action: `Escalated to Lead review — repeated blocker signature detected (${blockerLabel})`,
+  };
+}
+
+function extractRevisionBlockerMetadata(reviewContent: string): RevisionBlockerMetadata | null {
+  const matches = [...reviewContent.matchAll(/\[BLOCKER\s+([a-z0-9_-]+):([a-z0-9_-]+)\]/gi)];
+  if (matches.length === 0) return null;
+
+  const blockerTypes = [...new Set(matches.map((match) => match[1]!.trim().toLowerCase()).filter(Boolean))];
+  const blockerIds = [...new Set(matches.map((match) => match[2]!.trim().toLowerCase()).filter(Boolean))];
+  if (blockerIds.length === 0) return null;
+
+  return {
+    blockerType: blockerTypes.length === 1 ? blockerTypes[0] : 'mixed',
+    blockerIds,
+  };
 }
 
 function summarizeMarkdownLine(text: string | null | undefined, maxLength = 180): string | null {
@@ -404,6 +493,49 @@ export function recordAgentUsage(
       costUsdEstimate: cost > 0 ? cost : null,
     });
   }
+}
+
+function recordWriterFactCheckUsage(
+  ctx: ActionContext,
+  articleId: string,
+  stage: number,
+  report: Awaited<ReturnType<typeof executeWriterFactCheckPass>>,
+): void {
+  const usage = report.usage;
+  if (
+    usage.localDeterministicPassesUsed === 0 &&
+    usage.externalChecksUsed === 0 &&
+    usage.claimCount === 0 &&
+    usage.blockedSourceCount === 0 &&
+    usage.fetchFailureCount === 0
+  ) {
+    return;
+  }
+
+  ctx.repo.recordUsageEvent({
+    articleId,
+    stage,
+    surface: 'writeDraft-writer-factcheck',
+    provider: 'pipeline',
+    actor: 'writer-factcheck',
+    eventType: 'completed',
+    modelOrTool: 'writer-factcheck',
+    requestCount: usage.externalChecksUsed,
+    quantity: usage.claimCount,
+    unit: 'claim',
+    metadata: {
+      localDeterministicPassesUsed: usage.localDeterministicPassesUsed,
+      externalChecksUsed: usage.externalChecksUsed,
+      domainsTouched: usage.domainsTouched,
+      remainingStatus: usage.remainingStatus,
+      verifiedCount: report.verifiedFacts.length,
+      attributedCount: report.attributedFacts.length,
+      omittedCount: report.omittedClaims.length,
+      blockedSourceCount: usage.blockedSourceCount,
+      fetchFailureCount: usage.fetchFailureCount,
+      wallClockMs: usage.wallClockMs,
+    },
+  });
 }
 
 /**
@@ -864,6 +996,8 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
 
     // Run lightweight fact-check on panel discussion output (if available)
     const discussionArtifact = ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
+    let factCheckCtxArtifact: string | null = ctx.repo.artifacts.get(articleId, 'fact-check-context.md');
+    let contractClaims: string[] = [];
     if (discussionArtifact) {
       // Extract verifiable claims and build nflverse fact-check context
       const panelTexts = [discussionArtifact];
@@ -877,9 +1011,9 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       }
       const combinedPanelText = panelTexts.join('\n\n');
       const claims = extractClaims(combinedPanelText);
+      contractClaims = claims.contractClaims.map(claim => claim.raw);
 
       // Build enriched fact-check context from nflverse if claims found
-      let factCheckCtxArtifact: string | null = null;
       if (totalClaimCount(claims) > 0) {
         const fctx = ensureFactCheckContext(ctx.repo, articleId, claims);
         if (fctx) factCheckCtxArtifact = fctx.raw;
@@ -905,12 +1039,37 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-factcheck', factCheckResult);
     }
 
-    let content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
-
-    // Detect whether this is a revision (editor-review.md exists from a previous pass)
     const editorReview = ctx.repo.artifacts.get(articleId, 'editor-review.md');
     const previousDraft = ctx.repo.artifacts.get(articleId, 'draft.md');
     const isRevision = editorReview != null;
+    const existingWriterFactCheck = ctx.repo.artifacts.get(articleId, WRITER_FACTCHECK_ARTIFACT_NAME);
+    const writerFactCheckReport = await executeWriterFactCheckPass({
+      articleTitle: article.title,
+      mode: isRevision ? 'revision' : 'fresh_draft',
+      availableArtifacts: ctx.repo.artifacts.list(articleId).map((artifact) => artifact.name),
+      existingArtifact: existingWriterFactCheck,
+      factCheckContext: factCheckCtxArtifact,
+      contractClaims,
+      urlEvidence: extractUrlEvidence([
+        { name: 'discussion-summary.md', content: discussionArtifact },
+        { name: 'panel-factcheck.md', content: ctx.repo.artifacts.get(articleId, 'panel-factcheck.md') },
+        { name: 'fact-check-context.md', content: factCheckCtxArtifact },
+      ]),
+    });
+    ctx.repo.artifacts.put(
+      articleId,
+      WRITER_FACTCHECK_ARTIFACT_NAME,
+      buildWriterFactCheckArtifact({
+        articleTitle: article.title,
+        mode: isRevision ? 'revision' : 'fresh_draft',
+        availableArtifacts: ctx.repo.artifacts.list(articleId).map((artifact) => artifact.name),
+        existingArtifact: existingWriterFactCheck,
+        report: writerFactCheckReport,
+      }),
+    );
+    recordWriterFactCheckUsage(ctx, articleId, article.current_stage, writerFactCheckReport);
+
+    let content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
 
     // On revision: inject the previous draft so the writer REVISES it rather than
     // rewriting from scratch. Without this, the writer only sees the panel discussion
@@ -946,13 +1105,13 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     }
 
     const task = isRevision
-      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Output the complete revised article.'
-      : 'Write an analytical article draft based on the panel discussion.';
+      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Use the bounded writer fact-check contract only for specific risky claims; do not turn this into open-ended research. Output the complete revised article.'
+      : 'Write an analytical article draft based on the panel discussion. Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.';
 
     const result = await ctx.runner.run({
       agentName: 'writer',
       task,
-      skills: ['substack-article'],
+      skills: ['substack-article', WRITER_FACTCHECK_SKILL_NAME],
       conversationContext: conversationCtx || undefined,
       articleContext: {
         slug: articleId,
@@ -980,7 +1139,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       const retryResult = await ctx.runner.run({
         agentName: 'writer',
         task: buildDraftRepairInstruction(validation),
-        skills: ['substack-article'],
+        skills: ['substack-article', WRITER_FACTCHECK_SKILL_NAME],
         conversationContext: conversationCtx || undefined,
         articleContext: {
           slug: articleId,
@@ -1055,7 +1214,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     const result = await ctx.runner.run({
       agentName: 'editor',
-      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
+      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If `writer-factcheck.md` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
       skills: ['editor-review'],
       conversationContext: fullConversationCtx,
       articleContext: {
@@ -1073,7 +1232,8 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'editor', 'assistant', result.content);
 
     // Extract semantic verdict from the editor review content
-    let verdict = extractVerdict(result.content);
+    let finalReviewContent = result.content;
+    let verdict = extractVerdict(finalReviewContent);
 
     // Self-heal: if verdict is unparseable, retry once with stricter format instruction.
     // This prevents the pipeline from getting stuck at the 6→7 guard.
@@ -1087,24 +1247,26 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
           slug: articleId,
           title: article.title,
           stage: article.current_stage,
-          content: result.content,
+          content: finalReviewContent,
         },
       });
       // Append retry verdict to the existing review
       const combined = result.content + '\n\n---\n\n' + retryResult.content;
       writeAgentResult(ctx.repo, articleId, 'editor-review.md', { ...result, content: combined });
       recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor-retry', retryResult);
-      verdict = extractVerdict(combined);
+      finalReviewContent = combined;
+      verdict = extractVerdict(finalReviewContent);
     }
 
     // If editor returns REVISE, create a revision summary
     if (verdict === 'REVISE') {
       const iteration = getRevisionCount(ctx.repo, articleId) + 1;
-      const feedbackPreview = result.content.slice(0, 300);
+      const feedbackPreview = finalReviewContent.slice(0, 300);
       addRevisionSummary(
         ctx.repo, articleId, iteration,
         article.current_stage, 4,  // editor → writer
         'editor', 'REVISE', null, feedbackPreview,
+        extractRevisionBlockerMetadata(finalReviewContent),
       );
     }
 
@@ -1446,6 +1608,10 @@ export async function autoAdvanceArticle(
   }
 
   while (current.current_stage < maxStage) {
+    if (current.current_stage === 6 && current.status === 'needs_lead_review') {
+      break;
+    }
+
     if (ctx) {
       // Emit working status — use the action name for what's actually happening
       const actionLabel = STAGE_ACTION_MAP[current.current_stage as Stage] ?? 'processing';
@@ -1480,6 +1646,10 @@ export async function autoAdvanceArticle(
         const isWriterStructureSendBack =
           current.current_stage === 5 &&
           /Draft structure:/i.test(result.error ?? '');
+
+        if (current.current_stage === 6 && current.status === 'needs_lead_review') {
+          break;
+        }
 
         if (isRevise || isWriterStructureSendBack) {
           revisionCount++;
@@ -1546,6 +1716,21 @@ export async function autoAdvanceArticle(
       // REVISE but the action itself succeeded). Regress immediately instead of
       // letting the next stage's guard catch it.
       if (result.outcome === 'REVISE') {
+        const escalation = maybeEscalateRepeatedRevisionBlocker(repo, articleId);
+        if (escalation) {
+          const leadReviewStep: AutoAdvanceStep = {
+            type: 'working',
+            from: current.current_stage,
+            to: current.current_stage,
+            action: escalation.action,
+            duration: result.duration,
+          };
+          steps.push(leadReviewStep);
+          onStep?.(leadReviewStep);
+          current = repo.getArticle(articleId)!;
+          break;
+        }
+
         revisionCount++;
         if (revisionCount <= maxRevisions) {
           try {

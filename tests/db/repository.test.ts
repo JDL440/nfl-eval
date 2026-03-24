@@ -123,6 +123,16 @@ describe('Repository', () => {
       expect(article!.status).toBe('in_production');
     });
 
+    it('updates article status without changing stage', () => {
+      repo.createArticle({ id: 'lead-review-status', title: 'Lead Review Status' });
+      repo.advanceStage('lead-review-status', 1, 6, 'agent');
+
+      const article = repo.updateArticleStatus('lead-review-status', 'needs_lead_review');
+
+      expect(article.status).toBe('needs_lead_review');
+      expect(article.current_stage).toBe(6);
+    });
+
     it('rejects stage mismatch', () => {
       repo.createArticle({ id: 'mismatch', title: 'Mismatch' });
       expect(() => repo.advanceStage('mismatch', 2, 3, 'agent')).toThrow('Stage mismatch');
@@ -179,6 +189,58 @@ describe('Repository', () => {
     it('rejects invalid verdict', () => {
       repo.createArticle({ id: 'bad-verdict', title: 'Bad Verdict' });
       expect(() => repo.recordEditorReview('bad-verdict', 'MAYBE' as any)).toThrow('Invalid verdict');
+    });
+  });
+
+  describe('revision summaries', () => {
+    it('retrieves structured blocker metadata from stored revision summaries', () => {
+      repo.createArticle({ id: 'revision-test', title: 'Revision Test' });
+      repo.getDb().prepare(
+        `INSERT INTO revision_summaries
+         (article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary, blocker_type, blocker_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        'revision-test',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        JSON.stringify(['Missing TLDR']),
+        'Restore the TLDR block.',
+        'structure',
+        JSON.stringify(['missing-tldr']),
+      );
+
+      const revisions = repo.getRevisionSummaries('revision-test');
+      expect(revisions).toHaveLength(1);
+      expect(revisions[0].blocker_type).toBe('structure');
+      expect(revisions[0].blocker_ids).toBe(JSON.stringify(['missing-tldr']));
+      expect(repo.getRevisionSummaryCount('revision-test')).toBe(1);
+    });
+
+    it('keeps older revision rows readable when blocker metadata is absent', () => {
+      repo.createArticle({ id: 'revision-legacy', title: 'Revision Legacy' });
+      repo.getDb().prepare(
+        `INSERT INTO revision_summaries
+         (article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        'revision-legacy',
+        1,
+        6,
+        4,
+        'editor',
+        'REVISE',
+        null,
+        'Legacy free-text summary.',
+      );
+
+      const revisions = repo.getRevisionSummaries('revision-legacy');
+      expect(revisions).toHaveLength(1);
+      expect(revisions[0].feedback_summary).toBe('Legacy free-text summary.');
+      expect(revisions[0].blocker_type).toBeNull();
+      expect(revisions[0].blocker_ids).toBeNull();
     });
   });
 
@@ -991,6 +1053,20 @@ describe('Repository', () => {
       repo.regressStage('reg-rev', 5, 3, 'editor', 'Redo discussion');
       const afterReviews = repo.getEditorReviews('reg-rev');
       expect(afterReviews.length).toBe(0);
+    });
+
+    it('regression below Stage 6 clears lead-review artifacts', () => {
+      repo.createArticle({ id: 'reg-lead', title: 'Regress Lead Review' });
+      repo.advanceStage('reg-lead', 1, 2, 'agent');
+      repo.advanceStage('reg-lead', 2, 3, 'agent');
+      repo.advanceStage('reg-lead', 3, 4, 'agent');
+      repo.advanceStage('reg-lead', 4, 5, 'agent');
+      repo.advanceStage('reg-lead', 5, 6, 'agent');
+      repo.artifacts.put('reg-lead', 'lead-review.md', '# Lead Review');
+
+      repo.regressStage('reg-lead', 6, 4, 'editor', 'Need a reframe');
+
+      expect(repo.artifacts.get('reg-lead', 'lead-review.md')).toBeNull();
     });
   });
 

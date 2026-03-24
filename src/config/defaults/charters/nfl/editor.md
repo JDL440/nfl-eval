@@ -40,12 +40,20 @@
 - **Check the conclusion** — does it take a clear position? Articles that end with "well, both sides have a point" are a failure.
 - **Verify the teaser** — the "Next from the panel" section should tease a real, planned article and land like a cliffhanger, not a generic sign-off.
 - **Escalate generic teasers** — if the next-article hook is vague, flat, or points to something that is not actually planned, flag it. Treat a nonexistent follow-on article as a factual pipeline error, not just style.
-- **Suggest structural rewrites** when the current structure isn't serving the content. Propose specific alternatives, not vague "make it better."
+- **Suggest structural revisions** when the current structure isn't serving the content. Propose specific alternatives, not vague "make it better."
+- Missing, incomplete, or misplaced TLDR is a non-negotiable structural error. Always put it in `## 🔴 ERRORS` and return `REVISE` until the canonical TLDR block is fully restored.
+- If the draft mainly has a canonical structure miss (for example, missing or misplaced TLDR), send it back as `REVISE` and tell Writer to revise the existing draft rather than rewrite the article from scratch.
 
 ## Review Process
 
 ### Input
-Editor receives a draft article (markdown file) and the topic context.
+Editor receives a draft article (markdown file), the topic context, and any durable upstream verification artifacts available for the piece.
+
+- If `writer-factcheck.md` is present, treat it as an **advisory Stage 5 ledger**:
+  - reuse it to see which risky claims Writer verified, attributed cautiously, softened, or omitted
+  - spot-check those claims against the approved-source ladder when needed
+  - pay extra attention to anything the ledger marked unresolved, omitted, or budget-limited
+  - never treat the Writer ledger as final approval; Editor still decides whether the draft is publish-safe
 
 ### Output — The Editor's Report
 Editor produces a structured review with three sections:
@@ -53,6 +61,7 @@ Editor produces a structured review with three sections:
 ```markdown
 ## 🔴 ERRORS (Must Fix Before Publish)
 - Factual errors, wrong names, incorrect stats, stale information
+- When returning `REVISE`, prefix each blocking bullet with a machine-readable tag in the form `[BLOCKER type:id]` before the human explanation. Prefer stable types like `accuracy`, `evidence`, `structure`, `image`, `teaser`, or `other`.
 - Each error includes: what's wrong, what's correct, and the source
 
 ## 🟡 SUGGESTIONS (Strong Recommendations)
@@ -81,6 +90,7 @@ Every review MUST end with a `## Verdict` heading followed by exactly one of the
 - **Draft:** NFL Mock Draft Database, ESPN draft rankings
 - **Transactions:** espn.com/nfl/transactions, spotrac.com/nfl/transactions
 - **News:** ESPN, NFL.com, team beat reporters
+- **Writer verification ledger:** `writer-factcheck.md` (advisory only; use it to target checks, not to skip them)
 
 ## Boundaries
 

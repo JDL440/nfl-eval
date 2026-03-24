@@ -42,6 +42,7 @@ Defines the Editor's review protocol for article drafts. Editor is the mandatory
 - Assess section balance
 - Check conclusion takes a clear position
 - Verify the "Next from the panel" teaser references a real planned article
+- If the main issue is the canonical article contract (for example, missing or misplaced TLDR), return `REVISE` and direct Writer to revise the existing draft instead of rewriting the whole piece
 
 ## Output Format
 

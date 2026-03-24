@@ -43,13 +43,13 @@ tools: [view, rg, vitest]
 
 ## Current seam map
 
-- `src/dashboard/server.ts` calls `registerSSE(app, bus)`, serves `/static/*`, then registers all dashboard HTML/API/HTMX routes directly.
-- `src/dashboard/sse.ts` exposes `/events`, which means SSE must be covered by the same auth gate instead of being treated as a side channel.
-- `src/dashboard/server.ts` also exposes `/images/:slug/:file`, so unpublished article media should be treated as protected dashboard content unless the product explicitly wants public asset URLs.
-- `src/config/index.ts` loads repo-root and data-dir `.env` files, but today only exposes NFL runtime and provider/service configuration.
-- `src/db/repository.ts` / `src/db/schema.sql` are the natural persistence seam, but currently contain no auth/session schema.
-- Dashboard tests construct `createApp(repo, config)` and call routes immediately, which is strong evidence that auth is currently absent.
+- `src/dashboard/server.ts` now resolves `dashboardAuth`, exposes `GET/POST /login` plus `POST /logout`, and applies one `app.use('*', ...)` auth middleware before SSE and the dashboard routes.
+- `src/dashboard/sse.ts` still exposes `/events`, but the server middleware now covers it, so SSE is part of the same auth boundary as the rest of the dashboard.
+- `src/dashboard/server.ts` keeps `/static/*` public and treats `/images/:slug/:file` as protected unless the backing article is already published / Stage 8.
+- `src/config/index.ts` exposes `dashboardAuth` on `AppConfig`, parses `DASHBOARD_AUTH_MODE`, `DASHBOARD_AUTH_USERNAME`, `DASHBOARD_AUTH_PASSWORD`, `DASHBOARD_SESSION_COOKIE`, and `DASHBOARD_SESSION_TTL_HOURS`, and defaults secure cookies on in production.
+- `src/db/repository.ts` / `src/db/schema.sql` now provide `dashboard_sessions` persistence plus session create/read/delete/expiry cleanup helpers.
+- Dashboard tests now cover redirects, login/logout, SSE/API/HTMX/image protection, publish-page protection, and e2e login flow.
 
 ## Recommendation
 
-For this repo, the minimum viable long-term direction is: add Hono auth middleware plus `GET/POST /login` and `POST /logout`, back the session with a small SQLite `dashboard_sessions` table, and gate all dashboard/API/HTMX/SSE routes plus unpublished image routes except static assets and login. Keep the first pass single-operator and config-driven (`off|local` mode plus username + password hash + session secret), then expand only if the product truly needs per-user roles later.
+For this repo, keep the dashboard auth seam narrow: single-operator local login, config-driven `off|local` mode, SQLite-backed opaque sessions, and one middleware protecting HTML/API/HTMX/SSE plus unpublished image routes. Treat `/static/*`, login/logout, and published images as the only public surfaces, keep auth opt-in for tests/local workflows, and do not expand to roles or OAuth until product scope changes.

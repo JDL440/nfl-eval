@@ -31,6 +31,8 @@ export interface RevisionSummary {
   outcome: string;
   key_issues: string | null;
   feedback_summary: string | null;
+  blocker_type: string | null;
+  blocker_ids: string | null;
   created_at: string;
 }
 
@@ -39,6 +41,17 @@ export interface RevisionHistoryEntry {
   keyIssues: string[];
   writerTurn: ConversationTurn | null;
   editorTurn: ConversationTurn | null;
+}
+
+export interface RevisionBlockerMetadata {
+  blockerType?: string | null;
+  blockerIds?: string[] | null;
+}
+
+export interface RevisionBlockerSignature {
+  blockerType: string | null;
+  blockerIds: string[];
+  fingerprint: string;
 }
 
 export interface GetConversationOptions {
@@ -66,6 +79,94 @@ function parseKeyIssues(raw: string | null): string[] {
   } catch {
     return [];
   }
+}
+
+export function parseRevisionBlockerMetadata(
+  blockerType: string | null | undefined,
+  blockerIdsRaw: string | null | undefined,
+): { blockerType: string | null; blockerIds: string[] } | null {
+  if (blockerType == null && blockerIdsRaw == null) {
+    return null;
+  }
+
+  if (blockerIdsRaw == null) {
+    return { blockerType: blockerType ?? null, blockerIds: [] };
+  }
+
+  try {
+    const parsed = JSON.parse(blockerIdsRaw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return {
+      blockerType: blockerType ?? null,
+      blockerIds: parsed.filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function normalizeBlockerToken(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function getRevisionBlockerSignature(
+  blockerType: string | null | undefined,
+  blockerIdsRaw: string | null | undefined,
+): RevisionBlockerSignature | null {
+  const parsed = parseRevisionBlockerMetadata(blockerType, blockerIdsRaw);
+  if (!parsed) return null;
+
+  const normalizedType = parsed.blockerType == null
+    ? null
+    : normalizeBlockerToken(parsed.blockerType);
+  const normalizedIds = [...new Set(
+    parsed.blockerIds
+      .map(normalizeBlockerToken)
+      .filter(id => id.length > 0),
+  )].sort();
+
+  if (normalizedType == null && normalizedIds.length === 0) {
+    return null;
+  }
+
+  return {
+    blockerType: normalizedType,
+    blockerIds: normalizedIds,
+    fingerprint: `${normalizedType ?? 'unclassified'}::${normalizedIds.join('|')}`,
+  };
+}
+
+export function findConsecutiveRepeatedRevisionBlocker(
+  revisions: RevisionSummary[],
+): { previous: RevisionSummary; current: RevisionSummary; signature: RevisionBlockerSignature } | null {
+  const ordered = sortRevisionsAscending(revisions);
+  if (ordered.length < 2) return null;
+
+  const current = ordered[ordered.length - 1];
+  const previous = ordered[ordered.length - 2];
+
+  if (
+    current.agent_name !== 'editor'
+    || previous.agent_name !== 'editor'
+    || current.outcome !== 'REVISE'
+    || previous.outcome !== 'REVISE'
+  ) {
+    return null;
+  }
+
+  const currentSignature = getRevisionBlockerSignature(current.blocker_type, current.blocker_ids);
+  const previousSignature = getRevisionBlockerSignature(previous.blocker_type, previous.blocker_ids);
+  if (!currentSignature || !previousSignature) return null;
+  if (currentSignature.fingerprint !== previousSignature.fingerprint) return null;
+
+  return {
+    previous,
+    current,
+    signature: currentSignature,
+  };
 }
 
 function normalizeTimestamp(value: string): number {
@@ -169,12 +270,13 @@ export function addRevisionSummary(
   outcome: string,
   keyIssues?: string[] | null,
   feedbackSummary?: string | null,
+  blockerMetadata?: RevisionBlockerMetadata | null,
 ): void {
   const db = repo.getDb();
   db.prepare(
     `INSERT INTO revision_summaries
-     (article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     (article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary, blocker_type, blocker_ids)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     articleId,
     iteration,
@@ -184,6 +286,8 @@ export function addRevisionSummary(
     outcome,
     keyIssues ? JSON.stringify(keyIssues) : null,
     feedbackSummary ?? null,
+    blockerMetadata?.blockerType ?? null,
+    blockerMetadata?.blockerIds ? JSON.stringify(blockerMetadata.blockerIds) : null,
   );
 }
 
@@ -194,10 +298,7 @@ export function getRevisionHistory(
   repo: Repository,
   articleId: string,
 ): RevisionSummary[] {
-  const db = repo.getDb();
-  return db.prepare(
-    'SELECT * FROM revision_summaries WHERE article_id = ? ORDER BY iteration ASC',
-  ).all(articleId) as unknown as RevisionSummary[];
+  return repo.getRevisionSummaries(articleId);
 }
 
 /**
@@ -207,11 +308,7 @@ export function getRevisionCount(
   repo: Repository,
   articleId: string,
 ): number {
-  const db = repo.getDb();
-  const row = db.prepare(
-    'SELECT COALESCE(MAX(iteration), 0) AS count FROM revision_summaries WHERE article_id = ?',
-  ).get(articleId) as { count: number };
-  return row.count;
+  return repo.getRevisionSummaryCount(articleId);
 }
 
 /**
@@ -303,6 +400,7 @@ function formatRevisionLines(revisions: RevisionSummary[]): string[] {
     if (issues.length > 0) {
       parts.push('Key issues: ' + issues.map(issue => `• ${issue}`).join(' '));
     }
+
   }
 
   return parts;

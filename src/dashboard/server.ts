@@ -40,6 +40,7 @@ import {
   renderLiveArtifacts,
   renderLiveSidebar,
   ARTIFACT_FILES,
+  OPTIONAL_ARTIFACT_FILES,
 } from './views/article.js';
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
@@ -89,6 +90,11 @@ import { ModelPolicy } from '../llm/model-policy.js';
 import { AgentRunner, separateThinking } from '../agents/runner.js';
 import { AgentMemory } from '../agents/memory.js';
 import { PipelineAuditor } from '../pipeline/audit.js';
+import {
+  buildRevisionHistoryEntries,
+  getArticleConversation,
+  getRevisionHistory,
+} from '../pipeline/conversation.js';
 import { CopilotProvider } from '../llm/providers/copilot.js';
 import { CopilotCLIProvider } from '../llm/providers/copilot-cli.js';
 import { MockProvider } from '../llm/providers/mock.js';
@@ -596,6 +602,9 @@ export function createApp(
       if (errorParam) {
         errorMessage = `Auto-advance failed: ${errorParam}`;
         autoAdvanceActive = false;
+      } else if (article.current_stage === 6 && article.status === 'needs_lead_review') {
+        flashMessage = '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.';
+        autoAdvanceActive = false;
       } else if (article.current_stage < 7) {
         autoAdvanceActive = true;
       } else {
@@ -609,6 +618,10 @@ export function createApp(
         article,
         transitions: repo.getStageTransitions(id),
         reviews: repo.getEditorReviews(id),
+        revisionHistory: buildRevisionHistoryEntries(
+          getArticleConversation(repo, id),
+          getRevisionHistory(repo, id),
+        ),
         advanceCheck,
         usageEvents: repo.getUsageEvents(id),
         stageRuns: repo.getStageRuns(id),
@@ -1372,7 +1385,8 @@ export function createApp(
     const isThinking = name.endsWith('.thinking.md');
     const baseName = isThinking ? name.replace('.thinking.md', '.md') : name;
     const isPanelArtifact = /^panel-[a-z0-9-]+\.md$/.test(baseName);
-    if (!isPanelArtifact && !(ARTIFACT_FILES as readonly string[]).includes(baseName)) {
+    const isOptionalArtifact = (OPTIONAL_ARTIFACT_FILES as readonly string[]).includes(baseName);
+    if (!isPanelArtifact && !isOptionalArtifact && !(ARTIFACT_FILES as readonly string[]).includes(baseName)) {
       return c.html(renderArtifactContent(name, null), 400);
     }
 
@@ -1381,7 +1395,11 @@ export function createApp(
       return c.html(renderArtifactContent(name, null));
     }
 
-    return c.html(renderArtifactContent(name, content));
+    const persistedThinkingContent = !isThinking && name.endsWith('.md')
+      ? repo.artifacts.get(id, name.replace(/\.md$/i, '.thinking.md'))
+      : null;
+
+    return c.html(renderArtifactContent(name, content, persistedThinkingContent));
   });
 
   // ── htmx: usage panel ───────────────────────────────────────────────────

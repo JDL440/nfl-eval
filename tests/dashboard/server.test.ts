@@ -154,6 +154,10 @@ describe('Dashboard Server', () => {
         'REVISE',
         ['Tighten the lead', 'Refresh the stats'],
         'Need a stronger lead and fresher stats.\n\n## Verdict\nREVISE',
+        {
+          blockerType: 'evidence',
+          blockerIds: ['stale-stat'],
+        },
       );
 
       const res = await app.request('/articles/detail-revisions');
@@ -164,6 +168,31 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Writer pass');
       expect(html).toContain('Editor pass');
       expect(html).toContain('Refresh the stats');
+      expect(html).toContain('Blockers:');
+      expect(html).toContain('type=evidence');
+      expect(html).toContain('ids=stale-stat');
+    });
+
+    it('article detail surfaces paused lead review state and artifact tab', async () => {
+      repo.createArticle({ id: 'detail-lead-review', title: 'Lead Review Detail' });
+      for (let s = 2; s <= 5; s++) {
+        repo.advanceStage('detail-lead-review', s - 1, s, 'test');
+      }
+      repo.advanceStage('detail-lead-review', 5, 6, 'test');
+      repo.updateArticleStatus('detail-lead-review', 'needs_lead_review');
+      repo.artifacts.put('detail-lead-review', 'draft.md', '# Draft');
+      repo.artifacts.put('detail-lead-review', 'editor-review.md', '# Editor Review\n\n## Verdict\nREVISE');
+      repo.artifacts.put('detail-lead-review', 'lead-review.md', '# Lead Review Handoff\n\nEscalated after repeated blocker.');
+
+      const res = await app.request('/articles/detail-lead-review');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Needs Lead review');
+      expect(html).toContain('Lead review required: repeated editor blocker detected');
+      expect(html).toContain('/htmx/articles/detail-lead-review/artifact/lead-review.md');
+      expect(html).toContain('data-tab="lead-review.md"');
+      expect(html).toContain('id="artifact-content-detail-lead-review"');
+      expect(html).toMatch(/id="artifact-content-detail-lead-review"[\s\S]*hx-get="\/htmx\/articles\/detail-lead-review\/artifact\/lead-review\.md"/);
     });
 
     it('article detail returns 404 for missing article', async () => {
@@ -199,7 +228,6 @@ describe('Dashboard Server', () => {
 
     it('GET /api/articles/:id returns single article', async () => {
       repo.createArticle({ id: 'single-1', title: 'Single One' });
-
       const res = await app.request('/api/articles/single-1');
       expect(res.status).toBe(200);
       const body = await res.json() as { id: string; title: string };
@@ -620,6 +648,18 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).not.toContain('<script>');
       expect(html).toContain('&lt;script&gt;');
+    });
+
+    it('GET /htmx/articles/:id/artifact/:name allows lead-review artifacts', async () => {
+      repo.createArticle({ id: 'art-lead-review', title: 'Lead Review Artifact' });
+      repo.artifacts.put('art-lead-review', 'lead-review.md', '# Lead Review Handoff\n\nEscalated after repeated blocker.');
+
+      const res = await app.request('/htmx/articles/art-lead-review/artifact/lead-review.md');
+
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Lead Review Handoff');
+      expect(html).toContain('Escalated after repeated blocker.');
     });
 
     it('GET /htmx/articles/:id/artifact/:name prefers persisted thinking sidecars', async () => {
