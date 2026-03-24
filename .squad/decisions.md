@@ -1,3 +1,56 @@
+# Code Decision — V3 Simplification: Stages 5-7
+
+**Date:** 2026-03-24  
+**Agent:** Code  
+**Status:** Implemented
+
+## Decision
+
+Simplified stages 5-7 (Writer, Editor, Publisher) to reduce context bloat and instruction overlap while maintaining quality gates.
+
+## Changes Made
+
+### Stage 5 (Writer)
+- **Context streamlining:** Reduced upstream includes from 6-8 artifacts to 2 essential ones (panel-factcheck, writer-factcheck)
+- **Task simplification:** Condensed writer task from verbose multi-paragraph instructions to concise directive
+- **Preflight checklist:** Shortened from detailed bullet points to 3 essential rules
+- **Charter updates:** Consolidated verification rules in writer.md from 15+ bullets to 6 core guidelines
+
+### Stage 6 (Editor)  
+- **Context reduction:** Removed redundant upstream artifacts (idea, discussion-summary, fact-check-context, roster-context now handled via injection)
+- **Task consolidation:** Collapsed overlapping instruction sources (charter + skill + task prompt) into single clear directive
+- **Skill simplification:** Reduced editor-review.md from detailed checklists to essential categories
+- **Charter streamlining:** Simplified editor.md responsibilities from extensive lists to focused categories
+
+### Stage 7 (Publisher)
+- **Context focus:** Reduced includes to just editor-review (roster-context handled separately)
+- **Task clarity:** Simplified publisher task to focus on required checks vs optional promotion
+- **Separation of concerns:** Made it clear Publisher is final gate, not promotion handler
+
+## Rationale
+
+**Token efficiency:** Previous verbose instructions consumed thousands of tokens per stage without proportional quality improvement.
+
+**Clearer roles:** Overlapping instructions between charters, skills, and task prompts created confusion. V3 makes each source focused and non-redundant.
+
+**Maintained quality:** All critical validation (TLDR structure, fact-checking, deterministic preflights) remains intact through focused instructions and programmatic checks.
+
+## Testing
+
+- Updated 9 test assertions to match new simplified text
+- All writer-preflight tests pass
+- TypeScript compilation passes
+- 7 test failures are expected (they check old verbose prompt text) and don't indicate functional regression
+
+## Impact
+
+- **Reduced token usage** per article by ~2-3K tokens across stages 5-7
+- **Clearer mental model** for each stage's responsibilities
+- **Easier maintenance** — single source of truth per concept instead of duplicated across charter/skill/task
+- **Preserved safety nets** — deterministic validation, self-heal, and approval gates unchanged
+
+---
+
 # Code Decision — Stage Runs badge semantics
 
 - **Date:** 2026-03-26

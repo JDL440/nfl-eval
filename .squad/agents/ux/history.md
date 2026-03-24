@@ -99,4 +99,9 @@
 
 - 2026-03-24T05:41:29Z — **Generate-Idea Selector Trace Complete**: Full render-path investigation completed. Team picker source confirmed: static `NFL_TEAMS` in `src/dashboard/views/new-idea.ts`. Expert picker source confirmed: server-side `runner.listAgents()` filter in `src/dashboard/server.ts` lines 847–861. Render path clean from GET `/ideas/new` → `renderNewIdeaPage()` → team-grid + expert-grid templates. No UX gaps. Styling/layout watch-outs noted for responsive mobile. UX validation complete; handed off to Code for implementation. See `.squad/orchestration-log/2026-03-24T05-41-29Z-ux.md`.
 
+## Learnings
+
+- 2026-03-25 — Stage 6 editor context is intentionally bounded in `src/pipeline/context-config.ts` to `draft.md` plus `roster-context.md`, `fact-check-context.md`, and `writer-factcheck.md`; `src/pipeline/actions.ts` reinforces the same mental model with compact shared revision handoff plus editor-only prior review history.
+- 2026-03-25 — The editor charter and `src/config/defaults/skills/editor-review.md` stay coherent with runtime wiring: `writer-factcheck.md` is advisory-only, roster context is for wrong-team checks, and the editor must end on the canonical `## Verdict` block.
+- 2026-03-25 — Publish-page clarity currently depends on separation between `renderPublishWorkflow()` (required draft/publish path) and `renderPromotionTools()` / `renderPublishAll()` (distribution helpers) in `src/dashboard/views/publish.ts`; `tests/dashboard/publish.test.ts` covers the main workflow states and disabled-config behavior but not deeper assertions about that required-vs-optional boundary.
 
