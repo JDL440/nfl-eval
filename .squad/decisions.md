@@ -3042,3 +3042,36 @@ This makes the guardrails enforceable in code and prompting without prematurely 
 
 If later slices add the approved-source helper, they should populate the existing `writer-factcheck.md` sections and budget summary rather than inventing a second artifact shape.
 
+
+---
+
+# Lead Review — Issue #125 Slice 2 Revision
+
+**Date:** 2026-03-25  
+**Reviewer:** Lead  
+**Status:** APPROVED
+
+## Outcome
+
+Approve Data's slice-2 revision for Issue #125. The two prior rejection reasons are now resolved in the runtime implementation and focused regression coverage.
+
+## Evidence
+
+1. **Approved-source ladder parity restored**
+   - `src/config/defaults/skills/writer-fact-check.md:29-35` and `src/config/defaults/charters/nfl/writer.md:73-78` still approve official NFL/team primary pages.
+   - `src/pipeline/writer-factcheck.ts:95-109` now classifies both `nfl.com` / `*.nfl.com` and curated official team domains as `official_primary`.
+   - `tests/pipeline/actions.test.ts:1654-1682` and `tests/pipeline/writer-factcheck.test.ts:9-38` cover team-site allowlisting and fetch behavior through the approved-source helper.
+
+2. **Wall-clock budget enforced at fetch boundary**
+   - `src/pipeline/writer-factcheck.ts:497-543` computes remaining budget before each fetch, clamps the fetch timeout to that remainder, and records `Wall-clock budget expired during approved-source fetch.` when the slow request consumes the remaining time.
+   - `tests/pipeline/actions.test.ts:1757-1806` and `tests/pipeline/writer-factcheck.test.ts:41-94` cover slow approved-source fetches exhausting the remaining budget.
+
+## Routing Decision
+
+Ralph should route the **final planned slice** (Editor consumption + tests) to **Code**. The runtime/reporting slice is now acceptable, but `src/pipeline/context-config.ts:27-28` still limits `writer-factcheck.md` to Writer context and does not yet expose it to `runEditor`.
+
+## Validation
+
+- `npm run v2:test -- tests/pipeline/actions.test.ts tests/pipeline/writer-factcheck.test.ts`
+- `npm run v2:build`
+
