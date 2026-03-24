@@ -33,6 +33,8 @@
 ## Generate Idea Selector — Hygiene Review (2026-03-24T05:37:47Z)
 
 **Status:** Conditional Approval  
+
+- 2026-03-24T22:10:02Z — **V3 Stage 1 Dashboard Audit — UX Slice Complete**: UX reviewed Stage 1 dashboard/mobile slice for legacy path consolidation. Findings: `/htmx/recent-ideas` path (Stage-1-only) still exists alongside `/htmx/continue-articles`; `renderRecentIdeas()` delegates to `renderContinueArticles()` showing functional duplication. No breaking issues identified. All paths examined. Session log: `.squad/log/2026-03-24T22-10-02Z-dashboard-audit.md`. Orchestration: `.squad/orchestration-log/2026-03-24T22-10-02Z-ux.md`.
 **Focus:** Duplication + abbreviation fix
 
 **Finding:** Server filters expert agents by hardcoding TEAMS set, duplicating TEAM_ABBRS from agents.ts. Abbreviation inconsistency: 'wsh' vs 'was' (Washington).

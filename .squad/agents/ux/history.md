@@ -47,6 +47,17 @@
 - 2026-03-23 — Accepted publish-page error handling pattern: for operator-fixable Substack config failures, keep JSON callers on HTTP 500 with the raw machine-readable error, but return an HTMX-swappable publish-workflow fragment with the short alert, exact env vars (`SUBSTACK_PUBLICATION_URL`, `SUBSTACK_TOKEN`), restart guidance, and `/config` link.
 - 2026-03-23 — Exact validation commands for the final scoped publish fix: `npx vitest run tests/dashboard/publish.test.ts -t "creates the startup Substack service when publish env vars are present|returns an actionable HTMX message when Substack is not configured|returns error when SubstackService not configured|returns error when publishing without an existing linked Substack draft|shows empty state when no draft exists|renders publish preview page with article content"` and `npm run v2:build`.
 
+### 2026-03-24T22-10-02Z: Scribe Cross-Agent Update — V3 Stage 1 Dashboard Audit
+
+**Status:** All audit slices complete. Orchestration logs written. Session summary documented.
+
+**Findings for UX:**
+- Legacy `/htmx/recent-ideas` path (Stage-1-only) exists alongside `/htmx/continue-articles`
+- `renderRecentIdeas()` delegates to `renderContinueArticles()` showing functional duplication
+- No breaking issues; paths are fully examined in collaboration with Code slice
+- Session log: `.squad/log/2026-03-24T22-10-02Z-dashboard-audit.md`
+- Orchestration: `.squad/orchestration-log/2026-03-24T22-10-02Z-ux.md`
+
 ### 2026-03-23T04-16-31Z: Scribe Cross-Agent Update — Publish Config Fix Coordination
 
 **Coordinated Session:** Multi-agent Publish Config investigation  

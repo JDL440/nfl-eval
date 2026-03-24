@@ -59,6 +59,8 @@
 
 **Next:** Backend implementation of writer-preflight runtime in `src/pipeline/actions.ts` / `src/pipeline/writer-preflight.ts` with deterministic linter in `src/pipeline/engine.ts`.
 
+- 2026-03-24T22:10:02Z — **V3 Stage 1 Dashboard Audit — Server Slice Complete**: Code reviewed Stage 1 server/test slice for legacy route cleanup and contract alignment. Findings: `/htmx/recent-ideas` route still exposed in `src/dashboard/server.ts`; test assertions in `tests/e2e/live-server.test.ts` still reference legacy path; `depthLevel` parameter accepts 4 while UI contract enforces 1-3 simplified levels. Initial test-failure blocking claim was invalidated by coordinator (93/93 passing in direct run). All paths examined: `src/dashboard/server.ts`, `src/dashboard/views/home.ts`, `src/dashboard/views/new-idea.ts`, `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`. Session log: `.squad/log/2026-03-24T22-10-02Z-dashboard-audit.md`. Orchestration: `.squad/orchestration-log/2026-03-24T22-10-02Z-code.md`.
+
 ---
 
 ## Generate Idea Selector — Implementation (2026-03-24T05:37:47Z)
