@@ -2645,3 +2645,313 @@ Treat Issue #115 as **already satisfied on current mainline** and ready for issu
 ## Caveat
 
 The prior Lead closeout section in .squad/decisions.md was accurate when written but is now stale on one point: it said README lacked operator documentation. Current mainline README includes that documentation, so the remaining work is backlog/issue reconciliation rather than feature completion.
+
+---
+
+# Research Decision — Issue #125: Writer Fact-Checking Guardrails
+
+**Date:** 2026-03-25  
+**Requester:** Backend (Squad Agent)  
+**Status:** Ready for Code follow-up  
+**Related:** #125, #119, blocker-routing issue cluster (`#NEW-1/#NEW-2/#NEW-3/#NEW-5` in `.squad/decisions.md`)
+
+## TL;DR
+
+Writer should gain **bounded, targeted verification access**, not open-ended research autonomy. The safe v1 shape is: reuse existing local fact-check artifacts first, allow only a narrow approved-source ladder for high-risk claims, enforce a small external-check budget, require a durable fact-check artifact, and make Editor remain the final authority.
+
+## Current seam already in the repo
+
+- `writeDraft()` already builds and passes `roster-context.md`, `panel-factcheck.md`, and `fact-check-context.md` before Writer runs.
+- `runEditor()` already consumes `roster-context.md` and `fact-check-context.md`.
+- `recordAgentUsage()` plus `UsageEvent` / `StageRun` types already provide a telemetry seam for request counts, tokens, cost estimates, and stage metadata.
+
+That means v1 does **not** need a new architecture. It needs a policy contract, one bounded Writer-side research artifact, and budget enforcement around a small helper layer.
+
+---
+
+## 1) Approved source classes
+
+### Class A — Deterministic local/runtime sources
+**Approved for unqualified factual support in draft preparation.**  
+Use first. Reuse before any web lookup.
+
+- Supplied pipeline artifacts:
+  - `discussion-summary.md`
+  - `panel-*.md`
+  - `panel-factcheck.md`
+  - `roster-context.md`
+  - `fact-check-context.md`
+- Local structured data/query outputs already supported by repo tooling:
+  - nflverse roster, snap, schedule, draft, combine, player/team efficiency data
+  - local Python query helpers in `content/data/`
+  - deterministic validation/report helpers in `src/pipeline/fact-check-context.ts` and `src/pipeline/validators.ts`
+
+**Use for:** player-team assignment, season stats, draft facts, combine measurables, snap shares, team efficiency, schedule facts.  
+**Rule:** if Class A can answer the claim, Writer should not escalate to web research.
+
+### Class B — Official primary web sources
+**Approved for time-sensitive confirmation and primary-source attribution.**
+
+- Official NFL/team roster pages
+- Official NFL/team transaction pages
+- Official league schedules, standings, and press releases
+- Team site press conferences, press releases, and official announcements
+
+**Use for:** very recent transactions, dates, titles, official statements, formal announcements.  
+**Rule:** prefer Class B over secondary reporting when confirming "what happened" or "when it happened."
+
+### Class C — Trusted reference sources
+**Approved only through an allowlist and usually for attributed or dated facts.**
+
+- OverTheCap
+- Spotrac
+- Pro Football Reference
+- ESPN roster/depth/transaction pages
+
+**Use for:** contract structure/cap framing, historical stats cross-checks, roster/depth confirmation when Class A/B is incomplete.  
+**Rule:** if Class C conflicts with Class A/B, Writer must not silently pick a side; either use the higher-precedence source, attribute the source/date explicitly, or leave the claim unresolved for Editor.
+
+### Class D — Secondary reporting
+**Not approved as sole support for assertive prose in Writer v1.**
+
+- Beat reports
+- National news reports
+- Aggregators and recap articles
+
+**Allowed only to identify a follow-up check target** and only when the final factual support comes from Class A-C. If no A-C support is found within budget, Writer should soften, attribute cautiously, or omit.
+
+### Prohibited sources
+
+- Social posts, rumor accounts, Reddit, fan blogs, forums
+- AI-generated summaries or answer engines as evidence
+- Wikipedia as a sole source
+- Anonymous sourcing, private negotiation details, or unverifiable "someone said" claims
+- Medical/injury speculation beyond official/publicly documented reporting
+
+---
+
+## 2) Allowed tools for Writer
+
+### Allowed in v1
+
+1. **Existing supplied artifacts** already in article context
+2. **Existing deterministic local helpers** for nflverse-style checks
+3. **One narrow approved-domain fetch helper** for Class B/C URLs
+
+### Not allowed in v1
+
+- Raw open-ended web search for Writer
+- General browsing across arbitrary domains
+- Social/media scraping
+- Free-form "research until confident" loops
+
+## Tooling recommendation
+
+Code should **not** hand Writer a generic web-search capability. Instead, add a small resolver/helper with policy baked in, for example:
+
+- `resolveApprovedFactSources(claim)` → returns 0-N approved URL candidates and/or local lookup plans
+- `fetchApprovedSource(url)` → enforces domain allowlist and per-request timeout
+
+This keeps policy centralized and testable. `web_search` remains better suited to Research, not Writer.
+
+---
+
+## 3) Fact-check budget model
+
+### Budget principle
+
+Budget the **verification pass**, not the whole article. Writer should be able to de-risk a handful of expensive/high-risk claims without turning Stage 5 into a second Editor pass.
+
+### v1 enforced budget
+
+#### Fresh draft
+- **Local deterministic bundle:** 1 automatic pass, reusing `panel-factcheck.md`, `roster-context.md`, and `fact-check-context.md`
+- **External approved-source checks:** max **3**
+- **Distinct claims covered:** max **5 atomic claims** (or 3 tightly-coupled claim bundles)
+- **Wall-clock cap:** **5 minutes**
+
+#### Revision draft
+- Reuse prior Writer fact-check artifact first
+- **New external approved-source checks:** max **1** unless/until structured blocker routing lands
+- Only spend that check on a named unresolved blocker from Editor
+
+### v1 capture-only telemetry
+
+Persist, but do not hard-block on, these fields where available:
+
+- request count
+- prompt tokens / output tokens
+- estimated USD cost
+- source class used
+- domain used
+- claim count covered
+
+### Exhaustion rule
+
+If Writer hits budget before resolving a claim:
+
+1. mark the claim **unverified** in the fact-check artifact,
+2. either soften/attribute/omit it in prose,
+3. hand the residual risk to Editor instead of looping.
+
+### Why this model
+
+- Count + wall-time are stable across providers.
+- Existing usage telemetry can still report tokens/cost when present.
+- Revision loops stay bounded while blocker-routing work is still pending.
+
+---
+
+## 4) Citation + uncertainty contract
+
+### Required new artifact
+
+Add a Writer-side artifact such as `writer-factcheck.md` (or similarly named, but distinct from `panel-factcheck.md`).
+
+### Required sections
+
+1. **Verified facts used in draft**
+   - claim
+   - status
+   - source class
+   - source label/domain
+   - as-of date if volatile
+2. **Attributed but not fully verified**
+   - claim
+   - source used
+   - why it remains cautious
+   - required prose treatment
+3. **Unverified / omitted claims**
+   - claim
+   - why not cleared
+   - action taken (softened / removed / flagged for Editor)
+4. **Budget summary**
+   - local checks used
+   - external checks used
+   - domains touched
+   - remaining budget / exhausted
+
+### Prose rules
+
+### Writer may state plainly when:
+- the claim is supported by Class A, or
+- the claim is supported by Class B and is straightforward/current
+
+### Writer must attribute inline when:
+- using Class C for a volatile number or ranking
+- citing a time-sensitive roster/transaction fact
+- relying on a source that could drift quickly
+
+Recommended style:
+- "Per OverTheCap on 2026-03-25, …"
+- "According to the Seahawks' official transaction wire, …"
+- "Pro Football Reference credits him with …"
+
+### Writer must soften or omit when:
+- no approved source supports the claim within budget
+- approved sources materially conflict
+- the claim is interpretive but reads like a hard fact
+
+Recommended fallback language:
+- "appears"
+- "reportedly"
+- "projects as"
+- "the current public data suggests"
+
+### Conflict rule
+
+When sources diverge:
+
+1. prefer Class A over B/C
+2. prefer Class B over C for current-state facts
+3. for cap/contract variance within Class C, name the source/date or avoid precision
+4. never collapse an unresolved conflict into a bare factual sentence
+
+---
+
+## 5) Operator and agent guardrails
+
+### Writer guardrails
+
+- Writer verifies **specific risky claims**, not the entire article.
+- Writer may not use research to invent a new thesis that the panel did not supply.
+- Writer may not promote rumors, anonymous sourcing, or private-information claims into prose.
+- Writer may not use external research to override panel disagreement silently; disagreement stays visible when material.
+- Writer must prefer omission over false precision.
+
+### Editor guardrails
+
+- Editor remains the mandatory final fact-check gate.
+- A Writer verification artifact reduces churn; it does not create auto-approval.
+- Editor should treat missing Writer verification on a volatile claim as a review target, not as proof the claim is false.
+
+### Operator guardrails
+
+- v1 should be **draft-stage first**, not a full revision-loop router.
+- If verification repeatedly fails because evidence is missing, that belongs with the blocker-routing/evidence-deficit work, not with more Writer autonomy.
+- Keep domain allowlists and source precedence in code/config, not in free-text prompts only.
+
+---
+
+## 6) Minimum implementation slices for Code
+
+### Slice A — Policy + artifact contract (smallest, safest first)
+
+- Update `src/config/defaults/charters/nfl/writer.md` to allow bounded targeted verification under explicit rules
+- Add `src/config/defaults/skills/writer-fact-check.md`
+- Define the `writer-factcheck.md` artifact contract and source ladder
+
+**Why first:** this is the minimum change that turns design into a testable contract without changing routing logic yet.
+
+### Slice B — Bounded Stage 5 helper + usage metadata
+
+- In `src/pipeline/actions.ts`, add a small Writer-side verification step before/during `writeDraft()`
+- Reuse existing local artifacts first
+- Enforce:
+  - approved source allowlist
+  - max external checks
+  - wall-clock timeout
+- Record usage metadata through existing usage/stage seams
+
+**Why second:** the repo already has the seam; this makes the policy real.
+
+### Slice C — Editor consumption + tests
+
+- Include `writer-factcheck.md` in Editor context
+- Add tests covering:
+  - allowed vs blocked source domains
+  - budget exhaustion behavior
+  - citation requirement for volatile facts
+  - uncertainty fallback when no source is cleared
+
+**Why third:** closes the loop and prevents silent policy drift.
+
+### Deliberately deferred
+
+- Revision-time multi-check routing
+- Automatic escalation to Research on evidence deficit
+- repeated-blocker routing and Lead escalation
+
+Those should stay coordinated with the structured blocker foundation already called out in `.squad/decisions.md`.
+
+---
+
+## Proposed acceptance shape for Code
+
+- Writer can verify a small number of risky claims using only approved sources/tools
+- Writer emits a durable fact-check artifact with status + source + budget summary
+- Pipeline enforces count/time budgets for Writer-side research
+- Editor receives the Writer verification artifact
+- Tests prove:
+  - blocked sources are rejected
+  - exhausted budget forces soften/omit behavior
+  - volatile facts require attribution or unverified marking
+
+## Recommendation
+
+Route the next implementation pass to **Code**, but keep scope intentionally narrow:
+
+1. Stage 5 only
+2. no general web search
+3. approved-domain helper only
+4. no blocker-routing dependency in v1 beyond clean deferral notes

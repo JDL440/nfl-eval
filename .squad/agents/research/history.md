@@ -24,6 +24,8 @@
 
 ## Learnings
 
+- 2026-03-25 — Issue `#125` design: Writer should get bounded Stage 5 verification access via a source ladder (local/runtime artifacts → official primary sources → trusted references), a small external-check budget, and a durable `writer-factcheck.md` artifact; avoid giving Writer raw web-search autonomy.
+- 2026-03-25 — Existing seams already support `#125` without new architecture: `src/pipeline/actions.ts` injects `panel-factcheck.md`, `roster-context.md`, and `fact-check-context.md`, while `recordAgentUsage()` plus `src/types.ts` usage/stage types can capture verification telemetry.
 - 2026-03-25 — Issue `#115` already has a strong v1 structured surface: `src/db/schema.sql` persists `article_retrospectives` + `article_retrospective_findings`, `src/db/repository.ts` exposes `listRetrospectiveDigestFindings(limit)`, `src/cli.ts` ships `retrospective-digest` / `retro-digest`, and `src/types.ts` defines the bounded digest report/candidate/category contracts.
 - 2026-03-25 — Retrospective findings are synthesized from revision-loop state, not markdown scraping: `src/pipeline/actions.ts` builds writer/editor/lead findings from `revision_summaries`, revision issue history, and force-approval detection, then stores both a markdown artifact and normalized DB rows.
 - 2026-03-25 — The current digest shape is intentionally bounded and manual-review-first: `src/cli.ts` dedupes by normalized finding text within `role + finding_type`, limits promoted candidates to 5 process-improvement items and 5 learning updates, and caps category examples at 3.
