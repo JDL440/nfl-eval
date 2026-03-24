@@ -36,9 +36,10 @@ When Editor returns a `REVISE` with the same blocker signature as the immediatel
 6. **Define outcomes:** `REFRAME` → Stage 4 regression; `WAIT`/`PAUSE` → remain Stage 6; `ABANDON` → archive.
 
 **Implementation seams:**
-- Detection: `src/pipeline/actions.ts:autoAdvanceArticle()` — exact-match blocker fingerprint logic
-- Artifact: `lead-review.md` generated in `src/pipeline/actions.ts:saveArticle()` or equivalent
-- Tests: `tests/pipeline/actions.test.ts` — prove escalation fires, old loop does not
+- Detection helpers: `src/pipeline/conversation.ts` — normalize `blocker_type` + `blocker_ids`, then compare only the last two editor `REVISE` summaries
+- Escalation seam: `src/pipeline/actions.ts` — `maybeEscalateRepeatedRevisionBlocker()` writes `lead-review.md` and flips the article to `needs_lead_review`
+- Visibility seam: `src/dashboard/views/article.ts` + `src/db/repository.ts` — treat `lead-review.md` as a first-class Stage 6 artifact and clear it automatically on regressions below Stage 6
+- Tests: `tests/pipeline/actions.test.ts` + `tests/pipeline/conversation.test.ts` — prove the exact-match detection fires and the old regress/force-approve path does not
 
 ## Why This Works
 

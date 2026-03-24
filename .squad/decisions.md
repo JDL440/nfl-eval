@@ -1,36 +1,35 @@
-# Code Decision — Issue #123 (Actionable / Unblocked by #120)
+# Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
 
-**Date:** 2026-03-26  
+**Date:** 2026-03-26 (decision) → 2026-03-24 (completion)  
 **Issue:** #123 — Escalate repeated blockers to Lead for decision instead of infinite loop  
-**Status:** Actionable (Code owner)  
-**Blocker unblocked:** `#120` structured blocker seam complete and merged
+**Status:** ✅ COMPLETE (Code owner)  
 
-## Decision
+## Decision & Implementation
 
-Issue #123 is now ready for implementation. `#120` has delivered the structured blocker seam (`blocker_type` + `blocker_ids` on revision summaries with repository/test coverage), unblocking repeated-blocker escalation as the next narrow runtime slice.
+Issue #123 repeated-blocker escalation is complete and validated.
 
-## Acceptance Criteria
+### Implementation Summary
+- **Detection:** `src/pipeline/conversation.ts` normalizes `blocker_type` + `blocker_ids` into exact fingerprint; `src/pipeline/actions.ts` detects consecutive repeat across last two editor `REVISE` summaries
+- **Handoff:** On repeat, write `lead-review.md` (normalized fingerprint + latest feedback + action menu); set article status to `needs_lead_review`; keep article at Stage 6
+- **Non-repeated path:** Normal revision/max-revision flow unchanged
+- **Cleanup:** `src/db/repository.ts` clears `lead-review.md` on regression below Stage 6
+- **Visibility:** `src/dashboard/views/article.ts` includes `lead-review.md` in artifact allowlist + Stage 6 cleanup rules
 
-- Detect a repeated blocker across **consecutive editor `REVISE` summaries** using structured blocker metadata.
-- Route repeated blockers to **Lead review** instead of another automatic Writer retry.
-- Define the durable Lead handoff seam and the minimal article state transition.
-- Add focused tests that prove escalation happens and the old regress/force-approve loop does not fire for the repeated-blocker case.
+### Acceptance Criteria — VERIFIED
+- ✅ Detect repeated blocker across consecutive editor `REVISE` summaries using structured blocker metadata
+- ✅ Route repeated blockers to Lead review instead of automatic retry
+- ✅ Define durable Lead handoff seam (`lead-review.md`) and minimal state transition (`needs_lead_review` at Stage 6)
+- ✅ Focused tests prove escalation triggers and regress/force-approve paths do not fire
 
-## Implementation Seams
+### Implementation Seams
+- **Detection seam:** `autoAdvanceArticle()` in `src/pipeline/actions.ts` compares last two consecutive editor revision summaries using normalized blocker fingerprint
+- **Artifact seam:** `lead-review.md` captures repeated blocker fingerprint, latest editor feedback, candidate next-action menu for Lead
+- **State seam:** Article status `needs_lead_review` at Stage 6 (no new stage). Stops automatic regression to Stage 4 and skips force-approve path
+- **Post-Lead outcomes (definition only):** `REFRAME` → Stage 4 regression; `WAIT`/`PAUSE` → remain Stage 6; `ABANDON` → archive
 
-- **Detection seam:** in `autoAdvanceArticle()`, compare the last two consecutive editor revision summaries using a normalized blocker fingerprint (`blocker_type` + normalized `blocker_ids`). Keep it exact-match only for this issue; do not broaden into heuristic similarity.
-- **Artifact seam:** on escalation, write a dedicated `lead-review.md` artifact that captures the repeated blocker fingerprint, the latest editor feedback, and the candidate next-action menu for Lead.
-- **State seam:** add a minimal article status `needs_lead_review` while keeping the article at Stage 6. Do **not** add a new stage. On escalation, stop automatic regression to Stage 4 and skip the force-approve path.
-- **Post-Lead outcomes (definition only):**
-  - `REFRAME` → existing regression path back to Stage 4 / `revision`
-  - `WAIT` / `PAUSE` → remain Stage 6 / `needs_lead_review` until resumed
-  - `ABANDON` → existing archived path
-
-## Non-Goals
-
-- Do **not** reopen `#120` unless a real defect is found in blocker persistence itself.
-- Do **not** broaden into `#124` fallback/claim-mode, new article modes, or opinion-framing policy.
-- Do **not** introduce fuzzy blocker matching; exact repeated structured blockers are sufficient for this slice.
+### Validation
+- **Tests:** `npm run test -- tests/pipeline/actions.test.ts tests/pipeline/conversation.test.ts tests/db/repository.test.ts` → ✅ PASSED
+- **Build:** `npm run v2:build` → ✅ PASSED
 
 ---
 
