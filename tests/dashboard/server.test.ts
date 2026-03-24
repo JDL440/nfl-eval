@@ -232,13 +232,20 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('NFL Lab');
+      expect(html).toContain('Start Here');
       expect(html).toContain('Ready to Publish');
       expect(html).toContain('Pipeline');
-      expect(html).toContain('Recent Ideas');
+      expect(html).toContain('Continue Articles');
+      expect(html).toContain('Create Idea');
+      expect(html).toContain('Continue article');
     });
 
     it('home page shows articles in correct sections', async () => {
       repo.createArticle({ id: 'idea-1', title: 'Idea One' });
+      repo.createArticle({ id: 'drafting-1', title: 'Drafting One' });
+      for (let s = 2; s <= 5; s++) {
+        repo.advanceStage('drafting-1', s - 1, s, 'test');
+      }
       repo.createArticle({ id: 'ready-1', title: 'Ready One' });
       // Advance ready-1 through stages to 7
       for (let s = 2; s <= 7; s++) {
@@ -248,7 +255,11 @@ describe('Dashboard Server', () => {
       const res = await app.request('/');
       const html = await res.text();
       expect(html).toContain('Idea One');
+      expect(html).toContain('Drafting One');
       expect(html).toContain('Ready One');
+      expect(html).toContain('Stage 5');
+      expect(html).toContain('Continue Article');
+      expect(html).toContain('/articles/ready-1/publish');
     });
 
     it('article detail page renders', async () => {
@@ -499,14 +510,23 @@ describe('Dashboard Server', () => {
       expect(html).toContain('card-ready');
     });
 
-    it('GET /htmx/recent-ideas returns HTML fragment', async () => {
+    it('GET /htmx/continue-articles returns active Stage 1-6 articles', async () => {
       repo.createArticle({ id: 'idea-htmx', title: 'Idea Htmx' });
+      repo.createArticle({ id: 'discussion-htmx', title: 'Discussion Htmx' });
+      repo.advanceStage('discussion-htmx', 1, 2, 'test');
+      repo.createArticle({ id: 'publish-htmx', title: 'Publish Htmx' });
+      for (let s = 2; s <= 7; s++) {
+        repo.advanceStage('publish-htmx', s - 1, s, 'test');
+      }
 
-      const res = await app.request('/htmx/recent-ideas');
+      const res = await app.request('/htmx/continue-articles');
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Idea Htmx');
+      expect(html).toContain('Discussion Htmx');
       expect(html).toContain('card-idea');
+      expect(html).not.toContain('Publish Htmx');
+      expect(html).toContain('Continue Article');
     });
 
     it('GET /htmx/articles/:id/context-config returns defaults when no overrides', async () => {
@@ -876,11 +896,11 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/stage7-publish');
       const html = await res.text();
 
-      expect(html).toContain('Open Publish Page');
+      expect(html).toContain('Continue to Publish');
       expect(html).not.toContain('Publish to Substack');
-      expect(html).toContain('Substack draft saved. Open the Publish Page');
+      expect(html).toContain('Substack draft ready. Continue to Publish');
       expect(html).not.toContain('substack_url not set on article');
-      expect(html).toContain('Open Draft ↗');
+      expect(html).toContain('View Draft ↗');
     });
   });
 

@@ -138,10 +138,10 @@ export function renderPublishPreview(data: PublishPreviewData): string {
   } = data;
 
   const content = `
-    <div class="article-detail">
+    <div class="article-detail publish-page">
       <div class="detail-header">
         <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article Detail</a>
-        <h1>Publish Page: ${escapeHtml(article.title)}</h1>
+        <h1>Review &amp; Publish: ${escapeHtml(article.title)}</h1>
         ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
         <div class="detail-meta">
           ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
@@ -149,10 +149,10 @@ export function renderPublishPreview(data: PublishPreviewData): string {
             Stage ${article.current_stage}
           </span>
         </div>
-        <p class="hint">Save a Substack draft for review, then publish that linked draft live when ready.</p>
+        <p class="hint">Save or update a Substack draft, review it in context, then publish that linked draft live when ready.</p>
       </div>
 
-      <div class="detail-grid">
+      <div class="detail-grid publish-layout">
         <div class="detail-main">
           <section class="detail-section">
             <div class="action-bar" style="justify-content:space-between; margin-bottom:0.75rem;">
@@ -169,6 +169,14 @@ export function renderPublishPreview(data: PublishPreviewData): string {
         </div>
 
         <div class="detail-sidebar">
+          <section class="detail-section publish-flow-summary">
+            <h2>Next Steps</h2>
+            <ol class="flow-list">
+              <li>Save or update the linked Substack draft.</li>
+              <li>Review the draft preview or open the live Substack editor.</li>
+              <li>Publish the linked draft live when everything looks right.</li>
+            </ol>
+          </section>
           ${renderPublishWorkflow({ article, substackConfigured })}
 
           ${renderNoteComposer(article)}

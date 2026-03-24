@@ -269,9 +269,12 @@ describe('Publish Workflow', () => {
 
       const html = await res.text();
       expect(html).toContain('Publish Preview Test');
+      expect(html).toContain('Review &amp; Publish: Publish Preview Test');
       expect(html).toContain('Test Article');
       expect(html).toContain('Some content here');
       expect(html).toContain('Published Layout Preview');
+      expect(html).toContain('Next Steps');
+      expect(html).toContain('Save or update the linked Substack draft.');
       expect(html).toContain('Update Draft on Substack');
       expect(html).toContain('Publish Now');
     });

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "_note": "Authoritative model assignments for the NFL Lab pipeline. Edit here — do not hardcode models in individual charters or skill docs.",
+  "_note": "Authoritative model assignments for the NFL Lab pipeline, including dashboard Stage 1 idea generation via the lead role. Edit here — do not hardcode models in individual charters or skill docs.",
   "models": {
     "writer": "gpt-5-mini",
     "editor": "gpt-5-mini",
