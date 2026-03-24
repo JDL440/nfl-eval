@@ -42,6 +42,9 @@ import {
 import {
   executeWriterFactCheckPass,
 } from '../../src/pipeline/writer-factcheck.js';
+import {
+  buildWriterPreflightChecklist,
+} from '../../src/pipeline/writer-preflight.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -64,6 +67,8 @@ function longText(wordCount: number): string {
   return Array.from({ length: wordCount }, (_, i) => `word${i}`).join(' ');
 }
 
+const PANEL_FACTCHECK_OK = '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.';
+
 function validDraft(wordCount = 900): string {
   return `# Headline
 
@@ -78,6 +83,79 @@ function validDraft(wordCount = 900): string {
 **By: The NFL Lab Expert Panel**
 
 ${longText(wordCount)}
+
+---
+
+**Next from the panel:** Should Seattle double down on the offensive line or spend that money on a pass catcher?
+`;
+}
+
+function draftWithNameMismatch(wordCount = 500): string {
+  return `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+> - Fourth takeaway
+
+**By: The NFL Lab Expert Panel**
+
+**Jackson Smith-Njigba** is the cleanest separator in this offense, and the article should keep that exact name consistent with the supplied material.
+
+${longText(wordCount)}
+
+---
+
+**Next from the panel:** Why Seattle's third-receiver usage could decide the next playoff push.
+`;
+}
+
+function draftWithUnsupportedPreciseClaims(wordCount = 500): string {
+  return `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+> - Fourth takeaway
+
+**By: The NFL Lab Expert Panel**
+
+**Geno Smith**'s $32 million extension on March 14, 2026 would be justified by his 4,320 passing yards, even though the supplied material never nails down those exact numbers.
+
+${longText(wordCount)}
+
+---
+
+**Next from the panel:** The next cap domino this front office cannot dodge.
+`;
+}
+
+function draftWithPlaceholderLeakage(wordCount = 500): string {
+  return `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+> - Fourth takeaway
+
+**By: The NFL Lab Expert Panel**
+
+TODO: tighten this lede once the final version is ready.
+
+${longText(wordCount)}
+
+---
+
+**Next from the panel:** Should Seattle bet on internal growth or add another veteran pass catcher?
 `;
 }
 
@@ -514,7 +592,7 @@ describe('STAGE_ACTIONS', () => {
 
   describe('writeDraft', () => {
     it('calls writer agent and writes draft.md', async () => {
-      setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
+      setRunnerProvider(fixtures, new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]));
       createArticleWithStage(fixtures, 'test-wd', 4 as Stage, {
         'idea.md': '# Idea',
         'discussion-prompt.md': '# Prompt',
@@ -529,7 +607,7 @@ describe('STAGE_ACTIONS', () => {
     });
 
     it('passes the canonical TLDR contract to the writer via the substack-article skill', async () => {
-      const provider = new RecordingProvider([validDraft()]);
+      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-contract', 4 as Stage, {
         'idea.md': '# Idea',
@@ -547,7 +625,7 @@ describe('STAGE_ACTIONS', () => {
     });
 
     it('passes the bounded writer fact-check policy to the writer prompt', async () => {
-      const provider = new RecordingProvider([validDraft()]);
+      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-factcheck-skill', 4 as Stage, {
         'idea.md': '# Idea',
@@ -565,9 +643,30 @@ describe('STAGE_ACTIONS', () => {
       expect(systemPrompt).toContain('External approved-source checks: **max 3**');
     });
 
+    it('passes a short editor-style preflight checklist to the writer prompt', async () => {
+      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-preflight-prompt', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nJaxon Smith-Njigba is central to the passing game.',
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-preflight-prompt', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
+      expect(requestContent).toContain(buildWriterPreflightChecklist());
+      expect(requestContent).toContain('Do not expand a last name into a full name');
+      expect(requestContent).toContain('contract figure, date, draft fact, or stat');
+      expect(requestContent).not.toContain('Prose vs. tables');
+      expect(requestContent).not.toContain('**Next from the panel:** teaser');
+    });
+
     it('self-heals drafts missing the TLDR structure before succeeding', async () => {
       const provider = new RecordingProvider([
-        '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
+        PANEL_FACTCHECK_OK,
         `# Headline
 
 *Subtitle*
@@ -592,7 +691,7 @@ ${longText(400)}`,
 
     it('fails when the retry draft still misses the TLDR contract', async () => {
       const provider = new RecordingProvider([
-        '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
+        PANEL_FACTCHECK_OK,
         `# Headline
 
 *Subtitle*
@@ -619,8 +718,119 @@ ${longText(450)}`,
       expect(result.error).toContain('TLDR');
     });
 
+    it('retries when the draft expands a name beyond what the supplied artifacts support', async () => {
+      const provider = new RecordingProvider([
+        PANEL_FACTCHECK_OK,
+        draftWithNameMismatch(),
+        validDraft(),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-name-preflight', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nSmith-Njigba is the featured separator in this article.',
+      });
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-name-preflight', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(runSpy).toHaveBeenCalledTimes(3);
+      const retryCall = runSpy.mock.calls[2]?.[0];
+      expect(retryCall?.agentName).toBe('writer');
+      expect(retryCall?.task).toContain('failed the writer preflight on hard factual issues');
+      expect(retryCall?.task).toContain('Jackson Smith-Njigba');
+      expect(retryCall?.task).toContain('Smith-Njigba');
+      runSpy.mockRestore();
+    });
+
+    it('retries when the draft uses unsupported precise contract/date/stat language', async () => {
+      const provider = new RecordingProvider([
+        PANEL_FACTCHECK_OK,
+        draftWithUnsupportedPreciseClaims(),
+        validDraft(500),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-precise-claim-preflight', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nGeno Smith remains the quarterback question, but keep contract language cautious.',
+      });
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-precise-claim-preflight', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(runSpy).toHaveBeenCalledTimes(3);
+      const retryCall = runSpy.mock.calls[2]?.[0];
+      expect(retryCall?.task).toContain('unsupported precise contract language');
+      expect(retryCall?.task).toContain('March 14, 2026');
+      expect(retryCall?.task).toContain('4,320 passing yards');
+      runSpy.mockRestore();
+    });
+
+    it('retries when the draft still contains placeholder scaffolding text', async () => {
+      const provider = new RecordingProvider([
+        PANEL_FACTCHECK_OK,
+        draftWithPlaceholderLeakage(),
+        validDraft(500),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-placeholder-preflight', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKeep the lede crisp and publication-ready.',
+      });
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-placeholder-preflight', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(runSpy).toHaveBeenCalledTimes(3);
+      const retryCall = runSpy.mock.calls[2]?.[0];
+      expect(retryCall?.task).toContain('placeholder or scaffolding text');
+      expect(retryCall?.task).toContain('TODO');
+      const preflightArtifact = fixtures.repo.artifacts.get('test-wd-placeholder-preflight', 'writer-preflight.md') ?? '';
+      expect(preflightArtifact).toContain('**Repair triggered:** yes');
+      expect(preflightArtifact).toContain('[placeholder-leakage]');
+      expect(preflightArtifact).toContain('No deterministic writer-preflight issues found.');
+      runSpy.mockRestore();
+    });
+
+    it('does not retry a non-risky draft that already respects the preflight', async () => {
+      const provider = new RecordingProvider([
+        PANEL_FACTCHECK_OK,
+        validDraft(500),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-preflight-clean', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nJaxon Smith-Njigba is central to the passing game.',
+      });
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run');
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-preflight-clean', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(runSpy).toHaveBeenCalledTimes(2);
+      const preflightArtifact = fixtures.repo.artifacts.get('test-wd-preflight-clean', 'writer-preflight.md') ?? '';
+      expect(preflightArtifact).toContain('**Status:** passed');
+      expect(preflightArtifact).toContain('**Repair triggered:** no');
+      expect(preflightArtifact).toContain('No deterministic writer-preflight issues found.');
+      runSpy.mockRestore();
+    });
+
     it('keeps writer conversation handoff summary-only while still providing the full current editor review', async () => {
-      const provider = new RecordingProvider([validDraft()]);
+      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-handoff', 4 as Stage, {
         'idea.md': '# Idea',
@@ -650,13 +860,37 @@ ${longText(450)}`,
 
       expect(result.success).toBe(true);
       const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+      const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
       expect(userPrompt).toContain('## Shared Revision Handoff');
       expect(userPrompt).toContain('Tighten the math.');
       expect(userPrompt).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
-      expect(userPrompt).toContain('Use the bounded writer fact-check contract only for specific risky claims; do not turn this into open-ended research.');
-      expect(userPrompt).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
-      expect(userPrompt).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
-      expect(userPrompt).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
+      expect(requestContent).toContain(buildWriterPreflightChecklist());
+      expect(requestContent).toContain('Do not expand a last name into a full name');
+      expect(requestContent).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
+      expect(requestContent).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
+      expect(requestContent).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
+    });
+
+    it('uses the shared writer task builder for revisions so the checklist survives revision prompts', async () => {
+      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-revision-task', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nSmith-Njigba remains the featured separator.',
+        'draft.md': validDraft(500),
+        'editor-review.md': '## Verdict\nREVISE\n\nTighten the lede and keep the facts cautious.',
+        '_config.json': JSON.stringify({ writeDraft: [] }, null, 2),
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-revision-task', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+      expect(userPrompt).toContain('You are REVISING an existing draft — NOT writing from scratch.');
+      expect(userPrompt).toContain(buildWriterPreflightChecklist());
+      expect(userPrompt).toContain('do not turn Stage 5 into open-ended research');
     });
   });
 
@@ -1243,7 +1477,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('writeDraft includes idea.md as upstream context by default', async () => {
-    setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
+    setRunnerProvider(fixtures, new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]));
     createArticleWithStage(fixtures, 'test-ctx-wd', 4 as Stage, {
       'idea.md': '# Original Angle\nSeahawks cap space.',
       'discussion-prompt.md': '# Prompt',
@@ -1296,7 +1530,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('respects pipeline-context.json overrides', async () => {
-    setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
+    setRunnerProvider(fixtures, new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]));
     const configDir = join(fixtures.tempDir, 'config');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
@@ -1315,7 +1549,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('uses per-article overrides stored in _config.json', async () => {
-    const provider = new RecordingProvider([validDraft()]);
+    const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
     setRunnerProvider(fixtures, provider);
     createArticleWithStage(fixtures, 'test-ctx-article-override', 4 as Stage, {
       'idea.md': '# Idea\nUPSTREAM IDEA',
@@ -1334,7 +1568,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('works with empty include list (minimal context)', async () => {
-    setRunnerProvider(fixtures, new RecordingProvider([validDraft()]));
+    setRunnerProvider(fixtures, new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]));
     const configDir = join(fixtures.tempDir, 'config');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'pipeline-context.json'), JSON.stringify({
@@ -1397,7 +1631,7 @@ describe('Configurable upstream context', () => {
   });
 
   it('rich context preset widens writeDraft defaults', async () => {
-    const provider = new RecordingProvider([validDraft()]);
+    const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
     setRunnerProvider(fixtures, provider);
     fixtures.ctx.config.contextPreset = 'rich';
     createArticleWithStage(fixtures, 'test-ctx-rich', 4 as Stage, {

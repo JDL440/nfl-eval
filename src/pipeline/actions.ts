@@ -25,6 +25,14 @@ import {
   WRITER_FACTCHECK_ARTIFACT_NAME,
   WRITER_FACTCHECK_SKILL_NAME,
 } from './writer-factcheck.js';
+import {
+  buildWriterPreflightArtifact,
+  buildWriterPreflightChecklist,
+  runWriterPreflight,
+  WRITER_PREFLIGHT_ARTIFACT_NAME,
+  type WriterPreflightState,
+  type WriterPreflightSourceArtifact,
+} from './writer-preflight.js';
 import { validateStatClaims, validateDraftClaims, buildValidationReport } from './validators.js';
 import { estimateCost } from '../llm/pricing.js';
 import {
@@ -63,6 +71,7 @@ export type StageAction = (articleId: string, ctx: ActionContext) => Promise<Act
 interface DraftValidationState {
   wordCount: number;
   structure: ReturnType<typeof inspectDraftStructure>;
+  preflight: WriterPreflightState;
 }
 
 // ── Types (panel) ───────────────────────────────────────────────────────────
@@ -407,15 +416,10 @@ export function recordPostRevisionRetrospectiveIfEligible(
   return true;
 }
 
-function validateDraftOutput(content: string): DraftValidationState {
-  return {
-    wordCount: content.split(/\s+/).filter(Boolean).length,
-    structure: inspectDraftStructure(content),
-  };
-}
-
 function needsDraftRepair(state: DraftValidationState): boolean {
-  return state.wordCount < MIN_DRAFT_WORDS || !state.structure.passed;
+  return state.wordCount < MIN_DRAFT_WORDS
+    || !state.structure.passed
+    || state.preflight.blockingIssues.length > 0;
 }
 
 function buildDraftRepairInstruction(state: DraftValidationState): string {
@@ -428,8 +432,40 @@ function buildDraftRepairInstruction(state: DraftValidationState): string {
       `${state.structure.reason}. Rebuild the top of the article to follow the canonical substack-article skill exactly: headline, italic subtitle, optional cover image markdown, then a > **📋 TLDR** block near the top with 4 bullet points before the author line or first section heading.`,
     );
   }
+  if (state.preflight.blockingIssues.length > 0) {
+    fixes.push(
+      'Your previous draft failed the writer preflight on hard factual issues. Repair these before you return the article:\n'
+      + state.preflight.blockingIssues.map((issue) => `- ${issue.message}`).join('\n'),
+    );
+  }
+  if (state.preflight.warnings.length > 0) {
+    fixes.push(
+      'Before you finish, also tighten these editor-facing checks where possible:\n'
+      + state.preflight.warnings.map((issue) => `- ${issue.message}`).join('\n'),
+    );
+  }
   fixes.push('Output the complete revised article markdown, not notes or an outline.');
   return fixes.join(' ');
+}
+
+const WRITER_EDITOR_PREFLIGHT_CHECKLIST = buildWriterPreflightChecklist();
+
+function buildWriterTask(isRevision: boolean): string {
+  const modeInstruction = isRevision
+    ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised.'
+    : 'Write an analytical article draft based on the panel discussion.';
+  return `${modeInstruction} Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.\n\n${WRITER_EDITOR_PREFLIGHT_CHECKLIST}\n\nOutput the complete article markdown.`;
+}
+
+function validateDraftOutput(
+  sourceArtifacts: WriterPreflightSourceArtifact[],
+  content: string,
+): DraftValidationState {
+  return {
+    wordCount: content.split(/\s+/).filter(Boolean).length,
+    structure: inspectDraftStructure(content),
+    preflight: runWriterPreflight({ draft: content, sourceArtifacts }),
+  };
 }
 
 function buildWriterSendBackReview(reason: string): string {
@@ -990,15 +1026,20 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const discussionArtifact = ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
     let factCheckCtxArtifact: string | null = ctx.repo.artifacts.get(articleId, 'fact-check-context.md');
     let contractClaims: string[] = [];
+    const panelSourceArtifacts: WriterPreflightSourceArtifact[] = [];
     if (discussionArtifact) {
       // Extract verifiable claims and build nflverse fact-check context
       const panelTexts = [discussionArtifact];
+      panelSourceArtifacts.push({ name: 'discussion-summary.md', content: discussionArtifact });
       // Also gather individual panel outputs for broader claim extraction
       const allArtifacts = ctx.repo.artifacts.list(articleId);
       for (const a of allArtifacts) {
         if (a.name.startsWith('panel-') && a.name !== 'panel-factcheck.md' && a.name !== 'panel-composition.md') {
           const content = ctx.repo.artifacts.get(articleId, a.name);
-          if (content) panelTexts.push(content);
+          if (content) {
+            panelTexts.push(content);
+            panelSourceArtifacts.push({ name: a.name, content });
+          }
         }
       }
       const combinedPanelText = panelTexts.join('\n\n');
@@ -1029,6 +1070,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       });
       writeAgentResult(ctx.repo, articleId, 'panel-factcheck.md', factCheckResult);
       recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-factcheck', factCheckResult);
+      panelSourceArtifacts.push({ name: 'panel-factcheck.md', content: factCheckResult.content });
     }
 
     const editorReview = ctx.repo.artifacts.get(articleId, 'editor-review.md');
@@ -1060,6 +1102,13 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       }),
     );
     recordWriterFactCheckUsage(ctx, articleId, article.current_stage, writerFactCheckReport);
+    const writerFactCheckArtifact = ctx.repo.artifacts.get(articleId, WRITER_FACTCHECK_ARTIFACT_NAME);
+    const writerPreflightSources: WriterPreflightSourceArtifact[] = [
+      ...panelSourceArtifacts,
+      { name: 'fact-check-context.md', content: factCheckCtxArtifact },
+      { name: 'roster-context.md', content: rosterCtx },
+      { name: WRITER_FACTCHECK_ARTIFACT_NAME, content: writerFactCheckArtifact },
+    ];
 
     let content = gatherContext(ctx.repo, articleId, 'writeDraft', ctx.config);
 
@@ -1096,9 +1145,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       }
     }
 
-    const task = isRevision
-      ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised. Use the bounded writer fact-check contract only for specific risky claims; do not turn this into open-ended research. Output the complete revised article.'
-      : 'Write an analytical article draft based on the panel discussion. Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.';
+    const task = buildWriterTask(isRevision);
 
     const result = await ctx.runner.run({
       agentName: 'writer',
@@ -1120,13 +1167,16 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', result.content);
 
     let finalResult = result;
-    let validation = validateDraftOutput(finalResult.content ?? '');
+    let validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
+    const initialPreflight = validation.preflight;
 
     // Self-heal: retry once when the writer misses the minimum draft contract.
     if (needsDraftRepair(validation)) {
       const repairReason = validation.wordCount < MIN_DRAFT_WORDS
         ? `draft only ${validation.wordCount} words`
-        : validation.structure.reason;
+        : !validation.structure.passed
+          ? validation.structure.reason
+          : validation.preflight.blockingIssues[0]?.message ?? 'writer preflight issue';
       console.warn(`[writeDraft] Draft validation failed for '${articleId}' (${repairReason}), retrying with targeted repair instruction`);
       const retryResult = await ctx.runner.run({
         agentName: 'writer',
@@ -1144,8 +1194,19 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-retry', retryResult);
       addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', retryResult.content);
       finalResult = retryResult;
-      validation = validateDraftOutput(finalResult.content ?? '');
+      validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
     }
+
+    writeArtifact(
+      ctx.repo,
+      articleId,
+      WRITER_PREFLIGHT_ARTIFACT_NAME,
+      buildWriterPreflightArtifact({
+        initialState: initialPreflight,
+        finalState: validation.preflight,
+        repairTriggered: finalResult !== result,
+      }),
+    );
 
     if (needsDraftRepair(validation)) {
       return {
@@ -1153,7 +1214,9 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         error: `Writer draft failed validation after self-heal: ${
           validation.wordCount < MIN_DRAFT_WORDS
             ? `Draft has ${validation.wordCount} words (minimum ${MIN_DRAFT_WORDS})`
-            : validation.structure.reason
+            : !validation.structure.passed
+              ? validation.structure.reason
+              : validation.preflight.blockingIssues[0]?.message ?? 'Writer preflight detected a blocking issue'
         }`,
         duration: Date.now() - start,
       };
