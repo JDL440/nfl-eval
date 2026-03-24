@@ -1,38 +1,35 @@
-# Data Decision — Issue #125 Slice 2 Runtime Parity Revision
+# Code Decision — Issue #125 Slice 2 Narrow Revision (Approved & Implemented)
 
 **Date:** 2026-03-25  
-**Requester:** Backend (Squad Agent)  
-**Issue:** #125 Slice 2  
+**Scope:** `src/pipeline/writer-factcheck.ts` wall-clock enforcement only  
 **Status:** IMPLEMENTED and VALIDATED  
-**Scope:** Narrow rejected-artifact revision only
+**Approved by:** Lead
 
 ## Decision
 
-For Writer fact-check slice 2, runtime enforcement must match the documented approved-source ladder:
-
-1. **Official NFL team primary pages** (e.g., `seahawks.com`, `chiefs.com`) must resolve as `official_primary` sources alongside `nfl.com` / `*.nfl.com`.
-2. **Wall-clock budget enforcement** at the fetch boundary — pass remaining budget into each approved-source fetch timeout so a single slow request cannot overrun the 5-minute Stage 5 verification budget.
+Keep the approved-source ladder and official team primary allowlist unchanged, and enforce the remaining Stage 5 wall-clock budget by adding a separate fetch-level wall-clock abort path instead of clamping the normal approved-source timeout down to the remaining budget.
 
 ## Why
 
-- The design and skill docs already allow official team primary pages, so the runtime allowlist must not reject them.
-- A pre-fetch time check alone leaves a hole where one slow approved-source fetch can silently exceed the Stage 5 budget.
+- The stage already had a pre-fetch elapsed-time guard, but a single slow approved-source fetch could still consume the rest of the stage budget unless the in-flight request was also bounded by the remaining wall clock.
+- Preserving `AbortSignal.timeout(timeoutMs)` for the normal fetch timeout keeps the standard fetch behavior intact while still stopping the request when the stage budget expires.
+- This is the narrowest revision for the rejected slice: it changes runtime enforcement semantics without broadening the allowlist or changing the source ladder.
 
 ## Implementation
 
 **Files Modified:**
-- `src/pipeline/writer-factcheck.ts` — Updated runtime allowlist resolver to accept official NFL team primary domains; clamped approved-source fetch timeout to remaining wall-clock budget
-- `tests/pipeline/actions.test.ts` — Added focused tests for official team-site allowlisting and wall-clock exhaustion during slow approved-source fetch
+- `src/pipeline/writer-factcheck.ts` — Added fetch-level wall-clock abort signal; updated approved-source fetch to pass remaining budget timeout instead of clamping it down
+- `tests/pipeline/actions.test.ts` — Added focused tests for wall-clock exhaustion during slow approved-source fetch
 - `tests/pipeline/writer-factcheck.test.ts` — Updated to reflect new runtime behavior
 
 ## Validation
 
-✅ `npm run test -- tests/pipeline/actions.test.ts` — All focused tests pass  
-✅ `npm run test -- tests/pipeline/writer-factcheck.test.ts` — All tests pass  
+✅ `npm run test -- tests/pipeline/actions.test.ts tests/pipeline/writer-factcheck.test.ts` — All tests pass  
 ✅ `npm run v2:build` — Build clean  
+✅ Lead approval: Approved, no further revision needed
 
 ## Status: COMPLETE
-Filesystem evidence confirms all changes persisted; validation passed.
+Ready for next slice (Editor consumption). Filesystem evidence confirms all changes persisted; validation passed.
 
 ---
 

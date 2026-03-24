@@ -34,6 +34,7 @@
 
 ## Learnings
 
+- 2026-03-25T02-32-40Z — **Issue #125 Slice 2 Narrow Revision Complete**: Lead-approved narrow revision deployed for slice 2. Kept approved-source ladder and official team primary allowlist unchanged; enforced remaining Stage 5 wall-clock budget via fetch-level wall-clock abort signal instead of clamping normal timeout down. All validation passed. Decision merged to decisions.md. Ready to route slice 3 (Editor consumption) to Code agent.
 - 2026-03-23 — Issue #118 promotion layer: keep retrospective digest promotion read-only, emit disjoint process-improvement vs learning-update candidate arrays, and attach review evidence (`articleCount`, priorities, recency, sample articles, force-approval count) for manual follow-up.
 - 2026-03-24 — Issue #125 slice 2 should keep Writer bounded to supplied evidence plus allowlisted URLs already present in Stage 5 artifacts. The safe runtime seam is: parse local nflverse fact-check output into `writer-factcheck.md`, allow fetches only for explicit approved domains (`nfl.com`, OverTheCap, Spotrac, Pro Football Reference, ESPN), record usage metadata on `writeDraft-writer-factcheck`, and enforce the external-check budget without giving Writer raw search.
 - 2026-03-25 — Issue #125 slice 3 belongs at the Stage 6 context seam: include `writer-factcheck.md` in `runEditor` default upstream artifacts and explicitly frame it as advisory evidence in the editor prompt/charter so Editor can reuse Writer’s bounded verification ledger without surrendering final authority.
