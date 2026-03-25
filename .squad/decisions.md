@@ -4141,3 +4141,68 @@ Implementation should land in this order:
 - Collapse low-priority sidebar diagnostics behind disclosures on narrow screens
 - Add dashboard tests that assert mobile hooks and fragment-level structure, not only route copy
 
+# Decision: Dashboard Mobile System — Shared Shell & Responsive Primitives
+
+**Status:** Audit Complete | Ready for Implementation  
+**Auditor:** UX Agent  
+**Date:** 2026-03-26
+
+## Summary
+
+The dashboard is a **desktop-first system**, not a collection of isolated mobile bugs. The minimum viable fix is a shared mobile shell contract, three shared responsive CSS primitives (action stack, data-surface card/row transforms, secondary-panel collapse), and HTMX/SSE fragment updates to honor those primitives.
+
+## Core Findings
+
+1. **Shared shell has no mobile navigation pattern** — `layout.ts` renders 7 controls in a fixed 56px header; `styles.css` has zero header breakpoint rules
+2. **Layout system collapses columns but not hierarchy** — Grids stack on 768px, but shell remains locked and action ordering doesn't change
+3. **Shared action surfaces are dense and inconsistent** — `.action-bar` and composer actions lack a mobile-friendly stacking contract
+4. **Operational data surfaces assume tables** — `/runs`, `/memory`, `/config` only get horizontal scroll; no card/row fallback
+5. **HTMX/SSE fragments bypass mobile context** — Refreshed content reintroduces desktop markup since fragments don't carry mobile classes
+6. **Selector collisions** — `.agent-grid` defined twice (New Idea vs Agents); inline styles in action areas; no stable mobile component system
+7. **Test coverage missing** — No assertions for mobile classes, breakpoints, overflow, or touch targets
+
+## Implementation Sequence
+
+### UX-Owned (Days 1–2)
+1. Lock the mobile system contract for shell, actions, data surfaces, secondary panels
+2. Define minimum responsive behavior per surface
+3. Hand Code a selector map with shared rules first, then page-specific exceptions
+
+### Code-Owned (Days 3–7)
+1. Implement shared shell in `layout.ts` and responsive rules in `styles.css`
+2. Create three shared primitives: mobile action-stack, data-surface cards, secondary-panel disclosures
+3. Apply primitives to highest-traffic pages (article, publish, then runs/memory/config)
+4. Update HTMX/SSE fragment seams to use named classes
+5. Add regression coverage for structural mobile assertions
+
+## Concrete Changes
+
+**High-impact files:**
+- `src/dashboard/views/layout.ts` (lines 44–56) — header shell
+- `src/dashboard/public/styles.css` (lines 90–133 header, 827–835 media query, 1010–1041 agent-grid collision)
+- `src/dashboard/views/{article,publish,runs,memory,config}.ts` — apply mobile primitives to fragments
+
+**New media-query blocks needed:**
+- `@media (max-width: 480px)` — header collapse/hamburger
+- `@media (max-width: 640px)` — table-to-card, button stacking
+- Touch-target minimum: `min-height: 44px`
+
+**New shared CSS classes:**
+- `.mobile-action-stack` — full-width button rows on phone
+- `.mobile-data-card` / `.mobile-data-row` — table fallbacks
+- `.mobile-secondary` — collapse/disclose for diagnostics, advanced
+
+## Risk & Dependencies
+
+- **Risk:** Shared CSS changes can conflict with existing overrides (e.g., `.agent-grid` collision)
+- **Mitigation:** Scope overloaded selectors first; add structural tests for regression prevention
+- **No backend changes required** for Phase 1
+
+## Success Criteria
+
+- Header responds to viewport width (<480px hamburger, ≥480px inline)
+- Action buttons stack full-width on phone; maintain primary-first order
+- Data tables transform to cards/rows on narrow screens; no forced horizontal scroll
+- Secondary panels (diagnostics, advanced) collapse by default on phone
+- HTMX-updated fragments inherit mobile classes automatically
+- New dashboard work respects mobile primitives without page-by-page exceptions

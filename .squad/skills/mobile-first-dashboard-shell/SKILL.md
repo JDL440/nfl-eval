@@ -29,6 +29,11 @@ tools: [view, rg]
    - HTMX fragments should swap into containers that are already mobile-safe.
 5. Keep DOM priority aligned with mobile priority.
    - Primary actions should appear early in markup so mobile users reach them first.
+6. Verify that new mobile helper classes are actually wired.
+   - If views introduce classes like `.mobile-detail-layout` or `.mobile-primary-column`, confirm `src/dashboard/public/styles.css` defines them before assuming the page has a real mobile system.
+7. Add a responsive regression seam, not just markup assertions.
+   - Existing dashboard tests in this repo mostly check that tables, nav links, and preview containers render.
+   - Add at least one focused assertion per shared seam (header shell, detail-page ordering, data-surface fallback) so mobile work does not regress silently.
 
 ## Why
 
@@ -58,3 +63,5 @@ Before calling a dashboard page "mobile-safe" in this repo, verify these shared 
 - "Mobile preview" changes the surrounding page chrome too, not only `.preview-container.preview-mobile`.
 - Data-heavy views do not rely on three different fallback strategies (`overflow-x`, font shrink, or raw tables) across `/runs`, `/memory`, and `/config`.
 - Reused class names are still scoped to one job each; avoid collisions like the current `.agent-grid` split between New Idea chips and Agents directory cards.
+- New helper classes added in views are backed by real CSS rules; markup-only mobile classes are not a mobile system.
+- Tests verify responsive structure or mobile-specific class/state behavior, not only that the desktop HTML contains expected labels.
