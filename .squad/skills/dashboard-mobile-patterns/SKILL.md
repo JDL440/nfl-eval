@@ -405,6 +405,20 @@ document.getElementById('nav-toggle')?.addEventListener('click', () => {
 </table>
 ```
 
+### Clamped card minimums inside padded detail shells
+
+When a detail page already adds page/card padding, `minmax(280px, 1fr)` can still overflow a 320px phone because the grid track minimum ignores the reduced inner width. For gallery/card grids inside padded dashboard sections, clamp the minimum to the available width:
+
+```css
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 0.75rem;
+}
+```
+
+Use this when the issue is a specific card/grid minimum, not the whole page shell. Prefer this targeted clamp over global `overflow: hidden` or page-level horizontal-scroll masking.
+
 ---
 
 ## 5. Testing

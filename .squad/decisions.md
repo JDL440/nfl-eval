@@ -4596,3 +4596,153 @@ Dashboard is a **desktop-first system**. Mobile failures are not isolated bugs b
 - Worst failures are cross-page, not local bugs
 - HTMX/SSE views re-render partials independently; mobile structure must exist in shared fragments
 - Page-only patches would create multiple inconsistent mobile patterns
+
+---
+# Decision: Article Mobile Width Fix
+
+**Date:** 2026-03-27  
+**Author:** UX  
+**Status:** Implemented
+
+## Context
+
+The article detail page was overflowing horizontally on mobile devices. The root cause was CSS grid children (`.detail-grid`, `.detail-main`, `.detail-sidebar`) missing `min-width: 0`, allowing intrinsic content width (tables, code blocks, long text) to blow out the layout.
+
+## Decision
+
+Apply a minimal CSS-only fix in `src/dashboard/public/styles.css` without touching markup in `article.ts`:
+
+1. Add `min-width: 0` to `.detail-grid`, `.detail-main`, `.detail-sidebar`, and `.detail-section` (prevents grid blowout).
+2. Add `overflow: hidden` to `.detail-section` (clips runaway content).
+3. Add `overflow-wrap: break-word` to `.artifact-rendered` (soft-wraps long text).
+4. Change `.artifact-table` to `display: block; overflow-x: auto` with `white-space: nowrap` on cells (tables scroll horizontally instead of pushing viewport).
+5. Tighten `.content` and `.detail-section` padding at 768px breakpoint.
+
+## Rationale
+
+This approach:
+- Fixes the immediate issue without markup churn.
+- Applies to all detail pages sharing these classes.
+- Keeps table data readable by horizontal scroll instead of wrapping/truncating.
+
+## Alternatives Considered
+
+- **Explicit `max-width` constraints**: Would force content truncation rather than graceful scroll.
+- **Per-page markup wrappers**: Would require changes to `article.ts` and other views; higher churn for the same result.
+
+## Validation
+
+- Build: `npm run v2:build` ✓
+- Tests: `tests/dashboard/wave2.test.ts`, `tests/dashboard/server.test.ts` — 102/102 passing.
+
+---
+# Code Decision — Article Mobile Width
+
+- **Date:** 2026-03-25
+- **Scope:** `worktrees/V3/src/dashboard/public/styles.css`, `worktrees/V3/tests/dashboard/wave2.test.ts`
+
+## Decision
+
+Treat the remaining article-page mobile overflow as a **Stage 5 image-gallery card sizing bug**, not a whole-page layout failure.
+
+## Why
+
+The article detail shell already stacks correctly on narrow screens. The remaining horizontal overflow came from `.image-gallery` using `repeat(auto-fill, minmax(280px, 1fr))` inside padded `.detail-section` containers, which can exceed the usable width on ~320px phones. Earlier broad containment ideas like hiding overflow on the whole section or forcing generic artifact/table behavior would mask the symptom and risk clipping other content.
+
+## Implementation
+
+- Clamp the gallery card minimum with `minmax(min(100%, 280px), 1fr)` so one card can shrink to the available inner width without changing desktop/tablet behavior.
+- Keep the fix scoped to the image gallery instead of adding global overflow suppression.
+- Add regression coverage in `tests/dashboard/wave2.test.ts` that checks both the rendered gallery markup seam (`renderImageGallery`) and the stylesheet rule.
+
+## Validation
+
+- `npm run test -- tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts`
+- `npm run v2:build`
+
+---
+# Decision: Sentence-Starter Name Consistency Policy
+
+**Date:** 2026-03-27  
+**Owner:** Lead  
+**Status:** Recommended for immediate Code implementation + writer-support phasing  
+**Related:** writer-preflight.ts name-consistency blocker, writer-support.md feature decision
+
+## Problem
+
+Writer draft includes sentence-opening action phrases (e.g., "Take Trent Williams") while source artifacts list only the bare name (e.g., "Trent Williams"). The NAME_PATTERN regex is too greedy and captures "Take Trent Williams" as a full candidate name. Subsequent matching fails because it doesn't recognize that "Take" is not part of the actual person's name, triggering a hard blocking `name-consistency` issue.
+
+Example:
+```
+Draft: "Take Trent Williams off the board..."
+Artifacts: "Trent Williams"
+Extracted: "Take Trent Williams" → normalized to "take trent williams"
+Supported: "trent williams"
+Result: BLOCKING issue flagged
+```
+
+Root cause: "Take" and similar action verbs are **not** in `BANNED_FIRST_TOKENS`, so they pass the rejection filter. A growing list of ad-hoc verbs cannot scale.
+
+## Assessment
+
+The current name-consistency blocker **should remain a hard blocker**, but the implementation needs to shift:
+
+1. **Short term:** Expand `BANNED_FIRST_TOKENS` to include common draft-speak action verbs.
+2. **Medium term:** Shift to relying on `writer-support.md` canonical-names allowlist once implemented.
+3. **Long-term principle:** Name consistency should be deterministic and list-free, driven by an explicit artifact contract, not by regex + heuristics.
+
+## Policy: Action Verbs to Blocklist
+
+For immediate implementation, add these common action verbs to `BANNED_FIRST_TOKENS`:
+
+- **Draft context:** Take, Hit, Draft, Grab, Pick, Select, Land
+- **Contract context:** Sign, Ink, Re-sign
+- **Acquisition context:** Target, Pursue, Add, Trade
+- **General action:** Watch, Build, Keep, Leave, Get
+
+These reflect repeated patterns from NFL draft/contract articles where a verb + player name is the standard prose pattern (e.g., "Take [player]", "Hit [position]").
+
+## Rationale
+
+- **Principle:** A sentence-opening action verb is not part of a person's name, and filtering them out is linguistically sound.
+- **Minimal:** This addresses the specific failure class without expanding logic into the preflight itself.
+- **Bridge:** This buys time until `writer-support.md` is built and the preflight can depend on a structured name allowlist instead of NAME_PATTERN.
+- **Graceful:** Draft stays published and workflow doesn't break on false-positive sentence syntax.
+
+## Implementation: Smallest Safe Change
+
+**File:** `src/pipeline/writer-preflight.ts`
+
+In `BANNED_FIRST_TOKENS` constant (line ~66), append:
+```typescript
+// Common draft/contract action verbs that open sentences but are not name parts
+'Take', 'Hit', 'Draft', 'Grab', 'Pick', 'Select', 'Land', 
+'Sign', 'Ink', 'Target', 'Pursue', 'Add', 'Trade',
+'Watch', 'Build', 'Keep', 'Leave', 'Get',
+```
+
+**Test coverage:** Add one test case to `writer-preflight.test.ts`:
+```typescript
+it('does not flag action verbs + supported last name as a name mismatch', () => {
+  const state = runWriterPreflight({
+    draft: 'Take Trent Williams off the board. Add Micah Parsons in the second.',
+    sourceArtifacts: [
+      { name: 'artifacts.md', content: 'Trent Williams and Micah Parsons are priorities.' },
+    ],
+  });
+  
+  expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
+  expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
+});
+```
+
+## Migration Path to writer-support.md
+
+Once `writer-support.md` is implemented (as decided in the Writer Support decision), the preflight should:
+
+1. Parse `writer-support.md` first for the canonical-names section.
+2. Use that allowlist as the source of truth instead of fuzzy NAME_PATTERN matching.
+3. Downgrade name-consistency from blocking to warning if the draft name matches a supported last-name in the allowlist (graceful degradation).
+
+At that point, this sentence-starter verb blocker can be removed or relaxed, since deterministic name allowlisting will replace heuristic matching.
+

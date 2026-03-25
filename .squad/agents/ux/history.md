@@ -1,3 +1,22 @@
+## 2026-03-25T06:26:29Z — Mobile Width Fix Proposal
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T06-26-29Z-ux.md  
+**Session log:** .squad/log/2026-03-25T06-26-29Z-mobile-and-preflight-hardening.md
+
+**Status:** ✓ Completed — Mobile overflow root cause identified and CSS fix proposed
+
+**Finding:**
+- Article-detail mobile horizontal overflow traced to CSS grid children (.detail-grid, .detail-main, .detail-sidebar) missing min-width: 0.
+- Intrinsic content (.image-gallery with minmax(280px, 1fr)) expands beyond usable width on ~320px phones.
+
+**CSS Fix (minimal scope):**
+- Add min-width: 0 to grid containers to enable content shrinking.
+- Change .artifact-table to display: block; overflow-x: auto (horizontal scroll instead of viewport push).
+- Tighten padding at 768px breakpoint.
+
+**Decision:** [Article Mobile Width Fix](../../decisions.md)
+
+---
 ## 2026-03-25T05-51-20Z — Option B Article-Page Simplification Review
 
 **Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-ux.md  
@@ -38,5 +57,7 @@
 - 2026-03-26 — Cross-page mobile drift is being driven by shared desktop-first primitives rather than isolated pages: `.site-header`/`.header-inner`/`.btn-header`, `.detail-grid`, `.action-bar`, `.filter-bar`, `.artifact-table`, `.runs-table`, `.memory-table`, `.preview-toolbar`, `.team-grid`, and `.agent-badge` all stay dense or row-oriented on phones. The strongest risks are fixed header crowding, table-only data surfaces, inline-style action rows, and tap targets under 44px in `src/dashboard/public/styles.css`.
 - 2026-03-26 — Preview and publish mobile behavior are not the same thing in this repo. `src/dashboard/views/preview.ts` uses a manual `preview-mobile` class toggle to simulate a 375px Substack viewport, while the real page shell still depends on `renderLayout()` and shared CSS. Treat the preview toggle as a content simulation tool, not proof that the surrounding dashboard page works on a phone.
 - 2026-03-26 — Several dashboard pages use unscoped or missing style contracts that are easy to mistake for completed mobile work: `runs.ts` uses `.page-header` and `.runs-filter-bar`, `publish.ts` uses `.publish-detail-header`, `.article-preview`, `.status-info`, and `.publish-workflow-actions`, and `login.ts` uses `.publisher-form`, but those selectors are absent from `src/dashboard/public/styles.css`. Future mobile fixes should reconcile class contracts before adding more breakpoint rules.
+- 2026-03-27 — **Article mobile width fix**: Added `min-width: 0` to `.detail-grid`, `.detail-main`, `.detail-sidebar`, and `.detail-section` in `src/dashboard/public/styles.css` to prevent grid blowout on narrow screens. Also added `overflow: hidden` on `.detail-section`, `overflow-wrap: break-word` on `.artifact-rendered`, and `display: block; overflow-x: auto` on `.artifact-table` so tables scroll horizontally instead of pushing the viewport. Mobile breakpoint now also tightens `.content` and `.detail-section` padding. This is a CSS-only fix with no markup changes in `article.ts`.
+
 
 

@@ -51,6 +51,8 @@ Use a **one-primary / many-secondary** hierarchy:
 
 - Stage runs are useful, but they should not compete with the workflow header
 - Keep them inside the existing Advanced disclosure rather than as a separate default sidebar panel
+- Prefer a diagnostics label like `Execution History` over another workflow-sounding `Stage Runs` heading
+- Render the persisted run stage directly (`stage_runs.stage`), not `stage + 1`
 
 ### 5. Keep only one failure summary in the action card
 
@@ -69,8 +71,13 @@ If a control is secondary or destructive, it should not sit in the main action s
 
 - `src/dashboard/views/article.ts`
 - `src/dashboard/public/styles.css`
+- `src/dashboard/server.ts`
 - `tests/dashboard/server.test.ts`
 - `tests/dashboard/wave2.test.ts`
+
+## HTMX parity rule
+
+- Keep the full article header and `/htmx/articles/:id/live-header` on the same renderer so `Current stage` plus the compact workflow-status line stay in sync during SSE refreshes.
 
 ## Validation
 

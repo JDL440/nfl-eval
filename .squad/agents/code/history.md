@@ -1,3 +1,27 @@
+## 2026-03-25T06:26:29Z — Mobile Width & Preflight Hardening Implementation
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T06-26-29Z-code.md  
+**Session log:** .squad/log/2026-03-25T06-26-29Z-mobile-and-preflight-hardening.md
+
+**Status:** ✓ Completed — Two fixes implemented and validated in worktrees/V3
+
+**Fix 1: Article Mobile Width (from UX)**
+- Applied CSS grid min-width: 0 constraints to .detail-grid, .detail-main, .detail-sidebar, .detail-section.
+- Gallery card minimum clamped with minmax(min(100%, 280px), 1fr) to prevent blowout on narrow screens.
+- Added regression coverage in 	ests/dashboard/wave2.test.ts.
+- Validation: 
+pm run v2:build — all tests passing.
+
+**Fix 2: Sentence-Starter Preflight Hardening (from Lead)**
+- Expanded BANNED_FIRST_TOKENS in src/pipeline/writer-preflight.ts with action verbs: Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get.
+- Added test case for "Take [name]" + "Add [name]" opener false-positive prevention.
+- Preflight test suite passing.
+
+**Decisions:**
+1. [Article Mobile Width Fix](../../decisions.md) — Code implementation of UX proposal
+2. [Sentence-Starter Name Consistency Policy](../../decisions.md) — Implementation of Lead recommendation
+
+---
 # History — Code
 
 ## 2026-03-25T05-51-20Z — Option B Article-Page Review
@@ -44,9 +68,11 @@
 ## Learnings & Critical Seams
 
 **Active regression prevention:**
+- Article detail Option B: `src/dashboard/views/article.ts` should keep one canonical `Current stage` block plus one compact workflow-status line. Put run diagnostics under `renderAdvancedSection()` as `Execution History`, render persisted `stage_runs.stage` directly (not `stage + 1`), keep revisions collapsed, and mirror header/status changes through `renderLiveHeader()` + `src/dashboard/server.ts`. Validation seam: `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`, `npm run v2:build`.
 - Writer preflight opener false-positive: `writer-preflight.ts` + `writer-support.ts` sentence-opener filtering must stay synchronized (25+ conjunctions: Because, Since, Due, Given, If, When, While, Before, After, During, Following, Although, However, Furthermore, Moreover, Thus, Therefore, Consequently, As, Or, And, But, Yet, Unless, Except, Unlike, Regarding, Concerning, Considering).
 - Roster parquet current-snapshot: Missing `week` field signals current snapshot. Skip week filtering; render "Current snapshot" in `roster-context.ts`.
 - Dashboard mobile: Shell/nav → data-surface → detail/preview → page cleanup → regression coverage. Markup hooks exist; CSS selectors incomplete.
+- Article detail mobile width: Stage 5+ overflow came from `src/dashboard/public/styles.css` `.image-gallery` using `minmax(280px, 1fr)` inside padded `.detail-section` cards. Fix the root cause with `minmax(min(100%, 280px), 1fr)` and lock it with `renderImageGallery()` + `tests/dashboard/wave2.test.ts` rather than hiding overflow globally.
 - Stage 5 coverage: writer-support.test.ts, writer-preflight.test.ts, roster-context.test.ts, actions.test.ts all carry focused regression paths.
 
 ## Historical Context (Archived from Learnings, 2026-03-24 and earlier)
@@ -63,3 +89,4 @@
 
 - 2026-03-24T22:01:20Z — **Stall-fix runtime-regressions audit**: Code audited 8 files (4 product, 4 test) across writer-support, writer-preflight, roster-context, and actions. Existing vitest coverage is adequate: exact-vs-analytical separation tested in writer-support.test.ts; stale roster/missing player/wrong-team error paths tested in roster-context.test.ts; caution claim attribution/softening tested in writer-preflight.test.ts. Integration paths via writeDraft() append/retry/self-heal tested in actions.test.ts. Decision documented: inline stage 5 artifact writer-support.md (canonical names, exact facts allowed, caution bucket, roster guidance) built from writerFactCheckReport + roster-context + writer-preflight sources. No product code changes required. Audit complete.
 - 2026-03-25T05:40:46Z — **Writer preflight opener false-positive fix session**: Code completed full fix for "Because San Francisco" validation false positive. Root cause: both `writer-preflight.ts` and `writer-support.ts` lacked sentence-opener filtering in their `BANNED_FIRST_TOKENS` lists. Implementation: added 25+ conjunctions (Because, Since, Due, Given, If, When, While, Before, After, During, Following, Although, However, Furthermore, Moreover, Thus, Therefore, Consequently, As, Or, And, But, Yet, Unless, Except, Unlike, Regarding, Concerning, Considering) to both files with synchronized lists. Paired with complementary fix: preflight now trusts writer-support canonical names as primary authority before falling back to raw extraction. Files modified: `src/pipeline/writer-preflight.ts`, `src/pipeline/writer-support.ts`, tests in both test files. Validation: focused regression tests covering "Because X", "If X", "When X" patterns all pass. `npm run v2:build` validated. Decision records merged to decisions.md covering root cause analysis, implementation rationale (two-layer approach: opener filtering + structured-support priority), architecture rationale, and mobile/dashboard audit findings. Orchestration log and session log documented at `.squad/orchestration-log/2026-03-25T05-40-46Z-Code.md` and `.squad/log/2026-03-25T05-40-46Z-preflight-opener-fix.md`.
+
