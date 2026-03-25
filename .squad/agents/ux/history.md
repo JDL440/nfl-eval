@@ -108,3 +108,14 @@
 
 - 2026-03-25T01:26:48Z — **Mobile Dashboard Header Cleanup**: Completed two-tier mobile header refactor with compact brand + utilities row and horizontally scrollable nav pills. Desktop single-row behavior preserved. Decorative icons hidden below 768px. \New Idea\ isolated as primary action. Focused shared-header assertion added to dashboard server tests. All regressions passing. See .squad/orchestration-log/2026-03-25T01-26-48-ux.md.
 - 2026-03-25T10:45:00Z — V3 revision-state UX review: keep the existing dirty article-detail work in `src/dashboard/views/article.ts` that renames Stage 4 revision to `Revision Workspace` and folds lead-review send-back into `Send to Revision`, but finish the simplification by making revision read as draft work. The landed draft-first contract is `Working Draft` → `Editor Feedback` → `Background Context`, paired with copy like `Draft revision in progress` and `Open Working Draft first...`; do not disturb the mobile-safety guards already added in `src/dashboard/public/styles.css` (`min-width: 0`, smaller mobile padding, wrapped artifact content, and `.image-gallery` using `minmax(min(100%, 280px), 1fr)`). Smallest regression surface stays in `tests/dashboard/server.test.ts` for revision labels/order/send-back copy and `tests/dashboard/wave2.test.ts` for the mobile-width CSS assertion.
+
+## Update — V3 Revision-State Dashboard UX Plan (2026-03-25T07-26-44Z)
+
+Decision: revision state should read as draft work
+- Stage 4 relabeled as "Revision Workspace"
+- Artifact priority: draft → editor-review → discussion-summary
+- Copy: "Draft revision in progress"
+- Mobile-width protections preserved
+- Test impact: tests/dashboard/server.test.ts assertions updated
+
+Related decision: ux-v3-revision-plan

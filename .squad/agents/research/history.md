@@ -74,3 +74,15 @@
 - 2026-03-26 — Issue `#124` is now actionable without reopening `#120/#123`: the repo already has structured blocker metadata plus repeated-blocker escalation into Stage 6 `needs_lead_review` with `lead-review.md`.
 - 2026-03-26 — The narrowest safe seam for `#124` is a Lead-approved post-escalation fallback policy for repeated evidence blockers: reuse the existing Stage 6 hold, add the smallest durable article-mode signal, rerun Writer with a dedicated reframe contract, and expose explicit disclosure in operator/reader views.
 - 2026-03-26 — Issue `#124` handoff to Code ready: implementation as bounded policy/runtime slice reuses Stage 6 needs_lead_review seam, requires explicit Lead approval, includes dedicated Writer reframe contract, keeps non-evidence blockers on original revision path, and surfaces disclosure in reader/operator views. Acceptance criteria locked in decisions.md.
+
+## Update — V3 Revision-State Frontend Guidance (2026-03-25T07-26-44Z)
+
+Reviewed revision-state memo for frontend wording pass:
+- Stage 4 revision labeled as draft work (not discussion return)
+- Preferred label: "Revision Workspace"
+- Draft as default artifact with editor feedback secondary
+- Stage 6 send-back copy aligned with Stage 4 revision copy
+- Mobile-width protections preserved (no CSS selector changes)
+- Test focus: tests/dashboard/server.test.ts revision assertions
+
+Related decision: research-v3-revision-guidance

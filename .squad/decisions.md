@@ -3974,8 +3974,6 @@ The remaining mismatch is artifact emphasis: revision still defaults to editor f
 
 - Update focused assertions in `tests/dashboard/server.test.ts` to expect draft-first ordering/default HTMX load and the revised copy.
 - Leave `tests/dashboard/wave2.test.ts` mobile-width assertion intact unless selectors are renamed; it already protects the image-gallery viewport-safe rule.
-
-
 ------
 # Code Decision â€” V3 workflow simplify pass
 
@@ -4006,4 +4004,3 @@ For the first substantial V3 simplification pass, keep Stage 5 deterministic blo
 - More imperfect drafts can reach Editor, but the system becomes easier to reason about and Writer gets clearer upstream support.
 - Hard articles now surface honestly as `needs_lead_review` instead of silently converting churn into approval.
 - Legacy retrospective storage still supports old force-approved artifacts, but new runtime behavior should stop creating them.
-

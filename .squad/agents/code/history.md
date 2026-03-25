@@ -59,3 +59,15 @@
 - 2026-03-24T05:45:02Z — **Stage Runs Panel Stage Number Alignment Complete**: Fixed Stage Runs badge to render persisted `stage_runs.stage` directly without transformation. Changes in `src/dashboard/views/article.ts` and tests in `tests/dashboard/wave2.test.ts` + `tests/db/repository.test.ts`. All focused tests passing; v2 build passing. Key learning: `stage_runs.stage` is the persisted article/dashboard stage (not a "next stage" target); render semantics must align with `article.current_stage`. See `.squad/orchestration-log/2026-03-24T05-45-02Z-code.md`.
 
 
+
+## Update — Stage 5/6 Workflow Simplification (2026-03-25T07-26-44Z)
+
+Backend spawned Code agent for focused Stage 5/6 loop simplification:
+- Stage 5 deterministic guards narrowed to: headline, subheadline, TLDR, length, placeholder checks
+- Unsupported stats/contracts/dates moved to warnings (not hard blocks)  
+- Stage 6 escalates to lead-review after churn instead of force-approving
+- Sentence-starter hardening applied for 2-token lead-in + last-name matches
+- Writer/Editor prompt contracts updated
+- 184/184 targeted tests preserved/updated
+
+Related decisions: code-sentence-starter-hardening, code-warner-preflight-fix, code-workflow-simplify
