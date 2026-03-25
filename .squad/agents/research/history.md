@@ -25,6 +25,7 @@
 
 ## Learnings
 
+- 2026-03-27 — Seahawks second-pass stall review: the remaining acceptance risk splits into two classes. Live runtime stall evidence for slug `did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right` is still a Stage 6 evidence-deficit + stale-runtime-contract loop (`C:\Users\jdl44\.nfl-lab\agents\charters\nfl\editor.md`, `...\skills\editor-review.md`, `worktrees\V3\src\config\index.ts`, `worktrees\V3\src\agents\runner.ts`), while the source-side guardrail review in `.squad/decisions.md:5046-5144` correctly identifies the next cut as preventing post-approval advisory churn. Preserve `worktrees\V3\src\pipeline\engine.ts` minimal Stage 5 shell, `worktrees\V3\src\pipeline\writer-preflight.ts` placeholder-only hard blocker, `worktrees\V3\src\pipeline\actions.ts` revise-in-place + Stage 6→4 regression + blocker normalization, and reject any loosening that lets approved drafts reopen or TODO scaffolding leak into publish-visible artifacts.
 - 2026-03-25 — Seahawks JSN article stall in `worktrees\V3` was an evidence-deficit Stage 6 loop, not a surviving Stage 5 shell gate: runtime state in `C:\Users\jdl44\.nfl-lab\pipeline.db` shows slug `did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right` parked at Stage 6 / `needs_lead_review` after three editor `REVISE` outcomes, while `writer-factcheck.md` recorded zero verified claims and no external checks, `writer-support.md` was absent from both code and runtime artifacts, and editor blocker metadata stayed null so repeated-blocker escalation could not classify the loop.
 - 2026-03-27 — Writer/Editor churn root-cause analysis complete. Eight major sources identified: (1) heavyweight writer-preflight gates running post-draft causing self-repair loops; (2) reverse-flow editor-review artifact injection on revisions; (3–4) 4x claim validation redundancy (panel fact-check + writer fact-check + writer-preflight + editor), split between agent and deterministic passes; (5) implicit writer self-validation without explicit checklist; (6) asymmetric editor feedback (fixed verdict structure, unstructured revision prose); (7) no writer-specific support artifact (writer-support.md designed but not implemented); (8) revision blocker metadata scattered between conversation tables and inline text parsing. Key simplification levers: implement writer-support.md (already designed in decisions.md), make writer-factcheck the sole claim authority, reduce editor scope to lightweight structural/tone gate, delete redundant panel-factcheck pass, use structured blocker JSON instead of prose parsing. Detailed analysis written to .squad/decisions/inbox/research-writer-editor-churn.md with full file/line citations.
 - 2026-03-27 — Issue `#124` is now actionable without reopening `#120`/`#123`: `src/pipeline/conversation.ts` already fingerprints repeated structured blockers, `src/pipeline/actions.ts` already pauses Stage 6 in `needs_lead_review` with `lead-review.md`, and `src/dashboard/views/article.ts` plus `src/dashboard/server.ts` already expose that Lead-review seam.
@@ -141,4 +142,33 @@
 - Code implements runtime seam in actions.ts
 - Monitor first 20 articles post-fix for advisory approval downgrade
 - Validate no Stage 5 regression or placeholder leakage
+
+
+## 2026-03-28T08-11-46Z — Seahawks JSN Stall Confirmation: Runtime Contract Drift as Architecture Risk
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T08-11-46Z-research.md
+
+**Status:** ✓ Completed — Decision merged into decisions.md; runtime seam validated
+
+**Confirmation:**
+- Seahawks JSN stall confirmed as Stage 6 evidence-deficit + runtime contract drift, not Stage 5 regression
+- Live runtime charters (C:\Users\jdl44\.nfl-lab\agents\...) dated 2026-03-20 (5+ days stale)
+- Source defaults in worktrees\V3\src\config\defaults\... aligned with code contracts
+- Stage 6 hold functional; blocker metadata properly structured
+
+**Key Insight:**
+Runtime contract drift is a first-class workflow architecture risk. When workflow relies on seeded charters/skills in persistent data dir, both source defaults and live runtime copies must stay in sync. Stale runtime can mask code-side fixes.
+
+**Acceptance Guardrails Documented:**
+- Minimal Stage 5 shell (headline, subtitle, TLDR, empty-draft guard) stays hard
+- Placeholder leakage (TODO/TBD/TK) stays hard
+- Stage 6 REVISE → Stage 4 regression preserved
+- Blocker metadata structured; no silent losses
+- Advisory churn must not reopen approved articles
+
+**Next Steps:**
+1. Code resync runtime charters/skills from source defaults
+2. Code validate no Stage 5 regression post-fix
+3. Monitor first 20 articles post-fix for advisory-only approval rates
+4. Enforce all acceptance blockers in decisions.md for any follow-up simplification passes
 

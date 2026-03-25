@@ -132,6 +132,16 @@ When article is in revision state (Stage 4, status='revision'):
 - [ ] Prior-reviews context absent from Editor prompt during revision
 - [ ] Draft revision loop is symmetric (Editor → Writer → Editor, not looping within Writer)
 
+## Runtime Fallback: Blockerless REVISE Normalization
+
+When the approval gate still returns `REVISE` but cannot name a canonical blocker, add a runtime seam before the revision loop continues:
+
+1. Detect `REVISE` with zero `[BLOCKER type:id]` lines.
+2. Re-run the editor once with a blocker-only normalization instruction.
+3. If the normalized review still has no canonical blocker, downgrade it to advisory approval instead of consuming another revision cycle.
+
+**Why:** this preserves hard blockers for obvious factual failures while preventing evidence-polish or teaser-polish complaints from exhausting the revision cap and falsely escalating to Lead.
+
 ### Validation batch process
 
 1. After minimizing preflight: Monitor 20–30 articles. Confirm draft quality reaching Editor is acceptable.

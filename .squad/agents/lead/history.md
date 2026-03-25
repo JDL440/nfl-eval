@@ -129,6 +129,12 @@ Research, Code, and UX agents completed V3 workflow simplification pass under Le
 - For the Seahawks JSN article (`did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right`), the real stall was Stage 6 evidence churn around a timing/value thesis with missing contract facts, amplified by the stale runtime Editor contract. `panel-factcheck.md` explicitly marked contract figures as unsourced, while live editor reviews still emitted old `ERRORS/SUGGESTIONS/NOTES` structure and broad non-accuracy blockers, so the article hit revision-limit escalation instead of repeated-blocker escalation.
 - Further loosening must preserve the minimal Stage 5 shell, Stage 6 `REVISE` → Stage 4 regression, and structured blocker metadata. If blocker metadata goes null in `revision_summaries`, repeated-blocker escalation is effectively disabled even when the same issue is recurring.
 
+### 2026-03-28 — Seahawks stall review: distinguish live stall class from source-code intent
+
+- The Seahawks JSN article in `C:\Users\jdl44\.nfl-lab\pipeline.db` is paused at Stage 6 with `needs_lead_review`, but the revision history shows three editor `REVISE` cycles driven by missing contract facts and broad editorial asks, not a surviving Stage 5 shell blocker.
+- Current source in `worktrees/V3/src/pipeline/engine.ts` and `writer-preflight.ts` already keeps Stage 5 narrow: short draft, missing headline/subtitle/TLDR, and placeholder leakage are the only hard stops worth protecting during further loosening.
+- A reusable review pattern emerged: whenever workflow simplification touches charters/skills, audit both source defaults and the live seeded runtime files under the active data dir before diagnosing churn. Otherwise stale runtime contracts can make the product appear unsimplified even when source code is correct.
+
 ---
 
 ### 2026-03-27 — Second-pass Seahawks stall guardrails

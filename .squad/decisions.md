@@ -5143,3 +5143,58 @@ The safe second pass is:
 
 Anything broader should be treated as out of scope for this cut.
 
+
+# Lead Decision — Seahawks Stall: Stage 6 Revision-Cap Escalation
+
+**Date:** 2026-03-28  
+**Status:** Inbox merge (decision verified, no duplication of existing stall guidance)  
+**Scope:** Confirms stage classification and provides runtime contract drift guardrail
+
+## Decision
+
+The Seahawks JSN article stall is a **Stage 6 revision-cap escalation**, not a remaining Stage 5 hard-blocker problem.
+
+Further loosening should **not** remove the current minimal Stage 5 shell guards. The next acceptance bar is instead:
+
+1. keep Stage 5 limited to deterministic malformed-draft checks,
+2. keep Editor accuracy-only,
+3. preserve Stage 6 REVISE → Stage 4 regression,
+4. preserve structured blocker metadata for repeated-blocker escalation, and
+5. verify the live seeded runtime charter/skill set matches the reviewed source contract.
+
+## Evidence
+
+- Live article state in C:\Users\jdl44\.nfl-lab\pipeline.db:
+  - article did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right
+  - current_stage = 6
+  - status = needs_lead_review
+- evision_summaries show three editor-driven REVISE cycles on 2026-03-25 with the same missing-contract-facts theme; blocker metadata is null, so repeated-blocker fingerprint escalation could not fire.
+- worktrees\V3\src\pipeline\engine.ts keeps Stage 5 deterministic and narrow
+- worktrees\V3\src\pipeline\writer-preflight.ts now hard-blocks only placeholder leakage
+- Current source worktrees\V3\src\config\defaults\charters\nfl\editor.md defines accuracy-first lightweight Editor, but live runtime was still loading stale files dated 2026-03-20
+
+## Guardrails to Preserve
+
+- Minimal Stage 5 shell must remain hard: malformed drafts should not reach Editor.
+- Placeholder leakage must remain hard.
+- Writer revisions must patch the current draft, not restart.
+- Stage 6 REVISE must still regress to Stage 4 revision workspace.
+- Repeated blocker escalation must continue to rely on structured blocker metadata.
+- Advisory/editorial cleanup must not create another automatic revision loop.
+
+## Acceptance Blockers
+
+Reject any second-pass loosening if any of the following remain true:
+
+- live runtime charters/skills are out of sync with reviewed source defaults,
+- Editor can still block on comp ladders, teaser specificity, or similar non-accuracy asks,
+- blocker metadata can silently disappear from revision_summaries,
+- warnings or advisory notes can still trigger a revision loop,
+- Stage 5 loses the minimal malformed-draft protections.
+
+## Reusable Pattern
+
+Treat **runtime contract drift** as a first-class workflow simplification check:
+
+> When a workflow relies on seeded charters/skills in a persistent data dir, architecture review must validate both source defaults and live seeded runtime copies. Otherwise "the workflow is still stuck" may reflect stale runtime contracts, not surviving code guards.
+
