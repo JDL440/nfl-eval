@@ -12,9 +12,11 @@
 - Publishing flow: Two-step (Draft → Publish) with explicit state transitions  
 - Article detail: Status hub ("No draft yet" / "Draft ready" / "Published") with routing to richer preview or Substack draft
 - Publish page: Single workflow container with Create Draft + Publish Now as distinct primary actions
+- Publish errors: Short alert text ("Substack publishing is not configured.") with actionable recovery in separate hint (env vars, /config link). HTMX responses enable in-panel handling; JSON 500 for non-HTMX.
 - Agent selector (New Idea): Server-side filtering of expertAgents (10 NFL-wide specialists) from PROD (7) + TEAMS (32 team agents)
 - Platform cropping varies: Twitter/X 2:1, LinkedIn 1.91:1 — center-weight critical elements
 - Substack API may support separate `cover_image` field (future enhancement opportunity)
+- Mobile dashboard header: Two-tier layout with brand + utilities on row 1, horizontally scrollable nav pills on row 2. Desktop remains single-row grid. Decorative icons hidden below 768px. New Idea isolated as primary action.
 
 ## Publish-Overhaul Team Coordination (2026-03-24)
 
