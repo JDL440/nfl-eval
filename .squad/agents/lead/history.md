@@ -2,13 +2,7 @@
 
 ### V3 Workflow Architecture Work (2026-03-22 to 2026-03-27)
 
-Lead has completed three interconnected reviews on V3 workflow simplification and preflight hardening:
-
-1. **Sentence-Starter Name Consistency** (2026-03-25): Recommended BANNED_FIRST_TOKENS expansion (Take, Hit, Draft, etc.) to filter draft-common action verbs from name extraction. This bridges until writer-support.md canonical-names allowlist is implemented. Current NAME_PATTERN regex is greedy but deterministic validation needs finite verb list.
-
-2. **Warner Last-Name Heuristic Boundary** (2026-03-27): Confirmed that sentence-opening action verbs are NOT name parts and should be filtered deterministically, not heuristically. Scope creep risk in heuristic last-name matching across multi-player surnames. Decision: Add "Lose" + other release-context verbs to BANNED_FIRST_TOKENS; do NOT expand heuristics.
-
-3. **V3 Workflow Simplification Architecture** (2026-03-25–27): Diagnosed churn as structural (overlapping Writer/runtime/Editor validation). Approved surgical simplification: six phases, no pipeline redesign, keep escalation machinery, preserve dirty baseline (article.ts UX + mobile fix). Eight friction sources identified; six simplification levers defined. Implementation checklist with rollback triggers delivered.
+Lead completed comprehensive V3 simplification reviews: (1) Sentence-Starter Name Consistency — BANNED_FIRST_TOKENS expanded to deterministic verb lists (Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Re-sign, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get); (2) Warner Last-Name Heuristic Boundary — "Lose" + release-context verbs added, no fuzzy-matching expansion; (3) V3 Architecture — churn diagnosed as structural overlap (Writer/runtime/Editor); approved surgical simplification: six phases, no pipeline redesign, preserve escalation and mobile-safe baseline. Eight friction sources identified; six simplification levers defined. Implementation checklist with rollback triggers delivered in decisions.md.
 
 ### Key Learnings & Principles
 
@@ -18,9 +12,9 @@ Lead has completed three interconnected reviews on V3 workflow simplification an
 - **Escalation vs. force-approve:** Existing Lead escalation infrastructure + findConsecutiveRepeatedRevisionBlocker() logic reused. Change: cap revisions at 2, escalate on 3rd (not auto-approve).
 - **Preserve current V3 baseline:** Sentence-initial hardening (writer-preflight.ts) + mobile width fix (article.ts) are independent, valid, and should NOT be reverted.
 
-### Archived: Option B Article-Page, Dashboard Mobile Audit (2026-03-25)
+### Archived: Option B & Dashboard Mobile (2026-03-25)
 
-Lead completed reviews on article-page-only scope (smallest-safe pass approved; no route/type/SSE rewrites) and three-agent mobile audit (shared system contract strategy: header/nav, responsive data-surface, detail/preview stacking, selector cleanup, mobile regression coverage). Detailed session logs in .squad/log/.
+Lead completed article-page-only scope review (smallest-safe pass; no route/type/SSE rewrites) and dashboard mobile audit (shared system contract strategy). Detailed logs in .squad/log/.
 
 ---
 
