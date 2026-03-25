@@ -4981,3 +4981,33 @@ Priority order for default tab:
 
 - `src/dashboard/views/article.ts`: Default tab logic + workflow status label
 - `src/dashboard/tests/server.test.ts`: Focused test coverage
+
+---
+
+# Decision: UX — Revision Workspace Stays Draft-First
+
+**Date:** 2026-03-28  
+**Area:** Dashboard article detail (worktrees\V3)  
+**Owner:** UX  
+**Status:** Applied to V3 article detail
+
+## Decision
+
+When an article is at Stage 4 with status = revision, the UX should present that state as active draft work rather than a return to panel discussion.
+
+## Applied rules
+
+1. Alias visible stage label to **Revision Workspace** on article header and stage timeline
+2. Use compact workflow line: **Draft revision in progress**
+3. Load revision artifacts in order: **Working Draft** → **Editor Feedback** → **Background Context**
+4. Keep send-back copy aligned: Stage 4 is for draft fixes, not renewed discussion
+5. Preserve mobile-width protections already in styles.css; do not reintroduce horizontal overflow
+
+## Rationale
+
+Simplified workflow reduces writer/editor churn without rewriting backend stages. Keeping Stage 4 canonical while changing visible hierarchy gives operators right mental model without backend changes or new runtime behavior.
+
+## Files Changed
+
+- `src/dashboard/views/article.ts`: Stage label alias, workflow status line, artifact ordering
+- `src/dashboard/public/styles.css`: Mobile width protections (already applied)
