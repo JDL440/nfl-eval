@@ -232,6 +232,9 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('NFL Lab');
+      expect(html).toContain('aria-label="Primary navigation"');
+      expect(html).toContain('class="header-meta"');
+      expect(html).toContain('class="header-link-label">New Idea</span>');
       expect(html).toContain('Start Here');
       expect(html).toContain('Ready to Publish');
       expect(html).toContain('Pipeline');
