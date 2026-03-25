@@ -18,6 +18,7 @@
 
 ## Recent Learnings
 
+- 2026-03-28 — V3 workflow simplification research complete. Delivered guidance on writer-support.md implementation, single claim authority, lightweight Editor gate, and Lead-escalation policy. Orchestration log: .squad/orchestration-log/2026-03-28T06-46-06Z-research.md.
 - 2026-03-24 — Issue #85 implementation layout: keep the structured knowledge assets aligned with `src/config/defaults/` patterns and normalize team keys through a shared mapper.
 - 2026-03-23 — Issue #102 research confirmed the dashboard has no auth/session seam yet in `server.ts`, `repository.ts`, or `schema.sql`.
 - 2026-03-24 — Issue #116 digest heuristics: role + finding_type grouping, normalized-text dedupe, and bounded outputs were defined for Code.

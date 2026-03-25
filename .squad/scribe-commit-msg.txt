@@ -1,6 +1,9 @@
-.squad: summarize code history.md to core context
+Scribe: Orchestration logs, session summary, history updates
 
-Archived pre-2026-03-25 verbose learnings into concise Core Context Summary
-to bring file under 12KB threshold (10.09 KB).
+- Write orchestration logs for Research (2026-03-28T06-46-06Z) and Code agents
+- Write session log for V3 workflow simplification (2026-03-28T06-46-06Z-v3-workflow-simplify.md)
+- Merge decision inbox (ux-revision-workflow-simplify.md already in decisions.md; delete inbox file)
+- Update Research and Code agent history.md with latest work
+- Consolidate Code history Core Context to reduce file size below 12KB threshold
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

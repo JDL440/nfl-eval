@@ -40,27 +40,27 @@
 
 ## Core Context
 
-- Issue #107 locked the canonical `substack-article` contract: one TLDR/image policy source for Writer, Editor, Publisher, and pipeline guards.
-- Issue #108 added the post-Stage-7 retrospective runtime and repository persistence, with structured tables plus a synthesized `revision-retrospective-rN.md` artifact.
-- Issue #109 renders revision history from the conversation/revision seams; Issue #110 keeps stage timing as a dashboard aggregation over existing timestamps.
-- Dashboard architecture is Hono + HTMX + SSE on port 3456, with config loaded from `.env` and `~/.nfl-lab/config/.env`.
-- Issue #115 runtime already satisfied by existing manual/read-only retrospective digest seam: `src/cli.ts` provides `retrospective-digest` / `retro-digest`, `src/db/repository.ts` reads joined structured retrospective rows, `src/pipeline/actions.ts` persists findings, and operator guidance is documented in `README.md`.
-- Issue #117 keeps the retrospective digest CLI read-only, using one joined repository query plus normalized-text dedupe and bounded markdown/JSON output.
-- Issue #118 promotion rule: repeated `process_improvement` findings must promote to issue-ready independent of author or priority. Added explicit repetition check to `promoteIssueCandidates()`.
-- Issue #120 stores revision blocker metadata directly on `revision_summaries` via `blocker_type` + JSON `blocker_ids`, with backward-compatible handoff through `feedback_summary` and `key_issues`. Write seam: `src/pipeline/actions.ts` (parses `[BLOCKER type:id]` tags from `## 🔴 ERRORS`); read seam: `src/pipeline/conversation.ts` + `src/db/repository.ts`.
-- Issue #123 repeated-blocker escalation at Stage 6: detects exact consecutive Editor `REVISE` comparison using normalized blocker fingerprint (`blockerType` lowercase + `blockerIds` sorted/deduped), writes `lead-review.md`, sets status to `needs_lead_review`, blocks normal regress/force-approve path only for repeated case. Cleanup via `clearArtifactsAfterStage` on regression below Stage 6. Test coverage: 5 focused tests in actions.test.ts, 2 in conversation.test.ts, 2 in repository.test.ts, 1 in server.test.ts. Approved and ready for merge.
-- Issue #125 writer fact-check: three-slice arc complete (Policy Definition → Runtime Enforcement → Editor Consumption). Slice A: bounded policy in `src/pipeline/writer-factcheck.ts`. Slice B: Stage 5 wall-clock budget enforcement via fetch-level abort signal. Slice C: Editor consumption of `writer-factcheck.md` as advisory context in `src/pipeline/context-config.ts` + `src/pipeline/actions.ts`. Writer provides bounded verification ledger; Editor maintains final authority. Validation passed.
-- Writer support artifact decision (2026-03-27): Lead approved minimal Stage 5 artifact `writer-support.md` that normalizes names/facts/cautions from existing `writer-factcheck`, `roster-context`, and `writer-preflight` sources. Seam: immediate after `writer-factcheck.md` read block in `writeDraft()`, before `writerPreflightSources` assembly. Contains 4 sections: `Canonical Names`, `Exact Facts Allowed`, `Claims Requiring Caution`, `Roster Guidance`. Writer consumes for name/claim guidance; preflight parses first before fuzzy-match fallback. Queued for implementation.
-- Optional dashboard services (Substack, Twitter) resolve through startup dependency injection via `resolveDashboardDependencies()` helper in `src/dashboard/server.ts`. Tests exercise real startup path; env-configured services work correctly.
-- Writer revision retry: `writeDraft()` self-heal failures append failed draft under `## Failed Draft To Revise` for revision instead of restarting. Prompt guidance aligned across `src/config/defaults/charters/nfl/{editor,publisher}.md` plus `src/config/defaults/skills/{editor-review,publisher}.md`. TLDR fixes framed as revisions that preserve working analysis.
-- Writer revision handoff is assembled in `src/pipeline/actions.ts` inside `writeDraft()`: shared cross-role context from `buildRevisionSummaryContext()`, full `editor-review.md` and previous `draft.md` injected into `articleContext`. Merged writer prompt is runtime-only in `src/agents/runner.ts`; SQLite persists pieces (`artifacts`, `article_conversations`, `revision_summaries`) but not canonical per-iteration prompt snapshot.
-- Publish payload: HTML→ProseMirror handling refactored to operate on document nodes instead of string replacement. All validation passed (45 passing tests).
-- `buildRevisionHistoryEntries()` must normalize missing legacy/in-memory `blocker_type` values to `null` before dashboard/API consumers render revision history.
-- Stage 5 context seam for new artifacts is `src/pipeline/context-config.ts`: low-risk way to make artifacts available to Writer without widening Editor/Publisher scope.
+**Stage & Architecture:**
+- Issue #107: `substack-article` contract (TLDR/image).
+- Issue #108: Post-Stage-7 retrospective persistence + `revision-retrospective-rN.md`.
+- Issue #109: Revision history from conversation/revision seams. Issue #110: Stage timing as dashboard aggregation.
+- Dashboard: Hono + HTMX + SSE on port 3456.
+- Issue #115–118: Manual retrospective digest CLI + promotion rules via `src/cli.ts` + repository persistence.
+- Issue #120: Blocker metadata on `revision_summaries` (`blocker_type` + JSON `blocker_ids`).
+- Issue #123: Repeated-blocker escalation at Stage 6 with Lead-review hold.
+- Issue #125: Writer fact-check via `src/pipeline/writer-factcheck.ts` (policy, runtime enforcement, Editor consumption).
+- Writer support (2026-03-27): `writer-support.md` normalizes names/facts/cautions from `writer-factcheck`, `roster-context`, `writer-preflight`.
+- Optional services via dependency injection in `src/dashboard/server.ts`.
+- Writer revision retry: `## Failed Draft To Revise` seam in `writeDraft()`.
+- Writer revision handoff: `buildRevisionSummaryContext()` + `editor-review.md` + previous `draft.md` injected into `articleContext`.
+- Publish: HTML→ProseMirror document-node refactoring.
+- Stage 5 context seam: `src/pipeline/context-config.ts` for new Writer artifacts.
 
-## Learnings & Critical Seams
+## Recent Learnings & Critical Seams
 
-**Active regression prevention:**
+- 2026-03-28 — V3 workflow simplification implementation complete. Applied simplifications to prompt contracts, engine/preflight behavior, and focused test suite in worktrees/V3. Validation: 184 tests passing. Decision inbox merged. Orchestration log: .squad/orchestration-log/2026-03-28T06-46-06Z-code.md.
+- 2026-03-27 — Warner Preflight Hardening Implementation: added "Lose" to BANNED_FIRST_TOKENS in writer-preflight.ts. Release-context verbs extended with action-verb blocklist.
+- 2026-03-25 — Option B Article-Page Review: approved article-view-only implementation, no type system changes required, server wiring for transient status only.
 - Article detail Option B: `src/dashboard/views/article.ts` should keep one canonical `Current stage` block plus one compact workflow-status line. Put run diagnostics under `renderAdvancedSection()` as `Execution History`, render persisted `stage_runs.stage` directly (not `stage + 1`), keep revisions collapsed, and mirror header/status changes through `renderLiveHeader()` + `src/dashboard/server.ts`. Validation seam: `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`, `npm run v2:build`.
 - Writer preflight opener false-positive: `writer-preflight.ts` + `writer-support.ts` sentence-opener filtering must stay synchronized (25+ conjunctions: Because, Since, Due, Given, If, When, While, Before, After, During, Following, Although, However, Furthermore, Moreover, Thus, Therefore, Consequently, As, Or, And, But, Yet, Unless, Except, Unlike, Regarding, Concerning, Considering).
 - Roster parquet current-snapshot: Missing `week` field signals current snapshot. Skip week filtering; render "Current snapshot" in `roster-context.ts`.

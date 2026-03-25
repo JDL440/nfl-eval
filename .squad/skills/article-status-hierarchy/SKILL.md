@@ -65,7 +65,10 @@ Use a **one-primary / many-secondary** hierarchy:
 - If an article is at Stage 4 because Editor regressed it, alias the top-stage label to a revision-oriented term such as `Revision Workspace`
 - Use a workflow line that reads like active drafting work (for example `Draft revision in progress`), not a return to panel discussion
 - Prioritize revision artifacts as `draft.md` first, `editor-review.md` second, and discussion artifacts last
-- Preserve discussion artifacts, but relabel them as background context instead of making them the primary surface
+- Use labels that reinforce task order, e.g. `Working Draft`, `Editor Feedback`, and `Background Context`
+- Add one short helper sentence near the tabs so the page explains the intended scan path: open the working draft first, use feedback as the checklist, and only check background context when the original discussion matters
+- If the main CTA advances out of the revision workspace, rename it to a drafting verb such as `Resume Drafting` instead of a generic `Advance`
+- Preserve discussion artifacts, but relabel them as background/reference context instead of making them the primary surface
 - Keep the stage-timeline tooltip/current-stage alias in sync with the same revision wording so SSE refreshes and header chrome do not reintroduce `Panel Discussion`
 
 ## Mobile-specific rule
