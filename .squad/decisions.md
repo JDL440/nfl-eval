@@ -4004,3 +4004,53 @@ For the first substantial V3 simplification pass, keep Stage 5 deterministic blo
 - More imperfect drafts can reach Editor, but the system becomes easier to reason about and Writer gets clearer upstream support.
 - Hard articles now surface honestly as `needs_lead_review` instead of silently converting churn into approval.
 - Legacy retrospective storage still supports old force-approved artifacts, but new runtime behavior should stop creating them.
+
+# Code Decision — Substack packaging metadata seam
+
+- **Date:** 2026-03-25
+- **Owner:** Code
+- **Scope:** src/dashboard/server.ts, 	ests/dashboard/publish.test.ts
+
+## Decision
+
+Fix the title/subtitle duplication bug at the shared publish-presentation seam instead of patching preview and Substack draft creation separately.
+
+## Why
+
+Preview and Substack draft packaging both originate from uildPublishPresentation(). If the markdown H1 and italic deck stay in the body there, local preview shows duplicated chrome/body metadata and the Substack API never receives the extracted subtitle as draft_subtitle.
+
+## Implementation note
+
+- Extract markdown metadata once with xtractMetaFromMarkdown()
+- Package only odyMarkdown into preview/publish body content
+- Reuse extracted subtitle for preview chrome and Substack draft fields
+- Preserve the landed workflow simplification by changing only the shared packaging seam
+
+---
+
+# Code Decision — V3 workflow simplify pass
+
+## Decision
+
+Adopt a lighter V3 content workflow: Writer gets one compact canonical support brief for exact-claim handling, Stage 5 hard-blocks only malformed/empty/placeholder drafts plus the minimal shell contract, Stage 6 blocks only on obvious factual safety issues, and revision-cap churn escalates to 
+eeds_lead_review with lead-review.md instead of force-approval.
+
+## Reviewer-risky choice
+
+The riskiest architectural choice in this pass is treating the runtime-built ## Writer Support brief in src/pipeline/actions.ts as the single canonical upstream support layer for Writer even though it is synthesized from the bounded writer fact-check report rather than persisted as a separate first-class pipeline stage.
+
+## Why we accepted it
+
+- It delivers the requested simplification without adding another stage or widening dashboard scope.
+- It gives Writer one obvious safe/unsafe fact surface while keeping Stage 5 and Stage 6 responsibilities distinct.
+- It stays surgical inside the existing seams (writeDraft, unEditor, utoAdvanceArticle) and avoids a riskier schema/UI migration.
+
+## Guardrails
+
+- Stage 5 still only hard-blocks the minimal shell plus deterministic malformed/placeholder failures.
+- Stage 6 remains the obvious-accuracy gate and treats writer-factcheck.md / the support brief as advisory context, not automatic approval.
+- Revision-cap exhaustion now escalates to Lead instead of rewriting ditor-review.md to an approval artifact.
+
+## Follow-up risk
+
+If reviewers want a stronger audit trail later, the next safe step is to persist the Writer support brief as its own artifact rather than only injecting it into the Writer prompt.
