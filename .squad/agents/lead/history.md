@@ -1,3 +1,14 @@
+## 2026-03-25T05-51-20Z — Option B Article-Page Scope & Risk Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-lead.md  
+**Session log:** .squad/log/2026-03-25T05-51-20Z-option-b-article-plan.md
+
+**Status:** ✓ Completed — Scope/risk review approved
+
+**Decision:**
+- Approved smallest-safe article-page-only pass.
+- Advised against route/type/SSE rewrites.
+- Option B implementation proceeding.
 
 ## 2026-03-25T03:30:39Z — Dashboard Mobile Audit Session (Lead Architecture Synthesis)
 

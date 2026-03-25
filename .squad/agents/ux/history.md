@@ -1,3 +1,15 @@
+## 2026-03-25T05-51-20Z — Option B Article-Page Simplification Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-ux.md  
+**Session log:** .squad/log/2026-03-25T05-51-20Z-option-b-article-plan.md
+
+**Status:** ✓ Completed — Article-page simplification approved
+
+**Recommended approach:**
+- Canonical current-stage display as primary.
+- Advanced-only stage runs.
+- Collapsed revisions.
+- Latest failed-attempt summary only.
 
 ## 2026-03-25T03:30:39Z — Dashboard Mobile Audit Session (UX Audit)
 
@@ -17,6 +29,7 @@
 
 ## Learnings
 
+- 2026-03-25 — Article detail Option B landed as a hierarchy pass, not a redesign: `src/dashboard/views/article.ts` now makes the top `Current stage` block + status line the primary state surface, collapses revision history behind a summary disclosure, and moves Stage Runs into Advanced while keeping only one failed-attempt summary in the action card. Supporting CSS lives in `src/dashboard/public/styles.css`, and focused coverage sits in `tests/dashboard/{server,publish}.test.ts` plus `tests/dashboard/{runs,wave2}.test.ts`.
 - 2026-03-27 — Dashboard mobile rework shipped as a shared-system pass instead of page-by-page hacks. The stable pattern is: compact scrollable header nav in `src/dashboard/views/layout.ts`, responsive table-to-card transforms via `.responsive-table` in `src/dashboard/public/styles.css`, and mobile ordering handled by shared detail-layout hooks (`.mobile-detail-layout`, `.mobile-primary-column`, `.mobile-secondary-column`) so article detail can keep artifacts first while publish moves workflow/status ahead of preview on phones.
 - 2026-03-27 — The old `.agent-grid` collision is now avoided by keeping the New Idea picker on `.idea-agent-grid` and the Agents directory on `.agents-directory-grid`. Future dashboard/mobile work should avoid reusing selector names across chip pickers and card grids because the responsive layer is global.
 - 2026-03-27 — **Dashboard mobile implementation shipped**: `src/dashboard/views/layout.ts` and `src/dashboard/public/styles.css` now carry the real mobile system behind the shared hook classes: compact scrollable nav, tighter phone spacing, 44px tap targets, stacked action/filter/composer rows, responsive table/card treatment, and explicit article/publish column ordering. Supporting markup updates live in `src/dashboard/views/{article,config,home,login,memory,new-idea,preview,publish,runs}.ts`, with focused coverage in `tests/dashboard/{server,new-idea,publish,runs}.test.ts`.

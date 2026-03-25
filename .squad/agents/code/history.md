@@ -1,5 +1,18 @@
 # History — Code
 
+## 2026-03-25T05-51-20Z — Option B Article-Page Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-code.md  
+**Session log:** .squad/log/2026-03-25T05-51-20Z-option-b-article-plan.md
+
+**Status:** ✓ Completed — Option B server/rendering/test wiring reviewed
+
+**Findings:**
+- Article-view-only implementation approved by Lead.
+- No type system changes required.
+- Server wiring for transient status only.
+- Smallest-safe pass confirmed.
+
 ## Project Context
 
 - **Project:** NFL Lab (nfl-eval) — AI-powered NFL analytics and content platform
