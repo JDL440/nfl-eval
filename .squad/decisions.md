@@ -1,4 +1,4 @@
-# Code Decision — Stage Runs badge semantics
+﻿# Code Decision â€” Stage Runs badge semantics
 
 - **Date:** 2026-03-26
 - **Owner:** Code
@@ -15,15 +15,15 @@ The article header already treats the current dashboard stage as the canonical a
 ## Impact
 
 - Stage badges in Stage Runs now match article/dashboard stage semantics.
-- Focused tests lock the contract that a stored stage 5 run renders as `Stage 5 — Article Drafting`.
+- Focused tests lock the contract that a stored stage 5 run renders as `Stage 5 â€” Article Drafting`.
 
 ---
 
-# Code Implementation Complete — Issue #123 (Repeat-Blocker Escalation)
+# Code Implementation Complete â€” Issue #123 (Repeat-Blocker Escalation)
 
-**Date:** 2026-03-26 (decision) → 2026-03-24 (completion)  
-**Issue:** #123 — Escalate repeated blockers to Lead for decision instead of infinite loop  
-**Status:** ✅ COMPLETE (Code owner, Lead approved)  
+**Date:** 2026-03-26 (decision) â†’ 2026-03-24 (completion)  
+**Issue:** #123 â€” Escalate repeated blockers to Lead for decision instead of infinite loop  
+**Status:** âœ… COMPLETE (Code owner, Lead approved)  
 
 ## Decision & Implementation
 
@@ -36,29 +36,29 @@ Issue #123 repeated-blocker escalation is complete, validated, and Lead-approved
 - **Cleanup:** `src/db/repository.ts` clears `lead-review.md` on regression below Stage 6
 - **Visibility:** `src/dashboard/views/article.ts` includes `lead-review.md` in artifact allowlist + Stage 6 cleanup rules
 
-### Acceptance Criteria — VERIFIED
-- ✅ Detect repeated blocker across consecutive editor `REVISE` summaries using structured blocker metadata
-- ✅ Route repeated blockers to Lead review instead of automatic retry
-- ✅ Define durable Lead handoff seam (`lead-review.md`) and minimal state transition (`needs_lead_review` at Stage 6)
-- ✅ Focused tests prove escalation triggers and regress/force-approve paths do not fire
+### Acceptance Criteria â€” VERIFIED
+- âœ… Detect repeated blocker across consecutive editor `REVISE` summaries using structured blocker metadata
+- âœ… Route repeated blockers to Lead review instead of automatic retry
+- âœ… Define durable Lead handoff seam (`lead-review.md`) and minimal state transition (`needs_lead_review` at Stage 6)
+- âœ… Focused tests prove escalation triggers and regress/force-approve paths do not fire
 
 ### Implementation Seams
 - **Detection seam:** `autoAdvanceArticle()` in `src/pipeline/actions.ts` compares last two consecutive editor revision summaries using normalized blocker fingerprint
 - **Artifact seam:** `lead-review.md` captures repeated blocker fingerprint, latest editor feedback, candidate next-action menu for Lead
 - **State seam:** Article status `needs_lead_review` at Stage 6 (no new stage). Stops automatic regression to Stage 4 and skips force-approve path
-- **Post-Lead outcomes (definition only):** `REFRAME` → Stage 4 regression; `WAIT`/`PAUSE` → remain Stage 6; `ABANDON` → archive
+- **Post-Lead outcomes (definition only):** `REFRAME` â†’ Stage 4 regression; `WAIT`/`PAUSE` â†’ remain Stage 6; `ABANDON` â†’ archive
 
 ### Validation
-- **Tests:** `npm run test -- tests/pipeline/actions.test.ts tests/pipeline/conversation.test.ts tests/db/repository.test.ts` → ✅ PASSED
-- **Build:** `npm run v2:build` → ✅ PASSED
+- **Tests:** `npm run test -- tests/pipeline/actions.test.ts tests/pipeline/conversation.test.ts tests/db/repository.test.ts` â†’ âœ… PASSED
+- **Build:** `npm run v2:build` â†’ âœ… PASSED
 
 ---
 
-# Research Decision — Issue #124 Implementation Handoff
+# Research Decision â€” Issue #124 Implementation Handoff
 
 **Date:** 2026-03-26  
-**Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
-**Status:** ACTIONABLE — Prerequisites #120 and #123 merged; handoff from Research to Code ready
+**Issue:** #124 â€” Fallback to opinion-framed mode when evidence cannot be completed  
+**Status:** ACTIONABLE â€” Prerequisites #120 and #123 merged; handoff from Research to Code ready
 
 ## Implementation Scope
 
@@ -80,20 +80,20 @@ Research has defined the bounded fallback policy. Implementation is a **policy +
   - Expose disclosure in operator/reader views
   - Tests validate fallback only triggers from Lead-review seam with evidence blockers
 
-## Scope guard — Do not reopen:
+## Scope guard â€” Do not reopen:
 - `#120` unless blocker metadata is defective
 - `#123` unless repeated-blocker escalation or Stage 6 hold is defective
 
 
 ---
 
-# Lead Review Decision — Issue #125 Slice 3 (Verified)
+# Lead Review Decision â€” Issue #125 Slice 3 (Verified)
 
 **Date:** 2026-03-25  
 **Reviewer:** Lead (verified review)  
-**Issue:** #125 — Unbox Writer with guardrailed research and fact-checking access  
+**Issue:** #125 â€” Unbox Writer with guardrailed research and fact-checking access  
 **Slice:** 3 (Editor consumption + focused tests)  
-**Status:** APPROVED — Issue #125 complete and ready to close
+**Status:** APPROVED â€” Issue #125 complete and ready to close
 
 ## Verified Changes
 
@@ -105,22 +105,22 @@ Research has defined the bounded fallback policy. Implementation is a **policy +
 
 ## Scope Check
 
-Slice 3 stays bounded. One minor scope item: the `editor.md` diff also adds TLDR structural-error rules from the separate #107 TLDR decision. This codifies an already-approved policy and does not introduce new behavior — acceptable carry-forward, not harmful scope creep.
+Slice 3 stays bounded. One minor scope item: the `editor.md` diff also adds TLDR structural-error rules from the separate #107 TLDR decision. This codifies an already-approved policy and does not introduce new behavior â€” acceptable carry-forward, not harmful scope creep.
 
 ## Validation
 
 - Build: `tsc` exits clean (0)
 - Tests: 69/69 passing across `tests/pipeline/actions.test.ts` and `tests/pipeline/writer-factcheck.test.ts`
 
-## Acceptance Criteria — Full #125 Coverage
+## Acceptance Criteria â€” Full #125 Coverage
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| Approved source list and guardrails documented | ✅ | `src/config/defaults/skills/writer-fact-check.md` |
-| Writer charter updated for targeted fact-checking | ✅ | `src/config/defaults/charters/nfl/writer.md` §Bounded Stage 5 Verification |
-| Pipeline enforces fact-check budget and captures usage | ✅ | `writer-factcheck.ts` + `recordWriterFactCheckUsage()` in `actions.ts` |
-| Writer outputs cite checked facts or mark unverified | ✅ | `writer-factcheck.md` artifact sections: Verified / Attributed / Omitted |
-| Tests cover allowed-source and citation/uncertainty behavior | ✅ | 69 tests covering team-site allowlist, budget, wall-clock, Editor advisory |
+| Approved source list and guardrails documented | âœ… | `src/config/defaults/skills/writer-fact-check.md` |
+| Writer charter updated for targeted fact-checking | âœ… | `src/config/defaults/charters/nfl/writer.md` Â§Bounded Stage 5 Verification |
+| Pipeline enforces fact-check budget and captures usage | âœ… | `writer-factcheck.ts` + `recordWriterFactCheckUsage()` in `actions.ts` |
+| Writer outputs cite checked facts or mark unverified | âœ… | `writer-factcheck.md` artifact sections: Verified / Attributed / Omitted |
+| Tests cover allowed-source and citation/uncertainty behavior | âœ… | 69 tests covering team-site allowlist, budget, wall-clock, Editor advisory |
 
 ## Closeout
 
@@ -128,7 +128,7 @@ Issue #125 is **complete across all 3 slices** and ready to close once the worki
 
 ---
 
-# Code Decision — Issue #125 Slice 2 Narrow Revision (Approved & Implemented)
+# Code Decision â€” Issue #125 Slice 2 Narrow Revision (Approved & Implemented)
 
 **Date:** 2026-03-25  
 **Scope:** `src/pipeline/writer-factcheck.ts` wall-clock enforcement only  
@@ -148,22 +148,22 @@ Keep the approved-source ladder and official team primary allowlist unchanged, a
 ## Implementation
 
 **Files Modified:**
-- `src/pipeline/writer-factcheck.ts` — Added fetch-level wall-clock abort signal; updated approved-source fetch to pass remaining budget timeout instead of clamping it down
-- `tests/pipeline/actions.test.ts` — Added focused tests for wall-clock exhaustion during slow approved-source fetch
-- `tests/pipeline/writer-factcheck.test.ts` — Updated to reflect new runtime behavior
+- `src/pipeline/writer-factcheck.ts` â€” Added fetch-level wall-clock abort signal; updated approved-source fetch to pass remaining budget timeout instead of clamping it down
+- `tests/pipeline/actions.test.ts` â€” Added focused tests for wall-clock exhaustion during slow approved-source fetch
+- `tests/pipeline/writer-factcheck.test.ts` â€” Updated to reflect new runtime behavior
 
 ## Validation
 
-✅ `npm run test -- tests/pipeline/actions.test.ts tests/pipeline/writer-factcheck.test.ts` — All tests pass  
-✅ `npm run v2:build` — Build clean  
-✅ Lead approval: Approved, no further revision needed
+âœ… `npm run test -- tests/pipeline/actions.test.ts tests/pipeline/writer-factcheck.test.ts` â€” All tests pass  
+âœ… `npm run v2:build` â€” Build clean  
+âœ… Lead approval: Approved, no further revision needed
 
 ## Status: COMPLETE
 Ready for next slice (Editor consumption). Filesystem evidence confirms all changes persisted; validation passed.
 
 ---
 
-# Code & Lead Decision — TLDR Retry Revision & Contract Clarity
+# Code & Lead Decision â€” TLDR Retry Revision & Contract Clarity
 
 **Date:** 2026-03-25  
 **Agents:** Code, Lead  
@@ -174,7 +174,7 @@ Ready for next slice (Editor consumption). Filesystem evidence confirms all chan
 
 The TLDR contract had two related issues:
 
-1. **Instruction Clarity Issue (Lead Decision):** Writer charter incorrectly claimed that Writer sends back drafts missing TLDR (the pipeline guard does, not Writer). When Editor returns REVISE, the 6→4 regression didn't re-validate TLDR, so Writer could miss fixing it if Editor didn't explicitly flag it as a 🔴 ERROR.
+1. **Instruction Clarity Issue (Lead Decision):** Writer charter incorrectly claimed that Writer sends back drafts missing TLDR (the pipeline guard does, not Writer). When Editor returns REVISE, the 6â†’4 regression didn't re-validate TLDR, so Writer could miss fixing it if Editor didn't explicitly flag it as a ðŸ”´ ERROR.
 
 2. **Self-Heal Retry Bug (Code Implementation):** writeDraft() retried malformed drafts using only pre-draft context, discarding the failed draft that needed repair. This forced the model to essentially restart, often producing the same error or dropping working analysis.
 
@@ -184,9 +184,9 @@ The TLDR contract had two related issues:
 
 Approved three focused edits:
 
-1. **Writer Charter Clarity** — Remove confusion about who sends back missing TLDRs (the pipeline guard, not Writer).
-2. **Editor Charter Hard Guard** — Add explicit instruction to flag missing/incomplete TLDR as 🔴 ERROR (non-negotiable structural requirement).
-3. **writeDraft Revision Safety** — Remind Writer to preserve/verify TLDR on every revision, not just when Editor calls it out.
+1. **Writer Charter Clarity** â€” Remove confusion about who sends back missing TLDRs (the pipeline guard, not Writer).
+2. **Editor Charter Hard Guard** â€” Add explicit instruction to flag missing/incomplete TLDR as ðŸ”´ ERROR (non-negotiable structural requirement).
+3. **writeDraft Revision Safety** â€” Remind Writer to preserve/verify TLDR on every revision, not just when Editor calls it out.
 
 **Rationale:** TLDR is usually a structural miss, not content failure. Treating fixes as revisions that preserve good analysis rather than rewrites reduces churn and maintains working analysis.
 
@@ -222,34 +222,34 @@ Approved three focused edits:
 ## Files Modified
 
 **Charters & Skills:**
-- src/config/defaults/charters/nfl/writer.md — Clarified role in TLDR validation
-- src/config/defaults/charters/nfl/editor.md — Added hard-guard instruction for TLDR validation + 🔴 ERROR flagging
-- src/config/defaults/charters/nfl/publisher.md — Aligned revision guidance
-- src/config/defaults/skills/editor-review.md — Consistent TLDR language
-- src/config/defaults/skills/publisher.md — Consistent TLDR language
+- src/config/defaults/charters/nfl/writer.md â€” Clarified role in TLDR validation
+- src/config/defaults/charters/nfl/editor.md â€” Added hard-guard instruction for TLDR validation + ðŸ”´ ERROR flagging
+- src/config/defaults/charters/nfl/publisher.md â€” Aligned revision guidance
+- src/config/defaults/skills/editor-review.md â€” Consistent TLDR language
+- src/config/defaults/skills/publisher.md â€” Consistent TLDR language
 
 **Pipeline:**
-- src/pipeline/actions.ts — writeDraft retry logic + guidance alignment
-- 	ests/pipeline/actions.test.ts — Regression coverage for self-heal retry path
+- src/pipeline/actions.ts â€” writeDraft retry logic + guidance alignment
+- 	ests/pipeline/actions.test.ts â€” Regression coverage for self-heal retry path
 
 ## Validation Evidence
 
-- ✅ All existing tests pass (147/147)
-- ✅ New regression test covers self-heal retry path
-- ✅ Build succeeds (
+- âœ… All existing tests pass (147/147)
+- âœ… New regression test covers self-heal retry path
+- âœ… Build succeeds (
 pm run v2:build)
-- ✅ No regressions in pipeline guards or stage transitions
+- âœ… No regressions in pipeline guards or stage transitions
 
 ## Notes
 
 - No new reusable skill extracted; pattern captured adequately by existing writer-structure and prompt-handoff skills.
 - Stage 5 send-back behavior already preserved draft + synthetic editor-review; the missing piece was the immediate self-heal retry inside writeDraft().
-- Scope 4 (proactive TLDR re-validation in 6→4 regression) remains optional; Scopes 1–3 are sufficient in the happy path.
+- Scope 4 (proactive TLDR re-validation in 6â†’4 regression) remains optional; Scopes 1â€“3 are sufficient in the happy path.
 
 ---
 
 
-# DevOps Decision — Notes/Tweets 500 Fix Commit Stack
+# DevOps Decision â€” Notes/Tweets 500 Fix Commit Stack
 
 **Date:** 2026-03-22T23:15:00Z  
 **Agent:** DevOps  
@@ -260,8 +260,8 @@ pm run v2:build)
 
 Staged and committed the Notes/Tweets 500 error fix to main branch. The fix addresses two root causes:
 
-1. **Missing Twitter Service Initialization** — Twitter service wasn't being created at startup, leaving tweet actions unavailable.
-2. **SubstackService Notes Endpoint Default Missing** — When `notesEndpoint` not configured in SubstackConfig, API calls failed with 500. Now defaults to `/api/v1/comment/feed`.
+1. **Missing Twitter Service Initialization** â€” Twitter service wasn't being created at startup, leaving tweet actions unavailable.
+2. **SubstackService Notes Endpoint Default Missing** â€” When `notesEndpoint` not configured in SubstackConfig, API calls failed with 500. Now defaults to `/api/v1/comment/feed`.
 
 ## Commit Details
 
@@ -279,17 +279,17 @@ Staged and committed the Notes/Tweets 500 error fix to main branch. The fix addr
 
 ## Design Rationale
 
-1. **Factory Function** — `createTwitterServiceFromEnv()` follows the same DI pattern as `createSubstackServiceFromEnv()`
-2. **Graceful Degradation** — Twitter service startup logs warning but doesn't crash when credentials missing
-3. **Sensible Defaults** — Notes endpoint now has a safe default instead of requiring explicit configuration
+1. **Factory Function** â€” `createTwitterServiceFromEnv()` follows the same DI pattern as `createSubstackServiceFromEnv()`
+2. **Graceful Degradation** â€” Twitter service startup logs warning but doesn't crash when credentials missing
+3. **Sensible Defaults** â€” Notes endpoint now has a safe default instead of requiring explicit configuration
 
 ## Validation Status
 
-- ✅ Commit applied only 4 scoped files (no unrelated changes)
-- ✅ Tests updated to reflect new behavior (default endpoint fallback)
-- ✅ Trailer applied: `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`
-- ✅ Publish-social-validation passed
-- ✅ Publish-e2e-validation passed
+- âœ… Commit applied only 4 scoped files (no unrelated changes)
+- âœ… Tests updated to reflect new behavior (default endpoint fallback)
+- âœ… Trailer applied: `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`
+- âœ… Publish-social-validation passed
+- âœ… Publish-e2e-validation passed
 
 ## Next Steps
 
@@ -298,7 +298,7 @@ Staged and committed the Notes/Tweets 500 error fix to main branch. The fix addr
 
 ---
 
-# Publisher Decision — ProseMirror Payload Validation Complete
+# Publisher Decision â€” ProseMirror Payload Validation Complete
 
 **Date:** 2026-03-25  
 **Agent:** Publisher  
@@ -307,18 +307,18 @@ Staged and committed the Notes/Tweets 500 error fix to main branch. The fix addr
 
 ## Context
 
-After fixing the HTML→ProseMirror regression (see `publisher-html-regression.md` below), needed comprehensive validation that the corrected payload structure matches Substack's API contract and renders correctly.
+After fixing the HTMLâ†’ProseMirror regression (see `publisher-html-regression.md` below), needed comprehensive validation that the corrected payload structure matches Substack's API contract and renders correctly.
 
 ## Validation Performed
 
 ### Test Suite Verification
-- ✅ All 45 publish tests pass (`tests/dashboard/publish.test.ts`)
-- ✅ Payload structure validated: `draft_body` receives `JSON.stringify(enrichedDoc)`
-- ✅ Document structure confirmed: `{ type: 'doc', content: [...] }`
-- ✅ Node-level enrichment verified: images, subscribe CTA, footer blurb as ProseMirror nodes
-- ✅ Image upload workflow tested: local paths → Substack CDN URLs → embedded in nodes
-- ✅ Thinking tag removal confirmed
-- ✅ Draft-first flow enforced: create/update draft → publish draft
+- âœ… All 45 publish tests pass (`tests/dashboard/publish.test.ts`)
+- âœ… Payload structure validated: `draft_body` receives `JSON.stringify(enrichedDoc)`
+- âœ… Document structure confirmed: `{ type: 'doc', content: [...] }`
+- âœ… Node-level enrichment verified: images, subscribe CTA, footer blurb as ProseMirror nodes
+- âœ… Image upload workflow tested: local paths â†’ Substack CDN URLs â†’ embedded in nodes
+- âœ… Thinking tag removal confirmed
+- âœ… Draft-first flow enforced: create/update draft â†’ publish draft
 
 ### Stage Environment Attempt
 Created sandbox test environment pointing to `https://nfllabstage.substack.com`:
@@ -333,9 +333,9 @@ Created sandbox test environment pointing to `https://nfllabstage.substack.com`:
 From test file line 291-294:
 ```typescript
 const bodyJson = callArgs.bodyHtml as string;
-const doc = JSON.parse(bodyJson);  // ✅ Valid JSON
-expect(doc.type).toBe('doc');       // ✅ ProseMirror document
-const html = proseMirrorToHtml(doc); // ✅ Can render preview
+const doc = JSON.parse(bodyJson);  // âœ… Valid JSON
+expect(doc.type).toBe('doc');       // âœ… ProseMirror document
+const html = proseMirrorToHtml(doc); // âœ… Can render preview
 ```
 
 ## Key Implementation Points
@@ -346,15 +346,15 @@ const html = proseMirrorToHtml(doc); // ✅ Can render preview
    ```
 
 2. **Node Enrichment** (`src/dashboard/server.ts:374-428`):
-   - `buildImageNode()` — Cover and inline images
-   - `buildSubscribeNode()` — CTA with styling
-   - `buildBlurbNode()` — Footer with emphasis marks
-   - `buildHorizontalRule()` — Visual separator
-   - `intersperseImagesInDoc()` — Distributes inline images through content array
+   - `buildImageNode()` â€” Cover and inline images
+   - `buildSubscribeNode()` â€” CTA with styling
+   - `buildBlurbNode()` â€” Footer with emphasis marks
+   - `buildHorizontalRule()` â€” Visual separator
+   - `intersperseImagesInDoc()` â€” Distributes inline images through content array
 
 3. **API Contract** (`src/services/substack.ts:140-141`):
    ```typescript
-   draft_body: params.bodyHtml,  // Misleading name — expects JSON
+   draft_body: params.bodyHtml,  // Misleading name â€” expects JSON
    ```
 
 ## Decision
@@ -376,8 +376,8 @@ Evidence:
 
 ## Files Modified (Original Fix)
 
-- `src/dashboard/server.ts` — ProseMirror node builders and enrichment
-- `tests/dashboard/publish.test.ts` — Payload structure validation
+- `src/dashboard/server.ts` â€” ProseMirror node builders and enrichment
+- `tests/dashboard/publish.test.ts` â€” Payload structure validation
 
 ## Testing Artifacts
 
@@ -387,13 +387,13 @@ Evidence:
 
 ## Related Decisions
 
-- `publisher-html-regression.md` — Root cause analysis
+- `publisher-html-regression.md` â€” Root cause analysis
 - Publisher history entry: 2026-03-25T09:14:00Z (fix implementation)
 - Publisher history entry: 2026-03-22T22:25:00Z (this validation)
 
 ---
 
-# Publisher Decision — Restore ProseMirror JSON Document Structure for Substack Publishing
+# Publisher Decision â€” Restore ProseMirror JSON Document Structure for Substack Publishing
 
 **Date:** 2026-03-25  
 **Author:** Publisher  
@@ -421,10 +421,10 @@ Revert the Substack publish payload to proper ProseMirror JSON document format a
    - To: `substackDoc: ProseMirrorDoc | null`
 
 2. **Created ProseMirror node builder functions:**
-   - `buildImageNode(url, alt)` — constructs image nodes
-   - `buildHorizontalRule()` — constructs HR nodes
-   - `buildSubscribeNode(caption, labName)` — constructs subscribe CTA paragraph
-   - `buildBlurbNode(labName)` — constructs publication blurb paragraph
+   - `buildImageNode(url, alt)` â€” constructs image nodes
+   - `buildHorizontalRule()` â€” constructs HR nodes
+   - `buildSubscribeNode(caption, labName)` â€” constructs subscribe CTA paragraph
+   - `buildBlurbNode(labName)` â€” constructs publication blurb paragraph
 
 3. **Replaced `enrichSubstackBody()` with `enrichSubstackDoc()`:**
    - Accepts `ProseMirrorDoc` instead of HTML string
@@ -478,13 +478,13 @@ Operating at the ProseMirror document/node level ensures:
 ## Testing
 
 All 45 publish tests pass:
-- `npm test -- tests/dashboard/publish.test.ts` ✅
-- `npm run v2:build` ✅
+- `npm test -- tests/dashboard/publish.test.ts` âœ…
+- `npm run v2:build` âœ…
 
 ## Files Modified
 
-- `src/dashboard/server.ts` — ProseMirror node helpers, enrichment refactor, payload serialization
-- `tests/dashboard/publish.test.ts` — JSON parsing and validation
+- `src/dashboard/server.ts` â€” ProseMirror node helpers, enrichment refactor, payload serialization
+- `tests/dashboard/publish.test.ts` â€” JSON parsing and validation
 
 ## Next Steps
 
@@ -494,15 +494,15 @@ All 45 publish tests pass:
 
 ---
 
-# Publisher Decision — HTML Body Regression Analysis
+# Publisher Decision â€” HTML Body Regression Analysis
 
 **Agent:** Publisher  
 **Date:** 2026-03-25  
-**Status:** Investigation — No Code Changes
+**Status:** Investigation â€” No Code Changes
 
 ## Problem Statement
 
-User reported: "I tested it myself and it's not fixed — the post looks worse with HTML actually."
+User reported: "I tested it myself and it's not fixed â€” the post looks worse with HTML actually."
 
 The recent change from `JSON.stringify(doc)` to `proseMirrorToHtml(doc)` was intended to fix missing formatting on Substack. However, the user reports the live article appears worse, not better.
 
@@ -533,7 +533,7 @@ The decision logged in `.squad/decisions.md` at line 1218-1262 states:
 Looking at `src/services/substack.ts:135-159`, the Substack API receives:
 ```typescript
 const payload = {
-  draft_body: params.bodyHtml,  // ← field name is draft_body
+  draft_body: params.bodyHtml,  // â† field name is draft_body
   ...
 };
 ```
@@ -551,9 +551,9 @@ The TypeScript interface defines `bodyHtml: string` in `DraftCreateParams` (line
 ### The Actual Regression
 
 Switching to `proseMirrorToHtml(doc)`:
-- ✅ Sends valid HTML
-- ❌ But Substack expects ProseMirror JSON, not raw HTML strings
-- ❌ The enrichment layer compounds the problem by injecting HTML into what should be a structured document
+- âœ… Sends valid HTML
+- âŒ But Substack expects ProseMirror JSON, not raw HTML strings
+- âŒ The enrichment layer compounds the problem by injecting HTML into what should be a structured document
 
 The enrichment adds inline HTML strings like:
 ```html
@@ -569,7 +569,7 @@ This breaks Substack's editor and rendering, which expects a well-formed ProseMi
 
 **Revert to ProseMirror JSON, but enrich at the document level:**
 
-1. **Keep `substackBody = JSON.stringify(doc)`** — Substack wants ProseMirror JSON
+1. **Keep `substackBody = JSON.stringify(doc)`** â€” Substack wants ProseMirror JSON
 2. **Modify `enrichSubstackBody()`** to:
    - Accept ProseMirror doc object (not HTML string)
    - Upload images via `SubstackService.uploadImage()`
@@ -608,11 +608,11 @@ If Substack's API supports pure HTML body mode (not just ProseMirror):
 
 **Revert the HTML change and implement ProseMirror-native enrichment.** The current approach breaks Substack's document model expectations.
 
-Do not publish any more articles until this is fixed — each publish degrades the article quality on Substack.
+Do not publish any more articles until this is fixed â€” each publish degrades the article quality on Substack.
 
 ## Files to Modify
 
-1. `src/dashboard/server.ts` — lines 276, 296-425
+1. `src/dashboard/server.ts` â€” lines 276, 296-425
 2. Consider creating `src/services/prosemirror-enrichment.ts` for the doc manipulation logic
 3. Update tests in `tests/dashboard/publish.test.ts` to verify JSON structure, not HTML strings
 
@@ -629,11 +629,11 @@ The local preview looks fine because it renders HTML directly, bypassing Substac
 
 ---
 
-# Code Decision — Wire Substack Startup
+# Code Decision â€” Wire Substack Startup
 
 **Date:** 2026-03-25  
 **Owner:** Code  
-**Status:** ✅ IMPLEMENTED
+**Status:** âœ… IMPLEMENTED
 
 ## Decision
 
@@ -653,11 +653,11 @@ Treat `SubstackService` as an optional dashboard runtime dependency that is reso
 
 ---
 
-# Code Decision — Issue #118 Retrospective Finding Promotion (Revised)
+# Code Decision â€” Issue #118 Retrospective Finding Promotion (Revised)
 
 **Date:** 2026-03-23 (Revised 2026-03-25)  
 **Owner:** Code + Lead (replacement implementer)  
-**Status:** ✅ IMPLEMENTED  
+**Status:** âœ… IMPLEMENTED  
 **Related:** Issue #117 (Retrospective Digest CLI), Issue #118 (Promotion logic)
 
 ## Decision
@@ -683,7 +683,7 @@ Both candidate types include evidence, reason, and source fields for human revie
 - `tests/cli.test.ts`: Focused coverage for both promotion pathways
 - Validation: `npm run v2:test` and `npm run v2:build` passing
 
-### Revision (Issue #118 fix — Lead implementation)
+### Revision (Issue #118 fix â€” Lead implementation)
 - **Bug fixed:** Repeated `process_improvement` findings were not auto-promoting to issue-ready when author was non-Lead and priority was non-high.
 - **Root cause:** The approved rule uses "lead-authored OR repeated across 2+ articles" as a promotion signal, but implementation only applied repetition check to `churn_cause`/`repeated_issue` groups.
 - **Fix:** Added explicit repeated-`process_improvement` promotion check in `src/cli.ts` with clear reason string.
@@ -694,12 +694,12 @@ Both candidate types include evidence, reason, and source fields for human revie
 
 ---
 
-# Code Decision — Issue #107 TLDR Contract Enforcement
+# Code Decision â€” Issue #107 TLDR Contract Enforcement
 
 
 **Date:** 2026-03-23  
 **Owner:** Code  
-**Status:** ✅ IMPLEMENTED  
+**Status:** âœ… IMPLEMENTED  
 
 ## Decision
 
@@ -713,7 +713,7 @@ Treat `src/config/defaults/skills/substack-article.md` as the single canonical a
 
 ## Implementation
 
-- `src/pipeline/engine.ts` enforces the TLDR contract before Stage 5→6 advances via `inspectDraftStructure()`
+- `src/pipeline/engine.ts` enforces the TLDR contract before Stage 5â†’6 advances via `inspectDraftStructure()`
 - `src/pipeline/actions.ts` retries malformed drafts once, then uses a synthetic `editor-review.md` send-back during auto-advance when structure is still invalid
 - Writer, Editor, and Publisher charter/skill docs now reference the canonical `substack-article` contract
 - Test coverage: 145/145 passing in engine, actions, and mock provider tests
@@ -726,11 +726,11 @@ Treat `src/config/defaults/skills/substack-article.md` as the single canonical a
 
 **Reviewer:** UX  
 **Date:** 2026-03-24  
-**Status:** FINDINGS — Ready for team review
+**Status:** FINDINGS â€” Ready for team review
 
 ## Summary
 
-Stage 7 publish flow uses ambiguous wording ("publish workspace") and weak status copy that confuses the two-step workflow (Create Draft → Publish). Users lack clear mental model for:
+Stage 7 publish flow uses ambiguous wording ("publish workspace") and weak status copy that confuses the two-step workflow (Create Draft â†’ Publish). Users lack clear mental model for:
 1. Where to create a Substack draft
 2. When draft is ready vs. when publishing goes live
 3. What "publish workspace" refers to
@@ -740,13 +740,13 @@ Stage 7 publish flow uses ambiguous wording ("publish workspace") and weak statu
 ### 1. "Publish Workspace" Is Ambiguous
 - **Location:** `src/dashboard/views/article.ts:513` (tooltip when no draft exists)
 - **Problem:** Term only used once; conflates article detail page with `/articles/:id/publish` page; feels like jargon
-- **Current workflow:** Article → Publish Workspace button → `/articles/:id/publish` → Create Draft button
+- **Current workflow:** Article â†’ Publish Workspace button â†’ `/articles/:id/publish` â†’ Create Draft button
 
 ### 2. Warning Copy Conflicts with Intended Flow
 - **Article detail:** "Create a Substack draft in the publish workspace before publishing"
 - **Publish page:** "Publish to Substack, then optionally post a Note and Tweet"
 - **Issue:** First message implies drafting is a blocker; second makes publishing sound optional
-- **Reality:** Two-step flow IS required: Create Draft → Then Publish
+- **Reality:** Two-step flow IS required: Create Draft â†’ Then Publish
 
 ### 3. Success State Copy Is Weak
 - Needs stronger language confirming draft creation success
@@ -754,7 +754,7 @@ Stage 7 publish flow uses ambiguous wording ("publish workspace") and weak statu
 
 ## Recommended Actions
 
-1. **Rename/clarify "Publish Workspace"** → "Publish Preview" or "Draft Preview"
+1. **Rename/clarify "Publish Workspace"** â†’ "Publish Preview" or "Draft Preview"
 2. **Strengthen warning copy** on article detail page to match two-step requirement
 3. **Clarify publish page hints** so users understand Create Draft is mandatory, then Publish is the publication action
 4. **Upgrade publish page preview** to match richer `/articles/:id/preview` rendering
@@ -762,7 +762,7 @@ Stage 7 publish flow uses ambiguous wording ("publish workspace") and weak statu
 
 ---
 
-# Decision Inbox — Create-Draft Implementation Issue
+# Decision Inbox â€” Create-Draft Implementation Issue
 
 **From:** Code Investigation Team  
 **Date:** 2026-03-23T02:23:29Z  
@@ -788,9 +788,9 @@ Create-draft function in `publishToSubstack` action appears broken or incomplete
 
 ## Related Files
 
-- `src/actions/publishToSubstack.ts` — Main implementation
-- `src/server.ts` — Server integration point
-- `tests/**/*.test.ts` — Test coverage gaps
+- `src/actions/publishToSubstack.ts` â€” Main implementation
+- `src/server.ts` â€” Server integration point
+- `tests/**/*.test.ts` â€” Test coverage gaps
 
 ## Team Impact
 
@@ -798,11 +798,11 @@ Create-draft function in `publishToSubstack` action appears broken or incomplete
 
 ---
 
-# Code Decision — Publish HTMX Config Errors
+# Code Decision â€” Publish HTMX Config Errors
 
 **Date:** 2026-03-25  
 **Owner:** Code  
-**Status:** 📋 Proposed
+**Status:** ðŸ“‹ Proposed
 
 ## Decision
 
@@ -819,11 +819,11 @@ Set `SUBSTACK_PUBLICATION_URL` and `SUBSTACK_TOKEN` in `.env`, restart the dashb
 
 ---
 
-# Decision Inbox — Dashboard Substack Service Runtime Wiring
+# Decision Inbox â€” Dashboard Substack Service Runtime Wiring
 
 **Date:** 2026-03-25  
 **Owner:** Code + Publisher  
-**Status:** 📋 Proposed  
+**Status:** ðŸ“‹ Proposed  
 **Type:** Runtime wiring + UX semantics
 
 ## Consensus Position
@@ -861,11 +861,11 @@ Until Code wires `SubstackService` into startup, treat dashboard draft/publish a
 
 ---
 
-# Lead Decision — Retrospective Digest Issue Chain
+# Lead Decision â€” Retrospective Digest Issue Chain
 
 **Date:** 2026-03-23  
 **Owner:** Lead  
-**Status:** ✅ APPROVED
+**Status:** âœ… APPROVED
 
 ## Decision
 
@@ -891,11 +891,11 @@ Execution order is now:
 
 ---
 
-# Lead Review — Issue #117 Retrospective Digest CLI
+# Lead Review â€” Issue #117 Retrospective Digest CLI
 
 **Date:** 2026-03-23  
-**Reviewer:** Lead (🏗️)  
-**Status:** ✅ APPROVED
+**Reviewer:** Lead (ðŸ—ï¸)  
+**Status:** âœ… APPROVED
 
 ## Verdict
 
@@ -917,7 +917,7 @@ Approve the current #117 slice in this checkout.
 
 ---
 
-# Decision Inbox — Publish Error Handling & UX
+# Decision Inbox â€” Publish Error Handling & UX
 
 **From:** Publisher + UX Investigation Teams  
 **Date:** 2026-03-23T02:23:29Z  
@@ -949,9 +949,9 @@ Publish pipeline lacks robust error messaging and user feedback mechanisms. Draf
 
 ## Related Components
 
-- `src/actions/publishToSubstack.ts` — Error handling layer
-- `src/components/` — UI components for draft state
-- `content/articles/` — Article metadata/state storage
+- `src/actions/publishToSubstack.ts` â€” Error handling layer
+- `src/components/` â€” UI components for draft state
+- `content/articles/` â€” Article metadata/state storage
 
 ## Dependencies
 
@@ -959,7 +959,7 @@ Depends on Code team fixing create-draft logic.
 
 ---
 
-# Decision Inbox — Publisher publish overhaul
+# Decision Inbox â€” Publisher publish overhaul
 
 **From:** Publisher Team  
 **Date:** 2026-03-23  
@@ -1020,7 +1020,7 @@ Surface these states clearly:
 
 ---
 
-# UX Decision Inbox — Publish Flow Overhaul
+# UX Decision Inbox â€” Publish Flow Overhaul
 
 **Author:** UX  
 **Date:** 2026-03-24  
@@ -1069,7 +1069,7 @@ The publish page should become the place where users verify final appearance and
 ## Copy Direction
 
 - Prefer action-first copy:
-  - "No Substack draft yet — create one to continue."
+  - "No Substack draft yet â€” create one to continue."
   - "Draft ready in Substack."
   - "Publishing makes this article live to readers."
   - "We couldn't publish this draft. Try again or open it in Substack."
@@ -1089,7 +1089,7 @@ The publish page should become the place where users verify final appearance and
 
 ---
 
-# Decision — Publish-Overhaul Isolation Strategy
+# Decision â€” Publish-Overhaul Isolation Strategy
 
 **Lead Recommendation**  
 **Date:** 2026-03-24  
@@ -1140,7 +1140,7 @@ The publish-overhaul code changes live **exclusively in the working tree** (not 
 5. **Stage and commit publish-only changes** on the new branch:
    ```
    git add src/dashboard/ tests/dashboard/publish.test.ts tests/dashboard/server.test.ts
-   git commit -m "feat: publish-overhaul — draft-first UX, shared preview, unified workflow"
+   git commit -m "feat: publish-overhaul â€” draft-first UX, shared preview, unified workflow"
    ```
 
 6. **Include in commit message:**
@@ -1211,7 +1211,7 @@ This decision reflects team investigation findings from the publish-overhaul ses
 
 # Decision: retrospective follow-up should start as a manual digest
 
-**By:** Lead (🏗️)  
+**By:** Lead (ðŸ—ï¸)  
 **Date:** 2026-03-23  
 **Related issues:** #115, #114, #116, #117, #118
 
@@ -1234,7 +1234,7 @@ Implementation work stays downstream of **#114**, which tracks landing the base 
 
 ---
 
-# Lead Decision — Retrospective Port Boundary
+# Lead Decision â€” Retrospective Port Boundary
 
 **Date:** 2026-03-24
 **Status:** APPROVED for smallest coherent slice
@@ -1270,12 +1270,12 @@ Port only the **base post-revision retrospective runtime** from the `issue-108-r
 
 ---
 
-# Decision — Issue #107 Revision: Publisher Skill Deduplication
+# Decision â€” Issue #107 Revision: Publisher Skill Deduplication
 
 **Date:** 2026-03-24  
 **Owner:** Publisher (Squad Agent)  
-**Status:** ✅ COMPLETED  
-**Related:** Issue #107, Code rejection feedback, `.squad/decisions.md` #Code Decision — Issue #107 TLDR Contract Enforcement
+**Status:** âœ… COMPLETED  
+**Related:** Issue #107, Code rejection feedback, `.squad/decisions.md` #Code Decision â€” Issue #107 TLDR Contract Enforcement
 
 ## Decision
 
@@ -1287,21 +1287,21 @@ The Publisher skill now focuses exclusively on **verification** (syntax, paths, 
 
 ### Before (duplicated policy):
 - Enumerated "exactly 2 inline images"
-- Stated "cover image is hero-safe — not a chart, table, or data visualization"
+- Stated "cover image is hero-safe â€” not a chart, table, or data visualization"
 - Dictated "if story is player-centric, cover image is player-centric too"
 - Required "images do not use visible markdown captions"
 - Named inline images `{slug}-inline-1.png` and `{slug}-inline-2.png`
 
 ### After (policy reference + verification only):
-- Line 51: "The canonical image policy (count, placement, hero-safety, naming, alt text) is documented in `../substack-article.md` **Phase 4b: Image policy (updated)** — refer to that section as the source of truth."
-- Lines 55–59: Retained only technical Publisher checks (syntax, naming, existence, alt text quality, broken links)
+- Line 51: "The canonical image policy (count, placement, hero-safety, naming, alt text) is documented in `../substack-article.md` **Phase 4b: Image policy (updated)** â€” refer to that section as the source of truth."
+- Lines 55â€“59: Retained only technical Publisher checks (syntax, naming, existence, alt text quality, broken links)
 
 ## Why
 
 Following the Code team's Issue #107 decision: **Single canonical source prevents policy drift.**
 
-- **Before:** Writer charter, Editor skill, Publisher skill all potentially restated the same rules → divergence risk
-- **After:** One policy source (substack-article.md) is referenced by all three roles → consistent enforcement
+- **Before:** Writer charter, Editor skill, Publisher skill all potentially restated the same rules â†’ divergence risk
+- **After:** One policy source (substack-article.md) is referenced by all three roles â†’ consistent enforcement
 
 **Division of labor:**
 - `substack-article.md`: Defines image contract (what must be true)
@@ -1310,17 +1310,17 @@ Following the Code team's Issue #107 decision: **Single canonical source prevent
 ## Implementation Notes
 
 - **File modified:** `src/config/defaults/skills/publisher.md`
-- **Lines changed:** 49–64 (Step 2 section)
+- **Lines changed:** 49â€“64 (Step 2 section)
 - **Scope:** Documentation only; no code changes
 - **Testing:** Markdown change does not impact runtime behavior or tests
 - **Validation:** Cross-verified reference path (`../substack-article.md` exists in same directory); confirmed section title "Phase 4b: Image policy (updated)" exists in target file
 
 ## Related Files
 
-- `src/config/defaults/skills/substack-article.md` — Canonical image policy (Phase 4b, lines 207–215)
-- `src/config/defaults/charters/nfl/writer.md` — Writer charter (should reference canonical source)
-- `src/config/defaults/charters/nfl/editor.md` — Editor charter (should reference canonical source)
-- `src/config/defaults/skills/publisher.md` — Updated with reference-only Step 2
+- `src/config/defaults/skills/substack-article.md` â€” Canonical image policy (Phase 4b, lines 207â€“215)
+- `src/config/defaults/charters/nfl/writer.md` â€” Writer charter (should reference canonical source)
+- `src/config/defaults/charters/nfl/editor.md` â€” Editor charter (should reference canonical source)
+- `src/config/defaults/skills/publisher.md` â€” Updated with reference-only Step 2
 
 ## Next Steps (if any)
 
@@ -1328,7 +1328,7 @@ None required for this revision. Coordinated team documentation updates may foll
 
 ---
 
-# Scribe Routing Log — Issue #107 Completion & Orchestration
+# Scribe Routing Log â€” Issue #107 Completion & Orchestration
 
 **From:** Scribe  
 **Date:** 2026-03-24T03:25:00Z  
@@ -1340,45 +1340,45 @@ Issue #107 TLDR contract enforcement is complete and approved. Code agent delive
 
 ### Orchestration Complete
 
-- ✅ Orchestration logs written: Code and Lead agents
-- ✅ Session log written: Issue #107 TLDR contract enforcement
-- ✅ Decision inbox merged and deduplicated into `decisions.md`
-- ✅ Agent history updated with session learnings
-- ✅ Git commit staged for `.squad/` state
+- âœ… Orchestration logs written: Code and Lead agents
+- âœ… Session log written: Issue #107 TLDR contract enforcement
+- âœ… Decision inbox merged and deduplicated into `decisions.md`
+- âœ… Agent history updated with session learnings
+- âœ… Git commit staged for `.squad/` state
 
 ### Core Deliverables (Approved)
 
 1. **Canonical TLDR contract:** `src/config/defaults/skills/substack-article.md` with YAML frontmatter
-2. **Stage 5→6 enforcement:** `inspectDraftStructure()` validates structure before advance
+2. **Stage 5â†’6 enforcement:** `inspectDraftStructure()` validates structure before advance
 3. **Writer self-healing:** Malformed drafts retry once, then auto-regress with synthetic send-back
 4. **Test coverage:** 145/145 regression tests passing
 5. **Charter alignment:** All agent charters reference single canonical contract
 
 ### Lead Review Status
 
-✅ **APPROVED** — All guardrails validated, test coverage verified  
-⚠️ **Non-blocking notes:** Diagnostic cleanup opportunity, redundant clearArtifacts call (noted for future tech debt)
+âœ… **APPROVED** â€” All guardrails validated, test coverage verified  
+âš ï¸ **Non-blocking notes:** Diagnostic cleanup opportunity, redundant clearArtifacts call (noted for future tech debt)
 
 ### Next Steps
 
 1. **Lead agent to proceed** with final code review if needed
 2. **Code agent to validate** idempotent behavior and full integration
 3. **Final build/test pass** (`npm run v2:build`) before merge
-4. **Merge main → origin/main** and close Issue #107
+4. **Merge main â†’ origin/main** and close Issue #107
 
 ---
 
-# Scribe Inbox Merge Notice — 2026-03-24T02-40-39Z
+# Scribe Inbox Merge Notice â€” 2026-03-24T02-40-39Z
 
 **Inbox file:** `.squad/decisions/inbox/code-issue-107.md` (MERGED)
 
-**Status:** Deduplicated. The inbox contained an exact match of the primary **"Code Decision — Issue #107 TLDR Contract Enforcement"** record already present at line 1. No new information; inbox file deleted per merge completion.
+**Status:** Deduplicated. The inbox contained an exact match of the primary **"Code Decision â€” Issue #107 TLDR Contract Enforcement"** record already present at line 1. No new information; inbox file deleted per merge completion.
 
 ---
 
-# Lead Decision — Retrospective Digest Execution Order
+# Lead Decision â€” Retrospective Digest Execution Order
 
-**By:** Lead (🏗️)  
+**By:** Lead (ðŸ—ï¸)  
 **Date:** 2026-03-24  
 **Related issues:** #114, #115, #116, #117, #118
 
@@ -1386,10 +1386,10 @@ Issue #107 TLDR contract enforcement is complete and approved. Code agent delive
 
 Treat the retrospective digest chain as:
 
-1. **#114** — already reconciled and closed as verification only; no new runtime port work remains.
-2. **#116** — research/spec complete and ready to close.
-3. **#117** — active next implementation slice for the manual CLI digest/query scaffold.
-4. **#118** — remains blocked only on **#117** landing the digest scaffold, while consuming the accepted heuristic/spec from **#116**.
+1. **#114** â€” already reconciled and closed as verification only; no new runtime port work remains.
+2. **#116** â€” research/spec complete and ready to close.
+3. **#117** â€” active next implementation slice for the manual CLI digest/query scaffold.
+4. **#118** â€” remains blocked only on **#117** landing the digest scaffold, while consuming the accepted heuristic/spec from **#116**.
 
 ## Why
 
@@ -1403,7 +1403,7 @@ The mainline retrospective runtime seam is already present, so the backlog shoul
 
 ---
 
-# DevOps Decision — Publish Overhaul Ship
+# DevOps Decision â€” Publish Overhaul Ship
 
 **By:** DevOps  
 **Date:** 2026-03-24  
@@ -1437,31 +1437,31 @@ When local `main` is dirty and ahead of `origin/main`, isolate ship-ready dashbo
 ## Problem Statement
 
 Users encounter HTTP 500 error "Substack publishing is not configured for this environment" when attempting to create drafts or publish articles, despite having all required environment variables correctly configured:
-- `SUBSTACK_TOKEN` ✅ present (base64-encoded)
-- `SUBSTACK_PUBLICATION_URL` ✅ present (nfllab.substack.com)
-- `SUBSTACK_STAGE_URL` ✅ present (nfllabstage.substack.com)
+- `SUBSTACK_TOKEN` âœ… present (base64-encoded)
+- `SUBSTACK_PUBLICATION_URL` âœ… present (nfllab.substack.com)
+- `SUBSTACK_STAGE_URL` âœ… present (nfllabstage.substack.com)
 
 ## Root Cause
 
-**Code bug in `src/dashboard/server.ts` — `startServer()` function (lines 2342–2499)**
+**Code bug in `src/dashboard/server.ts` â€” `startServer()` function (lines 2342â€“2499)**
 
 The application has proper architecture to support optional services via dependency injection:
 ```typescript
 createApp(repo, config, { 
-  actionContext,      // ✅ created (lines 2374–2449)
-  imageService,       // ✅ created (lines 2456–2471)
-  memory,             // ✅ created (line 2439)
-  substackService     // ❌ MISSING — never created or passed
+  actionContext,      // âœ… created (lines 2374â€“2449)
+  imageService,       // âœ… created (lines 2456â€“2471)
+  memory,             // âœ… created (line 2439)
+  substackService     // âŒ MISSING â€” never created or passed
 })
 ```
 
-The `ImageService` pattern (lines 2455–2471) shows the correct approach:
+The `ImageService` pattern (lines 2455â€“2471) shows the correct approach:
 1. Check for `GEMINI_API_KEY`
 2. Instantiate service (with fallback provider)
 3. Pass to `createApp()`
 4. Log outcome
 
-**SubstackService is never instantiated.** The handlers (`/api/articles/:id/draft` and `/api/articles/:id/publish`, lines 1366–1459) check:
+**SubstackService is never instantiated.** The handlers (`/api/articles/:id/draft` and `/api/articles/:id/publish`, lines 1366â€“1459) check:
 ```typescript
 if (!substackService) {
   return c.json({ error: 'Substack publishing is not configured for this environment.' }, 500);
@@ -1474,11 +1474,11 @@ Since `substackService` is `undefined` (never created), publishing always fails.
 
 | Check | Result | Evidence |
 |-------|--------|----------|
-| Is SubstackService class available? | ✅ Yes | `src/services/substack.ts` (391 lines, fully implemented) |
-| Do env vars exist? | ✅ Yes | `.env` file verified |
-| Are env vars used elsewhere? | ✅ Yes | `src/dashboard/server.ts:513–514` shows them in config page |
-| Is dependency injection wired? | ✅ Partial | `createApp()` accepts `substackService` param, but startup never passes it |
-| Is similar service working? | ✅ Yes | `imageService` follows same pattern and works |
+| Is SubstackService class available? | âœ… Yes | `src/services/substack.ts` (391 lines, fully implemented) |
+| Do env vars exist? | âœ… Yes | `.env` file verified |
+| Are env vars used elsewhere? | âœ… Yes | `src/dashboard/server.ts:513â€“514` shows them in config page |
+| Is dependency injection wired? | âœ… Partial | `createApp()` accepts `substackService` param, but startup never passes it |
+| Is similar service working? | âœ… Yes | `imageService` follows same pattern and works |
 
 ## Recommendation
 
@@ -1493,7 +1493,7 @@ try {
   const stageUrl = process.env['SUBSTACK_STAGE_URL'] || undefined;
 
   if (!token || !pubUrl) {
-    console.log('Substack publishing credentials not set — publishing unavailable');
+    console.log('Substack publishing credentials not set â€” publishing unavailable');
   } else {
     const SubstackServiceClass = (await import('../services/substack.js')).SubstackService;
     substackService = new SubstackServiceClass({
@@ -1516,7 +1516,7 @@ const app = createApp(repo, config, { substackService, actionContext, imageServi
 - Mirrors existing `imageService` pattern (proven working)
 - Non-fatal initialization (logs warning, doesn't crash server if env missing)
 - Enables publishing workflow without user env changes
-- Unblocks Stage 7→8 transition in pipeline
+- Unblocks Stage 7â†’8 transition in pipeline
 
 ## Timeline
 
@@ -1532,17 +1532,17 @@ const app = createApp(repo, config, { substackService, actionContext, imageServi
 
 ---
 
-# Publisher — Substack Dashboard Config UX
+# Publisher â€” Substack Dashboard Config UX
 
 **Date:** 2026-03-23  
 **Owner:** Publisher  
-**Status:** ✅ DECISION MERGED  
+**Status:** âœ… DECISION MERGED  
 
 ## Recommendation
 
 Treat Substack dashboard publishing failures as two different product states:
-1. **Missing configuration** — `SUBSTACK_TOKEN` and/or `SUBSTACK_PUBLICATION_URL` absent.
-2. **Service unavailable despite config** — startup failed to instantiate or inject `SubstackService`.
+1. **Missing configuration** â€” `SUBSTACK_TOKEN` and/or `SUBSTACK_PUBLICATION_URL` absent.
+2. **Service unavailable despite config** â€” startup failed to instantiate or inject `SubstackService`.
 
 ## Why
 
@@ -1557,11 +1557,11 @@ Current publish UI collapses both states into one message telling the user to se
 
 ---
 
-# UX Decision — Publish Missing Config Copy
+# UX Decision â€” Publish Missing Config Copy
 
 **Date:** 2026-03-23  
 **Owner:** UX  
-**Status:** ✅ DECISION MERGED  
+**Status:** âœ… DECISION MERGED  
 
 ## Context
 
@@ -1590,7 +1590,7 @@ Keep the actionable recovery detail outside the alert, in the existing hint that
 
 ---
 
-# Scribe Inbox Dedupe — 2026-03-23T04:18:42Z
+# Scribe Inbox Dedupe â€” 2026-03-23T04:18:42Z
 
 - Inbox records for `publisher-substack-config.md` and `ux-publish-500.md` matched existing decision entries in `decisions.md`.
 - No duplicate decision text was appended.
@@ -1598,11 +1598,11 @@ Keep the actionable recovery detail outside the alert, in the existing hint that
 
 ---
 
-# Code Decision Inbox — Publish 500 Wiring
+# Code Decision Inbox â€” Publish 500 Wiring
 
 **Date:** 2026-03-23T04:17:39Z
 **Owner:** Code
-**Status:** 📋 Proposed
+**Status:** ðŸ“‹ Proposed
 
 ## Decision
 
@@ -1623,7 +1623,7 @@ Treat dashboard draft/publish "Substack publishing is not configured" failures a
 
 ---
 
-# Lead Review — dashboard publish missing-config fix
+# Lead Review â€” dashboard publish missing-config fix
 
 **Date:** 2026-03-25
 **Owner:** Lead
@@ -1645,7 +1645,7 @@ Split or restack the missing-config fix so it can be approved independently from
 
 ---
 
-# Decision Inbox — Code wire Substack startup
+# Decision Inbox â€” Code wire Substack startup
 
 **Date:** 2026-03-25
 **Owner:** Code
@@ -1671,11 +1671,11 @@ For Substack specifically:
 
 - Env-configured publish actions work without every caller having to manually thread `substackService`.
 - Existing mock-injection tests remain stable because an explicit mock still wins over env fallback.
-- Missing or invalid env still degrades safely into the existing “not configured” UX instead of crashing publish routes.
+- Missing or invalid env still degrades safely into the existing â€œnot configuredâ€ UX instead of crashing publish routes.
 
 ---
 
-# Lead Review — dashboard publish missing-config fix
+# Lead Review â€” dashboard publish missing-config fix
 
 **Date:** 2026-03-25
 **Owner:** Lead
@@ -1702,7 +1702,7 @@ Restack the missing-config fix so it only includes:
 
 ---
 
-# Lead Review — Issue #118
+# Lead Review â€” Issue #118
 
 **Date:** 2026-03-25  
 **Reviewer:** Lead  
@@ -1744,15 +1744,15 @@ Reviewed only:
 ## Validation
 
 - Ran focused existing coverage: 
-px vitest run tests/cli.test.ts -t "retrospective digest command" — passed.
+px vitest run tests/cli.test.ts -t "retrospective digest command" â€” passed.
 
 ---
 
-# Publisher Decision Inbox — Substack Output Gap Trace
+# Publisher Decision Inbox â€” Substack Output Gap Trace
 
 **Date:** 2026-03-25  
 **Owner:** Publisher  
-**Status:** 📋 Proposed  
+**Status:** ðŸ“‹ Proposed  
 **Type:** Payload parity / validation strategy
 
 ## Decision
@@ -1797,7 +1797,7 @@ Before republish validation, ensure real image assets exist for that slug or the
 
 ---
 
-# Decision Inbox — Data publish 500 final
+# Decision Inbox â€” Data publish 500 final
 
 ## Decision
 
@@ -1815,7 +1815,7 @@ Keep the accepted missing-config behavior exactly as-is, but in `POST /api/artic
 
 ---
 
-# Decision — Devops publish-substack-progress branch strategy
+# Decision â€” Devops publish-substack-progress branch strategy
 
 ## Decision
 
@@ -1846,12 +1846,12 @@ Published articles on Substack were missing images, formatting, and other rich c
 
 Line 276 in `src/dashboard/server.ts`:
 ```typescript
-substackBody = JSON.stringify(doc);  // ❌ Wrong - sends JSON
+substackBody = JSON.stringify(doc);  // âŒ Wrong - sends JSON
 ```
 
 Meanwhile, the preview correctly used:
 ```typescript
-htmlBody = proseMirrorToHtml(doc);  // ✅ Correct - sends HTML
+htmlBody = proseMirrorToHtml(doc);  // âœ… Correct - sends HTML
 ```
 
 The `saveOrUpdateSubstackDraft()` function passes `presentation.substackBody` as `bodyHtml` to Substack's API, which expects HTML, not JSON.
@@ -1860,22 +1860,22 @@ The `saveOrUpdateSubstackDraft()` function passes `presentation.substackBody` as
 
 Changed line 276 to match the preview rendering:
 ```typescript
-substackBody = proseMirrorToHtml(doc);  // ✅ Now sends HTML
+substackBody = proseMirrorToHtml(doc);  // âœ… Now sends HTML
 ```
 
 ## Error Precedence
 
 Reviewer also requested verification that error precedence in `POST /api/articles/:id/publish` remained correct. Confirmed the route checks:
-1. **First:** Missing markdown (`!presentation.substackBody`) → "No article draft found yet..."
-2. **Second:** Missing draft URL (`!article.substack_draft_url`) → "No linked Substack draft found..."
+1. **First:** Missing markdown (`!presentation.substackBody`) â†’ "No article draft found yet..."
+2. **Second:** Missing draft URL (`!article.substack_draft_url`) â†’ "No linked Substack draft found..."
 
 This order is correct and unchanged.
 
 ## Testing
 
-- ✅ All 42 publish tests pass (`npm run test -- tests/dashboard/publish.test.ts`)
-- ✅ Build succeeds (`npm run v2:build`)
-- ⚠️ 2 pre-existing server.test.ts failures unrelated to this change (revision history rendering)
+- âœ… All 42 publish tests pass (`npm run test -- tests/dashboard/publish.test.ts`)
+- âœ… Build succeeds (`npm run v2:build`)
+- âš ï¸ 2 pre-existing server.test.ts failures unrelated to this change (revision history rendering)
 
 ## Architecture Note
 
@@ -1887,7 +1887,7 @@ Both now use the same `proseMirrorToHtml()` renderer to ensure consistency betwe
 
 ---
 
-# Decision — Substack Payload Parity Restoration
+# Decision â€” Substack Payload Parity Restoration
 
 **Agent:** Publisher  
 **Date:** 2026-03-23  
@@ -1895,7 +1895,7 @@ Both now use the same `proseMirrorToHtml()` renderer to ensure consistency betwe
 
 ## Context
 
-The preview frame (`/articles/:id/preview`) showed a fully formatted article with cover/inline images, subscribe CTA, and publication blurb. However, the actual Substack draft/post was missing all these elements — it contained only the bare article body HTML.
+The preview frame (`/articles/:id/preview`) showed a fully formatted article with cover/inline images, subscribe CTA, and publication blurb. However, the actual Substack draft/post was missing all these elements â€” it contained only the bare article body HTML.
 
 **Root cause:** `buildPublishPresentation()` in `src/dashboard/server.ts` created identical `htmlBody` and `substackBody` (both from `proseMirrorToHtml(doc)`), but the preview added images and chrome _after_ that conversion via `intersperse()` and DOM injection. The Substack payload path never received these enhancements.
 
@@ -2058,11 +2058,11 @@ Created a single progress commit on `main` containing **only** the approved publ
 
 ## Validation
 
-✅ All 45 publish tests pass  
-✅ Build succeeds (`npm run v2:build`)  
-✅ No unrelated repo modifications included  
-✅ Excluded `.squad/` decision/log files (not source code)  
-✅ Commit message includes Co-authored-by trailer per policy
+âœ… All 45 publish tests pass  
+âœ… Build succeeds (`npm run v2:build`)  
+âœ… No unrelated repo modifications included  
+âœ… Excluded `.squad/` decision/log files (not source code)  
+âœ… Commit message includes Co-authored-by trailer per policy
 
 ## Trade-offs and Decisions
 
@@ -2072,14 +2072,14 @@ Created a single progress commit on `main` containing **only** the approved publ
 
 3. **Excluded metadata files**: Did not include `.squad/agents/*/history.md` or `.squad/decisions/` changes, as these are session artifacts, not production code. The commit message documents the decisions separately.
 
-4. **Untracked files**: Ignored untracked test/debug directories (`.copilot-debug-fix/`, `.test-debug-retro/`, `.worktrees/`, `=`, `worktrees/`) — these are ephemeral artifacts.
+4. **Untracked files**: Ignored untracked test/debug directories (`.copilot-debug-fix/`, `.test-debug-retro/`, `.worktrees/`, `=`, `worktrees/`) â€” these are ephemeral artifacts.
 
 ## Next Steps
 
-1. ✅ Commit created locally (push deferred per instructions)
-2. ⏳ Ready for QA/validation before production push
-3. ⏳ Monitor build/test results on CI when pushed
-4. ⏳ Coordinate deployment timing with team
+1. âœ… Commit created locally (push deferred per instructions)
+2. â³ Ready for QA/validation before production push
+3. â³ Monitor build/test results on CI when pushed
+4. â³ Coordinate deployment timing with team
 
 ## Metrics
 
@@ -2091,11 +2091,11 @@ Created a single progress commit on `main` containing **only** the approved publ
 
 ---
 
-# DevOps Decision — Publish Fix Commit
+# DevOps Decision â€” Publish Fix Commit
 
 **Date:** 2026-03-25T06:34:28Z  
 **Owner:** DevOps  
-**Status:** ✅ COMMITTED  
+**Status:** âœ… COMMITTED  
 **Commit SHA:** 9480b74d4f738718b9f0667de2564c857139d275
 
 ## Summary
@@ -2104,17 +2104,17 @@ Staged and committed publish-fix changes to main branch. Three files modified: d
 
 ## Files Committed
 
-1. src/dashboard/server.ts — +253, -109
+1. src/dashboard/server.ts â€” +253, -109
    - Added createSubstackServiceFromEnv() factory
    - Added 
 esolveDashboardDependencies() resolver
    - Proper service injection at startup
 
-2. src/dashboard/views/publish.ts — +7, -0
+2. src/dashboard/views/publish.ts â€” +7, -0
    - Exported proseMirrorToHtml() for test use
-   - Corrected HTML rendering for ProseMirror → HTML flow
+   - Corrected HTML rendering for ProseMirror â†’ HTML flow
 
-3. 	ests/dashboard/publish.test.ts — +100, -109
+3. 	ests/dashboard/publish.test.ts â€” +100, -109
    - Enhanced payload validation tests
    - Image reference and embedding test coverage
    - Mock service improvements
@@ -2165,11 +2165,11 @@ pm run v2:build
 
 ---
 
-# Publisher Decision — Notes Publishing 500 Fix
+# Publisher Decision â€” Notes Publishing 500 Fix
 
 **Date:** 2026-03-25  
 **Owner:** Publisher  
-**Status:** ✅ IMPLEMENTED
+**Status:** âœ… IMPLEMENTED
 
 ## Decision
 
@@ -2196,19 +2196,19 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 
 ## Validation
 
-- ✅ All 46 substack service tests pass
-- ✅ All 46 dashboard publish tests pass
-- ✅ Notes can now be posted without any env configuration beyond required Substack credentials
+- âœ… All 46 substack service tests pass
+- âœ… All 46 dashboard publish tests pass
+- âœ… Notes can now be posted without any env configuration beyond required Substack credentials
 
 ## Notes
 
 - Optional env var NOTES_ENDPOINT_PATH still works for overriding the default if needed (e.g., for testing against different endpoints)
-- No breaking changes — existing setups with explicit NOTES_ENDPOINT_PATH continue to work
+- No breaking changes â€” existing setups with explicit NOTES_ENDPOINT_PATH continue to work
 - Same contract pattern applicable to Tweet feature if similar issues emerge (service optional but feature requires configuration)
 
 ---
 
-# Lead — Board Cleanup & Priority Triage
+# Lead â€” Board Cleanup & Priority Triage
 
 **Date:** 2026-03-25T11:00:00Z  
 **Status:** COMPLETED  
@@ -2217,72 +2217,72 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 ## Changes Made
 
 ### Closed Issues (Work Completed & Merged)
-- **#107** ✓ Enforce TLDR article structure contract before editor approval
-- **#109** ✓ Dashboard article detail: surface revision history and persisted thinking traces
-- **#117** ✓ Add manual CLI retrospective digest over structured retrospective data
-- **#118** ✓ Promote retrospective findings into issue-ready and learning-ready candidates
+- **#107** âœ“ Enforce TLDR article structure contract before editor approval
+- **#109** âœ“ Dashboard article detail: surface revision history and persisted thinking traces
+- **#117** âœ“ Add manual CLI retrospective digest over structured retrospective data
+- **#118** âœ“ Promote retrospective findings into issue-ready and learning-ready candidates
 
 **Basis:** All four issues have completed commits to main. #107 and #109 were merged in earlier sessions; #117 and #118 were merged in the current session after Lead approval and hotfix validation.
 
 ### Unblocked & Ready for Active Work
-- **#115** → Added `go:yes` + `squad:research` labels
+- **#115** â†’ Added `go:yes` + `squad:research` labels
   - **Reason:** Both blocking issues (#117 CLI digest scaffold, #118 promotion layer) are now merged.
   - **Status:** Awaiting Research to begin mining retrospectives into learning updates and process-improvement tickets.
 
 ## Issues Remaining Actionable
 
 ### Awaiting Research Investigation
-- **#102** (go:needs-research, squad:devops) — Dashboard auth hardening
-- **#110** (go:needs-research, squad:lead) — Time spent metrics on stage runs
-- **#91** (go:needs-research, release:backlog, squad:code) — Domain knowledge runtime integration
+- **#102** (go:needs-research, squad:devops) â€” Dashboard auth hardening
+- **#110** (go:needs-research, squad:lead) â€” Time spent metrics on stage runs
+- **#91** (go:needs-research, release:backlog, squad:code) â€” Domain knowledge runtime integration
 
 ### Awaiting User Input/Feedback
-- **#84** (pending-user, go:yes) — Staleness detection design approval
-- **#76** (pending-user) — Mass document update service
-- **#70** (pending-user) — Social link image generation
+- **#84** (pending-user, go:yes) â€” Staleness detection design approval
+- **#76** (pending-user) â€” Mass document update service
+- **#70** (pending-user) â€” Social link image generation
 
 ## Next Issue for Ralph
 
-**#115 — Mine article retrospectives into learning updates and process-improvement work**
+**#115 â€” Mine article retrospectives into learning updates and process-improvement work**
 
-**One-line reason:** Natural continuation of completed #117/#118 digest pipeline; unblocks team's retrospective→process-improvement feedback loop.
+**One-line reason:** Natural continuation of completed #117/#118 digest pipeline; unblocks team's retrospectiveâ†’process-improvement feedback loop.
 
-**Team assignment:** Squad:Research → Begin synthesis of retrospective patterns and process-improvement candidacy rules per Manual Retro Digest First skill.
+**Team assignment:** Squad:Research â†’ Begin synthesis of retrospective patterns and process-improvement candidacy rules per Manual Retro Digest First skill.
 
 ---
 
-# Lead Board Reconciliation — 2026-03-25
+# Lead Board Reconciliation â€” 2026-03-25
 
 **Status:** Board reconciled. Stale issues closed. #117 identified as next priority.
 
 ## Issues Reconciled (Closed)
 
-### #107 — Enforce TLDR article structure contract before editor approval
-- **Status:** ✅ COMPLETED (Commit `74d87b2`)
+### #107 â€” Enforce TLDR article structure contract before editor approval
+- **Status:** âœ… COMPLETED (Commit `74d87b2`)
 - **Completion:** TLDR contract enforcement implemented in `src/pipeline/engine.ts` via `inspectDraftStructure()`
 - **Evidence:** Scribe logs and decision records in `.squad/decisions.md`
 - **Action:** Close as completed
 
-### #109 — Dashboard article detail: surface revision history and persisted thinking traces
-- **Status:** ✅ COMPLETED (Scribe logs dated `2026-03-25`)
+### #109 â€” Dashboard article detail: surface revision history and persisted thinking traces
+- **Status:** âœ… COMPLETED (Scribe logs dated `2026-03-25`)
 - **Completion:** Revision history and thinking artifact visibility surfaced in dashboard
 - **Evidence:** Scribe logs reference issue #109 implementation completion
 - **Action:** Close as completed
 
-## Active Issue Chain — #115/#117/#118
+## Active Issue Chain â€” #115/#117/#118
 
-### Parent: #115 — Mine article retrospectives into learning updates
+### Parent: #115 â€” Mine article retrospectives into learning updates
 - **Status:** ACTIVE (architecture work)
 - **Notes:** Locked architecture decision established; child issues (#117, #118) own execution
 
-### Current: #117 — Add manual CLI retrospective digest (unblocked, go:yes)
+### Current: #117 â€” Add manual CLI retrospective digest (unblocked, go:yes)
 - **Status:** NEXT PRIORITY
 - **Scope:** Manual CLI surface over `article_retrospectives` + `article_retrospective_findings`
 - **Blocking:** #118 (digest scaffold prerequisite)
 - **Assigned to:** Code
 - **Why Next:** Establishes base surface for retrospective mining pipeline; unblocks #118
 
-### Dependent: #118 — Promote retrospective findings into candidates
+### Dependent: #118 â€” Promote retrospective findings into candidates
 - **Status:** BLOCKED on #117 (digest scaffold)
 - **Scope:** Candidate promotion layer with process-improvement/learning-update distinction
 - **Notes:** Research (#116) completed; waits only for #117 to land
@@ -2293,10 +2293,10 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 **Board changes:** None (no label/status changes needed)
 
 **Active issues remaining:** 8 open issues across squad scope
-- Priority-P2: #107 (✅ CLOSED), #109 (✅ CLOSED), #115 (active), #117 (next), #118 (blocked), #102
+- Priority-P2: #107 (âœ… CLOSED), #109 (âœ… CLOSED), #115 (active), #117 (next), #118 (blocked), #102
 - Other: #110, #91, #84, #76, #70
 
-**Next issue for Ralph:** #117 — Add manual CLI retrospective digest
+**Next issue for Ralph:** #117 â€” Add manual CLI retrospective digest
 - Unblocked (`go:yes`)
 - Code team ready to implement
 - Clear acceptance criteria documented
@@ -2307,7 +2307,7 @@ otesEndpoint was optional in SubstackConfig but required by the createNote() met
 
 ---
 
-# Decision — TLDR Retry Revision Fix
+# Decision â€” TLDR Retry Revision Fix
 
 **Date:** 2026-03-25  
 **Author:** Code  
@@ -2362,13 +2362,13 @@ At the same time, the surrounding Writer/Editor/Publisher guidance was inconsist
 - Agent: Lead
 - Scope: Follow-up clarification only
 
-Decision: keep TLDR misses on the revision-first path, but make the prompts and charters explicit that TLDR is a hard structural requirement. Writer now owns verifying TLDR on every draft, Editor must log missing/incomplete TLDR under `## 🔴 ERRORS` with a `REVISE` verdict, and revision prompts explicitly preserve or restore the canonical TLDR block instead of assuming Editor will restate it every time.
+Decision: keep TLDR misses on the revision-first path, but make the prompts and charters explicit that TLDR is a hard structural requirement. Writer now owns verifying TLDR on every draft, Editor must log missing/incomplete TLDR under `## ðŸ”´ ERRORS` with a `REVISE` verdict, and revision prompts explicitly preserve or restore the canonical TLDR block instead of assuming Editor will restate it every time.
 
 
 
 ---
 
-# Lead Decision — Research Findings → Issue Set for Writer/Editor Loop Improvements
+# Lead Decision â€” Research Findings â†’ Issue Set for Writer/Editor Loop Improvements
 
 **Date:** 2026-03-25  
 **Requester:** Backend (Squad Agent)  
@@ -2382,7 +2382,7 @@ The Backend agent provided 7 research findings on Writer/Editor loop inefficienc
 
 ---
 
-## Research Findings → Issue Split
+## Research Findings â†’ Issue Split
 
 | Finding | Issue # | Title | Tier | Dependencies |
 |---------|---------|-------|------|--------------|
@@ -2392,7 +2392,7 @@ The Backend agent provided 7 research findings on Writer/Editor loop inefficienc
 | Repeated blockers hang articles | **#NEW-5** | Escalate repeated blockers to Lead | Medium | #NEW-1 |
 | No fallback when evidence insufficient | **#NEW-4** | Add fallback/claim-mode after revisions | Medium | #NEW-1 |
 | Writer cannot fact-check (biggest win) | **#NEW-6** | Unbox Writer with guardrailed fact-checking | Research | Research phase |
-| Model routing observability | ~~#NEW-7~~ | *Skip — covered by existing #119* | — | — |
+| Model routing observability | ~~#NEW-7~~ | *Skip â€” covered by existing #119* | â€” | â€” |
 
 ---
 
@@ -2440,13 +2440,13 @@ The Backend agent provided 7 research findings on Writer/Editor loop inefficienc
 ## Duplicate Check Results
 
 Searched GitHub issues for overlapping scope:
-- ✅ No existing issue for "Writer research/fact-checking with guardrails"
-- ✅ No existing issue for "Evidence-gap routing to Research"
-- ✅ No existing issue for "Blocker escalation to Lead"
-- ✅ No existing issue for "Blocker summary in Writer prompt"
-- ✅ No existing issue for "Structured blocker tracking"
-- ✅ Issue #119 covers separate scope (artifact-level provenance + UX badges) — EXCLUDE #NEW-7
-- ✅ All searches negative; safe to proceed with full 6-issue set
+- âœ… No existing issue for "Writer research/fact-checking with guardrails"
+- âœ… No existing issue for "Evidence-gap routing to Research"
+- âœ… No existing issue for "Blocker escalation to Lead"
+- âœ… No existing issue for "Blocker summary in Writer prompt"
+- âœ… No existing issue for "Structured blocker tracking"
+- âœ… Issue #119 covers separate scope (artifact-level provenance + UX badges) â€” EXCLUDE #NEW-7
+- âœ… All searches negative; safe to proceed with full 6-issue set
 
 ---
 
@@ -2496,37 +2496,37 @@ Searched GitHub issues for overlapping scope:
 ## Files to Update (by issue)
 
 **All issues:**
-- `.squad/decisions.md` — Record the split and priority ordering
-- `src/config/defaults/charters/nfl/*.md` — Update Writer, Editor, Lead, Researcher guidance
+- `.squad/decisions.md` â€” Record the split and priority ordering
+- `src/config/defaults/charters/nfl/*.md` â€” Update Writer, Editor, Lead, Researcher guidance
 
 **#NEW-1 (Blocker tracking):**
-- `src/db/schema.sql` — Add blocker_type enum, blocker_ids array
-- `src/db/repository.ts` — Add blocker query methods
-- `src/pipeline/actions.ts` — Wire blocker data into revision records
-- `tests/db/repository.test.ts` — Add blocker retrieval tests
+- `src/db/schema.sql` â€” Add blocker_type enum, blocker_ids array
+- `src/db/repository.ts` â€” Add blocker query methods
+- `src/pipeline/actions.ts` â€” Wire blocker data into revision records
+- `tests/db/repository.test.ts` â€” Add blocker retrieval tests
 
 **#NEW-2 (Blocker summary):**
-- `src/config/defaults/charters/nfl/writer.md` — Add "## Unresolved Blockers" section
-- `src/pipeline/actions.ts` — Inject blocker summary into Writer REVISE context
+- `src/config/defaults/charters/nfl/writer.md` â€” Add "## Unresolved Blockers" section
+- `src/pipeline/actions.ts` â€” Inject blocker summary into Writer REVISE context
 
 **#NEW-3 (Evidence routing):**
-- `src/pipeline/actions.ts` — Branch on blocker_type=evidence_deficit to Research
-- `src/config/defaults/charters/nfl/editor.md` — Guidance for evidence_deficit classification
-- `src/config/defaults/charters/nfl/researcher.md` — New task: mid-article data enrichment
+- `src/pipeline/actions.ts` â€” Branch on blocker_type=evidence_deficit to Research
+- `src/config/defaults/charters/nfl/editor.md` â€” Guidance for evidence_deficit classification
+- `src/config/defaults/charters/nfl/researcher.md` â€” New task: mid-article data enrichment
 
 **#NEW-4 (Fallback mode):**
-- `src/db/schema.sql` — Add article_mode enum
-- `src/pipeline/actions.ts` — Trigger fallback after N revisions; route to Lead
-- `src/config/defaults/charters/nfl/{writer,editor}.md` — Fallback reframe rules
+- `src/db/schema.sql` â€” Add article_mode enum
+- `src/pipeline/actions.ts` â€” Trigger fallback after N revisions; route to Lead
+- `src/config/defaults/charters/nfl/{writer,editor}.md` â€” Fallback reframe rules
 
 **#NEW-5 (Escalation):**
-- `src/pipeline/actions.ts` — Detect repeated blockers; escalate to Lead
-- `src/config/defaults/charters/nfl/lead.md` — Escalation decision guidance
+- `src/pipeline/actions.ts` â€” Detect repeated blockers; escalate to Lead
+- `src/config/defaults/charters/nfl/lead.md` â€” Escalation decision guidance
 
 **#NEW-6 (Writer fact-checking):**
-- `src/config/defaults/charters/nfl/writer.md` — Fact-checking permission + guardrails
-- `src/pipeline/actions.ts` — Optional fact-check gate (approved sources, budget)
-- `src/config/defaults/skills/writer-fact-check.md` — New skill doc
+- `src/config/defaults/charters/nfl/writer.md` â€” Fact-checking permission + guardrails
+- `src/pipeline/actions.ts` â€” Optional fact-check gate (approved sources, budget)
+- `src/config/defaults/skills/writer-fact-check.md` â€” New skill doc
 
 ---
 
@@ -2542,24 +2542,24 @@ Searched GitHub issues for overlapping scope:
 
 ## Next Steps
 
-1. **Lead (this pass):** Draft all 6 issue bodies (DONE) ✅
+1. **Lead (this pass):** Draft all 6 issue bodies (DONE) âœ…
 2. **Backend (next pass):** Search for duplicates with focused queries (provided draft to support this)
 3. **Backend (final pass):** Create issues via `gh issue create` in priority order
-4. **Team:** Implement in Tier 1 → Tier 2 → Tier 3 sequence
+4. **Team:** Implement in Tier 1 â†’ Tier 2 â†’ Tier 3 sequence
 
 ---
 
 ## Notes
 
 - **Scope pragmatism:** This split avoids a 100-line umbrella issue that would be unimplementable. Each issue is 1-3 days of work for one engineer.
-- **User feedback:** Writer fact-checking was explicitly called out as "biggest win" — prioritize research phase for this.
-- **Architecture alignment:** All issues fit within existing pipeline model (stage routing, blocker tracking, chart guidance) — no new abstractions needed.
+- **User feedback:** Writer fact-checking was explicitly called out as "biggest win" â€” prioritize research phase for this.
+- **Architecture alignment:** All issues fit within existing pipeline model (stage routing, blocker tracking, chart guidance) â€” no new abstractions needed.
 - **Interdependencies:** #NEW-1 is truly foundational; the rest can be parallelized once #NEW-1 lands.
 
 
 ---
 
-# Research — Issue Duplication Audit & Recommendations
+# Research â€” Issue Duplication Audit & Recommendations
 
 **Date:** 2026-03-25T21:30:00Z  
 **Task:** Assess requested research-driven issues for duplicates against open GitHub issues.  
@@ -2573,16 +2573,16 @@ Comprehensive search of 8 open GitHub issues found **zero overlapping duplicates
 ## Issue #119 Coverage Analysis
 
 **Title:** Capture model provenance per output artifact and show model badges in UX  
-**Status:** Open, awaiting research → implementation
+**Status:** Open, awaiting research â†’ implementation
 
 ### What #119 Already Covers
-- **Artifact-level provenance model** — captures provider, actual_model, actual_model_tier, actual_precedence_rank, requested_model/tier, and linkage to source stage_run_id/usage_event_id
-- **Schema + DB design** — extends artifact record metadata (may require new table or extension)
-- **Pipeline threading** — threading requested model metadata into `ctx.repo.startStageRun(...)` calls
-- **Artifact finalization** — persisting actual model provenance at creation/finalization time
-- **Backfill strategy** — inferring provenance from existing usage_events/stage_runs where confidence is acceptable
-- **UX presentation** — model/provider badge or label in artifact/article views (e.g., "Claude Sonnet 4.5", "GPT-5.2", Gemini)
-- **Open questions** — canonical artifact record ownership, requested vs actual display logic, backfill vs forward-fill approach
+- **Artifact-level provenance model** â€” captures provider, actual_model, actual_model_tier, actual_precedence_rank, requested_model/tier, and linkage to source stage_run_id/usage_event_id
+- **Schema + DB design** â€” extends artifact record metadata (may require new table or extension)
+- **Pipeline threading** â€” threading requested model metadata into `ctx.repo.startStageRun(...)` calls
+- **Artifact finalization** â€” persisting actual model provenance at creation/finalization time
+- **Backfill strategy** â€” inferring provenance from existing usage_events/stage_runs where confidence is acceptable
+- **UX presentation** â€” model/provider badge or label in artifact/article views (e.g., "Claude Sonnet 4.5", "GPT-5.2", Gemini)
+- **Open questions** â€” canonical artifact record ownership, requested vs actual display logic, backfill vs forward-fill approach
 
 ### What #119 Intentionally Does NOT Cover
 - Writer research/fact-checking system design
@@ -2625,7 +2625,7 @@ Comprehensive search of 8 open GitHub issues found **zero overlapping duplicates
 - Research: define claim mode selection (strict, moderate, relaxed), fallback behavior, and model selection heuristics
 - No duplicate found; no existing issue touches claim-level decision logic
 
-### 5. **Stage Metadata & Model Routing** [PARTIAL—see note]
+### 5. **Stage Metadata & Model Routing** [PARTIALâ€”see note]
 - Research: define stage-level model routing rules, precedence, and metadata capture (distinct from #119's artifact-level provenance)
 - **Note:** #119 includes "populate requested_model in stage_runs" as part of artifact prep. Propose framing this as **stage-level routing rules** (when/why to route to which model) vs. **artifact-level provenance** (capturing that routing decision durable on the artifact). No duplicate, but coordinate scope with #119 implementation.
 
@@ -2633,15 +2633,15 @@ Comprehensive search of 8 open GitHub issues found **zero overlapping duplicates
 
 ## Coordination Points
 
-- **#119 → New stage routing issue:** #119 handles artifact-level capture; new issue should define stage-level model selection rules and precedence logic.
-- **Writer research ↔ Claim mode:** Writer's fact-check findings should feed into claim-mode selection (strict/moderate/relaxed). Sequence: Writer research → claim mode → Editor gate.
-- **Editor gate ↔ Evidence-deficit routing:** If Editor flags insufficient evidence, evidence-deficit routing should determine escalation vs. auto-revision flow.
+- **#119 â†’ New stage routing issue:** #119 handles artifact-level capture; new issue should define stage-level model selection rules and precedence logic.
+- **Writer research â†” Claim mode:** Writer's fact-check findings should feed into claim-mode selection (strict/moderate/relaxed). Sequence: Writer research â†’ claim mode â†’ Editor gate.
+- **Editor gate â†” Evidence-deficit routing:** If Editor flags insufficient evidence, evidence-deficit routing should determine escalation vs. auto-revision flow.
 
 ---
 
 ## Approval
 
-✅ **All requested issues are safe to create.** Recommend starting with:
+âœ… **All requested issues are safe to create.** Recommend starting with:
 1. Writer fact-checking (inputs to other systems)
 2. Claim mode / fallback defaults (gates Writer and Editor behavior)
 3. Editor blockers (consumes Writer findings)
@@ -2650,11 +2650,11 @@ Comprehensive search of 8 open GitHub issues found **zero overlapping duplicates
 
 ---
 
-## Lead Decision — Issue #115 Retrospective Learning Closeout
+## Lead Decision â€” Issue #115 Retrospective Learning Closeout
 
-# Lead Decision Inbox — Issue #115 Retrospective Learning Closeout
+# Lead Decision Inbox â€” Issue #115 Retrospective Learning Closeout
 
-**By:** Lead (🏗️)  
+**By:** Lead (ðŸ—ï¸)  
 **Date:** 2026-03-24  
 **Related issue:** #115
 
@@ -2693,9 +2693,9 @@ Treat **#115** as Ralph's current highest-priority actionable retrospective item
 
 ---
 
-## Research Proposal — Issue #115 Retrospective Mining
+## Research Proposal â€” Issue #115 Retrospective Mining
 
-# Research Proposal — Issue #115 Retrospective Mining
+# Research Proposal â€” Issue #115 Retrospective Mining
 
 **Date:** 2026-03-25  
 **Agent:** Research  
@@ -2774,18 +2774,18 @@ This is bounded enough for manual review, but structured enough for a later work
 If a second slice is wanted later, prefer:
 
 1. operator docs for promotion rules and cadence
-2. optional “emit decision-inbox-ready markdown” helper
+2. optional â€œemit decision-inbox-ready markdownâ€ helper
 3. only then, a workflow wrapper around the same read-only digest
 
 
 ---
 
-# Lead Decision — Issue #115 Current-Mainline Verification & Closeout
+# Lead Decision â€” Issue #115 Current-Mainline Verification & Closeout
 
-**By:** Lead (🏗️)  
+**By:** Lead (ðŸ—ï¸)  
 **Date:** 2026-03-25  
 **Related Issue:** #115  
-**Status:** ACCEPTED — Issue satisfies mainline scope
+**Status:** ACCEPTED â€” Issue satisfies mainline scope
 
 ## Decision
 
@@ -2813,7 +2813,7 @@ The prior Lead closeout section in .squad/decisions.md was accurate when written
 
 ---
 
-# Research Decision — Issue #125: Writer Fact-Checking Guardrails
+# Research Decision â€” Issue #125: Writer Fact-Checking Guardrails
 
 **Date:** 2026-03-25  
 **Requester:** Backend (Squad Agent)  
@@ -2836,7 +2836,7 @@ That means v1 does **not** need a new architecture. It needs a policy contract, 
 
 ## 1) Approved source classes
 
-### Class A — Deterministic local/runtime sources
+### Class A â€” Deterministic local/runtime sources
 **Approved for unqualified factual support in draft preparation.**  
 Use first. Reuse before any web lookup.
 
@@ -2854,7 +2854,7 @@ Use first. Reuse before any web lookup.
 **Use for:** player-team assignment, season stats, draft facts, combine measurables, snap shares, team efficiency, schedule facts.  
 **Rule:** if Class A can answer the claim, Writer should not escalate to web research.
 
-### Class B — Official primary web sources
+### Class B â€” Official primary web sources
 **Approved for time-sensitive confirmation and primary-source attribution.**
 
 - Official NFL/team roster pages
@@ -2865,7 +2865,7 @@ Use first. Reuse before any web lookup.
 **Use for:** very recent transactions, dates, titles, official statements, formal announcements.  
 **Rule:** prefer Class B over secondary reporting when confirming "what happened" or "when it happened."
 
-### Class C — Trusted reference sources
+### Class C â€” Trusted reference sources
 **Approved only through an allowlist and usually for attributed or dated facts.**
 
 - OverTheCap
@@ -2876,7 +2876,7 @@ Use first. Reuse before any web lookup.
 **Use for:** contract structure/cap framing, historical stats cross-checks, roster/depth confirmation when Class A/B is incomplete.  
 **Rule:** if Class C conflicts with Class A/B, Writer must not silently pick a side; either use the higher-precedence source, attribute the source/date explicitly, or leave the claim unresolved for Editor.
 
-### Class D — Secondary reporting
+### Class D â€” Secondary reporting
 **Not approved as sole support for assertive prose in Writer v1.**
 
 - Beat reports
@@ -2914,8 +2914,8 @@ Use first. Reuse before any web lookup.
 
 Code should **not** hand Writer a generic web-search capability. Instead, add a small resolver/helper with policy baked in, for example:
 
-- `resolveApprovedFactSources(claim)` → returns 0-N approved URL candidates and/or local lookup plans
-- `fetchApprovedSource(url)` → enforces domain allowlist and per-request timeout
+- `resolveApprovedFactSources(claim)` â†’ returns 0-N approved URL candidates and/or local lookup plans
+- `fetchApprovedSource(url)` â†’ enforces domain allowlist and per-request timeout
 
 This keeps policy centralized and testable. `web_search` remains better suited to Research, not Writer.
 
@@ -3008,9 +3008,9 @@ Add a Writer-side artifact such as `writer-factcheck.md` (or similarly named, bu
 - relying on a source that could drift quickly
 
 Recommended style:
-- "Per OverTheCap on 2026-03-25, …"
-- "According to the Seahawks' official transaction wire, …"
-- "Pro Football Reference credits him with …"
+- "Per OverTheCap on 2026-03-25, â€¦"
+- "According to the Seahawks' official transaction wire, â€¦"
+- "Pro Football Reference credits him with â€¦"
 
 ### Writer must soften or omit when:
 - no approved source supports the claim within budget
@@ -3060,7 +3060,7 @@ When sources diverge:
 
 ## 6) Minimum implementation slices for Code
 
-### Slice A — Policy + artifact contract (smallest, safest first)
+### Slice A â€” Policy + artifact contract (smallest, safest first)
 
 - Update `src/config/defaults/charters/nfl/writer.md` to allow bounded targeted verification under explicit rules
 - Add `src/config/defaults/skills/writer-fact-check.md`
@@ -3068,7 +3068,7 @@ When sources diverge:
 
 **Why first:** this is the minimum change that turns design into a testable contract without changing routing logic yet.
 
-### Slice B — Bounded Stage 5 helper + usage metadata
+### Slice B â€” Bounded Stage 5 helper + usage metadata
 
 - In `src/pipeline/actions.ts`, add a small Writer-side verification step before/during `writeDraft()`
 - Reuse existing local artifacts first
@@ -3080,7 +3080,7 @@ When sources diverge:
 
 **Why second:** the repo already has the seam; this makes the policy real.
 
-### Slice C — Editor consumption + tests
+### Slice C â€” Editor consumption + tests
 
 - Include `writer-factcheck.md` in Editor context
 - Add tests covering:
@@ -3123,13 +3123,13 @@ Route the next implementation pass to **Code**, but keep scope intentionally nar
 
 ---
 
-# Code Decision Note — Issue #125 Slice A
+# Code Decision Note â€” Issue #125 Slice A
 
 **Date:** 2026-03-25
 **Owner:** Code
 **Scope:** First bounded implementation slice only
 
-# Code Decision Note — Issue #125 Slice A
+# Code Decision Note â€” Issue #125 Slice A
 
 **Date:** 2026-03-25  
 **Owner:** Code  
@@ -3172,7 +3172,7 @@ If later slices add the approved-source helper, they should populate the existin
 
 ---
 
-# Lead Review — Issue #125 Slice 2 Revision
+# Lead Review â€” Issue #125 Slice 2 Revision
 
 **Date:** 2026-03-25  
 **Reviewer:** Lead  
@@ -3205,7 +3205,7 @@ Ralph should route the **final planned slice** (Editor consumption + tests) to *
 
 ---
 
-# Code Decision — Issue #125 Slice 3 Editor Consumption
+# Code Decision â€” Issue #125 Slice 3 Editor Consumption
 
 **Date:** 2026-03-25  
 **Requester:** Backend (Squad Agent)  
@@ -3238,7 +3238,7 @@ Editor should consume `writer-factcheck.md` as **advisory upstream context**, no
 
 ---
 
-## Code Decision — Issue #125 Slice 3 Editor Consumption
+## Code Decision â€” Issue #125 Slice 3 Editor Consumption
 
 **Date:** 2026-03-25  
 **Requester:** Backend (Squad Agent)  
@@ -3264,20 +3264,20 @@ Editor should consume writer-factcheck.md as **advisory upstream context**, not 
 ### Validation
 
 - 
-pm run test -- tests/pipeline/actions.test.ts — PASS
+pm run test -- tests/pipeline/actions.test.ts â€” PASS
 - 
-pm run test -- tests/pipeline/writer-factcheck.test.ts — PASS
+pm run test -- tests/pipeline/writer-factcheck.test.ts â€” PASS
 - 
-pm run v2:build — PASS
+pm run v2:build â€” PASS
 
 
 
 
 ---
 
-# Lead Review — Issue #123
+# Lead Review â€” Issue #123
 
-# Lead Review — Issue #123
+# Lead Review â€” Issue #123
 
 ## Outcome
 
@@ -3322,10 +3322,10 @@ pm run v2:build — PASS
 
 ---
 
-# Research Decision — Issue #124 Re-Triage
+# Research Decision â€” Issue #124 Re-Triage
 
 **Date:** 2026-03-23  
-**Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
+**Issue:** #124 â€” Fallback to opinion-framed mode when evidence cannot be completed  
 **Status:** Actionable now; current execution lane: squad:research
 
 ## Why it is now actionable
@@ -3390,10 +3390,10 @@ This keeps #124 scoped to fallback policy + execution contract and avoids reopen
 - Do **not** reopen #123 unless repeated-blocker escalation or the Stage 6 hold path is actually defective.
 - Keep #124 limited to fallback policy, reframe contract, durable mode signal, and disclosure.
 
-# Lead Decision — Issue #102 Dashboard Auth Hardening
+# Lead Decision â€” Issue #102 Dashboard Auth Hardening
 
 **Date:** 2026-03-23  
-**Issue:** #102 — Dashboard auth hardening: replace shared password gate with proper login controls  
+**Issue:** #102 â€” Dashboard auth hardening: replace shared password gate with proper login controls  
 **Status:** Architecture approved; implementation-ready
 
 ## Decision
@@ -3454,16 +3454,16 @@ Before calling #102 done, Code must still ensure:
 
 ## Readiness
 
-**Yes — the issue is implementation-ready.**  
+**Yes â€” the issue is implementation-ready.**  
 Architecture is settled and narrow. Remaining work is execution/cleanup, not design.
 
 ---
 
-# Code Decision — Issue #102 Local Dashboard Auth
+# Code Decision â€” Issue #102 Local Dashboard Auth
 
 **Date:** 2026-03-24  
-**Issue:** #102 — Dashboard auth hardening: single-operator local login  
-**Status:** ✅ COMPLETE (Implementation verified, Lead-approved)
+**Issue:** #102 â€” Dashboard auth hardening: single-operator local login  
+**Status:** âœ… COMPLETE (Implementation verified, Lead-approved)
 
 ## Implementation
 
@@ -3486,9 +3486,9 @@ Implemented minimal config-driven dashboard auth per Lead's approved design:
 
 ## Validation
 
-- Auth tests: 	ests/dashboard/server.test.ts, 	ests/dashboard/config.test.ts, 	ests/dashboard/publish.test.ts, 	ests/e2e/live-server.test.ts → ✅ PASSED
+- Auth tests: 	ests/dashboard/server.test.ts, 	ests/dashboard/config.test.ts, 	ests/dashboard/publish.test.ts, 	ests/e2e/live-server.test.ts â†’ âœ… PASSED
 - Build: 
-pm run v2:build → ✅ PASSED (TypeScript failure fixed)
+pm run v2:build â†’ âœ… PASSED (TypeScript failure fixed)
 - Protected surface enforcement: HTML, HTMX, API, SSE, unpublished images all require auth when enabled
 - Public surfaces: /static/*, /login, /logout, published images accessible without auth
 
@@ -3500,13 +3500,13 @@ pm run v2:build → ✅ PASSED (TypeScript failure fixed)
 
 ---
 
-# Research Handoff Decision — Issue #124 Implementation Ready
+# Research Handoff Decision â€” Issue #124 Implementation Ready
 
 **Date:** 2026-03-26  
 **From:** Research  
 **To:** Code  
-**Issue:** #124 — Fallback to opinion-framed mode when evidence cannot be completed  
-**Status:** ACTIONABLE — Prerequisites #120 and #123 complete; implementation-ready handoff
+**Issue:** #124 â€” Fallback to opinion-framed mode when evidence cannot be completed  
+**Status:** ACTIONABLE â€” Prerequisites #120 and #123 complete; implementation-ready handoff
 
 ## Implementation Contract
 
@@ -3544,11 +3544,11 @@ pm run v2:build → ✅ PASSED (TypeScript failure fixed)
 - Keep #124 to: fallback policy, reframe contract, durable mode signal, disclosure
 
 ## Acceptance Criteria
-1. ✅ Entry criteria: explicit Lead approval from Stage 6 needs_lead_review seam
-2. ✅ Writer reframe contract: dedicated prompt, softens claims, includes disclosure rules
-3. ✅ Durable mode signal: structured article-mode field readable by API/dashboard/published
-4. ✅ Reader/operator disclosure: article detail + published views surface fallback mode + reasoning
-5. ✅ Focused tests: cover fallback trigger, reframe path, mode persistence, disclosure render
+1. âœ… Entry criteria: explicit Lead approval from Stage 6 needs_lead_review seam
+2. âœ… Writer reframe contract: dedicated prompt, softens claims, includes disclosure rules
+3. âœ… Durable mode signal: structured article-mode field readable by API/dashboard/published
+4. âœ… Reader/operator disclosure: article detail + published views surface fallback mode + reasoning
+5. âœ… Focused tests: cover fallback trigger, reframe path, mode persistence, disclosure render
 
 ---
 
@@ -3562,7 +3562,7 @@ pm run v2:build → ✅ PASSED (TypeScript failure fixed)
 
 ---
 
-# Decision: Generate Idea Page — Agent Selector Architecture
+# Decision: Generate Idea Page â€” Agent Selector Architecture
 
 **Date:** 2026-03-24  
 **Owner:** UX  
@@ -3582,13 +3582,13 @@ Inspection of the New Idea page agent selector confirms clean architecture with 
   - Exports enderIdeaSuccess() (confirmation partial)
   - Client-side JS: 	oggleAgent(), enderAgentChips(), emoveAgent()
   
-- **Server route:** src/dashboard/server.ts (lines 847–861)
+- **Server route:** src/dashboard/server.ts (lines 847â€“861)
   - GET /ideas/new builds xpertAgents list from runner
   - Filters: excludes PROD agents + 32 team agents
   - Passes list to form renderer
 
 - **Styles:** src/dashboard/public/styles.css
-  - .agent-badge (lines 1017–1041): border-based chip; selected state = solid background + white text
+  - .agent-badge (lines 1017â€“1041): border-based chip; selected state = solid background + white text
   - .agent-grid (auto-fill layout, 260px min-width columns)
 
 ### Data Source & Filtering
@@ -3606,15 +3606,15 @@ Derived from AgentRunner.listAgents() (line 851) after removing:
 - **Selection:** Client-side toggle via onclick="toggleAgent(button, agentName)"
 - **Persistence:** Selected agents stored in hidden input #pinned-agents (comma-separated)
 - **Display:** Real-time chip rendering in #selected-agents container
-- **Removal:** Chip × button calls emoveAgent(name)
+- **Removal:** Chip Ã— button calls emoveAgent(name)
 
-Team selection uses separate grid (lines 166–172) with its own toggle mechanics.
+Team selection uses separate grid (lines 166â€“172) with its own toggle mechanics.
 
 ## Mental Model Clarity
 
 **Current labels:**
-- "Pin Expert Agents (optional — these agents will always be included on the panel)" — clear opt-in language
-- "Teams (click to select)" — separate control, separate purpose
+- "Pin Expert Agents (optional â€” these agents will always be included on the panel)" â€” clear opt-in language
+- "Teams (click to select)" â€” separate control, separate purpose
 
 **Mental model:**
 - Expert agents = NFL-wide specialists pinned **at idea-generation time** to influence team panel composition
@@ -3624,17 +3624,17 @@ No conflation or ambiguity detected.
 
 ## Technical Findings
 
-1. **Filter logic is sound:** Server-side filtering prevents production agents or team agents from appearing in expert selector (lines 852–858)
+1. **Filter logic is sound:** Server-side filtering prevents production agents or team agents from appearing in expert selector (lines 852â€“858)
 2. **No stale data:** Agent list is live from runner state; rendering happens fresh per request
 3. **Data structure is simple:** Plain string array, no rich metadata needed for the selector UX
 4. **Selection behavior is correct:** Hidden input captures selections, form submission includes pinnedAgents in POST body
 
 ## Assessment
 
-✅ **No UX issues found**  
-✅ **Selector correctly separates NFL-wide agents from production agents and team agents**  
-✅ **Mental model is clear to users ("optional" + separate team grid)**  
-✅ **Rendering path is consistent with dashboard patterns (HTMX, client-side state, hidden inputs)**
+âœ… **No UX issues found**  
+âœ… **Selector correctly separates NFL-wide agents from production agents and team agents**  
+âœ… **Mental model is clear to users ("optional" + separate team grid)**  
+âœ… **Rendering path is consistent with dashboard patterns (HTMX, client-side state, hidden inputs)**
 
 ## Recommendation
 
@@ -3642,7 +3642,7 @@ No changes required. Architecture is clean and user experience is clear. If futu
 
 ---
 
-# Decision: Lead Review — Generate Idea Selector Hygiene
+# Decision: Lead Review â€” Generate Idea Selector Hygiene
 
 **Status:** Conditional Approval - Requires hygiene fixes  
 **Date:** 2026-03-26T16:00:00Z  
@@ -3667,17 +3667,17 @@ Dashboard idea form's expert agent selector (src/dashboard/server.ts lines 847-8
 
 ## Architecture Assessment
 
-### Correctness ✅
+### Correctness âœ…
 - Experts correctly filtered to specialist agents only
 - Team agents properly excluded (would be named ari.md, sea.md, etc. if they existed)
 - No security or auth issues
 
-### Maintainability ⚠️
+### Maintainability âš ï¸
 - Duplicate TEAM_ABBRS definition violates DRY
 - 'was' vs 'wsh' inconsistency is a bug waiting to happen
 - PROD list lacks documentation about why these agents are excluded
 
-### Scalability ⚠️
+### Scalability âš ï¸
 - Adding new agents requires code changes + knowledge of filter locations
 - No single place to configure what "production tier" means
 
@@ -3700,11 +3700,11 @@ Dashboard idea form's expert agent selector (src/dashboard/server.ts lines 847-8
 
 ---
 
-## Code Decision — Generate-Idea NFL Selector Support
+## Code Decision â€” Generate-Idea NFL Selector Support
 
 **Date:** 2026-03-24  
 **Agent:** Code  
-**Status:** ✅ Implemented
+**Status:** âœ… Implemented
 
 ### Decision
 
@@ -3722,16 +3722,16 @@ Keep the existing team-agent filter for the expert pin selector, but treat the l
 
 ### Validation
 
-- ✅ Minimal selector support added for league-wide NFL team selection
-- ✅ `nfl` team classification support in `src/dashboard/views/agents.ts`
-- ✅ `NFL` team grid option in `src/dashboard/views/new-idea.ts`
-- ✅ Expert picker server filter updated in `src/dashboard/server.ts`
-- ✅ Focused tests passed (`tests/dashboard/agents.test.ts`, focused `tests/dashboard/new-idea.test.ts` selector tests)
-- ✅ Build passed (`npm run v2:build`)
-- ✅ Runtime `nfl` charter remains selectable (not filtered out)
+- âœ… Minimal selector support added for league-wide NFL team selection
+- âœ… `nfl` team classification support in `src/dashboard/views/agents.ts`
+- âœ… `NFL` team grid option in `src/dashboard/views/new-idea.ts`
+- âœ… Expert picker server filter updated in `src/dashboard/server.ts`
+- âœ… Focused tests passed (`tests/dashboard/agents.test.ts`, focused `tests/dashboard/new-idea.test.ts` selector tests)
+- âœ… Build passed (`npm run v2:build`)
+- âœ… Runtime `nfl` charter remains selectable (not filtered out)
 
 
-## Code Decision — Stage Runs Panel Stage Number Alignment (2026-03-24)
+## Code Decision â€” Stage Runs Panel Stage Number Alignment (2026-03-24)
 
 **Date:** 2026-03-24  
 **Requester:** Backend (Squad Agent)  
@@ -3753,21 +3753,21 @@ The dashboard header badge shows \rticle.current_stage\. Stage Runs panel was i
 
 ### Validation
 
-- ✅ Focused tests: \
+- âœ… Focused tests: \
 pm run v2:test -- tests/dashboard/wave2.test.ts\
-- ✅ Focused tests: \
+- âœ… Focused tests: \
 pm run v2:test -- tests/db/repository.test.ts\  
-- ✅ Build: \
+- âœ… Build: \
 pm run v2:build\
 
 ### Key Seams
 
-- \src/dashboard/views/article.ts\ — render path
-- \src/db/repository.ts\ — persistence layer
-- \src/types.ts\ — type definitions
+- \src/dashboard/views/article.ts\ â€” render path
+- \src/db/repository.ts\ â€” persistence layer
+- \src/types.ts\ â€” type definitions
 
 
-## # UX Decision — Shared Mobile Header
+## # UX Decision â€” Shared Mobile Header
 
 **Author:** UX  
 **Date:** 2026-03-25  
@@ -3797,7 +3797,7 @@ Treat the shared dashboard header as a two-tier mobile component instead of a st
 
 ---
 
-# Code Decision — Rodgers Name Fix
+# Code Decision â€” Rodgers Name Fix
 
 - **Date:** 2026-03-26T19:05:00Z
 - **Scope:** `src/pipeline/writer-preflight.ts`
@@ -3815,4 +3815,195 @@ The live Pittsburgh Stage 4 failure came from sentence-openers like `If Rodgers`
 - Focused vitest regressions for `writer-preflight` and `writeDraft`
 - `npm run v2:build`
 - Local rerun of the patched preflight against the live Pittsburgh runtime artifacts returned no blocking issues
+
+
+---
+
+# Code Decision Inbox â€” V3 workflow simplification
+
+- **Date:** 2026-03-28
+- **Owner:** Code
+- **Scope:** `src/pipeline/actions.ts`, `src/pipeline/engine.ts`, `src/pipeline/writer-preflight.ts`, prompt contracts under `src/config/defaults/`
+
+## Decision
+
+Simplify the Writerâ†’Editor loop by making Stage 5 deterministic checks intentionally narrow and making Stage 6 escalate after churn instead of force-approving.
+
+## What changed
+
+- Stage 5 hard guards now stop only on missing headline, missing italic subheadline, missing recognizable TLDR block, too-short draft, or placeholder leakage.
+- Unsupported precise stats/contracts/dates remain visible as writer-preflight warnings, but they no longer hard-block the draft before Editor.
+- Editor prompt contracts now describe Stage 6 as a lightweight obvious-accuracy gate.
+- When Stage 6 hits the revision cap, the pipeline writes `lead-review.md` and sets `needs_lead_review` instead of overwriting `editor-review.md` with an auto-approval.
+
+## Why
+
+The old loop duplicated policy across Writer, runtime, and Editor, then hid churn by force-approving after repeated revisions. This narrower split keeps deterministic checks on low-false-positive failures and routes unresolved churn to Lead review instead of pretending the article is publish-safe.
+
+---
+
+# Code Decision â€” Sentence-Starter Name Hardening
+
+- **Date:** 2026-03-27T23:26:00Z
+- **Scope:** `src/pipeline/writer-preflight.ts`
+
+## Decision
+
+Handle sentence-initial capitalized lead-in words by trimming the first token only when the remaining tokens exactly match a supported full name from the supplied artifacts.
+
+## Why
+
+The failure class is broader than a few banned starters like `If` or `Because`: imperative or framing openers such as `Take Trent Williams` can still be misread as unsupported names. Trimming only at sentence start and only when the tail already exists in the supported-name set fixes the false positive without adding a giant allowlist or relaxing genuine unsupported-name expansion checks.
+
+## Validation
+
+- `npm test -- --run tests/pipeline/writer-preflight.test.ts`
+- `npm run v2:build`
+
+---
+
+# Decision Note â€” V3 cherry-pick equivalents for main checkout fixes
+
+## Context
+
+The requested source changes in the main checkout were present as uncommitted working-tree edits rather than cherry-pickable code commits. V3 already had the earlier one-off `If Rodgers` preflight guard, but not the broader opener-family fix or the article-page Option B simplification.
+
+## Decision
+
+Port the two code changes into V3 as focused equivalents instead of forcing a risky cherry-pick from unrelated dirty main state:
+
+1. expand writer-preflight sentence-opener filtering for the `Because/But/If...` false-positive family
+2. apply the article detail Option B simplification only in the article view/server/test seams
+
+## Why
+
+- Main has unrelated dirty work across dashboard/mobile/pipeline files, so cherry-picking from that state would risk dragging in unrelated work.
+- The Option B change has a smallest-safe seam: `src/dashboard/views/article.ts`, `src/dashboard/server.ts`, `src/dashboard/public/styles.css`, and focused dashboard tests.
+- The writer-preflight fix also has a smallest-safe seam: `src/pipeline/writer-preflight.ts` plus focused preflight tests.
+
+---
+
+# Code Decision Inbox â€” Warner preflight fix
+
+- **Date:** 2026-03-27
+- **Owner:** Code
+- **Scope:** `src/pipeline/writer-preflight.ts`, `tests/pipeline/writer-preflight.test.ts`
+
+## Decision
+
+Keep writer preflight strict on real unsupported names, but add one narrow sentence-initial fallback for 2-token `lead-in + last-name` matches such as `Lose Warner`.
+
+## Why
+
+The previous hardening only normalized sentence-initial candidates when dropping the first token still left a full supported name (`Take Trent Williams` â†’ `Trent Williams`). A 2-token opener like `Lose Warner` still reached `name-consistency` unchanged, even when the supplied artifacts already supported exactly one full-name variant for that last name (`Fred Warner`).
+
+## Implementation rule
+
+- Only apply this fallback to sentence-initial 2-token candidates.
+- Only apply it when the first token is on a tiny explicit lead-in list for this special path.
+- Only resolve it when the last name maps to exactly one supported artifact-backed full name.
+- Leave all other mismatches untouched so unsupported first-name expansions still block.
+
+## Validation
+
+- Focused vitest: `tests/pipeline/writer-preflight.test.ts`
+- Full repo build gate: `npm run v2:build`
+
+---
+
+# Research inbox â€” V3 revision-state frontend guidance
+
+## Context
+
+Reviewed the revision-state memo plus current dashboard/article tests for a frontend-only wording pass.
+
+## Guidance
+
+- Treat Stage 4 revision as **draft work**, not a return to discussion.
+- Preserve the memoâ€™s preferred stage label: **`Revision Workspace`**.
+- Shift workflow/status copy toward the memoâ€™s preferred wording: **`Draft revision in progress.`**
+- During revision, make the **draft the default/top artifact**, with editor feedback secondary and discussion artifacts clearly reference-only.
+- Fold the already-dirty Stage 6 **Send to Revision** UX into the same pass so lead-review send-back copy and Stage 4 revision copy do not diverge.
+- Do **not** disturb the mobile-safe article/image width behavior already guarded by `.image-gallery { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }`.
+
+## Smallest tests to touch
+
+- `tests/dashboard/server.test.ts` revision-state assertions around:
+  - `Stage 4 Â· Revision Workspace`
+  - `Revision requested Â· Next: Article Drafting`
+  - revision artifact labels/order/default tab
+  - Stage 6 send-back hint text
+- Keep `tests/dashboard/wave2.test.ts` mobile-width assertion intact unless CSS selector names move; the behavioral contract should remain unchanged.
+
+---
+
+---
+owner: UX
+date: 2026-03-25
+topic: V3 revision-state dashboard UX
+status: proposed
+---
+
+# Decision proposal: revision state should read as draft work
+
+## Context
+
+The current dirty UX work in `src/dashboard/views/article.ts`, `src/dashboard/public/styles.css`, and `tests/dashboard/server.test.ts` already moves Stage 4 away from reading like generic discussion by introducing `Revision Workspace` and a clearer lead-review send-back path.
+
+The remaining mismatch is artifact emphasis: revision still defaults to editor feedback first in the main stage-4 revision case, which conflicts with the V3 memo calling for draft-first revision UX.
+
+## Proposal
+
+1. Keep the existing send-back UX refactor and copy direction:
+   - `â†© Send to Revision`
+   - `Revision stage`
+   - `Revision notes`
+   - the hint that Stage 4 is the revision workspace
+2. Keep Stage 4 revision relabeled as `Revision Workspace`.
+3. Change revision artifact priority to:
+   - `draft.md`
+   - `editor-review.md`
+   - `discussion-summary.md`
+4. Make revision labels read as active draft work, not discussion review:
+   - workflow/status copy should prefer something like `Draft revision in progress`
+   - `draft.md` should be labeled more strongly than editor feedback
+   - `discussion-summary.md` remains reference context only
+5. Preserve the current mobile-width protections in `src/dashboard/public/styles.css`; no backend/state-machine changes are needed for this UX pass.
+
+## Test impact
+
+- Update focused assertions in `tests/dashboard/server.test.ts` to expect draft-first ordering/default HTMX load and the revised copy.
+- Leave `tests/dashboard/wave2.test.ts` mobile-width assertion intact unless selectors are renamed; it already protects the image-gallery viewport-safe rule.
+
+
+------
+# Code Decision â€” V3 workflow simplify pass
+
+## Decision
+
+For the first substantial V3 simplification pass, keep Stage 5 deterministic blocking narrow, make Stage 6 an obvious-accuracy gate, and escalate revision-cap churn to Lead review instead of force-approving.
+
+## Why
+
+- Writer was carrying both prompt-level and runtime-level structure policing, which created churn before Editor even saw the draft.
+- Editor was accumulating too much conversational baggage and acting like a full rewrite partner instead of a lightweight safety gate.
+- Force-approving after repeated churn hid unresolved blockers and pushed risk forward.
+
+## Implementation seams
+
+- `src/pipeline/engine.ts`
+  - minimal Stage 5 structure gate: headline, italic subheadline, recognizable TLDR
+- `src/pipeline/actions.ts`
+  - Writer gets a compact `## Writer Support` section assembled from the fact-check pass
+  - Editor only receives compact revision summary context, not stacked prior editor reviews
+  - default auto-advance revision cap drops to 2
+  - revision-cap exhaustion writes `lead-review.md` and sets `needs_lead_review` instead of force-approving
+- `src/config/defaults/charters/nfl/{writer,editor}.md`
+- `src/config/defaults/skills/{editor-review,substack-article}.md`
+
+## Consequences
+
+- More imperfect drafts can reach Editor, but the system becomes easier to reason about and Writer gets clearer upstream support.
+- Hard articles now surface honestly as `needs_lead_review` instead of silently converting churn into approval.
+- Legacy retrospective storage still supports old force-approved artifacts, but new runtime behavior should stop creating them.
 

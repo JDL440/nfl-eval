@@ -24,6 +24,10 @@
 
 ## Learnings
 
+- 2026-03-25 — The V3 revision-state memo’s frontend-only guidance is narrow and explicit: Stage 4 revision UX should read as draft work rather than discussion, keep the preferred label `Revision Workspace`, use draft-centered status copy like `Draft revision in progress.`, and make draft artifacts the default during revision (`src/dashboard/views/article.ts`, session-state memo `there-continues-to-be-too-much-churn-between-the-e.md`).
+- 2026-03-25 — Existing dashboard seams already carry revision/send-back UX that should be folded into any copy cleanup rather than reworked separately: `src/dashboard/views/article.ts` has the Stage 6 “Send to Revision” control + hint, and `tests/dashboard/server.test.ts` already asserts those strings plus revision-tab ordering.
+- 2026-03-25 — Preserve the mobile-safe article/image width guard while changing revision copy: `src/dashboard/public/styles.css` keeps `.image-gallery` on `minmax(min(100%, 280px), 1fr)`, and `tests/dashboard/wave2.test.ts` explicitly protects that behavior from viewport overflow regressions.
+
 - 2026-03-27 — Issue `#124` is now actionable without reopening `#120`/`#123`: `src/pipeline/conversation.ts` already fingerprints repeated structured blockers, `src/pipeline/actions.ts` already pauses Stage 6 in `needs_lead_review` with `lead-review.md`, and `src/dashboard/views/article.ts` plus `src/dashboard/server.ts` already expose that Lead-review seam.
 - 2026-03-27 — The narrowest safe `#124` implementation is to layer a Lead-approved fallback/article-mode signal on top of the existing Stage 6 hold, then branch `writeDraft()` into a dedicated reframe prompt and show durable mode disclosure in operator/publish surfaces; do not reopen blocker detection or escalation mechanics.
 - 2026-03-25 — Issue `#125` design: Writer should get bounded Stage 5 verification access via a source ladder (local/runtime artifacts → official primary sources → trusted references), a small external-check budget, and a durable `writer-factcheck.md` artifact; avoid giving Writer raw web-search autonomy.
