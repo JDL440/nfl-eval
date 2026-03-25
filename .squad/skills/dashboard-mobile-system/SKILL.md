@@ -43,7 +43,7 @@ tools: [view, rg, vitest]
 - `article.ts`, `publish.ts`, and `preview.ts` all rely on toolbar/detail-shell patterns (`.detail-grid`, `.preview-toolbar`, `.usage-summary`) that can still behave like desktop rows even after the main column stacks.
 - HTMX/SSE amplifies layout drift here: `renderRunsTable()`, `renderMemoryTable()`, `renderPublishWorkflow()`, and the live article partials all swap independently, so mobile structure must live in shared fragment markup/classes rather than only in full-page wrappers.
 - Dashboard tests may assert mobile hook classes without any stylesheet selector for those hooks. In that case the suite is only protecting structural intent; pair hook assertions with `styles.css` checks on the selectors that actually drive the breakpoint behavior.
-- Inline layout styles in shared dashboard views are another warning sign. If home.ts, publish.ts, login.ts, or rticle.ts need repeated style="..." layout tweaks, the system is missing a reusable shell/action primitive and mobile work should extract that first.
+- Inline layout styles in shared dashboard views are another warning sign. If `home.ts`, `publish.ts`, `login.ts`, or `article.ts` need repeated `style="..."` layout tweaks, the system is missing a reusable shell/action primitive and mobile work should extract that first.
 
 ## Recommendation
 
@@ -55,4 +55,5 @@ Treat mobile dashboard work in this repo as a system task: fix shell, data surfa
 - Detail/preview stack: `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`, `src/dashboard/views/preview.ts`
 - Dense data surfaces: `src/dashboard/views/runs.ts`, `src/dashboard/views/memory.ts`, `src/dashboard/views/config.ts`
 - Selector-density drift risk: `src/dashboard/views/new-idea.ts`, `src/dashboard/views/agents.ts`
+
 
