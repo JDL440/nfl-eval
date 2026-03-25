@@ -4377,3 +4377,60 @@ The dashboard is a **desktop-first system**, not a collection of isolated mobile
 - Secondary panels (diagnostics, advanced) collapse by default on phone
 - HTMX-updated fragments inherit mobile classes automatically
 - New dashboard work respects mobile primitives without page-by-page exceptions
+
+---
+
+## Code decision: keep verified analytics out of writer-support exact facts
+
+**Date:** 2026-03-24  
+**Owner:** Code  
+
+### Decision
+
+Route only verified exact facts into writer-support.md Exact Facts Allowed, and move verified analytical framing into Claims Requiring Caution with soften.
+
+### Why
+
+writer-support.md was previously mirroring every writerFactCheckReport.verifiedFacts entry into the allowlist. That let verified analytical ranges, working-lane language, and softer cap/ranking framing bypass the exact-fact gate even though the Stage 5 contract says that lane is for exact facts safe for plain prose.
+
+### Implementation shape
+
+- keep reusing the existing writer-factcheck verified / attributed / omitted buckets
+- filter verified entries before building Exact Facts Allowed
+- allow only verified claims with exact fact signals (stats, contract figures, draft facts, or precise date/year claims)
+- move verified analytical claims with deterministic markers (range, roughly, working lane, projects, top-five, etc.) into caution as soften
+
+### Validation
+
+- focused vitest coverage added for exact-vs-analytical separation in tests/pipeline/writer-support.test.ts
+- existing Stage 5 writer/preflight/factcheck/actions tests still pass
+
+---
+
+## Code Decision — Writer Support Artifact
+
+**Date:** 2026-03-27  
+**Owner:** Code  
+**Related TODO:** stall-fix-writer-support-artifact
+
+### Decision
+
+Implement writer-support.md as a compact Stage 5 artifact built inside writeDraft() from the live writerFactCheckReport, roster artifact metadata, and existing Stage 5 source artifacts.
+
+### Implementation notes
+
+- writeDraft() now persists writer-support.md immediately after writer-factcheck.md and injects it directly into the writer runtime context, independent of per-article context overrides.
+- Roster freshness is derived from the existing roster-context.md artifact timestamp with this minimal posture:
+  - fresh = 0–2 days old
+  - caution = >2 and <=7 days old
+  - stale = >7 days old
+  - unknown = no usable roster timestamp
+- Writer preflight parses writer-support.md before fuzzy source matching and treats it as:
+  - canonical-name allowlist
+  - exact-fact allowlist
+  - caution bucket for exact claims that must be attributed/softened/omitted
+  - roster freshness signal for transaction/team-assignment language
+
+### Why
+
+This keeps the slice entirely inside the existing Stage 5 seam, avoids a new persistence model, and prevents writer-support.md caution lines from being mistaken as generic support by the old fuzzy matcher.
