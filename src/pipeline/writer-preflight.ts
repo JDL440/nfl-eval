@@ -65,7 +65,9 @@ const BANNED_EXACT_NAMES = new Set([
 ]);
 const BANNED_FIRST_TOKENS = new Set([
   'The', 'This', 'That', 'These', 'Those', 'Next', 'Current', 'Latest', 'Official', 'Primary', 'Upstream', 'Why',
-  'Should', 'By', 'If', 'For', 'In', 'First', 'Second', 'Third', 'Fourth',
+  'Should', 'By', 'If', 'Because', 'Since', 'Due', 'Given', 'When', 'While', 'Before', 'After', 'During', 'Following',
+  'Although', 'However', 'Furthermore', 'Moreover', 'Thus', 'Therefore', 'Consequently', 'As', 'Or', 'And', 'But', 'Yet',
+  'Unless', 'Except', 'Unlike', 'Regarding', 'Concerning', 'Considering', 'For', 'In', 'First', 'Second', 'Third', 'Fourth',
   'Writer', 'Editor', 'Panel', 'Draft', 'Article', 'Summary', 'Budget', 'Stage', 'NFL', 'Lab',
 ]);
 const BANNED_LAST_TOKENS = new Set([
@@ -344,15 +346,8 @@ function extractSupportedNames(text: string): string[] {
     const name = cleanName(match[1] ?? '');
     if (!name) continue;
 
-    const parts = name.split(/\s+/);
-    const first = parts[0] ?? '';
-    const last = parts[parts.length - 1] ?? '';
-    if (
-      parts.length < 2
-      || BANNED_EXACT_NAMES.has(name)
-      || BANNED_FIRST_TOKENS.has(first)
-      || BANNED_LAST_TOKENS.has(last)
-    ) {
+    const parts = tokenizeName(name);
+    if (isRejectedNameCandidate(name, parts)) {
       continue;
     }
 
@@ -403,14 +398,52 @@ function cleanName(name: string): string {
   return name.replace(/\s+/g, ' ').trim().replace(/[.,;:!?]+$/, '');
 }
 
+function tokenizeName(name: string): string[] {
+  return name
+    .split(/\s+/)
+    .map((part) => part.replace(/^[^A-Za-z]+|[^A-Za-z.]+$/g, ''))
+    .filter(Boolean);
+}
+
+function isRejectedNameCandidate(name: string, parts: string[]): boolean {
+  const normalizedName = parts.join(' ');
+  const first = parts[0] ?? '';
+  const last = parts[parts.length - 1] ?? '';
+
+  return parts.length < 2
+    || BANNED_EXACT_NAMES.has(name)
+    || BANNED_EXACT_NAMES.has(normalizedName)
+    || parts.slice(0, -1).some((part) => BANNED_FIRST_TOKENS.has(part))
+    || BANNED_FIRST_TOKENS.has(first)
+    || BANNED_LAST_TOKENS.has(last);
+}
+
 function normalizeText(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9$\s%.-]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function hasStandaloneLastName(text: string, lastName: string): boolean {
   if (!lastName) return false;
-  const pattern = new RegExp(`\\b${escapeRegex(lastName)}\\b`, 'i');
-  return pattern.test(text);
+  const pattern = new RegExp(`\\b${escapeRegex(lastName)}\\b`, 'gi');
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const matchedLastName = match[0] ?? lastName;
+    const prefix = text.slice(Math.max(0, match.index - 80), match.index);
+    const priorTokens = prefix.match(/[A-Za-z][A-Za-z'.-]*/g) ?? [];
+    const candidatePhrases = [
+      `${priorTokens[priorTokens.length - 1] ?? ''} ${matchedLastName}`.trim(),
+      `${priorTokens.slice(-2).join(' ')} ${matchedLastName}`.trim(),
+    ].filter((candidate) => candidate.length > matchedLastName.length);
+
+    if (candidatePhrases.some((candidate) => isRejectedNameCandidate(cleanName(candidate), tokenizeName(candidate)))) {
+      continue;
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 function escapeRegex(value: string): string {

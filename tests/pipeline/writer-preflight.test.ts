@@ -52,6 +52,36 @@ describe('writer preflight', () => {
     expect(state.blockingIssues.some((issue) => issue.message.includes('cowboys'))).toBe(false);
   });
 
+  it('ignores sentence-opener pseudo-names like "Because San Francisco" in source artifacts', () => {
+    const state = runWriterPreflight({
+      draft: 'San Francisco still has to decide how aggressive to be at receiver.',
+      sourceArtifacts: [
+        {
+          name: 'discussion-summary.md',
+          content: 'Because San Francisco still lacks easy answers here, the panel kept circling the receiver question.',
+        },
+      ],
+    });
+
+    expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
+    expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
+  });
+
+  it('ignores sibling opener phrases when checking supported names', () => {
+    const state = runWriterPreflight({
+      draft: 'Seattle still needs another answer at guard.',
+      sourceArtifacts: [
+        {
+          name: 'discussion-summary.md',
+          content: 'If Seattle wants this offense to travel, it must get sturdier inside. When Seattle gets boxed in, the whole plan narrows.',
+        },
+      ],
+    });
+
+    expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
+    expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
+  });
+
   it('flags unsupported precise claims but allows supported local claims through', () => {
     const unsupported = runWriterPreflight({
       draft: '**Geno Smith** has a $32 million extension lined up after his 4,320 passing yards in 2026.',
