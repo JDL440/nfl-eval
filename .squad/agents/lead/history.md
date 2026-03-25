@@ -18,6 +18,10 @@ Lead has completed three interconnected reviews on V3 workflow simplification an
 - **Escalation vs. force-approve:** Existing Lead escalation infrastructure + findConsecutiveRepeatedRevisionBlocker() logic reused. Change: cap revisions at 2, escalate on 3rd (not auto-approve).
 - **Preserve current V3 baseline:** Sentence-initial hardening (writer-preflight.ts) + mobile width fix (article.ts) are independent, valid, and should NOT be reverted.
 
+### Archived: Option B Article-Page, Dashboard Mobile Audit (2026-03-25)
+
+Lead completed reviews on article-page-only scope (smallest-safe pass approved; no route/type/SSE rewrites) and three-agent mobile audit (shared system contract strategy: header/nav, responsive data-surface, detail/preview stacking, selector cleanup, mobile regression coverage). Detailed session logs in .squad/log/.
+
 ---
 
 ## Recent Work
@@ -140,98 +144,41 @@ Lead has completed three interconnected reviews on V3 workflow simplification an
 
 ---
 
+## Historical Synthesis
+
+### Workflow Contract Simplification Principles (archived from detailed learnings)
+
+- **Structural contracts over prompt:** Churn is overlapping validation boundaries, not AI quality. Solution: narrow role ownership, keep minimal deterministic guards, remove force-approve.
+- **Strict blocker taxonomy:** Editor emits only accuracy blockers (wrong-name, unsupported-stat, stale-claim, fabricated-quote). Structure blockers signal implementation error.
+- **Name extraction strategy:** BANNED_FIRST_TOKENS (finite action-verb list) bridges until writer-support.md canonical-names allowlist replaces greedy NAME_PATTERN regex.
+- **Escalation pattern:** Reuse existing Lead infrastructure + findConsecutiveRepeatedRevisionBlocker(). Change: cap at 2 revisions, escalate on 3rd (not force-approve).
+
+### V3 Articles Page & Mobile Audit (2026-03-25)
+
+Lead reviewed article-page scope and dashboard mobile audit findings. Approved smallest-safe article-page-only pass. Shared findings: header nav overflow, missing detail-grid collapse, desktop-first tables, missing mobile tests. Root cause: dashboard views emit fragments without mobile-aware wrappers; shared CSS primitives missing.
+
+---
+
 ## 2026-03-27T15:30:00Z — V3 Workflow Simplification Architecture Review
 
-**Request:** Review planned V3 workflow simplification (churn reduction) and return implementation checklist.  
-**Basis:** Backend research memo + in-flight V3 baseline (sentence-initial hardening + mobile width fix)  
-**Status:** ✓ Completed — Architecture approved, checklist delivered with rollback guardrails  
-**Output:** `.squad/decisions/inbox/lead-v3-review.md` (14.3 KB) — Detailed phase-by-phase guardrails, test protection matrix, risk table, blocker-type standardization.
+**Status:** ✓ Completed — Architecture approved, checklist delivered with rollback guardrails
 
 **Key findings:**
 1. **Churn root cause is structural, not prompting.** Writer, runtime, and Editor all police overlapping article contract. The fix is contract simplification, not smarter AI.
 2. **In-flight baseline is independent and valid.** Sentence-initial name hardening (writer-preflight.ts) + mobile width fix (article.ts) are independent of churn simplification. Do not revert.
-3. **V3 already has escalation machinery.** Current design auto-approves after max revisions; the cleaner answer is to cap at 2 revisions and escalate to Lead on 3rd. This reuses existing infrastructure instead of adding new control flow.
+3. **V3 already has escalation machinery.** Current design auto-approves after max revisions; cap at 2 revisions and escalate to Lead on 3rd. Reuses existing infrastructure instead of adding new control flow.
 4. **Blocker-type taxonomy must be strict.** Editor can only emit accuracy blockers (name, stat, quote, attribution, staleness). Any structure blocker signals implementation error and should trigger rollback.
 5. **Six phases are clear and independent.** Phase 1 (Writer support artifact) → Phase 2 (minify preflight) → Phase 3 (Editor accuracy-only) → Phase 4 (cap revisions) → Phase 5 (reduce context) → Phase 6 (UX alignment).
 
-**Critical protected behaviors (must not regress):**
-- Stage 6 REVISE regresses to Stage 4 (not Stage 5) — Writer context is start of revision
-- Lead escalation metadata tracked via structured blockers — prevents silent failure loops
-- Minimal structure validation remains in engine.ts — empty draft, recognizable TLDR block required
-
-**Rollback triggers:** If Editor emits structure blockers, if preflight warnings appear as stage blocks, if force-approve returns, if Editor receives prior-review accumulation.
-
 ---
 
-## Learnings
+## 2026-03-25T06:26:29Z — Sentence-Starter Preflight Policy Reassessment
 
-### Workflow Simplification Review Pattern
-- For V3 workflow simplification, treat active dirty worktree changes as baseline when they are independent of the contract rewrite. In this pass that means preserving article-page revision UX (`src/dashboard/views/article.ts`, `src/dashboard/public/styles.css`) and sentence-initial preflight hardening (`src/pipeline/writer-preflight.ts`) while simplifying Writer/Editor boundaries elsewhere.
-- The safe simplification pattern is: narrow role ownership, keep minimal deterministic structure guards, remove force-approve, and preserve structured Lead escalation. This keeps the existing state machine honest without rewriting the 8-stage pipeline.
-- Reviewer focus should stay on runtime truth, not prompt rhetoric: warnings must stop behaving like blockers, Editor must stop emitting structure policing, and Stage 6 `REVISE` must still regress to Stage 4 with structured blocker metadata intact.
+**Status:** ✓ Completed — Blocker policy reviewed and hardening recommendation issued
 
-### V3 Workflow Contract Simplification
-
-- **Structural insight:** Current churn comes from symmetric revision model where Writer, runtime, and Editor all validate the article contract. The solution is to simplify the boundary:
-  - Writer owns draft quality (with better support artifact)
-  - Runtime enforces only deterministic safety (empty draft, TLDR block exists, no obvious placeholders)
-  - Editor enforces only accuracy (names, stats, quotes, staleness)
-  - Lead escalation catches genuinely hard articles (not force-approved churn loops)
-- **Critical principle:** Blocker types must have strict taxonomy. Accuracy types (wrong-name, unsupported-stat, stale-claim, fabricated-quote) are the **only** types Editor should emit. Any structure blocker signals implementation error.
-- **In-flight V3 context:** Sentence-initial name hardening (BANNED_FIRST_TOKENS expansion) is a valid interim step before writer-support.md allowlist. Mobile width fix in article.ts is independent UX work.
-- **Escalation vs. force-approve:** Existing `findConsecutiveRepeatedRevisionBlocker()` logic + Lead escalation infrastructure is already in place. The change is to remove force-approve and cap revisions at 2, making escalation the honest resolution path.
-
-### Name Consistency Strategy
-- The NAME_PATTERN regex in writer-preflight.ts is intentionally greedy to capture full names across 2-4 word variations.
-- Filtering happens in two stages: **extraction** (regex + markdown stripping) and **validation** (BANNED_FIRST_TOKENS + BANNED_LAST_TOKENS).
-- Current validation uses a banned-list approach, which doesn't scale for infinite language variation (e.g., action verbs opening sentences).
-- **Principle:** Sentence-opening action verbs (Take, Hit, Draft, etc.) are not name parts and should be filtered deterministically, not heuristically.
+**Assessment:**
+- Sentence-opener NAME_PATTERN extraction too greedy; captures "Take Trent Williams" as full name.
+- Current BANNED_FIRST_TOKENS insufficient for draft-common verbs (Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get).
+- Blocker should remain hard, but heuristic must shift from greedy regex to explicit verb list.
 - **Bridge solution:** Expand BANNED_FIRST_TOKENS with draft-common verbs (small, finite list) until writer-support.md canonical-names allowlist is implemented.
-- Once writer-support.md exists, the preflight should parse that artifact first and rely on explicit allowlist, not NAME_PATTERN fuzzy matching.
-
-### Writer Preflight Architecture
-- Blocker classes: placeholder-leakage, name-consistency, unsupported-name-expansion, unsourced-contract-claim, unsourced-stat-claim, unsourced-draft-claim, unsourced-date-claim.
-- The preflight dedupes issues and caps blocking-issues at 3 per run to avoid overwhelming the writer.
-- Name consistency is a hard blocker to catch serious mismatches (e.g., "Jackson" vs "Jaxon"), but the current regex-based extraction makes it sensitive to prose variation.
-- Unsupported-name-expansion is triggered when the draft has a full name (e.g., "Pat Freiermuth") but artifacts only support a last-name reference (e.g., "Freiermuth").
-
-### Writer Support Artifact Direction
-- writer-support.md (decided, not yet implemented) will be the canonical source for exact names, facts, claims, and roster guidance.
-- It will be produced in writeDraft() after writer-factcheck.md and before writerPreflightSources finalization.
-- The preflight will parse writer-support.md first as an allowlist before falling back to fuzzy matching.
-- This will eventually allow name-consistency blocker to be downgraded to warning or absorbed into allowlist validation.
-
----
-
-## 2026-03-25T05-51-20Z — Option B Article-Page Scope & Risk Review
-
-**Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-lead.md  
-**Session log:** .squad/log/2026-03-25T05-51-20Z-option-b-article-plan.md
-
-**Status:** ✓ Completed — Scope/risk review approved
-
-**Decision:**
-- Approved smallest-safe article-page-only pass.
-- Advised against route/type/SSE rewrites.
-- Option B implementation proceeding.
-
-## 2026-03-25T03:30:39Z — Dashboard Mobile Audit Session (Lead Architecture Synthesis)
-
-**Orchestration log:** .squad/orchestration-log/2026-03-25T03-30-39Z-lead.md  
-**Session log:** .squad/log/2026-03-25T03-30-39Z-dashboard-mobile-audit.md
-
-**Status:** ✓ Completed — corroborated UX findings, shared primitives approach
-
-**Three-agent audit findings (Lead architecture):**
-- Shared failures confirmed: Header nav overflow, missing detail-grid collapse, desktop-first tables/forms, missing/assertion-only mobile tests
-- Root cause: Dashboard views emit fragments without explicit mobile-aware wrappers; shared CSS primitives missing for <640px breakpoints
-- Fragment inheritance gap: HTMX swaps inherit parent shell mobile behavior unpredictably
-- Class scoping conflicts: .agent-grid used in two different contexts with no mobile override strategy
-
-**Recommended strategy:** Establish shared system contract
-1. shared shell/navigation contract
-2. shared responsive data-surface contract
-3. shared detail/preview stacking contract
-4. page-specific selector-density cleanup
-5. targeted mobile regression coverage
 
