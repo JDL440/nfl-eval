@@ -12,7 +12,7 @@ import type { PipelineEngine } from './engine.js';
 import type { AgentRunner, AgentRunResult } from '../agents/runner.js';
 import type { PipelineAuditor } from './audit.js';
 import type { AppConfig } from '../config/index.js';
-import { extractVerdict, inspectDraftStructure, MIN_DRAFT_WORDS } from './engine.js';
+import { inspectDraftStructure, MIN_DRAFT_WORDS } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ensureRosterContext, validatePlayerMentions } from './roster-context.js';
@@ -709,9 +709,40 @@ const WRITER_EDITOR_PREFLIGHT_CHECKLIST = buildWriterPreflightChecklist();
 
 function buildWriterTask(isRevision: boolean): string {
   const modeInstruction = isRevision
-    ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised.'
-    : 'Write an analytical article draft based on the panel discussion.';
-  return `${modeInstruction} Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.\n\n${WRITER_EDITOR_PREFLIGHT_CHECKLIST}\n\nOutput the complete article markdown.`;
+    ? 'You are REVISING an existing draft — NOT writing from scratch. Use the current editor review to make the smallest complete set of fixes while preserving what already works.'
+    : 'Write the full article draft from the panel discussion summary.';
+  return [
+    modeInstruction,
+    'Stay inside the supplied evidence and use the bounded writer fact-check contract only for specific risky claims. Do not turn Stage 5 into open-ended research.',
+    WRITER_EDITOR_PREFLIGHT_CHECKLIST,
+    'Return only the complete article markdown.',
+  ].join('\n\n');
+}
+
+const EDITOR_VERDICT_SECTION_PATTERN = /(?:^|\n)\s*##\s*Verdict\s*\n+\s*(APPROVED|REVISE|REJECT)\s*(?=\n|$)/gim;
+
+const EDITOR_APPROVAL_GATE_TASK = [
+  'Review the article draft as the final approval gate before publish.',
+  'Follow the editor-review skill as the canonical review protocol and output format.',
+  'Use roster context only to block confirmed wrong-team assignments; a player missing from roster data alone is a caution, not a blocker.',
+  'Treat writer-factcheck.md as an advisory Stage 5 ledger only.',
+  'End with exactly one canonical ## Verdict section.',
+].join('\n\n');
+
+const PUBLISHER_REQUIRED_PASS_TASK = [
+  'Run the publisher pass for the required Stage 7 publish-readiness checks only.',
+  'Use the publisher skill for formatting, structure, metadata readiness, image placement, and dashboard handoff expectations.',
+  'Stop at publish readiness. Optional promotion work such as Notes, Tweets, or Publish All follow-ons is handled separately.',
+].join('\n\n');
+
+function extractCanonicalEditorVerdict(text: string): ActionResult['outcome'] | null {
+  const matches = [...text.matchAll(EDITOR_VERDICT_SECTION_PATTERN)]
+    .map((match) => match[1]?.toUpperCase())
+    .filter((value): value is string => value !== undefined)
+    .filter((value): value is 'APPROVED' | 'REVISE' | 'REJECT' => value === 'APPROVED' || value === 'REVISE' || value === 'REJECT');
+  if (matches.length === 0) return null;
+  const unique = [...new Set(matches)];
+  return unique.length === 1 ? unique[0] : null;
 }
 
 function validateDraftOutput(
@@ -1526,22 +1557,13 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    let content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
-
     // Inject current roster data for fact-checking player-team assignments
     const team = article.primary_team;
     if (team) {
-      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team);
-      if (rosterCtx) {
-        content = content + '\n\n---\n\n' + rosterCtx;
-      }
+      ensureRosterContext(ctx.repo, articleId, team);
     }
 
-    // Inject fact-check context if available (built during writeDraft stage)
-    const factCheckArtifact = ctx.repo.artifacts.get(articleId, 'fact-check-context.md');
-    if (factCheckArtifact) {
-      content = content + '\n\n---\n\n' + factCheckArtifact;
-    }
+    const content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
 
     // Editor gets compact shared handoff plus its own prior reviews, not the raw cross-role transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
@@ -1556,7 +1578,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     const result = await ctx.runner.run({
       agentName: 'editor',
-      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If `writer-factcheck.md` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
+      task: EDITOR_APPROVAL_GATE_TASK,
       skills: ['editor-review'],
       conversationContext: fullConversationCtx,
       articleContext: {
@@ -1573,17 +1595,25 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     // Record editor review as a conversation turn
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'editor', 'assistant', result.content);
 
-    // Extract semantic verdict from the editor review content
+    // Require the single canonical verdict section from the editor-review skill.
     let finalReviewContent = result.content;
-    let verdict = extractVerdict(finalReviewContent);
+    let verdict = extractCanonicalEditorVerdict(finalReviewContent);
 
-    // Self-heal: if verdict is unparseable, retry once with stricter format instruction.
-    // This prevents the pipeline from getting stuck at the 6→7 guard.
+    // Self-heal once if the review drifted from the canonical verdict section.
     if (!verdict) {
-      console.warn(`[runEditor] No verdict found for '${articleId}', retrying with strict format`);
+      console.warn(`[runEditor] No canonical verdict found for '${articleId}', retrying with strict format`);
       const retryResult = await ctx.runner.run({
         agentName: 'editor',
-        task: `Your previous review did not contain a parseable verdict. Based on the draft quality, respond with ONLY a verdict section. Do not re-review. Just provide:\n\n## Verdict\nAPPROVED\n\nor\n\n## Verdict\nREVISE\n\nChoose one based on the draft quality. If in doubt, choose APPROVED.`,
+        task: [
+          'Your previous review did not end with the canonical verdict section required by the editor-review skill.',
+          'Reply with ONLY the final verdict section in this exact format:',
+          '## Verdict\nAPPROVED',
+          'or',
+          '## Verdict\nREVISE',
+          'or',
+          '## Verdict\nREJECT',
+          'Preserve the decision already implied by your prior review. If that review was ambiguous, choose REVISE.',
+        ].join('\n\n'),
         skills: ['editor-review'],
         articleContext: {
           slug: articleId,
@@ -1597,7 +1627,15 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       writeAgentResult(ctx.repo, articleId, 'editor-review.md', { ...result, content: combined });
       recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor-retry', retryResult);
       finalReviewContent = combined;
-      verdict = extractVerdict(finalReviewContent);
+      verdict = extractCanonicalEditorVerdict(finalReviewContent);
+    }
+
+    if (!verdict) {
+      return {
+        success: false,
+        error: 'Editor review did not include the required canonical verdict section after retry.',
+        duration: Date.now() - start,
+      };
     }
 
     // If editor returns REVISE, create a revision summary
@@ -1615,7 +1653,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     return {
       success: true,
       duration: Date.now() - start,
-      outcome: verdict ? verdict as ActionResult['outcome'] : undefined,
+      outcome: verdict,
     };
   } catch (err) {
     return {
@@ -1635,20 +1673,14 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     const content = gatherContext(ctx.repo, articleId, 'runPublisherPass', ctx.config);
 
-    // Inject roster context for publisher agent
-    const rosterCtx = article.primary_team
-      ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
-      : null;
-
     // Publisher only needs the shared handoff, not the raw editorial transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
     const conversationCtx = buildRevisionSummaryContext(revisions) || undefined;
 
     const result = await ctx.runner.run({
       agentName: 'publisher',
-      task: 'Run the publisher pass to prepare the article for publication.',
+      task: PUBLISHER_REQUIRED_PASS_TASK,
       skills: ['publisher'],
-      rosterContext: rosterCtx ?? undefined,
       conversationContext: conversationCtx,
       articleContext: {
         slug: articleId,

@@ -6,10 +6,10 @@ describe('writer preflight', () => {
   it('builds a short checklist focused on top blockers', () => {
     const checklist = buildWriterPreflightChecklist();
 
-    expect(checklist).toContain('short editor-style preflight on only the top blockers');
-    expect(checklist).toContain('Do not expand a last name into a full name');
-    expect(checklist).toContain('contract figure, date, draft fact, or stat');
-    expect(checklist).toContain('No guesswork');
+    expect(checklist).toContain('short essentials preflight');
+    expect(checklist).toContain('do not invent fuller versions');
+    expect(checklist).toContain('numbers, dates, draft facts, and contract details');
+    expect(checklist).toContain('unsupported specifics');
   });
 
   it('flags unsupported name variants against supplied artifacts', () => {

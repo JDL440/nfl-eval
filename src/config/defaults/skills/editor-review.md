@@ -1,6 +1,6 @@
 ---
 name: editor-review
-description: Editor review protocol — fact-checking, style, structure, and verdict
+description: Editor approval protocol — blocking errors, strong gate, exact verdict
 domain: content-production
 confidence: 1.0
 tools: []
@@ -10,51 +10,44 @@ tools: []
 
 ## Purpose
 
-Defines the Editor's review protocol for article drafts. Editor is the mandatory final gate before any article moves to publication.
+Editor is the mandatory approval gate between Writer and publish.
 
-## Review Checklist
+## What to Check
 
-### Fact-Checking (Non-negotiable)
-- Verify every player name against current NFL rosters
-- Verify every stat (career numbers, season totals, combine measurables) against source data
-- Verify every contract figure (AAV, guarantees, total value) against OverTheCap or Spotrac
-- Verify every date and timeline
-- Cross-reference player-team assignments — make sure every player is on the correct current team
-- Flag stale information — references to "free agent" who has since signed, or "rumored" deal now confirmed
+### Blocking accuracy checks
 
-### Temporal Accuracy Checklist
-- [ ] Are all player stats from the most recently completed season?
-- [ ] Are "Year N" references correct?
-- [ ] Is cap space current (2026 offseason)?
-- [ ] Does the article satisfy the canonical TLDR structure from `src/config/defaults/skills/substack-article.md`?
-- [ ] Are all player/coach names verified?
+- player and coach names
+- team assignments
+- stats, dates, rankings, and contract figures
+- stale or drifted news framing
+- direct quotes and attributions
 
-### Style & Readability
-- Check tone consistency — "The Ringer meets OverTheCap"
-- Verify expert quotes are attributed correctly
-- Check table formatting — clean, aligned, accurate data
-- Ensure the opening hook creates urgency
-- Check the headline — clickbait-adjacent but honest
+### Blocking structure checks
 
-### Structural Review
-- Evaluate article flow — logical argument progression
-- Identify buried ledes
-- Assess section balance
-- Check conclusion takes a clear position
-- Verify the "Next from the panel" teaser references a real planned article
-- If the main issue is the canonical article contract (for example, missing or misplaced TLDR), return `REVISE` and direct Writer to revise the existing draft instead of rewriting the whole piece
+- draft follows the canonical article contract in `src/config/defaults/skills/substack-article.md`
+- missing, incomplete, or misplaced TLDR always goes in `## 🔴 ERRORS`
+- if the main miss is structure, return `REVISE` and tell Writer to revise the existing draft
+
+### Approval judgment
+
+- writer-factcheck.md is advisory only
+- use blocker tags on `REVISE` bullets: `[BLOCKER type:id]`
+- keep image review inside the same report when relevant
+- a vague or fake **Next from the panel** teaser is a real issue, not cosmetic fluff
 
 ## Output Format
 
+This skill owns the only canonical Stage 6 review format and verdict section.
+
 ```markdown
 ## 🔴 ERRORS (Must Fix Before Publish)
-- [Each error includes: what's wrong, what's correct, and the source]
+- [BLOCKER structure:missing-tldr] What is wrong, what is correct, and what must change
 
 ## 🟡 SUGGESTIONS (Strong Recommendations)
-- [Each suggestion includes: what to change and why]
+- High-value edits that improve the piece
 
 ## 🟢 NOTES (Minor / Optional)
-- [Polish items, alternative phrasings, formatting tweaks]
+- Nice-to-haves
 
 ## Verdict
 APPROVED
@@ -62,10 +55,10 @@ APPROVED
 
 ## Verdict Rules
 
-Your final line MUST be a `## Verdict` heading followed by exactly one of these three words on the next line — no emoji, no extra text, no explanation:
+The review must end with `## Verdict` followed by exactly one word on the next line:
 
-- `APPROVED` — publish as-is (after fixing any 🔴 errors)
-- `REVISE` — needs suggested changes before publishing
-- `REJECT` — fundamental issues requiring rewrite or re-research
+- `APPROVED`
+- `REVISE`
+- `REJECT`
 
-⚠️ Do NOT use variations like "PIVOT REQUIRED", "NEEDS REVISION", or "CONDITIONALLY APPROVED". Use only APPROVED, REVISE, or REJECT.
+No alternate labels, no emoji, no extra explanation on the verdict line.

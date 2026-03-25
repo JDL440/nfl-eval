@@ -18,11 +18,11 @@ export interface WriterPreflightSourceArtifact {
 
 export const WRITER_PREFLIGHT_ARTIFACT_NAME = 'writer-preflight.md';
 
-const WRITER_PREFLIGHT_HEADER = 'Before you return the draft, run this short editor-style preflight on only the top blockers:';
+const WRITER_PREFLIGHT_HEADER = 'Before returning the draft, run this short essentials preflight:';
 const WRITER_PREFLIGHT_CHECKS = [
-  '- Names: keep every full name exactly consistent with supplied artifacts. Do not expand a last name into a full name unless that exact full name appears in the supplied material.',
-  '- Precise facts: if you state a contract figure, date, draft fact, or stat, it must come from supplied artifacts or the bounded writer fact-check. Otherwise attribute it, soften it, or cut it.',
-  '- No guesswork: do not add new unsupported specifics just to make the prose sound smoother.',
+  '- Keep names exactly aligned with supplied artifacts; do not invent fuller versions.',
+  '- Keep specific numbers, dates, draft facts, and contract details only when the supplied materials or bounded fact-check support them.',
+  '- Cut placeholder text and unsupported specifics added only to smooth the prose.',
 ] as const;
 
 const NAME_PATTERN = /([A-Z][a-z]+(?:[-'][A-Za-z]+)?[ \t]+[A-Z][A-Za-z'-]+(?:[ \t]+[A-Z][A-Za-z'-]+){0,2}(?:[ \t]+(?:Jr\.?|Sr\.?|II|III|IV))?)/g;
