@@ -37,12 +37,13 @@ tools: [view, rg, vitest]
 - `layout.ts` is the single shell for most dashboard pages, so header/nav problems are cross-system by default.
 - `styles.css` currently has a thin global mobile layer; many components still rely on desktop flex rows or tables.
 - `preview.ts` includes a manual `preview-mobile` toggle, but that is a preview mode, not a substitute for real responsive behavior.
-- `new-idea.ts` and `agents.ts` currently share the same `.agent-grid` selector name for different layouts, which is a signal to scope page-specific classes before adding more responsive rules.
+- `new-idea.ts` now uses `.idea-agent-grid` for expert-agent pinning, which is the right isolation move. Treat that as the preferred pattern when a selector grid and a content-card grid would otherwise share a class name.
 - `layout.ts` renders `.header-nav`, but the shared stylesheet currently has no dedicated `.header-nav` rule or mobile-nav fallback. Treat header behavior as an unresolved system seam, not a finished component.
 - Shared data tables are inconsistent on mobile: `runs.ts` uses `.runs-table-wrap`, while `config.ts` (`.artifact-table`) and `memory.ts` (`.memory-table`) do not share a common responsive wrapper/card strategy.
 - `article.ts`, `publish.ts`, and `preview.ts` all rely on toolbar/detail-shell patterns (`.detail-grid`, `.preview-toolbar`, `.usage-summary`) that can still behave like desktop rows even after the main column stacks.
 - HTMX/SSE amplifies layout drift here: `renderRunsTable()`, `renderMemoryTable()`, `renderPublishWorkflow()`, and the live article partials all swap independently, so mobile structure must live in shared fragment markup/classes rather than only in full-page wrappers.
 - Dashboard tests may assert mobile hook classes without any stylesheet selector for those hooks. In that case the suite is only protecting structural intent; pair hook assertions with `styles.css` checks on the selectors that actually drive the breakpoint behavior.
+- Inline layout styles in shared dashboard views are another warning sign. If home.ts, publish.ts, login.ts, or rticle.ts need repeated style="..." layout tweaks, the system is missing a reusable shell/action primitive and mobile work should extract that first.
 
 ## Recommendation
 
@@ -54,3 +55,4 @@ Treat mobile dashboard work in this repo as a system task: fix shell, data surfa
 - Detail/preview stack: `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`, `src/dashboard/views/preview.ts`
 - Dense data surfaces: `src/dashboard/views/runs.ts`, `src/dashboard/views/memory.ts`, `src/dashboard/views/config.ts`
 - Selector-density drift risk: `src/dashboard/views/new-idea.ts`, `src/dashboard/views/agents.ts`
+
