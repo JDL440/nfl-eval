@@ -65,8 +65,23 @@ function parseTeams(raw: string | null): string[] {
   return [];
 }
 
-export function renderArticleMetaDisplay(article: Article): string {
+function getWorkflowStatusLine(article: Article, autoAdvanceActive = false): string {
+  if (article.current_stage === 8 || article.status === 'published') return 'Published live';
+  if (article.status === 'archived') return 'Archived';
+  if (article.current_stage === 6 && article.status === 'needs_lead_review') return 'Paused for lead review';
+  if (article.current_stage === 7) return article.substack_draft_url ? 'Ready to publish' : 'Ready for publish review';
+  if (article.status === 'revision') return 'Revision requested';
+  if (autoAdvanceActive && article.current_stage < 7) {
+    return `${STAGE_NAMES[article.current_stage] ?? 'Pipeline work'} in progress`;
+  }
+
+  const nextStage = Math.min(article.current_stage + 1, 8) as Stage;
+  return `Working · Next: ${STAGE_NAMES[nextStage] ?? `Stage ${nextStage}`}`;
+}
+
+export function renderArticleMetaDisplay(article: Article, autoAdvanceActive = false): string {
   const teams = parseTeams(article.teams);
+  const workflowStatus = getWorkflowStatusLine(article, autoAdvanceActive);
   const teamsBadges = teams.length > 0
     ? `<div class="meta-teams">${teams.map(t => `<span class="badge badge-team">${escapeHtml(t)}</span>`).join(' ')}</div>`
     : '';
@@ -88,10 +103,13 @@ export function renderArticleMetaDisplay(article: Article): string {
       ${teamsBadges}
       <div class="detail-meta">
         ${!teamsBadges && article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
-        <span class="badge badge-stage badge-stage-${article.current_stage}">
-          Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
-        </span>
-        <span class="badge badge-status badge-status-${article.status}">${escapeHtml(article.status)}</span>
+        <div class="current-stage-block">
+          <span class="detail-meta-label">Current stage</span>
+          <span class="badge badge-stage badge-stage-${article.current_stage}">
+            Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
+          </span>
+          <span class="current-stage-status"><span class="article-workflow-label">Workflow status</span> ${escapeHtml(workflowStatus)}</span>
+        </div>
         <span class="badge badge-depth">${DEPTH_LABELS[article.depth_level] ?? `Depth ${article.depth_level}`}</span>
       </div>
     </div>`;
@@ -185,7 +203,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           hx-trigger="sse:stage_changed, sse:pipeline_complete"
           hx-swap="innerHTML"
           hx-indicator="#pipeline-activity">
-          ${renderArticleMetaDisplay(article)}
+          ${renderArticleMetaDisplay(article, autoAdvanceActive)}
           ${renderStageTimeline(article.current_stage, transitions)}
         </div>
       </div>
@@ -210,8 +228,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           hx-swap="innerHTML"
           hx-indicator="#pipeline-activity">
           ${renderUsagePanel(usageEvents ?? [])}
-          ${renderStageRunsPanel(stageRuns ?? [])}
-          ${renderAdvancedSection(article, transitions, pinnedAgents)}
+          ${renderAdvancedSection(article, transitions, pinnedAgents, stageRuns ?? [])}
         </div>
       </div>
     </div>`;
@@ -291,8 +308,8 @@ function renderPipelineActivityBar(article: Article, autoAdvanceActive?: boolean
 
 // ── Partial renders for SSE-driven live updates ─────────────────────────────
 
-export function renderLiveHeader(article: Article, transitions: StageTransition[]): string {
-  return renderArticleMetaDisplay(article) + renderStageTimeline(article.current_stage, transitions);
+export function renderLiveHeader(article: Article, transitions: StageTransition[], autoAdvanceActive = false): string {
+  return renderArticleMetaDisplay(article, autoAdvanceActive) + renderStageTimeline(article.current_stage, transitions);
 }
 
 export function renderLiveArtifacts(article: Article, artifactNames?: string[]): string {
@@ -301,8 +318,7 @@ export function renderLiveArtifacts(article: Article, artifactNames?: string[]):
 
 export function renderLiveSidebar(article: Article, usageEvents: UsageEvent[], stageRuns: StageRun[], transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
   return renderUsagePanel(usageEvents)
-    + renderStageRunsPanel(stageRuns)
-    + renderAdvancedSection(article, transitions, pinnedAgents);
+    + renderAdvancedSection(article, transitions, pinnedAgents, stageRuns);
 }
 
 // ── Stage timeline ───────────────────────────────────────────────────────────
@@ -469,35 +485,51 @@ function renderRevisionTurn(
 }
 
 function renderRevisionHistory(history: RevisionHistoryEntry[]): string {
+  const latestEntry = history.reduce((latest, entry) =>
+    entry.summary.iteration > latest.summary.iteration ? entry : latest,
+  history[0]);
+  const latestBlockers = parseRevisionBlockerMetadata(
+    latestEntry.summary.blocker_type,
+    latestEntry.summary.blocker_ids,
+  );
+  const latestBlocker = latestBlockers?.blockerIds[0]
+    ?? latestBlockers?.blockerType
+    ?? 'none';
+
   return `
-    <section class="detail-section">
-      <h2>Revision History</h2>
-      <div class="review-list revision-history-list">
-        ${history.map(entry => {
-          const { summary, keyIssues, writerTurn, editorTurn } = entry;
-          const blockerMetadata = parseRevisionBlockerMetadata(summary.blocker_type, summary.blocker_ids);
-          const outcomeClass = summary.outcome.toLowerCase();
-          return `
-            <div class="review-card review-${escapeHtml(outcomeClass)} revision-history-card">
-              <div class="review-header">
-                <span class="verdict-badge verdict-${escapeHtml(outcomeClass)}">🔁 Iteration ${summary.iteration}</span>
-                <span class="review-number">${escapeHtml(STAGE_NAMES[summary.from_stage as Stage] ?? `Stage ${summary.from_stage}`)} → ${escapeHtml(STAGE_NAMES[summary.to_stage as Stage] ?? `Stage ${summary.to_stage}`)}</span>
-                <span class="meta-date">${escapeHtml(formatDate(summary.created_at))}</span>
-              </div>
-              <div class="review-stats">
-                <span class="stat stat-note">${escapeHtml(summary.outcome)}</span>
-                <span class="stat stat-note">${escapeHtml(summary.agent_name)}</span>
-              </div>
-              ${summary.feedback_summary ? `<p class="revision-feedback"><strong>Summary:</strong> ${escapeHtml(summary.feedback_summary)}</p>` : ''}
-              ${blockerMetadata ? `<p class="revision-feedback"><strong>Blockers:</strong> ${blockerMetadata.blockerType ? `type=${escapeHtml(blockerMetadata.blockerType)}` : 'type=unclassified'}${blockerMetadata.blockerIds.length > 0 ? ` · ids=${escapeHtml(blockerMetadata.blockerIds.join(', '))}` : ''}</p>` : ''}
-              ${keyIssues.length > 0 ? `<ul class="revision-issues">${keyIssues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('')}</ul>` : ''}
-              <div class="revision-turn-grid">
-                ${renderRevisionTurn('Writer pass', writerTurn)}
-                ${renderRevisionTurn('Editor pass', editorTurn)}
-              </div>
-            </div>`;
-        }).join('')}
-      </div>
+    <section class="detail-section revision-history-section">
+      <details class="revision-history-disclosure">
+        <summary>
+          <span class="revision-history-summary-title">Revision History</span>
+          <span class="revision-history-summary-line">${history.length} ${history.length === 1 ? 'iteration' : 'iterations'} · Latest outcome: ${escapeHtml(latestEntry.summary.outcome)} · Top blocker: ${escapeHtml(latestBlocker)}</span>
+        </summary>
+        <div class="review-list revision-history-list">
+          ${history.map(entry => {
+            const { summary, keyIssues, writerTurn, editorTurn } = entry;
+            const blockerMetadata = parseRevisionBlockerMetadata(summary.blocker_type, summary.blocker_ids);
+            const outcomeClass = summary.outcome.toLowerCase();
+            return `
+              <div class="review-card review-${escapeHtml(outcomeClass)} revision-history-card">
+                <div class="review-header">
+                  <span class="verdict-badge verdict-${escapeHtml(outcomeClass)}">🔁 Iteration ${summary.iteration}</span>
+                  <span class="review-number">${escapeHtml(STAGE_NAMES[summary.from_stage as Stage] ?? `Stage ${summary.from_stage}`)} → ${escapeHtml(STAGE_NAMES[summary.to_stage as Stage] ?? `Stage ${summary.to_stage}`)}</span>
+                  <span class="meta-date">${escapeHtml(formatDate(summary.created_at))}</span>
+                </div>
+                <div class="review-stats">
+                  <span class="stat stat-note">${escapeHtml(summary.outcome)}</span>
+                  <span class="stat stat-note">${escapeHtml(summary.agent_name)}</span>
+                </div>
+                ${summary.feedback_summary ? `<p class="revision-feedback"><strong>Summary:</strong> ${escapeHtml(summary.feedback_summary)}</p>` : ''}
+                ${blockerMetadata ? `<p class="revision-feedback"><strong>Blockers:</strong> ${blockerMetadata.blockerType ? `type=${escapeHtml(blockerMetadata.blockerType)}` : 'type=unclassified'}${blockerMetadata.blockerIds.length > 0 ? ` · ids=${escapeHtml(blockerMetadata.blockerIds.join(', '))}` : ''}</p>` : ''}
+                ${keyIssues.length > 0 ? `<ul class="revision-issues">${keyIssues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('')}</ul>` : ''}
+                <div class="revision-turn-grid">
+                  ${renderRevisionTurn('Writer pass', writerTurn)}
+                  ${renderRevisionTurn('Editor pass', editorTurn)}
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </details>
     </section>`;
 }
 
@@ -875,12 +907,13 @@ function renderEditorReviews(reviews: EditorReview[]): string {
 
 // ── Advanced collapsible section ─────────────────────────────────────────────
 
-function renderAdvancedSection(article: Article, transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
+function renderAdvancedSection(article: Article, transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>, stageRuns: StageRun[] = []): string {
   return `
     <section class="detail-section">
       <details class="advanced-section">
-        <summary>⚙️ Advanced</summary>
+        <summary>⚙️ Advanced diagnostics</summary>
         <div class="advanced-content">
+          ${renderStageRunsAdvanced(stageRuns)}
           ${renderRosterPanel(article)}
           ${renderAuditLog(transitions)}
           ${renderArticleMetadata(article, pinnedAgents)}
@@ -1200,39 +1233,49 @@ export function renderUsagePanel(events: UsageEvent[]): string {
 // ── Stage Runs Panel ─────────────────────────────────────────────────────────
 
 export function renderStageRunsPanel(runs: StageRun[]): string {
-  if (runs.length === 0) {
-    return `<section class="detail-section">
-      <h2>Stage Runs</h2>
-      <p class="empty-state">No runs recorded</p>
+  return `
+    <section class="detail-section">
+      <h2>Execution History</h2>
+      ${renderStageRunsBody(runs)}
     </section>`;
+}
+
+function renderStageRunsAdvanced(runs: StageRun[]): string {
+  return `
+    <div class="advanced-subsection">
+      <h3>Execution History</h3>
+      ${renderStageRunsBody(runs)}
+    </div>`;
+}
+
+function renderStageRunsBody(runs: StageRun[]): string {
+  if (runs.length === 0) {
+    return '<p class="empty-state">No runs recorded</p>';
   }
 
   return `
-    <section class="detail-section">
-      <h2>Stage Runs</h2>
-      <div class="stage-runs">
-        ${runs.map(r => {
-          const statusIcon = r.status === 'completed' ? '✅' : r.status === 'failed' ? '❌' : r.status === 'started' ? '🔄' : r.status === 'interrupted' ? '⚡' : '⏹';
-          const duration = r.completed_at && r.started_at
-            ? formatDuration(new Date(r.completed_at).getTime() - new Date(r.started_at).getTime())
-            : '';
-          const targetStage = Math.min(r.stage + 1, 8) as Stage;
-          const targetName = STAGE_NAMES[targetStage] ?? `Stage ${targetStage}`;
-          return `
-          <div class="stage-run stage-run-${r.status}">
-            <div class="stage-run-header">
-              <span class="stage-run-icon">${statusIcon}</span>
-              <span class="badge badge-stage badge-stage-${targetStage}">Stage ${targetStage} — ${escapeHtml(targetName)}</span>
-            </div>
-            <div class="stage-run-meta">
-              ${duration ? `<span class="stage-run-duration">⏱ ${duration}</span>` : ''}
-              <span class="stage-run-time">${formatDate(r.started_at)}</span>
-            </div>
-            ${r.requested_model ? `<div class="stage-run-model">🤖 ${escapeHtml(r.requested_model)}</div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-    </section>`;
+    <div class="stage-runs">
+      ${runs.map(r => {
+        const statusIcon = r.status === 'completed' ? '✅' : r.status === 'failed' ? '❌' : r.status === 'started' ? '🔄' : r.status === 'interrupted' ? '⚡' : '⏹';
+        const duration = r.completed_at && r.started_at
+          ? formatDuration(new Date(r.completed_at).getTime() - new Date(r.started_at).getTime())
+          : '';
+        const runStage = Math.max(1, Math.min(r.stage, 8)) as Stage;
+        const runStageName = STAGE_NAMES[runStage] ?? `Stage ${runStage}`;
+        return `
+        <div class="stage-run stage-run-${r.status}">
+          <div class="stage-run-header">
+            <span class="stage-run-icon">${statusIcon}</span>
+            <span class="badge badge-stage badge-stage-${runStage}">Stage ${runStage} — ${escapeHtml(runStageName)}</span>
+          </div>
+          <div class="stage-run-meta">
+            ${duration ? `<span class="stage-run-duration">⏱ ${duration}</span>` : ''}
+            <span class="stage-run-time">${formatDate(r.started_at)}</span>
+          </div>
+          ${r.requested_model ? `<div class="stage-run-model">🤖 ${escapeHtml(r.requested_model)}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function formatDuration(ms: number): string {

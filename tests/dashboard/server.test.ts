@@ -272,7 +272,10 @@ describe('Dashboard Server', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Detail Test Article');
-      expect(html).toContain('Stage 1');
+      expect(html).toContain('Current stage');
+      expect(html).toContain('Stage 1 · Idea Generation');
+      expect(html).toContain('Workflow status');
+      expect(html).toContain('Working · Next: Discussion Prompt');
       expect(html).toContain('Audit Log');
       expect(html).toContain('Agent Context Settings');
       expect(html).toContain('/htmx/articles/detail-test/context-config');
@@ -313,7 +316,9 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/detail-revisions');
       expect(res.status).toBe(200);
       const html = await res.text();
+      expect(html).toContain('class="revision-history-disclosure"');
       expect(html).toContain('Revision History');
+      expect(html).toContain('1 iteration · Latest outcome: REVISE · Top blocker: stale-stat');
       expect(html).toContain('Iteration 1');
       expect(html).toContain('Writer pass');
       expect(html).toContain('Editor pass');
@@ -337,6 +342,8 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/detail-lead-review');
       expect(res.status).toBe(200);
       const html = await res.text();
+      expect(html).toContain('Workflow status');
+      expect(html).toContain('Paused for lead review');
       expect(html).toContain('Needs Lead review');
       expect(html).toContain('Lead review required: repeated editor blocker detected');
       expect(html).toContain('/htmx/articles/detail-lead-review/artifact/lead-review.md');

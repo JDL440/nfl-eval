@@ -351,10 +351,10 @@ describe('renderStageRunsPanel', () => {
 
   it('shows run with status icon and stage badge', () => {
     const html = renderStageRunsPanel([makeStageRun({})]);
-    expect(html).toContain('Stage Runs');
+    expect(html).toContain('Execution History');
     expect(html).toContain('✅');
-    expect(html).toContain('Stage 6');  // target stage (from=5 → target=6)
-    expect(html).toContain('Editor Pass');
+    expect(html).toContain('Stage 5');
+    expect(html).toContain('Article Drafting');
   });
 
   it('shows failed run with error icon', () => {
@@ -480,8 +480,8 @@ describe('Wave 2 Routes', () => {
       const res = await app.request('/htmx/articles/runs-test/stage-runs');
       expect(res.status).toBe(200);
       const html = await res.text();
-      expect(html).toContain('Stage Runs');
-      expect(html).toContain('Stage 6');  // target stage (from=5 → target=6)
+      expect(html).toContain('Execution History');
+      expect(html).toContain('Stage 5');
       expect(html).toContain('claude-sonnet-4');
     });
 
@@ -500,7 +500,7 @@ describe('Wave 2 Routes', () => {
   });
 
   describe('Article detail page', () => {
-    it('includes usage and stage runs panels', async () => {
+    it('includes usage and advanced execution history diagnostics', async () => {
       repo.createArticle({ id: 'detail-test', title: 'Detail Test' });
       repo.recordUsageEvent({
         articleId: 'detail-test',
@@ -518,7 +518,8 @@ describe('Wave 2 Routes', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Token Usage');
-      expect(html).toContain('Stage Runs');
+      expect(html).toContain('Advanced diagnostics');
+      expect(html).toContain('Execution History');
     });
 
     it('includes enhanced stage timeline with timestamps', async () => {

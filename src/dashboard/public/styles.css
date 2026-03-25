@@ -647,6 +647,28 @@ a:hover { text-decoration: underline; }
 }
 .back-link:hover { color: var(--color-accent); }
 .detail-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.detail-meta-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.current-stage-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 220px;
+}
+.current-stage-status {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+.article-workflow-label {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-right: 0.35rem;
+}
 .detail-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -871,6 +893,25 @@ a:hover { text-decoration: underline; }
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.revision-history-section { padding-top: 1rem; }
+.revision-history-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.revision-history-disclosure > summary::-webkit-details-marker { display: none; }
+.revision-history-summary-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.revision-history-summary-line {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+.revision-history-list { margin-top: 0.85rem; }
 
 /* ── Audit Log ───────────────────────────────────────────────────────────── */
 .audit-log {

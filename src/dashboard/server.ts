@@ -833,7 +833,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-    return c.html(renderArticleMetaDisplay(article));
+    return c.html(renderArticleMetaDisplay(article, activeAdvances.has(id)));
   });
 
   app.get('/htmx/articles/:id/edit-meta', (c) => {
@@ -879,7 +879,7 @@ export function createApp(
 
     try {
       const updated = repo.updateArticle(id, updates);
-      return c.html(renderArticleMetaDisplay(updated));
+      return c.html(renderArticleMetaDisplay(updated, activeAdvances.has(id)));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       return c.html(`<p class="empty-state">${escapeHtml(message)}</p>`, 400);
@@ -1629,7 +1629,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('', 404);
-    return c.html(renderLiveHeader(article, repo.getStageTransitions(id)));
+    return c.html(renderLiveHeader(article, repo.getStageTransitions(id), activeAdvances.has(id)));
   });
 
   app.get('/htmx/articles/:id/live-artifacts', (c) => {
