@@ -3794,3 +3794,25 @@ Treat the shared dashboard header as a two-tier mobile component instead of a st
 - `src/dashboard/views/layout.ts`
 - `src/dashboard/public/styles.css`
 - `tests/dashboard/server.test.ts`
+
+---
+
+# Code Decision — Rodgers Name Fix
+
+- **Date:** 2026-03-26T19:05:00Z
+- **Scope:** `src/pipeline/writer-preflight.ts`
+
+## Decision
+
+Treat `If`, `For`, and `In` as banned first tokens during writer-preflight name extraction instead of widening the name-consistency matcher.
+
+## Why
+
+The live Pittsburgh Stage 4 failure came from sentence-openers like `If Rodgers` and `If Pat Freiermuth` being misread as names, then compared against supported artifacts containing `Aaron Rodgers'` and `Pat Freiermuth`. Filtering those clause-openers at extraction time fixes the false positive in the narrowest seam and avoids changing downstream support/normalization rules for real names.
+
+## Validation
+
+- Focused vitest regressions for `writer-preflight` and `writeDraft`
+- `npm run v2:build`
+- Local rerun of the patched preflight against the live Pittsburgh runtime artifacts returned no blocking issues
+
