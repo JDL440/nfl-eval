@@ -65,3 +65,23 @@ Before calling a dashboard page "mobile-safe" in this repo, verify these shared 
 - Reused class names are still scoped to one job each; avoid collisions like the current `.agent-grid` split between New Idea chips and Agents directory cards.
 - New helper classes added in views are backed by real CSS rules; markup-only mobile classes are not a mobile system.
 - Tests verify responsive structure or mobile-specific class/state behavior, not only that the desktop HTML contains expected labels.
+
+## Current contract gaps
+
+These hooks currently appear in view markup/tests and should be treated as the intended shared mobile contract:
+
+- `shared-mobile-header`
+- `shared-mobile-nav`
+- `header-nav-link`
+- `header-env-badge`
+- `mobile-detail-layout`
+- `mobile-primary-column`
+- `mobile-secondary-column`
+
+If those hooks are present but `src/dashboard/public/styles.css` has no selectors for them, the repo is still in a "mobile planned, not mobile implemented" state.
+
+## Extra repo warnings
+
+- `src/dashboard/views/preview.ts` uses `preview-mobile` as a preview simulator, not a shell breakpoint.
+- `src/dashboard/views/home.ts`, `publish.ts`, and `login.ts` still use inline layout styles, which makes shared breakpoint tuning harder.
+- Missing selectors are themselves a drift signal here. Recent examples include `.page-header`, `.publish-detail-header`, `.article-preview`, `.status-info`, `.publish-workflow-actions`, and `.publisher-form`.

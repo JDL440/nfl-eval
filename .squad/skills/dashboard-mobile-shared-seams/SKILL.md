@@ -41,3 +41,11 @@ This keeps the broadest but lowest-semantic-risk fixes first and leaves the high
 ## Testing guidance
 
 Current dashboard tests skew toward route/render behavior, not responsive layout. For mobile work, add assertions around shared markup/class hooks and narrow-screen structural behavior instead of assuming existing route tests will catch layout regressions.
+
+If tests assert new mobile hook classes, also confirm those selectors exist in `src/dashboard/public/styles.css`. In this repo it is possible for views to emit mobile-intent classes and for tests to pass while the stylesheet still has no rules for those hooks, which means the suite is protecting intent rather than real phone behavior.
+
+## Current trap
+
+- Hook classes such as `shared-mobile-header`, `shared-mobile-nav`, `mobile-detail-layout`, `mobile-primary-column`, and `mobile-secondary-column` may appear in views/tests without corresponding CSS selectors.
+- When that happens, the real mobile system is still driven by older generic selectors like `detail-grid`, `filter-bar`, `runs-table-wrap`, `memory-table`, and `artifact-table`.
+- Audit both markup and stylesheet before concluding that a shared mobile seam has been implemented.
