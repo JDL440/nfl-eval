@@ -1,3 +1,38 @@
+## 2026-03-27T06-46-06Z — Warner Last-Name Heuristic Boundary Review & Sentence-Starter Hardening
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T06-46-06Z-lead.md  
+**Session log:** .squad/log/2026-03-27T06-46-06Z-warner-preflight-hardening.md
+
+**Status:** ✓ Completed — Recommendation finalized: Add "Lose" to BANNED_FIRST_TOKENS; do NOT extend last-name heuristics
+
+**Failure case:** Draft "Lose Warner" vs Artifacts "Fred Warner"  
+**Root cause:** "Lose" not in action-verb blocklist  
+**Decision:** Extend BANNED_FIRST_TOKENS with release-context verbs (Lose, Cut, Release, Drop, etc.)
+
+**Why NOT expand last-name heuristics:**
+- Ambiguity across multi-player surnames (Smith, Johnson, Williams, Davis, etc.)
+- Scope creep risk: "last-name match when exactly one candidate" fails when multiple articles mention same surname
+- Violates deterministic principle: the Sentence-Starter policy established that filtered extraction with explicit lists is deterministic; heuristic last-name matching is not
+
+**Key decision:** Sentence-opening action verbs are **not part of person's names** and should be filtered deterministically, not heuristically. This bridges until writer-support.md canonical-names allowlist is implemented.
+
+**Decision documented in:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
+
+---
+
+## 2026-03-27T[HH:MM:SS]Z — Warner Last-Name Heuristic Boundary Review
+
+**Status:** ✓ Completed — Recommendation: Add "Lose" to BANNED_FIRST_TOKENS; do NOT extend last-name heuristics
+
+**Failure case:** Draft "Lose Warner" vs Artifacts "Fred Warner"  
+**Root cause:** "Lose" not in action-verb blocklist  
+**Recommendation:** Extend BANNED_FIRST_TOKENS with release-context verbs (Lose, Cut, etc.)  
+**Why NOT expand last-name heuristics:** Ambiguity across multi-player surnames; scope creep into fuzzy matching; violates deterministic principle.
+
+**Decision:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
+
+---
+
 ## 2026-03-25T06:26:29Z — Sentence-Starter Preflight Policy Reassessment
 
 **Orchestration log:** .squad/orchestration-log/2026-03-25T06-26-29Z-lead.md  

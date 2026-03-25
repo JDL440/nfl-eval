@@ -4504,6 +4504,108 @@ Add comprehensive sentence-opener filtering to both `BANNED_FIRST_TOKENS` lists:
 
 ---
 
+# Decision: Warner Last-Name Heuristic Boundary Review
+
+**Date:** 2026-03-27 (Follow-up)  
+**Owner:** Lead  
+**Status:** Recommendation for Code implementation  
+**Related:** Sentence-Starter Name Consistency Policy, writer-preflight.ts name-consistency blocker
+
+---
+
+## Problem
+
+Draft text: "Lose Warner" (or similar action-verb + last-name patterns)  
+Artifacts support: "Fred Warner"  
+Current behavior: Hard blocker flagged as `name-consistency` issue
+
+The question: Should we extend heuristics to accept action-verb + supported-last-name when exactly one full-name candidate shares that surname?
+
+---
+
+## Analysis
+
+### Why Last-Name Heuristics Are Wrong
+
+**Do NOT extend preflight logic to match on last-names-only**, even with the "exactly one match" constraint. Here's why:
+
+1. **Ambiguity:** Across NFL rosters, multiple players share surnames (Smith, Johnson, Williams, Davis, etc.). Accepting "just Warner" as permission for "Lose Warner" would fail the moment a draft mentions another Warner or a generic "Warner stays central."
+
+2. **Scope creep:** The boundary becomes: "last-name match when exactly one supported candidate." What happens when:
+   - Multiple articles in the backlog mention different Warners?
+   - An article discusses "the Warner contingent" (plural)?
+   - A trade rumor says "Warner could move to the NFC"?
+
+3. **Principle violation:** The existing architecture (Sentence-Starter Name Consistency Policy) established that **filtered extraction with explicit lists is deterministic; heuristic last-name matching is not**.
+
+### The Real Culprit
+
+"Lose" is an action verb that should be in `BANNED_FIRST_TOKENS`, just like "Take," "Hit," "Draft," "Grab," "Pick," etc. It's not a name part.
+
+**Immediate fix:** Add "Lose" to the verb blocklist in line 73.
+
+---
+
+## Recommendation
+
+**Smallest safe rule for Code to ship:**
+
+1. **Add "Lose" to BANNED_FIRST_TOKENS** (line 73 in writer-preflight.ts).
+   - Keep: Take, Hit, Draft, Grab, Pick, Select, Land (draft context)
+   - Keep: Sign, Ink, Re-sign (contract context)
+   - Keep: Target, Pursue, Add, Trade (acquisition context)
+   - Keep: Watch, Build, Keep, Leave, Get (general action)
+   - **ADD:** Lose, Lose (loss/release/cut context)
+
+2. **No new last-name matching logic.** The current blocker at lines 199-207 (check supported full-names by last-name) is correct—it flags unsupported invented expansions. Don't weaken it.
+
+3. **No change to architecture.** The sentence-initial trimming logic (lines 378–394) will then correctly trim "Lose" when it appears sentence-initial, leaving "Warner" as the candidate. That will not match any supported full name, but it will trigger `unsupported-name-expansion` logic (lines 210–216) instead. If "Warner" appears standalone in artifacts, that's acceptable.
+
+---
+
+## Why This Works
+
+- **Deterministic:** "Lose" is a word, not a name. No heuristics.
+- **Minimal:** One-line addition to a predefined list.
+- **Safe:** Doesn't create ambiguity or scope creep.
+- **Aligned:** Extends the existing Sentence-Starter policy, doesn't replace it.
+- **Path to writer-support.md:** Once canonical-names allowlist exists, this verb list can be relaxed or removed entirely.
+
+---
+
+## Migration
+
+Once `writer-support.md` is implemented (with canonical-names section), the preflight can rely on that allowlist and downgrade or remove this heuristic entirely. But for now, explicit token blocking is the right boundary.
+
+---
+
+## Test Case
+
+After adding "Lose" to BANNED_FIRST_TOKENS:
+
+```typescript
+it('filters release-context action verbs like "Lose" before checking names', () => {
+  const state = runWriterPreflight({
+    draft: 'Lose Warner and the defense narrows.',
+    sourceArtifacts: [
+      { name: 'discussion-summary.md', content: 'Fred Warner is the centerpiece of that defense.' },
+    ],
+  });
+
+  // Should either pass (if Warner alone is acceptable) or flag unsupported-name-expansion
+  // NOT name-consistency (which was the bug)
+  expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
+});
+```
+
+---
+
+## Principle: No Heuristic Last-Name Matching
+
+This decision protects the preflight from degrading into fuzzy matching. The blocker remains hard for unsupported full-name expansions because that's a deterministic check. But we don't extend it to say "any last-name match is OK"—that's the escape hatch we're avoiding.
+
+---
+
 # Decision: Article Stage Data Flow & Drift Sources
 
 **Date:** 2026-03-25  

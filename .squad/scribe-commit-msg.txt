@@ -1,13 +1,6 @@
-scribe: merge decisions from inbox, record orchestration logs
+.squad: summarize code history.md to core context
 
-- Orchestration log: 2026-03-25T04-39-35Z-code.md for Code agent assessment
-- Session log: 2026-03-25T04-39-35Z-writer-contract-precision-fix-review.md
-- Merged inbox decisions (3 files):
-  * Lead decision on writer-support artifact (2026-03-27)
-  * UX decision on dashboard mobile system contract (2026-03-27)
-  * Code decision on mobile dashboard implementation (2026-03-27)
-- Deleted merged inbox files
-- Updated Code agent history with writer-support context
-- No archival (all decisions within 30-day window)
+Archived pre-2026-03-25 verbose learnings into concise Core Context Summary
+to bring file under 12KB threshold (10.09 KB).
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

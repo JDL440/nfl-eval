@@ -1,25 +1,18 @@
-## 2026-03-25T06:26:29Z — Mobile Width & Preflight Hardening Implementation
+## 2026-03-27T06-46-06Z — Warner Preflight Hardening Implementation
 
-**Orchestration log:** .squad/orchestration-log/2026-03-25T06-26-29Z-code.md  
-**Session log:** .squad/log/2026-03-25T06-26-29Z-mobile-and-preflight-hardening.md
+**Orchestration log:** .squad/orchestration-log/2026-03-27T06-46-06Z-code.md  
+**Session log:** .squad/log/2026-03-27T06-46-06Z-warner-preflight-hardening.md
 
-**Status:** ✓ Completed — Two fixes implemented and validated in worktrees/V3
+**Status:** ✓ Completed — Preflight hardening implemented and validated in worktrees/V3
 
-**Fix 1: Article Mobile Width (from UX)**
-- Applied CSS grid min-width: 0 constraints to .detail-grid, .detail-main, .detail-sidebar, .detail-section.
-- Gallery card minimum clamped with minmax(min(100%, 280px), 1fr) to prevent blowout on narrow screens.
-- Added regression coverage in 	ests/dashboard/wave2.test.ts.
-- Validation: 
-pm run v2:build — all tests passing.
+**Implementation:** Add "Lose" to BANNED_FIRST_TOKENS in writer-preflight.ts
+- Release-context verbs: Lose, Cut, Release, Drop (extending the action-verb blocklist)
+- Test case: filters release-context action verbs before checking names
+- Validation: preflight test suite passing in V3 worktree
 
-**Fix 2: Sentence-Starter Preflight Hardening (from Lead)**
-- Expanded BANNED_FIRST_TOKENS in src/pipeline/writer-preflight.ts with action verbs: Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get.
-- Added test case for "Take [name]" + "Add [name]" opener false-positive prevention.
-- Preflight test suite passing.
+**Decision:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
 
-**Decisions:**
-1. [Article Mobile Width Fix](../../decisions.md) — Code implementation of UX proposal
-2. [Sentence-Starter Name Consistency Policy](../../decisions.md) — Implementation of Lead recommendation
+---
 
 ---
 # History — Code
