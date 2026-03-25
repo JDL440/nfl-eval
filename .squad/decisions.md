@@ -4848,3 +4848,136 @@ Once `writer-support.md` is implemented (as decided in the Writer Support decisi
 
 At that point, this sentence-starter verb blocker can be removed or relaxed, since deterministic name allowlisting will replace heuristic matching.
 
+
+---
+
+# Decision: V3 Workflow Simplification — Implementation-Pass Checklist
+
+**Date:** 2026-03-25T07:12:44Z UTC  
+**Owner:** Lead  
+**Status:** Ready for implementation  
+**In-flight Baseline:** Sentence-initial hardening + mobile width fix (valid, do not revert)
+
+## Summary
+
+Churn is **structural** (overlapping Writer/runtime/Editor validation), not prompting. Fix: simplify contract boundaries.
+
+## What Code MUST Change (Protected Behaviors)
+
+| Phase | Goal | Timeline | Code Surface |
+|-------|------|----------|---------------|
+| **1** | Writer support artifact + improved context | Day 1 | `actions.ts:1336–1479` (writeDraft context) + `writer.md` charter |
+| **2** | Minimize writer-preflight blocker set | Day 1 | `actions.ts:1487–1543` (runDraftValidation) + `engine.ts:117–189` |
+| **3** | Editor accuracy-only gate | Day 1–2 | `editor.md` + `editor-review.md` skill + `runEditor()` in actions.ts |
+| **4** | Cap revisions at 2, escalate to Lead on 3rd | Day 2 | `autoAdvanceArticle()` force-approve branches (delete/simplify) |
+| **5** | Reduce Editor context (no prior-reviews accumulation) | Day 3 | `runEditor()` artifact assembly (lines 1568–1584) |
+| **6** | UX alignment: revision = draft work, not "back to discussion" | Day 3 | `article.ts` stage labels + artifact priority + styles |
+
+## Key Protected Behaviors
+
+| Test | Protected Behavior | Reason |
+|------|-------------------|--------|
+| `actions.test.ts:1030–1059` | Editor `REVISE` records blocker metadata | Lead escalation depends on structured blocker tracking |
+| `actions.test.ts:1109–1139` | Editor output parsed into canonical verdict | Pipeline state machine requires unambiguous approval signal |
+| `actions.test.ts:1400–1422` | Stage 5 structure failure sends back to Writer | Runtime guard prevents malformed input to Editor |
+| `actions.test.ts:1424–1470` | Stage 6 `REVISE` regresses to Stage 4 (not Stage 5) | Revision always begins with Writer context, not drafting restart |
+| `actions.test.ts:1472–1523` | Repeated blockers escalate to Lead review | Prevents silent failure loops; honest signal to human |
+| **Delete/Rewrite** | `actions.test.ts:1930–1951` (force-approve after max revisions) | No longer part of intended behavior; escalation replaces it |
+
+---
+
+# Decision: V3 Workflow Simplification — Lead Review Scope & Guardrails
+
+**Date:** 2026-03-25T07:12:44Z UTC  
+**Owner:** Lead  
+**Status:** Approved guardrails for active implementation pass
+
+## Scope of this pass
+
+This pass should simplify the Writer → Editor loop inside V3 **without** rewriting the pipeline. Baseline:
+
+- `src/dashboard/public/styles.css`
+- `src/dashboard/views/article.ts`
+- `src/pipeline/writer-preflight.ts`
+- `tests/dashboard/server.test.ts`
+- `tests/dashboard/wave2.test.ts`
+- `tests/pipeline/writer-preflight.test.ts`
+
+Those in-flight changes are valid starting state and must **not** be reverted.
+
+## Code changes required
+
+1. Update Writer and Editor charters for narrow role ownership
+2. Simplify Stage 5 validation to a bounded safety rail
+3. Remove force-approve behavior after revision exhaustion
+4. Reduce Editor context (drop prior-review accumulation)
+5. Keep revision-state reframing and mobile-width protection already in dirty baseline
+
+## Code changes forbidden
+
+- Do NOT redesign the 8-stage pipeline
+- Do NOT replace existing escalation plumbing
+- Do NOT broaden into publisher/substack behavior
+- Do NOT reopen sentence-initial name-hardening unless directly broken
+- Do NOT turn into UI architecture effort
+
+---
+
+# Research Report: V3 Writer/Editor Churn Loop Analysis
+
+**Date:** 2026-03-25T07:12:44Z UTC  
+**Researcher:** Research  
+**Status:** Complete
+
+## Executive Summary
+
+The V3 writer/editor churn loop has eight major sources of friction:
+
+1. **Heavyweight writer-preflight gates** — deterministic blocking checks run after draft is written
+2. **Reverse-flow artifact injection** — editor review injected back into writer context
+3. **Multi-stage claim validation** — claims validated 4x (panel, writer fact-check, preflight, editor)
+4. **Dual fact-check systems** — `writer-factcheck.md` (agent) vs `writer-preflight.ts` (deterministic)
+5. **Implicit writer self-validation** — writer must self-repair without explicit checklist
+6. **Asymmetric editor feedback** — verdict fixed, feedback unstructured
+7. **No writer-specific support artifact** — writer derives allowlist from raw fact-check
+8. **Revision metadata scattered** — blocker tracking split across multiple locations
+
+## Simplification Levers
+
+1. **Make Writer Fact-Check the Authority** — Build `writer-support.md` from verified bucket
+2. **Lightweight Editor + Structured Verdict** — Accuracy-only gate; remove suggestions/notes
+3. **Delete Panel Fact-Check** — Writer fact-check should be sufficient
+4. **Structured Revision Blockers** — JSON metadata, not inline text parsing
+5. **Remove Writer Self-Repair Retry** — Fail fast; let operator/editor decide
+6. **Publish Writer Preflight Checklist** — Make rules explicit in writer charter
+
+---
+
+# Decision: Revision Send-Back UX Defaults
+
+**Date:** 2026-03-25T07:12:44Z UTC  
+**Agent:** UX  
+**Status:** Implemented
+
+## Decision
+
+When editor gives REVISE verdict, the article regresses to stage 4. The dashboard should show:
+
+1. When `article.status === 'revision'`, default to `draft.md` tab
+2. Update workflow status line to "Draft revision in progress"
+
+Priority order for default tab:
+1. `lead-review.md` when `status === 'needs_lead_review'`
+2. `draft.md` when `status === 'revision'`
+3. First artifact otherwise
+
+## Rationale
+
+- **Smallest safe change**: Only default tab logic and status label
+- **Context-appropriate**: Shows artifact needing attention without hiding others
+- **Consistent pattern**: Follows existing lead-review.md default logic
+
+## Files Changed
+
+- `src/dashboard/views/article.ts`: Default tab logic + workflow status label
+- `src/dashboard/tests/server.test.ts`: Focused test coverage

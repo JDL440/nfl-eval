@@ -37,6 +37,7 @@ Use a **one-primary / many-secondary** hierarchy:
   - `Working`
   - `Paused for lead review`
   - `Ready to publish`
+- For Stage 4 with `status='revision'`, make the sentence explicit that the operator is revising toward drafting, not re-running discussion
 - Prefer a short line under the stage badge instead of another chip/badge row
 
 ### 3. Collapse retrospective content by default
@@ -58,6 +59,12 @@ Use a **one-primary / many-secondary** hierarchy:
 
 - If stage runs exist, show a single concise line for the latest failed attempt
 - Prefer one-line summaries over larger alert boxes that repeat diagnostic history
+
+### 6. Treat editor send-backs as revision work
+
+- If an article is at Stage 4 because Editor regressed it, alias the top-stage label to a revision-oriented term such as `Revision Workspace`
+- Prioritize `editor-review.md` and `draft.md` ahead of discussion artifacts in the artifact tabs
+- Preserve discussion artifacts, but relabel them as context instead of making them the primary surface
 
 ## Mobile-specific rule
 

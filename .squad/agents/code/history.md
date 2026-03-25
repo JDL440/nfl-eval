@@ -85,3 +85,11 @@
 - Mobile width: identified gallery card minmax root cause, implemented CSS fix with regression coverage.
 - Sentence-starter: expanded BANNED_FIRST_TOKENS with action verbs (Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get).
 
+
+## Learnings
+- 2026-03-28 writer/editor churn research: Stage 5 churn is concentrated in `worktrees\V3\src\pipeline\actions.ts` (`buildWriterTask`, `buildDraftRepairInstruction`, `writeDraft`) plus deterministic guards in `writer-preflight.ts` and `engine.ts`.
+- Stage 6 churn surfaces also live in `worktrees\V3\src\pipeline\actions.ts` (`EDITOR_APPROVAL_GATE_TASK`, `runEditor`, auto-advance regression/force-approve paths) and prompt policy files under `worktrees\V3\src\config\defaults\charters\nfl\{writer,editor}.md` plus skills `substack-article.md` and `editor-review.md`.
+- Shared revision-loop state is persisted through `worktrees\V3\src\pipeline\conversation.ts` (`RevisionSummary`, `buildRevisionSummaryContext`, repeated-blocker helpers), so simplifying Editor to a lightweight accuracy pass may allow pruning blocker metadata, lead-review escalation, and retrospective churn logic if the team chooses a less loop-heavy model.
+- Targeted V3 validation command: `npx vitest run tests\pipeline\writer-preflight.test.ts tests\pipeline\engine.test.ts tests\pipeline\actions.test.ts --silent`; current baseline has one failing actions test around name-preflight retry expectations.
+- 2026-03-25 send-back UX fix: in `worktrees\V3\src\dashboard\views\article.ts`, Stage 4 + `status='revision'` should render as `Revision Workspace`, prioritize `editor-review.md`/`draft.md` ahead of discussion artifacts, and default the artifact pane to the first persisted revision artifact rather than `idea.md`.
+- Lead-review regression controls should frame Stage 4 as a revision destination, not a discussion rollback: the send-back disclosure copy lives in `worktrees\V3\src\dashboard\views\article.ts`, helper styles in `worktrees\V3\src\dashboard\public\styles.css`, and regression coverage in `worktrees\V3\tests\dashboard\server.test.ts` with validation via `npm run test -- tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts && npm run v2:build`.
