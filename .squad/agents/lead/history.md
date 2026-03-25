@@ -119,6 +119,25 @@ Research, Code, and UX agents completed V3 workflow simplification pass under Le
 **Decision:** [Sentence-Starter Name Consistency Policy](../../decisions.md)
 
 ---
+
+## Learnings
+
+### 2026-03-25 — Seahawks stall review: runtime-contract drift is a first-class workflow risk
+
+- The live V3 server on `localhost:3456` can be up while still running an old workflow contract. In this case, source defaults in `worktrees/V3/src/config/defaults/charters/nfl/editor.md` and `.../skills/editor-review.md` were simplified on 2026-03-25, but the runtime was loading older seeded files from `C:\Users\jdl44\.nfl-lab\agents\...` last written on 2026-03-20. That means source review alone can misdiagnose stalls unless the seeded runtime knowledge is checked too.
+- `seedKnowledge()` is bootstrap-only: it copies charters/skills only when missing, and `AgentRunner` reads directly from `config.chartersDir` / `config.skillsDir` under the data dir. Architectural implication: prompt/contract simplification needs a sync/versioning/reseed path, or live behavior will drift from reviewed source.
+- For the Seahawks JSN article (`did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right`), the real stall was Stage 6 evidence churn around a timing/value thesis with missing contract facts, amplified by the stale runtime Editor contract. `panel-factcheck.md` explicitly marked contract figures as unsourced, while live editor reviews still emitted old `ERRORS/SUGGESTIONS/NOTES` structure and broad non-accuracy blockers, so the article hit revision-limit escalation instead of repeated-blocker escalation.
+- Further loosening must preserve the minimal Stage 5 shell, Stage 6 `REVISE` → Stage 4 regression, and structured blocker metadata. If blocker metadata goes null in `revision_summaries`, repeated-blocker escalation is effectively disabled even when the same issue is recurring.
+
+---
+
+### 2026-03-27 — Second-pass Seahawks stall guardrails
+
+- The remaining stall class is **post-approval advisory churn**, not a Stage 5 deterministic-blocker problem. The Seahawks JSN article already reached `editor-review-2.md` with an `APPROVED` verdict, then received a third targeted pass (`editor-review-3.md`) that only cleaned up yellow suggestions and inserted an HTML TODO comment into the live draft.
+- Current Stage 5 is already narrow in code: `requireDraft()` only hard-blocks very short drafts plus missing headline, italic subtitle, or recognizable TLDR, while `writer-preflight.ts` blocks only placeholder leakage and downgrades name/claim/date issues to warnings. That means the next cut should protect this minimal shell and focus on preventing downstream roles from reopening approved drafts for non-blocking cleanup.
+- Acceptance for any further loosening must preserve: writer revises the existing draft, Stage 6 `REVISE` still regresses to Stage 4, repeated blocker escalation still works, editor remains accuracy-only, and approved/advisory comments never create another automatic revision or publish-visible TODO leakage.
+
+---
 ## 2026-03-27T[HH:MM:SS]Z — Writer-Editor Churn Reduction Architecture Plan
 
 **Orchestration log:** .squad/orchestration-log/[timestamp]-lead.md  
@@ -196,4 +215,41 @@ Lead reviewed article-page scope and dashboard mobile audit findings. Approved s
 - Current BANNED_FIRST_TOKENS insufficient for draft-common verbs (Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get).
 - Blocker should remain hard, but heuristic must shift from greedy regex to explicit verb list.
 - **Bridge solution:** Expand BANNED_FIRST_TOKENS with draft-common verbs (small, finite list) until writer-support.md canonical-names allowlist is implemented.
+
+
+## 2026-03-28T06-46-06Z — Second-Pass Guardrails for Stage 6 Blockerless Revise Loop
+
+**Orchestration log:** .squad/orchestration-log/2026-03-28T06-46-06Z-lead.md  
+**Session log:** .squad/log/2026-03-28T06-46-06Z-second-pass-workflow-fix.md
+
+**Status:** ✓ Completed — Direction validated with explicit guardrails and rollback triggers
+
+**Diagnosis Validated:**
+- Seahawks JSN article stall is post-approval advisory churn at Stage 6, not Stage 5 shell gate
+- Article already cleared blocking factual review, kept looping for non-blocking cleanup
+- Editor-review-3.md pass exists only for yellow items and HTML TODO placeholder
+
+**Approved Implementation:**
+- Runtime normalization seam in worktrees\V3\src\pipeline\actions.ts
+- If Editor REVISE has no canonical blockers, force blocker-only retry then treat as APPROVED
+- Does not weaken Stage 5 hard guards or placeholder detection
+
+**Protected Behaviors (Strict):**
+1. Minimal Stage 5 shell (headline, subtitle, TLDR, empty draft guard)
+2. Placeholder leakage hard blocker (TODO/TBD/TK must not pass)
+3. Warnings remain advisory (don't block advancement)
+4. Writer revises in place (no draft restarts)
+5. APPROVED is terminal (only true REVISE/REJECT reopens)
+6. Escalation machinery intact (repeated blocker fingerprinting, needs_lead_review hold)
+7. Editor accuracy gate only (name, stat, quote, staleness)
+
+**Rollback Triggers (Reject/Revert If):**
+1. Minimal shell guard weakened
+2. Placeholder leakage becomes publish-safe
+3. APPROVED still triggers required revision
+4. Editor blocker taxonomy widens
+5. Escalation contract breaks
+6. Advisory findings become hidden blockers
+
+**Key Principle:** Not a return to force-approve-after-cap churn. Downgrade only when Editor cannot name canonical blocker after blocker-only retry.
 

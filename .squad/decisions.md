@@ -5011,3 +5011,135 @@ Simplified workflow reduces writer/editor churn without rewriting backend stages
 
 - `src/dashboard/views/article.ts`: Stage label alias, workflow status line, artifact ordering
 - `src/dashboard/public/styles.css`: Mobile width protections (already applied)
+
+---
+
+# Decision: Code — Second-pass workflow simplification
+
+# Code — Second-pass workflow simplification
+
+- Date: 2026-03-28
+- Scope: `worktrees/V3` pipeline runtime and prompt contracts
+
+## Decision
+
+Treat blockerless Stage 6 `REVISE` reviews as workflow noise, not a real revision gate.
+
+## Why
+
+The live Seahawks JSN article was stuck after three Editor loops even though the review never surfaced a canonical blocker. The repeated asks were for more evidence framing (comp ladder, stronger source labels, more specific teaser), not obvious factual failures like wrong names, wrong teams, fabricated quotes, or unsupported exact figures.
+
+## Implementation direction
+
+1. Tighten the Editor contract so those asks are explicitly advisory.
+2. Add a runtime normalization seam in `worktrees/V3/src/pipeline/actions.ts`:
+   - if Editor says `REVISE` with no `[BLOCKER type:id]` lines, run one blocker-only normalization pass;
+   - if the normalized review still has no canonical blocker, treat it as `APPROVED` instead of looping.
+3. Keep existing hard Stage 5 rails for malformed shells and placeholder leakage.
+
+## Guardrail
+
+This is **not** a return to force-approve-after-cap churn. The downgrade only applies when the Editor cannot name a canonical blocker after a blocker-only retry.
+
+---
+
+# Decision: Lead — Second-Pass Guardrails for Remaining Seahawks Stall
+
+# Lead Decision — Second-Pass Guardrails for Remaining Seahawks Stall
+
+**Status:** Recommended for next code cut  
+**Scope:** Stage 5/6 acceptance guardrails after first churn-simplification pass
+
+## Decision
+
+The live Seahawks JSN case shows the remaining stall is **not** a hard Stage 5 guard failure. It is **post-approval advisory churn**: the article already cleared blocking factual review, then kept looping through extra cleanup passes for yellow/non-blocking items. The clearest evidence is the artifact chain:
+
+- `content/articles/jsn-extension-preview/editor-review.md` — initial review mixed true blockers with suggestions/notes.
+- `content/articles/jsn-extension-preview/editor-review-2.md` — all three red issues fixed; verdict already `APPROVED`.
+- `content/articles/jsn-extension-preview/editor-review-3.md` — a third pass exists only to mop up yellow items and explicitly adds an HTML TODO placeholder to the draft rather than resolving a publish blocker.
+
+## Answer Set
+
+### 1. What class of stall is still happening?
+
+**Advisory-review churn after factual approval.**  
+The workflow still behaves as if yellow suggestions are quasi-required work even after the Editor has already approved the draft. That keeps the article in a "one more cleanup pass" posture instead of treating approval as terminal unless a true blocker remains.
+
+### 2. Should the next cut remove or further downgrade any remaining Stage 5 blockers?
+
+**No further Stage 5 downgrade is the primary move.**  
+Current code is already close to the intended minimum:
+
+- `src/pipeline/engine.ts` hard-blocks only: short/empty draft, missing H1, missing italic subtitle, missing recognizable TLDR.
+- `src/pipeline/writer-preflight.ts` hard-blocks only placeholder leakage (`TODO`, `TBD`, `TK`, etc.); names/claims/dates are warnings.
+
+That means the new issue is **elsewhere**: downstream reviewer/runtime behavior is still reopening work on non-blocking findings and allowing advisory cleanup to mutate the draft in publish-visible ways.
+
+### 3. What exact behavior must Code preserve while loosening further?
+
+Code must preserve all of the following:
+
+1. **Minimal Stage 5 shell stays hard**
+   - headline
+   - italic subtitle
+   - recognizable TLDR
+   - empty/very short draft guard
+
+2. **Placeholder leakage stays hard**
+   - visible TODO/TBD/TK scaffolding must not silently pass
+
+3. **Warnings remain advisory**
+   - Stage 5 warnings must not block advancement on their own
+
+4. **Writer revises in place**
+   - revision flow must continue to patch the existing draft, not restart from scratch
+
+5. **Stage 6 approval semantics stay strict**
+   - only true `REVISE`/`REJECT` blockers reopen the loop
+   - `APPROVED` must behave as terminal for required review flow
+
+6. **Escalation machinery stays intact**
+   - repeated blocker fingerprinting
+   - Stage 6 hold / `needs_lead_review`
+   - no reintroduction of force-pass behavior
+
+7. **Editor remains an accuracy gate**
+   - wrong name/team
+   - unsupported exact stat/figure
+   - stale/contradicted claim
+   - fabricated quote/attribution
+   - structure only when the draft is too malformed to review factual safety
+
+## Reviewer / Rollback Risks
+
+Reject or roll back the next cut if any of these appear:
+
+1. **Minimal shell guard weakened too far**
+   - malformed drafts can reach Editor without headline/subtitle/TLDR
+
+2. **Placeholder leakage becomes publish-safe**
+   - TODO comments or scaffolding appear in `draft.md`, publisher pass artifacts, or rendered output
+
+3. **Approved no longer means done**
+   - an `APPROVED` editor review still triggers another required revision/cleanup pass
+
+4. **Editor blocker taxonomy widens again**
+   - structure/style/tone suggestions come back as blocking reasons
+
+5. **Escalation or regression contract breaks**
+   - true `REVISE` no longer regresses to Stage 4
+   - repeated blocker escalation metadata stops working
+
+6. **Advisory findings become hidden blockers**
+   - yellow suggestions are still treated as mandatory by publisher/runtime even if Editor approved
+
+## Review Standard for Code
+
+The safe second pass is:
+
+- keep Stage 5 where it is or nearly where it is,
+- stop post-approval suggestion churn from reopening the article,
+- ensure approved drafts do not pick up publish-visible TODO scaffolding during "cleanup."
+
+Anything broader should be treated as out of scope for this cut.
+

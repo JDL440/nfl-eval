@@ -135,9 +135,38 @@
 
 
 ## Learnings
+- 2026-03-28 second-pass workflow simplification: the live Seahawks JSN article was not stuck on Stage 5 structure anymore; it was stuck in Stage 6 because Editor kept issuing blockerless `REVISE` passes for missing comp ladders, source-label polish, and teaser specificity, which exhausted the revision cap and escalated to Lead review.
+- In `worktrees\V3\src\pipeline\actions.ts`, the safest runtime seam for this class of churn is after canonical verdict extraction: if Editor returns `REVISE` without any `[BLOCKER type:id]` lines, force one blocker-only normalization pass and treat any still-blockerless result as advisory approval instead of another revision loop.
 - 2026-03-28 writer/editor churn research: Stage 5 churn is concentrated in `worktrees\V3\src\pipeline\actions.ts` (`buildWriterTask`, `buildDraftRepairInstruction`, `writeDraft`) plus deterministic guards in `writer-preflight.ts` and `engine.ts`.
 - Stage 6 churn surfaces also live in `worktrees\V3\src\pipeline\actions.ts` (`EDITOR_APPROVAL_GATE_TASK`, `runEditor`, auto-advance regression/force-approve paths) and prompt policy files under `worktrees\V3\src\config\defaults\charters\nfl\{writer,editor}.md` plus skills `substack-article.md` and `editor-review.md`.
 - Shared revision-loop state is persisted through `worktrees\V3\src\pipeline\conversation.ts` (`RevisionSummary`, `buildRevisionSummaryContext`, repeated-blocker helpers), so simplifying Editor to a lightweight accuracy pass may allow pruning blocker metadata, lead-review escalation, and retrospective churn logic if the team chooses a less loop-heavy model.
 - Targeted V3 validation command: `npx vitest run tests\pipeline\writer-preflight.test.ts tests\pipeline\engine.test.ts tests\pipeline\actions.test.ts --silent`; current baseline has one failing actions test around name-preflight retry expectations.
 - 2026-03-25 send-back UX fix: in `worktrees\V3\src\dashboard\views\article.ts`, Stage 4 + `status='revision'` should render as `Revision Workspace`, prioritize `editor-review.md`/`draft.md` ahead of discussion artifacts, and default the artifact pane to the first persisted revision artifact rather than `idea.md`.
 - Lead-review regression controls should frame Stage 4 as a revision destination, not a discussion rollback: the send-back disclosure copy lives in `worktrees\V3\src\dashboard\views\article.ts`, helper styles in `worktrees\V3\src\dashboard\public\styles.css`, and regression coverage in `worktrees\V3\tests\dashboard\server.test.ts` with validation via `npm run test -- tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts && npm run v2:build`.
+
+## 2026-03-28T06-46-06Z — Second-Pass Workflow Simplification (Seahawks JSN Stall Fix)
+
+**Orchestration log:** .squad/orchestration-log/2026-03-28T06-46-06Z-code.md  
+**Session log:** .squad/log/2026-03-28T06-46-06Z-second-pass-workflow-fix.md
+
+**Status:** ✓ Completed — Second-pass workflow simplification diagnosed and implemented
+
+**Diagnosis:**
+- Seahawks JSN article stall is Stage 6 blockerless/advisory revise loop, not Stage 5 hard-block failure
+- Article reached APPROVED verdict at pass 2, but looped for third advisory-only cleanup pass
+- Root cause: Editor emits blockerless REVISE reviews for missing comp ladders and source-label polish
+
+**Implementation Direction:**
+- Runtime normalization seam in worktrees\V3\src\pipeline\actions.ts
+- If Editor returns REVISE with no [BLOCKER type:id] lines, force one blocker-only retry
+- If still blockerless, treat as APPROVED instead of looping
+- Preserve Stage 5 hard rails for shell minimums and placeholder leakage
+
+**Validation:**
+- Lead approved direction with explicit guardrails
+- Research confirmed issue class is evidence-deficit/editor churn at Stage 6
+- Guardrails preserve: minimal Stage 5 shell, placeholder hard guard, approval finality, escalation intact
+
+**Rollback Triggers Guarded:**
+- Minimal shell guard weakened, placeholder leakage publish-safe, APPROVED still triggers revision, blocker taxonomy widened, escalation broken, advisory becomes hidden blocker
+

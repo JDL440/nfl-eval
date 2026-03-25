@@ -25,6 +25,7 @@
 
 ## Learnings
 
+- 2026-03-25 — Seahawks JSN article stall in `worktrees\V3` was an evidence-deficit Stage 6 loop, not a surviving Stage 5 shell gate: runtime state in `C:\Users\jdl44\.nfl-lab\pipeline.db` shows slug `did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right` parked at Stage 6 / `needs_lead_review` after three editor `REVISE` outcomes, while `writer-factcheck.md` recorded zero verified claims and no external checks, `writer-support.md` was absent from both code and runtime artifacts, and editor blocker metadata stayed null so repeated-blocker escalation could not classify the loop.
 - 2026-03-27 — Writer/Editor churn root-cause analysis complete. Eight major sources identified: (1) heavyweight writer-preflight gates running post-draft causing self-repair loops; (2) reverse-flow editor-review artifact injection on revisions; (3–4) 4x claim validation redundancy (panel fact-check + writer fact-check + writer-preflight + editor), split between agent and deterministic passes; (5) implicit writer self-validation without explicit checklist; (6) asymmetric editor feedback (fixed verdict structure, unstructured revision prose); (7) no writer-specific support artifact (writer-support.md designed but not implemented); (8) revision blocker metadata scattered between conversation tables and inline text parsing. Key simplification levers: implement writer-support.md (already designed in decisions.md), make writer-factcheck the sole claim authority, reduce editor scope to lightweight structural/tone gate, delete redundant panel-factcheck pass, use structured blocker JSON instead of prose parsing. Detailed analysis written to .squad/decisions/inbox/research-writer-editor-churn.md with full file/line citations.
 - 2026-03-27 — Issue `#124` is now actionable without reopening `#120`/`#123`: `src/pipeline/conversation.ts` already fingerprints repeated structured blockers, `src/pipeline/actions.ts` already pauses Stage 6 in `needs_lead_review` with `lead-review.md`, and `src/dashboard/views/article.ts` plus `src/dashboard/server.ts` already expose that Lead-review seam.
 - 2026-03-27 — The narrowest safe `#124` implementation is to layer a Lead-approved fallback/article-mode signal on top of the existing Stage 6 hold, then branch `writeDraft()` into a dedicated reframe prompt and show durable mode disclosure in operator/publish surfaces; do not reopen blocker detection or escalation mechanics.
@@ -108,4 +109,36 @@
 - Smallest test surface recommendations for implementation phase
 
 **Distribution:** Shared with UX and Code teams for V3 implementation.
+
+
+## 2026-03-28T06-46-06Z — Second-Pass Confirmation: Seahawks JSN Stall Diagnosis
+
+**Orchestration log:** .squad/orchestration-log/2026-03-28T06-46-06Z-research.md  
+**Session log:** .squad/log/2026-03-28T06-46-06Z-second-pass-workflow-fix.md
+
+**Status:** ✓ Completed — Issue class confirmed; runtime seam validated
+
+**Diagnosis Confirmation:**
+- Seahawks JSN stall is evidence-deficit/editorial churn at Stage 6, NOT Stage 5 failure
+- Runtime state: C:\Users\jdl44\.nfl-lab\pipeline.db shows Stage 6 / needs_lead_review
+- Artifact chain: pass 1 = blockers+suggestions; pass 2 = APPROVED; pass 3 = yellow cleanup only
+- Supporting evidence: writer-factcheck.md zero verified claims, writer-support.md absent, blocker metadata null
+
+**Validation:**
+- Stage 5 in code is already narrow (requireDraft, writer-preflight blocks only hard guards)
+- Remaining issue is post-approval advisory churn, not shell gate failure
+- Runtime seam in actions.ts is appropriate for blockerless REVISE → blocker-only retry → APPROVED
+- Preserves Stage 5 hard guards, placeholder detection, escalation machinery
+
+**Guardrails Confirmed:**
+- Minimal Stage 5 shell stays hard (headline, subtitle, TLDR, empty draft)
+- Placeholder leakage stays hard (TODO/TBD/TK must not pass)
+- Approval is terminal (only true REVISE/REJECT reopens)
+- Escalation intact (repeated blocker fingerprinting, needs_lead_review hold)
+- Does not weaken deterministic guards or reintroduce force-approve
+
+**Next:**
+- Code implements runtime seam in actions.ts
+- Monitor first 20 articles post-fix for advisory approval downgrade
+- Validate no Stage 5 regression or placeholder leakage
 
