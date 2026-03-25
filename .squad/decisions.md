@@ -4434,3 +4434,165 @@ Implement writer-support.md as a compact Stage 5 artifact built inside writeDraf
 ### Why
 
 This keeps the slice entirely inside the existing Stage 5 seam, avoids a new persistence model, and prevents writer-support.md caution lines from being mistaken as generic support by the old fuzzy matcher.
+
+---
+
+# Decision: "Because San Francisco" Validation Failure Root Cause Analysis & Fix
+
+**Date:** 2026-03-25  
+**Author:** Code (Core Dev)  
+**Status:** MERGED from inbox — Fix completed  
+**Context:** Writer draft failed validation after self-heal with "Draft uses 'Because San Francisco', but supplied artifacts support 'San Francisco'."
+
+## Root Cause
+
+The current `main` checkout's `writer-preflight.ts` and `writer-support.ts` maintain separate `BANNED_FIRST_TOKENS` lists. Both were missing "Because" and other sentence-opener conjunctions, allowing "Because San Francisco" to be extracted as a pseudo-name when it appeared in sentences like "Because San Francisco signed...".
+
+## Decision
+
+Add comprehensive sentence-opener filtering to both `BANNED_FIRST_TOKENS` lists:
+- Add conjunctions: Because, Since, Due, Given, If, When, While, Before, After, During, Following, Although, However, Furthermore, Moreover, Thus, Therefore, Consequently, As, Or, And, But, Yet, Unless, Except, Unlike, Regarding, Concerning, Considering
+- Keep both files in sync (separate lists, identical content)
+
+## Implementation (Completed)
+
+- **Files modified:** `src/pipeline/writer-preflight.ts`, `src/pipeline/writer-support.ts`, `tests/pipeline/writer-preflight.test.ts`, `tests/pipeline/writer-support.test.ts`
+- **Tests added:** Focused regressions for "Because X", "If X", etc. sentence starters
+- **Validation:** Focused regression tests + `npm run v2:build` passed
+
+## Why
+
+- Solves immediate "Because San Francisco" blocker
+- Catches similar sentence-opener false positives (If Flowers, When Seattle, etc.)
+- Reuses existing banned-token infrastructure (low-risk change)
+- Paired with complementary fix: preflight now trusts writer-support canonical names as primary authority before falling back to raw extraction
+
+---
+
+# Decision: Writer Preflight Sentence-Opener Filtering Focus
+
+**Date:** 2026-03-25  
+**Author:** Lead (Architecture Review)  
+**Status:** MERGED from inbox — Approved for implementation  
+**Related Issue:** Writer-preflight validation stalls on false-positive openers
+
+## Decision (Two-Layer Approach)
+
+**Path A (Opener Filtering):** Expand `BANNED_FIRST_TOKENS` in both writer-preflight.ts and writer-support.ts to include common prepositional and adverbial sentence openers.
+
+**Path B (Structured Support First):** Update writer-preflight name-consistency logic to prefer writer-support canonical names as the primary authority, and only fall back to raw extraction if writer-support is empty.
+
+## Rationale
+
+- Path A immediately solves "Because San Francisco" and similar prose-opener traps
+- Path B aligns with the research finding that writers need a canonical player-identity ledger
+- Together, they create a two-layer defense: structured data first, then filtered extraction as fallback
+
+## Implementation
+
+- Added 25+ conjunctions/openers to BANNED_FIRST_TOKENS in both files
+- Updated preflight name-consistency logic to check writer-support canonical names first
+- Added focused regression tests for both paths
+- Validation: focused regression tests + npm run v2:build passed
+
+## Why This is the Smallest Scope
+
+- Solves the blocker without widening enforcement
+- Doesn't change stage structure or new artifact types
+- Leverages existing infrastructure (banned-token filtering, writer-support artifact)
+- Prevents similar false positives without over-generalizing
+
+---
+
+# Decision: Article Stage Data Flow & Drift Sources
+
+**Date:** 2026-03-25  
+**Author:** Code (Data Architecture Review)  
+**Status:** MERGED from inbox — Informational; no implementation required
+
+## Findings
+
+Five competing stage representations on the article detail page create cognitive load:
+
+1. **Article Meta Badge** — current_stage + status
+2. **Stage Timeline** — progress circles showing completed/current/future
+3. **Pipeline Activity Banner** — real-time SSE events
+4. **Action Panel** — advance/retry/send-back controls
+5. **Stage Runs Panel** — execution history
+
+## Root Causes of Drift
+
+1. **StageRun Badge shows N+1 instead of N** — The panel computes target as `stage + 1`, causing mismatch with article timeline
+2. **Pipeline Activity Banner uses stale SSE data** — Events may fire before DB writes complete; page may not refresh
+3. **Status vs Stage confusion** — `article.status` is independent of `article.current_stage`
+4. **Revision History shows historical stage labels** — Old iterations may be outdated after regressions
+
+## Recommendations
+
+1. **StageRun Label Precision** — Show "From Stage {N}" or "Started at Stage {N}" instead of computing target
+2. **Status Indicator on Timeline** — Add secondary badge showing `article.status` when different from default
+3. **Revision Panel Context** — Prepend revision cards with "Historical" or show current stage for comparison
+4. **SSE Event Data Validation** — Include both current DB stage and event stage in payloads to detect stale events
+
+---
+
+# Decision: Publish & Dashboard Mobile Audit Findings
+
+**Date:** 2026-03-25  
+**Authors:** UX + Code (Audit Teams)  
+**Status:** MERGED from inbox — Informational; linked to broader mobile remediation work
+
+## Key UX Findings (Article Page Revision History)
+
+### Critical Issues
+
+1. **Revision History is Too Prominent** — Takes ~50% vertical space in main column; pushes Artifacts below fold
+2. **Stage Runs Panel Duplicates Timeline** — Shows completed/current/future state already conveyed by timeline
+3. **Live Update Banner & Pipeline Activity Compete** — Two feedback mechanisms with inconsistent styling
+4. **Sidebar Has Too Much Density** — Token usage, stage runs, and advanced section all visible simultaneously
+5. **Action Panel Complexity** — Different states for different stages; mobile dropdowns can overflow
+6. **Stage Timeline Mobile Behavior** — Horizontally scrollable but lacks scroll indicators; small tap targets
+
+## Recommendations (Priority Order)
+
+A. **Collapse Revision History by Default** — Wrap in `<details>` when >1 iteration; show only summary badge
+B. **Demote Stage Runs to Advanced Section** — Move out of sidebar; timeline already conveys state
+C. **Simplify Token Usage for Mobile** — Show summary only on mobile; collapse breakdowns into `<details>`
+D. **Unify Live Update Feedback** — Single pattern instead of dual-feedback system
+E. **Mobile-First Action Bar Redesign** — Primary action full-width; secondary actions collapse/accordion; danger zone hidden
+F. **Add Revision History Styles** — Dedicated CSS rules for `.revision-history-list`, `.revision-history-card`, `.revision-turn-grid`
+
+---
+
+# Decision: Dashboard Mobile System — Shared Shell & Responsive Primitives (Audit)
+
+**Date:** 2026-03-25  
+**Author:** UX (Audit)  
+**Status:** MERGED from inbox — Audit findings; system-level implementation strategy recommended
+
+## Summary
+
+Dashboard is a **desktop-first system**. Mobile failures are not isolated bugs but systematic across shell and every page. Remedy requires shared shell contract + three shared CSS primitives.
+
+## System-Level Findings
+
+1. **Shared shell has no mobile navigation pattern** — Fixed 56px header with 6 controls; no breakpoint handling
+2. **Layout collapses columns but not hierarchy** — Grid stacks at 768px; shell remains locked
+3. **Shared action surfaces are dense and inconsistent** — Buttons stay small when wrapped
+4. **Operational data surfaces assume tables** — `/runs`, `/memory`, `/config` force horizontal scroll
+5. **HTMX/SSE fragments bypass mobile context** — Updated content reintroduces desktop markup
+6. **Selector collisions** — `.agent-grid` defined twice; inline styles in action areas
+7. **Test coverage missing** — No mobile breakpoint assertions
+
+## Recommended Implementation Order
+
+1. **UX defines** mobile shell contract, action-stack pattern, data-surface card pattern, secondary-panel collapse
+2. **Code implements** shared seams in `layout.ts` + `styles.css`
+3. **Code migrates** page groups (article, publish, runs, memory, config) onto primitives
+4. **Code adds** mobile-focused regression coverage
+
+## Why System-Level Approach
+
+- Worst failures are cross-page, not local bugs
+- HTMX/SSE views re-render partials independently; mobile structure must exist in shared fragments
+- Page-only patches would create multiple inconsistent mobile patterns
