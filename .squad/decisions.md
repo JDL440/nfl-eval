@@ -1,3 +1,69 @@
+# Decision: Dashboard Mobile Audit — Shared System Approach
+
+**Date:** 2026-03-25T03-29-17Z
+**Initiators:** UX (read-only audit) + Code (read-only audit)
+**Status:** MERGED from inbox
+**Scope:** Dashboard mobile system audit → implementation strategy
+
+## Decision
+
+Treat dashboard mobile work as a **shared-system change**, not page-by-page cleanup.
+
+Implementation should land in this order:
+
+1. shared shell/navigation contract
+2. shared responsive data-surface contract
+3. shared detail/preview stacking contract
+4. page-specific selector-density cleanup
+5. targeted mobile regression coverage
+
+## Findings (UX audit)
+
+- Shell-level failures: sticky header, primary nav (`.header-nav`), page layout collapse inconsistently across breakpoints
+- Repeated patterns: same data-table, action-group, filter patterns used across multiple pages with no centralized mobile contract
+- HTMX fragment mismatch: swapped content from partial renders doesn't inherit shell mobile behavior; needs wrapper scoping
+- Mobile-unsafe selectors: `.agent-grid` overloaded; `.card-actions`, `.quick-actions`, `.preview-toolbar` lack stacking/wrapping rules
+- Test gap: current dashboard tests focus on route/copy validation; no viewport-specific assertions for mobile hooks or fragment structure
+
+## Findings (Code audit)
+
+- Server-side render contract unclear: Dashboard views emit fragments without explicit mobile-aware wrappers
+- Shared CSS primitives missing: Breakpoints exist but key elements (tables, action groups, filters) lack stacking rules for <640px
+- Fragment inheritance gap: HTMX swaps inherit parent shell mobile behavior unpredictably
+- Class scoping conflicts: `.agent-grid` used in two different contexts with no mobile override strategy
+- Test infrastructure gap: Dashboard tests mock DOM/routes but don't assert breakpoint-specific rendering or verify mobile fragment-level classes
+
+## Why
+
+- The worst failures are **cross-page, not local bugs**.
+- Page-only patches would create multiple inconsistent mobile patterns.
+- HTMX/SSE views re-render partials independently, so mobile structure must exist inside shared fragments and shared classes, not only in full-page wrappers.
+
+## Minimum product direction
+
+- Add a real mobile header/nav behavior for `.header-nav`
+- Introduce shared stacked page-header / action-group / filter-group patterns
+- Convert operator tables to one reusable mobile data-surface pattern instead of relying on horizontal scroll
+- Collapse low-priority sidebar diagnostics behind disclosures on narrow screens
+- Add dashboard tests that assert mobile hooks and fragment-level structure, not only route copy
+
+## Implementation ownership
+
+**UX responsibilities:**
+1. Define mobile shell behavior for primary nav (`.header-nav`): wrap vs collapse, priority actions, and tap target expectations.
+2. Define one mobile data-surface rule for dashboard tables/cards: horizontal scroll allowance vs stacked summary rows.
+3. Define toolbar/action-group behavior for preview/publish/article contexts: when controls wrap, stack, or move under titles.
+4. Approve class scoping for overloaded selectors like `.agent-grid`.
+
+**Code responsibilities:**
+1. Add explicit shared shell/nav CSS for `.header-nav` plus narrow-screen layout rules in `src/dashboard/public/styles.css`.
+2. Introduce/shared wrappers or responsive classes for `artifact-table`, `memory-table`, and any other dense table surfaces.
+3. Normalize shared action groups (`.card-actions`, `.quick-actions`, `.preview-toolbar`, `.usage-summary`) to mobile-safe wrapping/stacking.
+4. Scope the conflicting `.agent-grid` usages across `src/dashboard/views/new-idea.ts` and `src/dashboard/views/agents.ts`.
+5. Add focused tests that lock shared mobile hooks/classes on rendered HTML, because current dashboard tests do not protect viewport behavior.
+
+---
+
 # Code Decision — Simplify V3 Stages 5-7 Instruction Sources
 
 - **Date:** 2026-03-24T22:20:00Z
@@ -3689,6 +3755,70 @@ pm run v2:build → ✅ PASSED (TypeScript failure fixed)
 
 ---
 
+# Decision: Dashboard Mobile System Audit (Shared Shell + Responsive Primitives)
+
+**Date:** 2026-03-25  
+**Owner:** UX  
+**Scope:** System-level mobile dashboard audit and implementation planning  
+**Status:** COMPLETED — Audit findings documented; implementation split UX/Code
+
+## Decision
+
+Treat dashboard mobile remediation as a **shared shell + shared responsive primitive project**, not a page-by-page CSS cleanup.
+
+## Why
+
+The highest-risk failures come from system seams used by nearly every dashboard view:
+
+1. `src/dashboard/views/layout.ts` provides one shared header/navigation shell for almost every page.
+2. `src/dashboard/public/styles.css` only adds shallow breakpoint handling (`.dashboard-grid`, `.detail-grid`, a few two-column forms), but does not define a responsive nav, responsive action-bar system, or responsive data-display system.
+3. Several pages repeat the same desktop-first patterns:
+   - tables without a reusable mobile wrapper/card strategy (`src/dashboard/views/config.ts`, `src/dashboard/views/memory.ts`, `src/dashboard/views/runs.ts`)
+   - dense action/filter rows (`src/dashboard/views/home.ts`, `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`, `src/dashboard/views/preview.ts`)
+   - preview "mobile mode" that only shrinks the article frame, not the surrounding page shell
+
+## Implementation order (critical)
+
+1. **UX defines the mobile shell/navigation contract and the shared responsive content primitives** (days 1–2)
+2. **Code implements those shared seams in `src/dashboard/views/layout.ts` and `src/dashboard/public/styles.css`** (days 3–5)
+3. **Code migrates page groups onto those primitives** (days 6–7):
+   - shell + top-level nav
+   - action/filter bars
+   - data-heavy pages (`runs`, `memory`, `config`)
+   - article / preview / publish flows
+
+## System-level findings
+
+**7 key failures identified in audit:**
+
+1. **Shared shell has no real mobile navigation pattern** — Every dashboard page starts with a fixed 56px header with 6 controls before content; no breakpoint handling
+2. **Layout system collapses columns but not hierarchy** — Grid stacks at 768px but does not reprioritize actions, summaries, diagnostics
+3. **Shared action surfaces are dense and inconsistent** — Buttons remain small when they wrap; lacks mobile action stack pattern
+4. **Operational data surfaces assume tables and horizontal width** — `/runs`, `/memory`, `/config` force sideways scanning without card/list treatment
+5. **HTMX/SSE fragments preserve desktop markup** — Real-time updates reintroduce desktop-shaped UI unless fragment contract itself is mobile-aware
+6. **Dashboard has selector collisions and one-off layout decisions** — `.agent-grid` defined twice with different meanings; overloaded selectors make shared CSS changes risky
+7. **Current tests protect workflow copy, not mobile system behavior** — No assertions around mobile classes, responsive shells, overflow hooks, or mobile-specific fragment structure
+
+## Minimum system change set
+
+1. Add one shared mobile shell contract with explicit `.header-nav` pattern for `.header-inner`, `.content`, page-header spacing
+2. Create three shared responsive primitives:
+   - Mobile action stack for `.action-bar` and filters
+   - Mobile data surface for tables → readable stacked rows/cards
+   - Mobile secondary-panel pattern for sidebars/diagnostics (collapse behind disclosures)
+3. Scope overloaded selectors (`.agent-grid` split between New Idea and Agents)
+4. Make HTMX/SSE fragment outputs honor the same mobile primitives
+5. Add lightweight structural tests for the mobile contract
+
+## Files and evidence
+
+- **UX audit:** `.squad/agents/ux/ux-dashboard-mobile-audit.md` (7 findings with concrete line numbers, 135+ lines of evidence)
+- **Decision:** `.squad/decisions/inbox/ux-dashboard-mobile-audit.md` (shared-system recommendation)
+- **Skills:** `.squad/skills/dashboard-mobile-patterns/SKILL.md` (pattern guidance for implementation)
+- **History:** `.squad/agents/ux/history.md` (detailed learnings appended with system-level implications)
+
+---
+
 # Decision: Generate Idea Page — Agent Selector Architecture
 
 **Date:** 2026-03-24  
@@ -3892,3 +4022,122 @@ pm run v2:build\
 - \src/dashboard/views/article.ts\ — render path
 - \src/db/repository.ts\ — persistence layer
 - \src/types.ts\ — type definitions
+
+
+---
+
+# Lead Decision — Dashboard Mobile Audit
+
+## Decision
+
+Treat dashboard mobile remediation as a shared shell + shared responsive primitive project, not a page-by-page CSS cleanup.
+
+## Why
+
+The highest-risk failures come from system seams used by nearly every dashboard view:
+
+1. `src/dashboard/views/layout.ts` provides one shared header/navigation shell for almost every page.
+2. `src/dashboard/public/styles.css` only adds shallow breakpoint handling (`.dashboard-grid`, `.detail-grid`, a few two-column forms), but does not define a responsive nav, responsive action-bar system, or responsive data-display system.
+3. Several pages repeat the same desktop-first patterns:
+   - tables without a reusable mobile wrapper/card strategy (`src/dashboard/views/config.ts`, `src/dashboard/views/memory.ts`, `src/dashboard/views/runs.ts`)
+   - dense action/filter rows (`src/dashboard/views/home.ts`, `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`, `src/dashboard/views/preview.ts`)
+   - preview “mobile mode” that only shrinks the article frame, not the surrounding page shell (`src/dashboard/views/preview.ts`, reused by `src/dashboard/views/publish.ts`)
+
+## Non-Decision
+
+- Do not start with one-off page CSS patches.
+- Do not treat the preview frame toggle as sufficient mobile validation.
+- Do not lock in current desktop-first tables/actions with new tests before the shared contract exists.
+
+## Required implementation order
+
+1. UX defines the mobile shell/navigation contract and the shared responsive content primitives.
+2. Code implements those shared seams in `src/dashboard/views/layout.ts` and `src/dashboard/public/styles.css`.
+3. Code migrates page groups onto those primitives:
+   - shell + top-level nav
+   - action/filter bars
+   - data-heavy pages (`runs`, `memory`, `config`)
+   - article / preview / publish flows
+
+## Test implication
+
+Current dashboard tests validate content and route behavior, but not narrow-screen behavior. Add mobile-focused coverage only after the shared contract exists so tests enforce the right system shape.
+
+
+---
+
+# Code Decision Inbox — Dashboard Mobile Audit
+
+- **Date:** 2026-03-25T00:35:00Z
+- **Owner:** Code
+- **Scope:** Dashboard mobile system audit only
+
+## Proposed decision
+
+Treat dashboard mobile work as a shared-system rollout with this order:
+
+1. shared shell/navigation contract
+2. shared responsive data-surface contract
+3. shared detail/preview stacking contract
+4. page-specific selector-density cleanup
+5. targeted mobile regression coverage
+
+## Why
+
+- `src/dashboard/views/layout.ts` and `src/dashboard/public/styles.css` define the shell for most dashboard pages, so header/nav issues are systemic.
+- `src/dashboard/views/article.ts`, `src/dashboard/views/publish.ts`, and `src/dashboard/views/preview.ts` reuse the same preview/detail patterns, so mobile fixes should land as shared primitives instead of one-off patches.
+- `src/dashboard/views/{runs,memory,config}.ts` all expose table/dense data surfaces that currently rely on desktop-safe presentation.
+
+## Minimum implementation split
+
+### UX ownership
+
+1. Define mobile shell behavior for primary nav (`.header-nav`): wrap vs collapse, priority actions, and tap target expectations.
+2. Define one mobile data-surface rule for dashboard tables/cards: horizontal scroll allowance vs stacked summary rows.
+3. Define toolbar/action-group behavior for preview/publish/article contexts: when controls wrap, stack, or move under titles.
+4. Approve class scoping for overloaded selectors like `.agent-grid`.
+
+### Code ownership
+
+1. Add explicit shared shell/nav CSS for `.header-nav` plus narrow-screen layout rules in `src/dashboard/public/styles.css`.
+2. Introduce/shared wrappers or responsive classes for `artifact-table`, `memory-table`, and any other dense table surfaces.
+3. Normalize shared action groups (`.card-actions`, `.quick-actions`, `.preview-toolbar`, `.usage-summary`) to mobile-safe wrapping/stacking.
+4. Scope the conflicting `.agent-grid` usages across `src/dashboard/views/new-idea.ts` and `src/dashboard/views/agents.ts`.
+5. Add focused tests that lock shared mobile hooks/classes on rendered HTML, because current dashboard tests do not protect viewport behavior.
+
+
+---
+
+# Decision: Dashboard Mobile Fixes Must Start at Shared Shell and Fragments
+
+## Context
+
+The dashboard mobile review found the same failures repeating across the shell and every major operator surface: the sticky header in `src/dashboard/views/layout.ts`, the shared grids/toolbars/tables in `src/dashboard/public/styles.css`, and HTMX-swapped fragments from `article.ts`, `publish.ts`, `runs.ts`, and `memory.ts`.
+
+The current system mostly collapses columns at small widths but keeps desktop navigation, desktop-sized controls, and desktop data density.
+
+## Decision
+
+Treat dashboard mobile work as a shared-system change, not a page-by-page cleanup.
+
+Implementation should land in this order:
+
+1. shared shell/navigation contract
+2. shared mobile CSS primitives for headers, page headers, action groups, filters, and data surfaces
+3. HTMX fragment wrappers/classes so swapped content inherits the same mobile behavior
+4. page-specific follow-through on article, publish, runs, memory, config, agents, and new-idea
+
+## Why
+
+- The worst failures are cross-page, not local bugs.
+- Page-only patches would create multiple inconsistent mobile patterns.
+- HTMX/SSE views re-render partials independently, so mobile structure must exist inside shared fragments and shared classes, not only in full-page wrappers.
+
+## Minimum product direction
+
+- Add a real mobile header/nav behavior for `.header-nav`
+- Introduce shared stacked page-header / action-group / filter-group patterns
+- Convert operator tables to one reusable mobile data-surface pattern instead of relying on horizontal scroll
+- Collapse low-priority sidebar diagnostics behind disclosures on narrow screens
+- Add dashboard tests that assert mobile hooks and fragment-level structure, not only route copy
+

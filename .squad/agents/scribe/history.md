@@ -49,3 +49,12 @@
 
 ### 2026-03-26T12-05-00Z: Issue #123 closeout
 - **Closeout:** Issue #123 is implemented and Lead-approved; exact consecutive blocker signatures now escalate to `lead-review.md`, the article stays at Stage 6 with `needs_lead_review`, and non-repeat cases keep the existing path.
+
+### 2026-03-25T03-29-33Z: UX Dashboard Mobile Audit — Scribe orchestration & inbox merge
+- **Audit completion:** UX delivered system-level mobile dashboard audit (7 findings, concrete line numbers, implementation split).
+- **Orchestration log:** `.squad/orchestration-log/2026-03-25T03-29-33Z-ux.md` written with audit findings, root cause, minimum change set.
+- **Session log:** `.squad/log/2026-03-25T03-29-33Z-dashboard-mobile-audit.md` written with brief summary.
+- **Decision merge:** Consolidated three inbox decision files (ux, lead, code) into top of `decisions.md`, deduplicating overlapping scope statements while preserving distinct perspectives.
+- **Inbox cleanup:** Removed all 9 decision inbox files from `.squad/decisions/inbox/` after merge verification.
+- **Cross-agent history:** UX history already updated with detailed learnings by UX agent during audit session.
+- **Decisions.md size:** File grew to 181KB; no archival needed yet (all entries within 30-day window in simulated timeline).

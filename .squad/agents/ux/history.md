@@ -113,6 +113,74 @@
 
 ## Learnings
 
+- 2026-03-27 — **Dashboard mobile system audit refresh**: two cross-page drift sources are still especially important. First, preview mobile is mostly simulated rather than truly responsive: `src/dashboard/views/preview.ts` and `publish.ts` only toggle `.preview-container.preview-mobile`, while `src/dashboard/public/styles.css` leaves `.preview-toolbar`, `.detail-header`, and the outer publish/article shell desktop-shaped. Second, operator data surfaces diverge by page: `/runs` gets `.runs-table-wrap { overflow-x:auto; }`, `/config` renders raw `.artifact-table` blocks with no wrapper, and `/memory` only shrinks table font size at 768px. Treat preview chrome and data-surface behavior as shared mobile primitives, not page-by-page exceptions.
+- 2026-03-26T00:00:00Z — **Dashboard mobile system audit (read-only)**: The biggest mobile failures are shared shell/CSS architecture gaps, not isolated page bugs. `src/dashboard/views/layout.ts` renders every page through one header shell, but `src/dashboard/public/styles.css` has no `.header-nav` rules and no mobile nav breakpoint, so all pages inherit the same cramped top bar. The stylesheet is also collision-prone: `.agent-grid` is defined both for New Idea chips and Agents directory cards, and the later global rule can override the earlier selector behavior. Across data-heavy pages, `src/dashboard/views/config.ts`, `src/dashboard/views/memory.ts`, and `src/dashboard/views/runs.ts` rely on desktop tables, while tests in `tests/dashboard/{server,new-idea,publish,runs,wave2}.test.ts` assert rendering/state flows but do not cover mobile layout, touch targets, or breakpoint behavior.
+
+- 2026-03-26 — **Mobile dashboard audit complete** (`ux-dashboard-mobile-audit.md`). Root cause: dashboard is **desktop-first system**, not individual page bugs. Shell (fixed 56px header with 6 inline buttons) has no responsive breakpoint; grids stack on 768px but shell remains locked. Missing shared mobile patterns: header collapse/hamburger, table-to-card transforms, button tap targets (currently 6px 14px = <40px). HTMX partials inherit no mobile context. Minimum change set: responsive header in `layout.ts`, consolidated media-query system in `styles.css`, reusable mobile CSS library (cards, sidebars, buttons). Implementation sequence split UX (days 1–2: design patterns) and Code (days 3–7: shell, CSS system, page overrides, testing). No action taken yet; this is audit-only output.
 - 2026-03-26 — Mobile dashboard audit: the shared dashboard failure is not one broken page but one desktop-first system. `src/dashboard/views/article.ts`, `home.ts`, `publish.ts`, `preview.ts`, `runs.ts`, `memory.ts`, `config.ts`, `agents.ts`, `new-idea.ts`, and `login.ts` all inherit the same tight horizontal toolbars, small action targets, large table surfaces, and inconsistent stacked hierarchy from `src/dashboard/public/styles.css`.
 - 2026-03-26 — The article detail page needs page-specific mobile restructuring, not just a smaller grid. The action panel, stage timeline, artifact tabs, diagnostics sidebar, and send-back flow all compete at phone widths, so mobile should prioritize summary → primary action → current artifact, with usage/stage runs/advanced content collapsed behind secondary disclosures.
 - 2026-03-26 — A reusable dashboard mobile pattern exists for this repo: compact sticky shell, page-header stack, full-width action groups, chip/toolbar horizontal scrollers only when intentional, and table-to-card transforms for operational data. Future dashboard work should treat mobile as the default layout and layer desktop density back in with wider breakpoints.
+- 2026-03-26 — Shared shell evidence: `src/dashboard/views/layout.ts` renders six header controls plus the env badge in one `header-nav`, while `src/dashboard/public/styles.css` styles `.site-header`, `.header-inner`, `.btn-header`, and `.env-badge` but does not define `.header-nav` or any header breakpoint behavior. The fixed 56px header therefore remains a desktop-first row across every dashboard page.
+- 2026-03-26 — Shared CSS-system gap: the main responsive layer in `src/dashboard/public/styles.css` is only the small `@media (max-width: 768px)` block around `.dashboard-grid`, `.detail-grid`, `.form-row`, `.checklist`, `.stage-timeline`, and `.form-row-2col`, plus a later memory-only tweak. Core mobile pain points on `/runs`, `/memory`, `/config`, `/publish`, `/articles/:id`, `/agents`, and `/ideas/new` trace back to missing shared patterns for nav, toolbars, action groups, and operational data surfaces rather than isolated page bugs.
+- 2026-03-26 — HTMX composition amplifies system-level mobile issues: `renderRunsTable()`, `renderMemoryTable()`, `renderPublishWorkflow()`, `renderArticlePreviewFrame()`, and the live article partials are swapped independently, so mobile wrappers/patterns must live in shared fragments and CSS, not in page-only fixes. Current tests cover route behavior and workflow copy well, but the named dashboard suites do not assert mobile classes, breakpoints, overflow handling, or viewport-specific markup; a targeted dashboard test run also still has two unrelated failing auto-advance assertions in `tests/dashboard/new-idea.test.ts`.
+
+### System-Level Mobile Findings (2026-03-26 Detailed Audit)
+
+**5 Biggest Failures (in order of impact):**
+
+1. **Header never shrinks** — `layout.ts` lines 44–56 render 7 items in one 56px row; `styles.css` lines 90–133 define zero mobile rules; `.header-nav` class is unstyled. Result: buttons overlap on 320px screens.
+
+2. **Tables have no card fallback** — `styles.css` line 1660 `.runs-table-wrap { overflow-x: auto; }` is only mobile handling; zero card patterns. `/memory`, `/config` tables unprotected. Users scroll sideways to see stage/status columns.
+
+3. **Single @media block covers 6 components** — Lines 827–835 only touch `.dashboard-grid`, `.detail-grid`, `.form-row`, `.checklist`, `.stage-timeline`, `.form-row-2col`. Missing: header, tables, filters, actions, agent chips, toolbars, composers.
+
+4. **HTMX fragments bypass mobile context** — `/htmx/runs`, `/htmx/memory` return table-only; inherit `.content { max-width: 1280px; }` even at 320px. No fragment variants for mobile.
+
+5. **Agent selector too small & collided** — `.agent-badge { padding: 5px 10px; }` = 24px height; below 44px tap minimum. Also `.agent-grid` defined twice (line 1010 flex, line 2009 grid) causes style collision when mobile rules added.
+
+**CSS System Gaps:**
+
+- No `@media (max-width: 480px)` for header collapse
+- No `@media (max-width: 640px)` for table-to-card, button stacking
+- No touch-target minimum rule (`min-height: 44px`)
+- No mobile data-surface pattern
+
+**Test Coverage:**
+
+- Zero mobile class assertions in `tests/dashboard/*.test.ts`
+- No breakpoint regression tests
+- No touch-target size validation
+- Two unrelated auto-advance failures in `new-idea.test.ts` (pre-existing)
+
+**Concrete Files & Line Numbers:**
+
+- Header: `layout.ts` 44–56, `styles.css` 90–133
+- Responsive: `styles.css` 827–835 (single @media block)
+- Tables: `styles.css` 1660–1676 (runs), 1740–1800 (memory)
+- Actions: `styles.css` 569–570, 839–874
+- Agents: `styles.css` 1010–1041 (new-idea), 2009 (agents, collision)
+- Filters: `styles.css` 1594–1657
+
+**Recommendation:** Phase 1 (UX) adds shared mobile CSS layer; Phase 2 (Code + UX) reorders article detail, publish workflow, HTMX fragments. No backend changes needed for Phase 1.
+
+Full report: `.squad/decisions.md` (merged into "Decision: Dashboard Mobile Audit — Shared System Approach")
+
+## 2026-03-25T03:29:17Z — Dashboard Mobile Audit (Read-Only, Merged)
+
+**Status:** Complete audit, findings merged into `.squad/decisions.md`
+
+**Scope:** UX conducted parallel read-only audit of dashboard mobile system across views, styles, HTMX fragments, responsive behavior, and test coverage.
+
+**Findings (UX):**
+- Shell-level failures: sticky header, primary nav collapse, page layout inconsistency
+- Repeated patterns: data-table, action-group, filter patterns appear across pages without centralized mobile contract
+- HTMX mismatch: partial renders don't inherit shell mobile behavior
+- Overloaded selectors: `.agent-grid` used in two contexts with no mobile override
+- Test gap: no viewport-specific assertions
+
+**Key audit artifacts:**
+- Orchestration log: `.squad/orchestration-log/2026-03-25T03-29-17Z-ux.md`
+- Session log: `.squad/log/2026-03-25T03-29-17Z-dashboard-mobile-audit.md`
+- Decision merged: ".squad/decisions.md" under "Dashboard Mobile Audit — Shared System Approach"
+
+**Handoff:** Code audit ran in parallel; both audit outputs converged on same finding: mobile work is system-wide, not page-by-page. Recommendation: treat as shared-system rollout with explicit phase sequencing (shell → CSS primitives → HTMX fragments → page follow-through).
