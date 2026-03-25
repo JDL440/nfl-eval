@@ -56,4 +56,10 @@ Treat mobile dashboard work in this repo as a system task: fix shell, data surfa
 - Dense data surfaces: `src/dashboard/views/runs.ts`, `src/dashboard/views/memory.ts`, `src/dashboard/views/config.ts`
 - Selector-density drift risk: `src/dashboard/views/new-idea.ts`, `src/dashboard/views/agents.ts`
 
+## Implementation notes
+
+- Use `.mobile-detail-layout` with `.mobile-primary-column` / `.mobile-secondary-column` for phone-only reordering instead of duplicating article/publish markup.
+- Use `.responsive-table` plus `data-label` cells to turn operational tables into stacked mobile cards.
+- Keep selector namespaces distinct when a chip-picker grid and a content-card grid need different responsive behavior; for example, `.idea-agent-grid` and `.agents-directory-grid`.
+
 

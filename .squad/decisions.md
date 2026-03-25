@@ -1,3 +1,174 @@
+# Decision: Writer Support Artifact — Minimal Fact/Name Compact
+
+**Date:** 2026-03-27  
+**Owner:** Lead  
+**Status:** Recommended for next Stage 5 slice
+
+## Decision
+
+Add one compact Stage 5 artifact named `writer-support.md`.
+
+Its job is not to replace `writer-factcheck.md`, `roster-context.md`, or `writer-preflight.md`. It is a small normalization layer that turns those existing inputs into one Writer-friendly and preflight-friendly source of truth for:
+
+1. exact names
+2. exact facts safe for plain prose
+3. exact claims that must be attributed / softened / omitted
+4. roster freshness posture
+
+## Exact artifact contract
+
+Persist `writer-support.md` as markdown with these sections and fixed fields:
+
+### Header fields
+
+- `Generated:` ISO timestamp
+- `Roster as of:` ISO timestamp or `unknown`
+- `Roster freshness:` `fresh` | `caution` | `stale` | `unknown`
+
+### `## Canonical Names`
+
+One bullet per supported exact full name:
+
+- `- name: Derrick Henry`
+
+Source priority: `roster-context.md` first, then `panel-factcheck.md`, then other Stage 5 source artifacts only to fill gaps.
+
+### `## Exact Facts Allowed`
+
+One bullet per exact claim that may appear in plain prose:
+
+- `- type: contract | claim: $11 million signing bonus | source: writer-factcheck:verified | as_of: 2026-03-27`
+- `- type: stat | claim: 1,234 receiving yards in 2025 | source: writer-factcheck:verified | as_of: 2026-03-27`
+
+Populate this only from facts already cleared in the current `writerFactCheckReport` / `writer-factcheck.md` verified bucket. This is the exact-claim allowlist.
+
+### `## Claims Requiring Caution`
+
+One bullet per risky exact claim that cannot be stated plainly:
+
+- `- action: attribute | claim: four-year, $92 million extension | reason: verified only through volatile source/date`
+- `- action: soften | claim: projects as a top-five cap hit | reason: analytical range, not exact verified fact`
+- `- action: omit | claim: signed with Baltimore on March 27 | reason: unsupported exact transaction detail`
+
+Populate this from the current `writerFactCheckReport` attributed + omitted buckets, plus roster-freshness cautions for unconfirmed team-assignment language.
+
+### `## Roster Guidance`
+
+Keep this section to 2-4 bullets max:
+
+- `- primary_team: BAL`
+- `- rule: If a player-team assignment depends on a very recent move and roster freshness is caution/stale, attribute or soften it instead of stating it as settled fact.`
+- `- rule: Different-team contradictions from roster data still override panel prose.`
+
+## Production seam inside `writeDraft()`
+
+Produce `writer-support.md` in `src/pipeline/actions.ts` `writeDraft()` **after**:
+
+1. `panel-factcheck.md` exists
+2. `writer-factcheck.md` has been built/persisted
+3. roster context has been loaded
+
+And **before**:
+
+1. `writerPreflightSources` is finalized
+2. `gatherContext(...)` output is handed to Writer
+
+Concretely, the seam is immediately after the current `writer-factcheck.md` write/read block and before the existing `writerPreflightSources` array is assembled.
+
+## Consumption
+
+### Writer
+
+- Append `writer-support.md` directly into the Stage 5 runtime context in `writeDraft()`.
+- Treat it as the compact operating sheet:
+  - use `Canonical Names` for exact full-name spellings
+  - use `Exact Facts Allowed` for hard numbers/dates/draft facts that can be stated plainly
+  - use `Claims Requiring Caution` to decide when to attribute, soften, or cut
+  - use `Roster Guidance` when roster freshness is uncertain
+
+Do **not** ask Writer to derive those lanes again from raw panel prose.
+
+### Writer preflight
+
+- Add `writer-support.md` to `writerPreflightSources`.
+- Parse it first, before falling back to broad fuzzy matching across raw source text.
+- Use it as:
+  - the exact-name allowlist
+  - the exact-claim allowlist
+  - the caution bucket for targeted blocker messages when the draft states a barred exact claim plainly
+  - the freshness posture for team-assignment / transaction caution handling
+
+This keeps `writer-preflight` aligned with the same compact truth surface the Writer saw, instead of re-inferring support from noisy markdown.
+
+## Why this is the smallest reasonable slice
+
+- It stays entirely inside the existing Stage 5 `writeDraft()` seam.
+- It reuses current artifacts and current `writerFactCheckReport` buckets instead of inventing a second verification system.
+- It gives the pending slices a clean home:
+  - `stall-fix-writer-support-artifact` → the artifact itself
+  - `stall-fix-claim-buckets` → `Exact Facts Allowed` vs `Claims Requiring Caution`
+  - `stall-fix-roster-freshness` → header freshness fields + `Roster Guidance`
+
+## Explicitly out of scope
+
+- no new pipeline stage
+- no new external research or fetch path
+- no replacement for `writer-factcheck.md`
+- no Editor/publisher/dashboard redesign
+- no per-claim database schema or long-lived structured state beyond this one artifact
+- no attempt to make Writer or preflight the final authority on roster truth; Editor remains the final gate
+
+---
+
+# UX Decision — Dashboard Mobile System Contract
+
+**Date:** 2026-03-27  
+**Owner:** UX  
+**Status:** Recommended from read-only audit
+
+## Decision request
+
+Treat dashboard mobile as one shared system change, not a page-by-page cleanup.
+
+## Why
+
+The dashboard now carries mobile-intent hook classes in markup and tests (`shared-mobile-header`, `mobile-detail-layout`, `mobile-primary-column`, `mobile-secondary-column`, `publish-workflow-actions`, `idea-agent-grid`), but `src/dashboard/public/styles.css` still does not define most of those selectors. That means the system has a documented mobile contract in templates/tests without the shared CSS layer that would make the contract real.
+
+The same audit found three recurring shared seams:
+
+1. **Shell/nav seam** — `src/dashboard/views/layout.ts` drives every page, but header behavior is still styled only through generic `.site-header`, `.header-inner`, `.btn-header`, and `.env-badge`.
+2. **Data-surface seam** — `runs.ts`, `memory.ts`, and `config.ts` all present operator data differently on small screens (`.runs-table-wrap`, raw `.memory-table`, raw `.artifact-table`) with no shared responsive strategy.
+3. **HTMX fragment seam** — article live partials, runs, memory, and publish workflow all swap inner fragments, so mobile structure must live in shared fragment classes/CSS, not only in page wrappers.
+
+## Recommended minimum sequence
+
+1. **UX** defines the shared mobile contract:
+   - header/navigation behavior
+   - action/filter group behavior
+   - responsive data-surface pattern
+   - preview chrome behavior vs. simulated article viewport
+2. **Code** implements that contract in shared CSS/layout seams first:
+   - `src/dashboard/views/layout.ts`
+   - `src/dashboard/public/styles.css`
+   - shared fragment renderers in `article.ts`, `publish.ts`, `runs.ts`, `memory.ts`, `config.ts`
+3. **Code + UX** add tests that verify both:
+   - markup hooks exist
+   - stylesheet selectors/breakpoint behavior exist for those hooks
+
+## Tiny prerequisites
+
+- Convert repeated inline layout styles in `home.ts`, `publish.ts`, `login.ts`, and `article.ts` into named shared classes before broad responsive work.
+- Keep page-specific fixes after the shared shell/data-surface pass unless a narrow blocker appears.
+
+---
+
+### 2026-03-27T00:00:00Z: Mobile dashboard implementation
+**By:** Backend (Squad Agent) (via Copilot)
+**What:** Apply dashboard mobile fixes through shared layout and CSS primitives: compact header nav, shared tap-target/stacking rules, responsive tables/cards, publish workflow-first phone ordering, and scoped agent-grid naming.
+**Why:** The dashboard mobile issues came from shared shell/CSS seams across HTMX views, not isolated single-page bugs. A shared-system implementation keeps article, publish, home, runs, agents, memory, config, new-idea, preview, and login coherent on phones.
+
+---
+
 # Decision: Dashboard Mobile Audit — Shared System Approach
 
 **Date:** 2026-03-25T03-29-17Z
