@@ -1,3 +1,27 @@
+# Code Decision — Simplify V3 Stages 5-7 Instruction Sources
+
+- **Date:** 2026-03-24T22:20:00Z
+- **Owner:** Backend (Squad Agent)
+- **Scope:** Stage 5/6/7 context deduplication and policy canonicalization
+
+## Decision
+
+Keep one canonical instruction source per concern:
+- `substack-article.md` owns structure/TLDR/image contract
+- `writer-fact-check.md` owns Stage 5 bounded verification policy
+- `editor-review.md` owns Stage 6 review/verdict protocol
+
+Trim Writer/Editor/Publisher charters to role/voice/boundaries only. Reduce default Stage 5/6/7 context weight. Avoid duplicate Editor context injection when runtime already received the same artifact via context config.
+
+## Why
+
+Preserves deterministic safety while reducing:
+- Prompt drift across runtime and charters
+- Token weight duplication
+- Policy text appearing in multiple places
+
+---
+
 # Code Decision — Writer Runtime / Editor Alignment Plan
 
 - **Date:** 2026-03-24
