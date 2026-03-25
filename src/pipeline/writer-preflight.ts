@@ -65,7 +65,7 @@ const BANNED_EXACT_NAMES = new Set([
 ]);
 const BANNED_FIRST_TOKENS = new Set([
   'The', 'This', 'That', 'These', 'Those', 'Next', 'Current', 'Latest', 'Official', 'Primary', 'Upstream', 'Why',
-  'Should', 'By', 'First', 'Second', 'Third', 'Fourth',
+  'Should', 'By', 'If', 'For', 'In', 'First', 'Second', 'Third', 'Fourth',
   'Writer', 'Editor', 'Panel', 'Draft', 'Article', 'Summary', 'Budget', 'Stage', 'NFL', 'Lab',
 ]);
 const BANNED_LAST_TOKENS = new Set([

@@ -25,6 +25,21 @@ describe('writer preflight', () => {
     expect(state.blockingIssues[0]?.message).toContain('Jaxon Smith-Njigba');
   });
 
+  it('does not treat sentence-openers plus a supported last name as an invented expansion', () => {
+    const state = runWriterPreflight({
+      draft: 'If Rodgers comes back, the offense still has to flow through structure. If Pat Freiermuth stays central, the tight end room still matters.',
+      sourceArtifacts: [
+        {
+          name: 'discussion-summary.md',
+          content: "Aaron Rodgers' headline value still matters. Pat Freiermuth stays central to the tight end room.",
+        },
+      ],
+    });
+
+    expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
+    expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
+  });
+
   it('ignores NFL Lab team branding phrases when extracting supported names', () => {
     const state = runWriterPreflight({
       draft: '**Micah Parsons** is the hinge point of this Cowboys defense.',
