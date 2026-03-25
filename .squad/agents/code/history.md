@@ -75,18 +75,20 @@ pm run v2:build — all tests passing.
 - Article detail mobile width: Stage 5+ overflow came from `src/dashboard/public/styles.css` `.image-gallery` using `minmax(280px, 1fr)` inside padded `.detail-section` cards. Fix the root cause with `minmax(min(100%, 280px), 1fr)` and lock it with `renderImageGallery()` + `tests/dashboard/wave2.test.ts` rather than hiding overflow globally.
 - Stage 5 coverage: writer-support.test.ts, writer-preflight.test.ts, roster-context.test.ts, actions.test.ts all carry focused regression paths.
 
-## Historical Context (Archived from Learnings, 2026-03-24 and earlier)
+## Core Context Summary
 
-- Stage 5/6/7 simplification: `substack-article.md` owns article structure/TLDR/image contract. `writer-fact-check.md` owns Stage 5 bounded verification. `editor-review.md` owns Stage 6 review protocol. Context distribution via `context-config.ts` + `actions.ts` avoids duplication.
-- Issue #102 (Auth): Config-driven `DASHBOARD_AUTH_MODE=off|local` with env-backed credentials, SQLite-backed sessions, centralized Hono middleware, secure defaults (opaque ids, httpOnly/SameSite cookies, 24h TTL). Validation: tests in `tests/dashboard/{server,config,publish}.test.ts`, `tests/e2e/live-server.test.ts`.
-- Issue #123 (Repeated Blocker): Exact consecutive Editor `REVISE` comparison via normalized fingerprint. Escalates at Stage 6 without new stage. Blocks normal loop bypass only for repeated case. Tests: 5 in actions.test.ts, 2 in conversation.test.ts, 2 in repository.test.ts, 1 in server.test.ts.
-- Optional dashboard services (Substack, Twitter): Resolve via `resolveDashboardDependencies()` in `src/dashboard/server.ts`. Tests exercise real startup path.
-- Writer revision retry: `writeDraft()` self-heal appends failed draft under `## Failed Draft To Revise`. Prompt guidance in charters + skills. TLDR fixes as revisions.
-- Publish payload: HTML→ProseMirror refactored to operate on document nodes. Tests passing (45+).
-- `buildRevisionHistoryEntries()` must normalize missing `blocker_type` to `null`.
-- Stage 5 context seam: `src/pipeline/context-config.ts` makes artifacts available to Writer without widening Editor/Publisher scope.
-- Generate-idea selector: NFL-wide charter key is lowercase `nfl`; UI badge uses `NFL`. Keep identifiers aligned.
+**Architecture & Patterns:**
+- Stage 5/6/7 contracts: `substack-article.md` (structure/TLDR/image), `writer-fact-check.md` (verification), `editor-review.md` (review). Context via `context-config.ts` + `actions.ts`.
+- Issue #102 (Auth): Config-driven mode with SQLite sessions, Hono middleware, secure defaults (opaque ids, httpOnly/SameSite, 24h TTL).
+- Issue #123 (Repeated Blocker): Normalized fingerprint, escalates at Stage 6, blocks loop bypass only on repeat.
+- Optional services (Substack, Twitter): Dependency injection via `resolveDashboardDependencies()` in `src/dashboard/server.ts`.
+- Writer revision retry: Self-heal via `## Failed Draft To Revise` seam in `writeDraft()`.
+- Publish: HTML→ProseMirror document-node refactoring (45+ tests).
+- Stage 5 context seam: `src/pipeline/context-config.ts` provides Writer scope without expanding Editor/Publisher.
 
-- 2026-03-24T22:01:20Z — **Stall-fix runtime-regressions audit**: Code audited 8 files (4 product, 4 test) across writer-support, writer-preflight, roster-context, and actions. Existing vitest coverage is adequate: exact-vs-analytical separation tested in writer-support.test.ts; stale roster/missing player/wrong-team error paths tested in roster-context.test.ts; caution claim attribution/softening tested in writer-preflight.test.ts. Integration paths via writeDraft() append/retry/self-heal tested in actions.test.ts. Decision documented: inline stage 5 artifact writer-support.md (canonical names, exact facts allowed, caution bucket, roster guidance) built from writerFactCheckReport + roster-context + writer-preflight sources. No product code changes required. Audit complete.
-- 2026-03-25T05:40:46Z — **Writer preflight opener false-positive fix session**: Code completed full fix for "Because San Francisco" validation false positive. Root cause: both `writer-preflight.ts` and `writer-support.ts` lacked sentence-opener filtering in their `BANNED_FIRST_TOKENS` lists. Implementation: added 25+ conjunctions (Because, Since, Due, Given, If, When, While, Before, After, During, Following, Although, However, Furthermore, Moreover, Thus, Therefore, Consequently, As, Or, And, But, Yet, Unless, Except, Unlike, Regarding, Concerning, Considering) to both files with synchronized lists. Paired with complementary fix: preflight now trusts writer-support canonical names as primary authority before falling back to raw extraction. Files modified: `src/pipeline/writer-preflight.ts`, `src/pipeline/writer-support.ts`, tests in both test files. Validation: focused regression tests covering "Because X", "If X", "When X" patterns all pass. `npm run v2:build` validated. Decision records merged to decisions.md covering root cause analysis, implementation rationale (two-layer approach: opener filtering + structured-support priority), architecture rationale, and mobile/dashboard audit findings. Orchestration log and session log documented at `.squad/orchestration-log/2026-03-25T05-40-46Z-Code.md` and `.squad/log/2026-03-25T05-40-46Z-preflight-opener-fix.md`.
+**Recent Work (2026-03-24 to 2026-03-25):**
+- Audited writer-support/preflight/roster integration for runtime regressions; coverage adequate via focused test paths.
+- Fixed preflight opener false-positive: synchronized 25+ conjunctions in BANNED_FIRST_TOKENS across preflight + writer-support; preflight now trusts canonical names first.
+- Mobile width: identified gallery card minmax root cause, implemented CSS fix with regression coverage.
+- Sentence-starter: expanded BANNED_FIRST_TOKENS with action verbs (Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get).
 
