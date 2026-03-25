@@ -100,3 +100,8 @@
 - 2026-03-24T05:41:29Z — **Generate-Idea Selector Trace Complete**: Full render-path investigation completed. Team picker source confirmed: static `NFL_TEAMS` in `src/dashboard/views/new-idea.ts`. Expert picker source confirmed: server-side `runner.listAgents()` filter in `src/dashboard/server.ts` lines 847–861. Render path clean from GET `/ideas/new` → `renderNewIdeaPage()` → team-grid + expert-grid templates. No UX gaps. Styling/layout watch-outs noted for responsive mobile. UX validation complete; handed off to Code for implementation. See `.squad/orchestration-log/2026-03-24T05-41-29Z-ux.md`.
 
 
+
+## Learnings
+- 2026-03-25T01:24:56Z — Shared dashboard header cleanup: keep desktop on a single-row grid, but on mobile move to a compact two-tier treatment with logo + utilities on the first row and a horizontally scrollable nav pill row underneath. Hide decorative nav icons below 768px, keep `New Idea` as the only strong primary action, and keep the env badge/theme toggle grouped in `src/dashboard/views/layout.ts` with styling in `src/dashboard/public/styles.css`. Focused regression coverage now lives in `tests/dashboard/server.test.ts` for the shared header shell.
+
+- 2026-03-25T01:26:48Z — **Mobile Dashboard Header Cleanup**: Completed two-tier mobile header refactor with compact brand + utilities row and horizontally scrollable nav pills. Desktop single-row behavior preserved. Decorative icons hidden below 768px. \New Idea\ isolated as primary action. Focused shared-header assertion added to dashboard server tests. All regressions passing. See .squad/orchestration-log/2026-03-25T01-26-48-ux.md.

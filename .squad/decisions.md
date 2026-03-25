@@ -3765,3 +3765,32 @@ pm run v2:build\
 - \src/dashboard/views/article.ts\ — render path
 - \src/db/repository.ts\ — persistence layer
 - \src/types.ts\ — type definitions
+
+
+## # UX Decision — Shared Mobile Header
+
+**Author:** UX  
+**Date:** 2026-03-25  
+**Status:** Proposed
+
+## Decision
+
+Treat the shared dashboard header as a two-tier mobile component instead of a stack of full-width buttons:
+
+1. Keep the first row for brand + utilities (`logo`, theme toggle, env badge).
+2. Put primary navigation on a second row as compact pill buttons.
+3. Allow horizontal scrolling for the nav row on narrow screens instead of forcing multi-line full-width buttons.
+4. Hide decorative nav icons below tablet width; preserve text labels and keep `New Idea` as the only visually primary action.
+
+## Why
+
+- The previous full-width mobile treatment solved collisions but made the header visually heavy and too tall.
+- A dedicated utility cluster keeps global controls stable while letting the nav stay scannable.
+- Horizontal pill navigation is an intentional mobile pattern for shared, always-available destinations where every item still matters.
+- Desktop behavior stays intact because the same markup remains a single-row header at larger widths.
+
+## Implementation Seams
+
+- `src/dashboard/views/layout.ts`
+- `src/dashboard/public/styles.css`
+- `tests/dashboard/server.test.ts`
