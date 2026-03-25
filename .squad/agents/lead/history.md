@@ -40,6 +40,40 @@ Lead completed article-page-only scope review (smallest-safe pass; no route/type
 
 ---
 
+## 2026-03-27T07:30:00Z — V3 Workflow Simplification Pass Completion & Documentation
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-lead.md  
+**Session log:** .squad/log/2026-03-27T07-30-00Z-v3-workflow-simplify.md
+
+**Status:** ✓ Completed — Four-agent team delivered first V3 simplification pass with Phase 1 shipped
+
+**Session Summary:**
+Research, Code, and UX agents completed V3 workflow simplification pass under Lead oversight. Churn diagnosed as structural overlap; six-phase roadmap with protected guardrails delivered. Phase 1 (Warner preflight hardening) shipped and validated.
+
+**Team Deliverables:**
+1. **Lead:** Validated guardrails, approved six-phase checklist, protected behaviors and rollback triggers
+2. **Code:** Implemented Phase 1 (BANNED_FIRST_TOKENS + "Lose"), validated pipeline, guarded rollback triggers
+3. **UX:** Implemented revision UX simplification, mobile width fix, dashboard alignment
+4. **Research:** Mapped eight friction sources, defined six levers, provided guidance framework
+
+**Protected Behaviors:** Editor blocker metadata (accuracy-only), verdict parsing (stage regression 6→4), repeated blocker escalation, minimal structure guards (BANNED_FIRST_TOKENS deterministic only)
+
+**Rollback Triggers:** Structure blockers, warnings blocking advancement, force-approve reachable, regression broken, baseline diluted, escalation metadata degraded
+
+**Files Modified (worktrees/V3):**
+- src/pipeline/writer-preflight.ts (BANNED_FIRST_TOKENS + "Lose")
+- src/pipeline/writer-support.ts (artifact scaffolding)
+- src/dashboard/views/article.ts (mobile CSS, revision display)
+- src/dashboard/public/styles.css (grid overflow handling)
+- tests/pipeline/writer-preflight.test.ts (release-context verb test)
+- tests/dashboard/wave2.test.ts (mobile viewport validation)
+
+**Validation:** npm run v2:build, Vitest tests, mobile viewport tests (320px–1024px) — all passing
+
+**Next:** Code implements Phases 2–6 per checklist; monitor first 20 articles post-Phase 2; escalate revised-3x articles to Lead hold
+
+---
+
 ## 2026-03-27T06-46-06Z — Warner Last-Name Heuristic Boundary Review & Sentence-Starter Hardening
 
 **Orchestration log:** .squad/orchestration-log/2026-03-27T06-46-06Z-lead.md  
@@ -59,19 +93,6 @@ Lead completed article-page-only scope review (smallest-safe pass; no route/type
 **Key decision:** Sentence-opening action verbs are **not part of person's names** and should be filtered deterministically, not heuristically. This bridges until writer-support.md canonical-names allowlist is implemented.
 
 **Decision documented in:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
-
----
-
-## 2026-03-27T[HH:MM:SS]Z — Warner Last-Name Heuristic Boundary Review
-
-**Status:** ✓ Completed — Recommendation: Add "Lose" to BANNED_FIRST_TOKENS; do NOT extend last-name heuristics
-
-**Failure case:** Draft "Lose Warner" vs Artifacts "Fred Warner"  
-**Root cause:** "Lose" not in action-verb blocklist  
-**Recommendation:** Extend BANNED_FIRST_TOKENS with release-context verbs (Lose, Cut, etc.)  
-**Why NOT expand last-name heuristics:** Ambiguity across multi-player surnames; scope creep into fuzzy matching; violates deterministic principle.
-
-**Decision:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
 
 ---
 

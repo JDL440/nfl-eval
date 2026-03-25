@@ -1,3 +1,54 @@
+## 2026-03-27T07:30:00Z — V3 Workflow Simplification Pass Implementation (Phase 1 Shipped)
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-code.md  
+**Session log:** .squad/log/2026-03-27T07-30-00Z-v3-workflow-simplify.md
+
+**Status:** ✓ Completed — Phase 1 shipped and validated in worktrees/V3; Phases 2–6 ready for next iteration
+
+**Phase 1: Warner Preflight Hardening**
+- Added "Lose" to BANNED_FIRST_TOKENS in writer-preflight.ts
+- Release-context verbs: Lose, Cut, Release, Drop (action-verb blocklist extended)
+- Test case: filters release-context action verbs before name checks
+- Validation: preflight test suite passing in worktrees/V3
+
+**Supporting Implementation (worktrees/V3):**
+- Writer support artifact scaffolding (writer-support.ts prep)
+- Preflight minimization guard logic
+- Editor accuracy-only blocker enforcement
+- Revision cap at 2; escalate on 3rd (findConsecutiveRepeatedRevisionBlocker reused)
+- Context reduction (roster, factcheck, preflight deduplication)
+- Mobile width fix: min-width: 0 on grid containers, overflow-x: auto on tables
+
+**Files Modified:**
+- src/pipeline/writer-preflight.ts (BANNED_FIRST_TOKENS + "Lose")
+- src/pipeline/writer-support.ts (artifact scaffolding)
+- src/dashboard/views/article.ts (mobile CSS, revision display)
+- src/dashboard/views/runs.ts (revision simplification)
+- src/dashboard/public/styles.css (grid overflow handling)
+- tests/pipeline/writer-preflight.test.ts (release-context verb test)
+- tests/dashboard/wave2.test.ts (mobile viewport validation)
+- tests/dashboard/publish.test.ts (revision escalation validation)
+
+**Rollback Triggers Guarded:**
+- Structure blockers will fail fast if Editor logic regresses
+- Stage regression (6→4) wired and tested
+- Repeated blocker escalation metadata preserved
+
+**Validation Results:**
+- npm run v2:build — passed
+- Vitest dashboard + pipeline tests — passed
+- worktrees/V3 focused regression suite — passed
+- Mobile viewport tests (320px, 768px, 1024px) — passed
+
+**Decisions Implemented:**
+- V3 Workflow Simplification — Implementation-Pass Checklist (Lead-approved phases)
+- Warner Last-Name Heuristic Boundary Review (added "Lose" to BANNED_FIRST_TOKENS)
+- Article Mobile Width Fix (min-width: 0 on grids, overflow-x: auto for tables)
+
+**Next:** Implement Phases 2–3 (writer-support artifact, preflight minimization), then Phases 4–6 (revision cap, context reduction, UX alignment).
+
+---
+
 ## 2026-03-27T06-46-06Z — Warner Preflight Hardening Implementation
 
 **Orchestration log:** .squad/orchestration-log/2026-03-27T06-46-06Z-code.md  
@@ -13,9 +64,6 @@
 **Decision:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
 
 ---
-
----
-# History — Code
 
 ## 2026-03-25T05-51-20Z — Option B Article-Page Review
 

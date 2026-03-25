@@ -73,6 +73,29 @@
 - 2026-03-26 — The narrowest safe seam for `#124` is a Lead-approved post-escalation fallback policy for repeated evidence blockers: reuse the existing Stage 6 hold, add the smallest durable article-mode signal, rerun Writer with a dedicated reframe contract, and expose explicit disclosure in operator/reader views.
 - 2026-03-26 — Issue `#124` handoff to Code ready: implementation as bounded policy/runtime slice reuses Stage 6 needs_lead_review seam, requires explicit Lead approval, includes dedicated Writer reframe contract, keeps non-evidence blockers on original revision path, and surfaces disclosure in reader/operator views. Acceptance criteria locked in decisions.md.
 
+## 2026-03-27T07:30:00Z — V3 Workflow Simplification Pass (Research Guidance)
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-research.md  
+**Session log:** .squad/log/2026-03-27T07-30-00Z-v3-workflow-simplify.md
+
+**Status:** ✓ Completed — Churn analysis delivered; six-lever simplification roadmap finalized
+
+**Deliverables:**
+- **Churn Root Cause Analysis:** Eight friction sources mapped; structural overlap identified (not prompt quality)
+- **Simplification Roadmap:** Six levers with rollback triggers and protected behaviors
+- **Blocker Taxonomy Guidance:** Editor accuracy-only (wrong-name, unsupported-stat, stale-claim, fabricated-quote); no structure blockers
+- **Name Consistency Strategy:** BANNED_FIRST_TOKENS (finite, deterministic) as interim guard; writer-support.md as target
+
+**Key Learnings:**
+- Structural contracts beat prompt rhetoric in addressing churn
+- Blocker taxonomy must remain strict (accuracy-only, no structure blockers)
+- Finite BANNED_FIRST_TOKENS list preferred over fuzzy NAME_PATTERN matching
+- Escalation infrastructure reused; force-approve removed; revision cap enforced at 2→escalate on 3rd
+
+**Distribution:** Guidance shared with Lead (approval), Code (implementation), UX (UX alignment).
+
+---
+
 ## 2026-03-25T07:15:45Z — Draft-First Revision Wording & Smallest Test Surface Guidance
 
 **Orchestration log:** .squad/orchestration-log/2026-03-25T07-15-45Z-research.md  

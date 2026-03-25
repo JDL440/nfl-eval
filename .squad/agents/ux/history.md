@@ -1,3 +1,49 @@
+## 2026-03-27T07:30:00Z — V3 Revision-State UX Pass & Mobile Width Fix Implementation
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-ux.md  
+**Session log:** .squad/log/2026-03-27T07-30-00Z-v3-workflow-simplify.md
+
+**Status:** ✓ Completed — Revision-state UX simplification and mobile width fix shipped in worktrees/V3
+
+**Article-Detail View Simplification:**
+- Canonical current-stage display as primary focus
+- Advanced-only stage runs (collapsed by default)
+- Latest failed-attempt summary only (removed historical clutter)
+
+**Mobile Width Fix Implementation:**
+- Root cause: intrinsic content (image-gallery minmax(280px, 1fr)) expands beyond ~320px phone width
+- CSS applied to .detail-grid, .detail-main, .detail-sidebar (min-width: 0)
+- .artifact-table now scrolls horizontally instead of pushing viewport
+- Padding tightened at 768px breakpoint
+
+**Revision Display Alignment:**
+- Revision history now supports compact display (collapsed by default)
+- Latest blocker summary only (UX-aligned with simplification goal)
+- Escalation metadata preserved for lead-review indication
+
+**Dashboard Mobile Audit Integration:**
+- Article-detail view aligns with shared mobile contract (no per-page workarounds)
+- Revision display respects mobile-safe selectors and fragment scoping
+- HTMX partial-render behavior validated with wrapper scoping
+
+**Files Modified (worktrees/V3):**
+- src/dashboard/views/article.ts (mobile CSS + revision display)
+- src/dashboard/public/styles.css (grid overflow handling, mobile padding)
+- tests/dashboard/wave2.test.ts (mobile viewport validation)
+- tests/dashboard/publish.test.ts (revision display and escalation tests)
+
+**Test Validation:**
+- Dashboard mobile tests passing (viewport-specific assertions)
+- Article-detail view rendering correctly on 320px–768px–1024px breakpoints
+- Revision summary and escalation metadata preserved in test assertions
+
+**Decisions Implemented:**
+- Article Mobile Width Fix (min-width: 0 on grids, overflow-x: auto)
+- Revision-State UX Pass (collapsed revisions, canonical stage display)
+- Dashboard Mobile Audit Findings (system-level approach, not page-by-page)
+
+---
+
 ## 2026-03-25T06:26:29Z — Mobile Width Fix Proposal
 
 **Orchestration log:** .squad/orchestration-log/2026-03-25T06-26-29Z-ux.md  
