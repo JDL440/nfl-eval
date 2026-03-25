@@ -585,7 +585,7 @@ describe('markdownToProseMirror', () => {
   });
 
   it('handles TL;DR blockquote with bullet list', () => {
-    const md = '> **TLDR**\n> - Point one\n> - Point two';
+    const md = '> **TL;DR**\n> - Point one\n> - Point two';
     const doc = markdownToProseMirror(md);
     const para = doc.content.find((n) => n.type === 'paragraph');
     const list = doc.content.find((n) => n.type === 'bullet_list');

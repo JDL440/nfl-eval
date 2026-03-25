@@ -380,7 +380,7 @@ function splitDraftUnits(text: string): string[] {
     .map((unit) => unit.trim())
     .filter((unit) => unit.length > 0)
     .filter((unit) => !unit.startsWith('#'))
-    .filter((unit) => !unit.startsWith('> **📋 TLDR**'));
+    .filter((unit) => !/^>\s*\*\*(?:📋\s*)?TL;?DR\*\*/i.test(unit));
 }
 
 function samePerson(left: string, right: string): boolean {
