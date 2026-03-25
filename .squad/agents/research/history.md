@@ -71,3 +71,17 @@
 - 2026-03-26 — Issue `#124` is now actionable without reopening `#120/#123`: the repo already has structured blocker metadata plus repeated-blocker escalation into Stage 6 `needs_lead_review` with `lead-review.md`.
 - 2026-03-26 — The narrowest safe seam for `#124` is a Lead-approved post-escalation fallback policy for repeated evidence blockers: reuse the existing Stage 6 hold, add the smallest durable article-mode signal, rerun Writer with a dedicated reframe contract, and expose explicit disclosure in operator/reader views.
 - 2026-03-26 — Issue `#124` handoff to Code ready: implementation as bounded policy/runtime slice reuses Stage 6 needs_lead_review seam, requires explicit Lead approval, includes dedicated Writer reframe contract, keeps non-evidence blockers on original revision path, and surfaces disclosure in reader/operator views. Acceptance criteria locked in decisions.md.
+
+## 2026-03-25T07:15:45Z — Draft-First Revision Wording & Smallest Test Surface Guidance
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T07-15-45Z-research.md  
+**Session log:** .squad/log/2026-03-25T07-15-45Z-v3-revision-ux-plan.md
+
+**Status:** ✓ Completed — Memo guidance extracted and delivered
+
+**Deliverables:**
+- Draft-first revision wording recommendations
+- Smallest test surface recommendations for implementation phase
+
+**Distribution:** Shared with UX and Code teams for V3 implementation.
+

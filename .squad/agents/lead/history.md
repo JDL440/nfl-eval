@@ -1,3 +1,27 @@
+## Core Context
+
+### V3 Workflow Architecture Work (2026-03-22 to 2026-03-27)
+
+Lead has completed three interconnected reviews on V3 workflow simplification and preflight hardening:
+
+1. **Sentence-Starter Name Consistency** (2026-03-25): Recommended BANNED_FIRST_TOKENS expansion (Take, Hit, Draft, etc.) to filter draft-common action verbs from name extraction. This bridges until writer-support.md canonical-names allowlist is implemented. Current NAME_PATTERN regex is greedy but deterministic validation needs finite verb list.
+
+2. **Warner Last-Name Heuristic Boundary** (2026-03-27): Confirmed that sentence-opening action verbs are NOT name parts and should be filtered deterministically, not heuristically. Scope creep risk in heuristic last-name matching across multi-player surnames. Decision: Add "Lose" + other release-context verbs to BANNED_FIRST_TOKENS; do NOT expand heuristics.
+
+3. **V3 Workflow Simplification Architecture** (2026-03-25–27): Diagnosed churn as structural (overlapping Writer/runtime/Editor validation). Approved surgical simplification: six phases, no pipeline redesign, keep escalation machinery, preserve dirty baseline (article.ts UX + mobile fix). Eight friction sources identified; six simplification levers defined. Implementation checklist with rollback triggers delivered.
+
+### Key Learnings & Principles
+
+- **Structural contracts over prompt rhetoric:** Churn is not AI quality; it's overlapping validation boundaries. Solution: narrow role ownership, keep minimal deterministic guards, remove force-approve.
+- **Blocker-type taxonomy is strict:** Editor emits only accuracy blockers (wrong-name, unsupported-stat, stale-claim, fabricated-quote). Any structure blocker signals implementation error.
+- **Name consistency strategy:** BANNED_FIRST_TOKENS (finite list) until writer-support.md canonical-names allowlist replaces fuzzy NAME_PATTERN matching.
+- **Escalation vs. force-approve:** Existing Lead escalation infrastructure + findConsecutiveRepeatedRevisionBlocker() logic reused. Change: cap revisions at 2, escalate on 3rd (not auto-approve).
+- **Preserve current V3 baseline:** Sentence-initial hardening (writer-preflight.ts) + mobile width fix (article.ts) are independent, valid, and should NOT be reverted.
+
+---
+
+## Recent Work
+
 ## 2026-03-25T07:12:44Z — V3 Workflow Simplification Review & Implementation Approval
 
 **Orchestration log:** .squad/orchestration-log/2026-03-25T07-12-44Z-lead.md  

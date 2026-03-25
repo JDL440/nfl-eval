@@ -48,6 +48,7 @@
 
 ## Learnings
 
+- 2026-03-28 — V3 revision-state simplification should stay draft-first even when the canonical stage remains 4. In `worktrees\V3\src\dashboard\views\article.ts`, treat `current_stage === 4 && status === 'revision'` as a `Revision Workspace`, alias the stage timeline/pipeline label away from `Panel Discussion`, and order artifact tabs as `draft.md` → `editor-review.md` → `discussion-summary.md` with a short hint explaining that background context is secondary. Keep the earlier mobile-width hardening in `worktrees\V3\src\dashboard\public\styles.css` intact, and protect the behavior with focused assertions in `worktrees\V3\tests\dashboard\server.test.ts` plus the mobile-safe gallery check in `worktrees\V3\tests\dashboard\wave2.test.ts`.
 - 2026-03-25 — Article detail Option B landed as a hierarchy pass, not a redesign: `src/dashboard/views/article.ts` now makes the top `Current stage` block + status line the primary state surface, collapses revision history behind a summary disclosure, and moves Stage Runs into Advanced while keeping only one failed-attempt summary in the action card. Supporting CSS lives in `src/dashboard/public/styles.css`, and focused coverage sits in `tests/dashboard/{server,publish}.test.ts` plus `tests/dashboard/{runs,wave2}.test.ts`.
 - 2026-03-27 — Dashboard mobile rework shipped as a shared-system pass instead of page-by-page hacks. The stable pattern is: compact scrollable header nav in `src/dashboard/views/layout.ts`, responsive table-to-card transforms via `.responsive-table` in `src/dashboard/public/styles.css`, and mobile ordering handled by shared detail-layout hooks (`.mobile-detail-layout`, `.mobile-primary-column`, `.mobile-secondary-column`) so article detail can keep artifacts first while publish moves workflow/status ahead of preview on phones.
 - 2026-03-27 — The old `.agent-grid` collision is now avoided by keeping the New Idea picker on `.idea-agent-grid` and the Agents directory on `.agents-directory-grid`. Future dashboard/mobile work should avoid reusing selector names across chip pickers and card grids because the responsive layer is global.
@@ -61,4 +62,21 @@
 - 2026-03-27 — **Revision send-back UX fix**: Fixed misleading article-detail UX when editor REVISE verdict sends article back to stage 4. Changed `renderArtifactTabs()` default tab logic to show `draft.md` (the artifact that needs work) instead of discussion artifacts when `article.status === 'revision'`. Also updated workflow status line from "Revision requested" to "Draft revision in progress" to clarify what needs attention. Minimal safe change with focused test in `tests/dashboard/server.test.ts`.
 
 
+
+
+## 2026-03-25T07:15:45Z — Frontend-Only V3 Revision-State Simplification Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T07-15-45Z-ux.md  
+**Session log:** .squad/log/2026-03-25T07-15-45Z-v3-revision-ux-plan.md
+
+**Status:** ✓ Completed — Frontend review and plan finalized
+
+**Surface reviewed:**
+- article.ts
+- styles.css
+- server.test.ts
+- wave2.test.ts
+- Research memo guidance
+
+**Outcome:** Concise no-edit plan preserving dirty Stage 4/Stage 6 wording changes, artifact priority, and mobile-safe CSS behavior ready for Code team implementation.
 

@@ -63,8 +63,10 @@ Use a **one-primary / many-secondary** hierarchy:
 ### 6. Treat editor send-backs as revision work
 
 - If an article is at Stage 4 because Editor regressed it, alias the top-stage label to a revision-oriented term such as `Revision Workspace`
-- Prioritize `editor-review.md` and `draft.md` ahead of discussion artifacts in the artifact tabs
-- Preserve discussion artifacts, but relabel them as context instead of making them the primary surface
+- Use a workflow line that reads like active drafting work (for example `Draft revision in progress`), not a return to panel discussion
+- Prioritize revision artifacts as `draft.md` first, `editor-review.md` second, and discussion artifacts last
+- Preserve discussion artifacts, but relabel them as background context instead of making them the primary surface
+- Keep the stage-timeline tooltip/current-stage alias in sync with the same revision wording so SSE refreshes and header chrome do not reintroduce `Panel Discussion`
 
 ## Mobile-specific rule
 
