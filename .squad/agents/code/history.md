@@ -135,6 +135,8 @@
 
 
 ## Learnings
+- 2026-03-28 multi-provider dashboard rollout: in `src\dashboard\server.ts`, provider-mode copy must prefer the actual registered provider list over `MOCK_LLM` fallback flags when multiple providers are available, or `/config` will incorrectly say `Mock only` even while the article metadata form and runtime can route across more than one provider.
+- 2026-03-28 preview/Substack packaging bug: the shared publish seam in `worktrees\V3\src\dashboard\server.ts` was converting raw `draft.md` straight to preview/Substack body and reading subtitle only from `articles.subtitle`, so preview repeated the H1/deck in-body and drafts lost the real subtitle field when DB metadata was blank. Fix by extracting markdown meta once at packaging time, stripping it from `bodyMarkdown`, and using extracted subtitle as the packaging fallback for preview/Substack fields.
 - 2026-03-28 second-pass workflow simplification: the live Seahawks JSN article was not stuck on Stage 5 structure anymore; it was stuck in Stage 6 because Editor kept issuing blockerless `REVISE` passes for missing comp ladders, source-label polish, and teaser specificity, which exhausted the revision cap and escalated to Lead review.
 - In `worktrees\V3\src\pipeline\actions.ts`, the safest runtime seam for this class of churn is after canonical verdict extraction: if Editor returns `REVISE` without any `[BLOCKER type:id]` lines, force one blocker-only normalization pass and treat any still-blockerless result as advisory approval instead of another revision loop.
 - 2026-03-28 writer/editor churn research: Stage 5 churn is concentrated in `worktrees\V3\src\pipeline\actions.ts` (`buildWriterTask`, `buildDraftRepairInstruction`, `writeDraft`) plus deterministic guards in `writer-preflight.ts` and `engine.ts`.
@@ -170,3 +172,41 @@
 **Rollback Triggers Guarded:**
 - Minimal shell guard weakened, placeholder leakage publish-safe, APPROVED still triggers revision, blocker taxonomy widened, escalation broken, advisory becomes hidden blocker
 
+
+## 2026-03-26T05:56:52Z — Multi-provider LLM Rollout Architecture Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-26T05-56-52Z-code.md
+**Session log:** .squad/log/2026-03-26T05-56-52Z-multi-provider-llm-review.md
+
+**Status:** ✓ Complete — Architecture review validated, seams and tests confirmed
+
+**Findings:**
+- Startup registration is the unlock seam in src/dashboard/server.ts
+- Repository/schema/type seams already mostly exist
+- Test focus: additive registration, prefer-vs-require behavior, fallback, config truthfulness
+- No architectural rewrites needed—wiring completion only
+
+**Code Seams Validated:**
+- Gateway: optional provider hint handling requires new semantics
+- Runner: provider propagation is additive
+- Pipeline: article \llm_provider\ reaches execution path
+- Repository: schema and read/write paths exist
+- Dashboard: config multi-provider display and metadata editing (JSON + HTMX)
+
+**Key Constraints:**
+- Keep \ModelPolicy\ model-first
+- Preserve auto/unset behavior exactly
+- Treat article override as prefer, not require
+- Requested provider is observability, not truth
+
+**Test Priorities:**
+- Gateway: auto / prefer / require provider routing
+- Runner: provider hint propagation to gateway calls
+- Pipeline: article \llm_provider\ reaches execution path
+- Repository: new field round-trip and requested-provider stage-run persistence
+- Dashboard: config multi-provider display and metadata editing (JSON + HTMX)
+
+**Related Decisions:**
+- Lead — Multi-provider LLM review (in decisions.md)
+- UX — Multi-provider article controls (in decisions.md)
+- Code — Multi-provider dashboard copy alignment (in decisions.md)

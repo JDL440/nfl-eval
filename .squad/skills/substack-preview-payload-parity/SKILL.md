@@ -66,3 +66,11 @@ Implementation in `src/dashboard/server.ts:291-385` (`enrichSubstackBody` and `i
 ## Recommendation
 
 ✅ **Resolved.** Preview and payload are now in parity. For future changes, maintain the enrichment logic in `enrichSubstackBody()` to ensure both paths receive the same content enhancements.
+
+## Metadata parity guard
+
+When preview and publish both show article chrome (title/deck/author line), strip the markdown H1 + italic subtitle from the packaged body before rendering or draft upload. Use `extractMetaFromMarkdown()` at the shared presentation seam, then:
+
+- send `title` / `subtitle` through the explicit preview/Substack metadata fields
+- send only `bodyMarkdown` into HTML / ProseMirror conversion
+- fall back to extracted subtitle when persisted article metadata is blank, so preview and `draft_subtitle` stay aligned

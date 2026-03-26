@@ -122,6 +122,22 @@ Research, Code, and UX agents completed V3 workflow simplification pass under Le
 
 ## Learnings
 
+### 2026-03-28 — Multi-provider review: treat this as wiring completion, not a fresh re-architecture
+
+- The repo is in a **partially landed** state already: `articles.llm_provider` exists in `src\db\schema.sql`, `src\types.ts`, and `src\db\repository.ts`, and `src\dashboard\views\article.ts` already renders provider display/edit UI. The unsafe part is the seam mismatch: startup in `src\dashboard\server.ts` still registers providers mutually exclusively, `AgentRunner` / `executeTransition()` do not thread article provider intent into runtime calls, and stage-run intent telemetry is still model-only.
+- Smallest-safe rollout order is now even narrower than a greenfield proposal: finish startup/provider wiring first, then gateway/runner provider hints, then pipeline threading, and only then any richer policy work. Do **not** rename `llm_provider` or redesign `ModelPolicy` in the same pass; current code and tests already expect the existing field name.
+- Review the rollout as a requested-vs-actual truth problem. `usage_events.provider` and `model_or_tool` already capture actual execution, but there is still no matching requested-provider column on `stage_runs`, so fallback/debug behavior will be opaque until intent is persisted alongside the existing requested-model fields.
+- `src\dashboard\views\config.ts` is already structured for a multi-provider summary (`providers`, `providerModeLabel`, `defaultModel`), but `src\dashboard\server.ts` is still the gating seam that determines whether the dashboard reflects reality. If server-side provider discovery lags behind startup registration, operators will see stale “single provider” semantics even after backend routing works.
+- Lockout concern remains unchanged but is now easier to miss because article/provider UI exists: LM Studio still claims universal model support and ignores `request.model`, always sending its configured local default. Any implementation that treats `supportsModel()` as proof of model fidelity, or backfills requested values over actual LM Studio telemetry, should be rejected on review.
+
+### 2026-03-28 — Multi-provider rollout: keep provider preference additive and intent-visible
+
+- The smallest safe rollout is **not** a provider-policy rewrite. `src\llm\gateway.ts` is already the right abstraction; the real unlock is replacing mutually exclusive provider boot wiring in `src\dashboard\server.ts` with additive registration so one runtime can host Copilot CLI, Copilot API, and LM Studio together.
+- Provider choice should layer on top of the existing model policy, not replace it. Keep `src\llm\model-policy.ts` model-first for now, add an optional provider preference/strategy in the gateway + runner seam, and let article-level preference override auto-routing without inventing stage-specific provider rules yet.
+- Persistence/UI drift is the main implementation risk. If `articles` gains a provider override, the same field must be threaded through `src\types.ts`, `src\db\repository.ts`, dashboard PATCH + HTMX edit handlers in `src\dashboard\server.ts`, article metadata rendering in `src\dashboard\views\article.ts`, and config visibility in `src\dashboard\views\config.ts`; otherwise the system will look single-provider even if the backend routes correctly.
+- Observability must preserve **requested vs actual** truth. Existing `usage_events.provider` and `model_or_tool` already capture actual execution, but rollout debugging gets materially easier if `stage_runs` also records requested provider intent. Do not collapse LM Studio's actual local model name into the requested canonical cloud model — that mismatch is expected and should stay visible.
+- Lockout-worthy concern: LM Studio currently returns `supportsModel() === true` for every model and ignores `request.model`, always using its configured local default. Any implementation that treats provider support as equivalent to model fidelity, or silently rewrites telemetry to hide that substitution, will create routing lies and make regressions impossible to diagnose.
+
 ### 2026-03-25 — Seahawks stall review: runtime-contract drift is a first-class workflow risk
 
 - The live V3 server on `localhost:3456` can be up while still running an old workflow contract. In this case, source defaults in `worktrees/V3/src/config/defaults/charters/nfl/editor.md` and `.../skills/editor-review.md` were simplified on 2026-03-25, but the runtime was loading older seeded files from `C:\Users\jdl44\.nfl-lab\agents\...` last written on 2026-03-20. That means source review alone can misdiagnose stalls unless the seeded runtime knowledge is checked too.
@@ -259,3 +275,53 @@ Lead reviewed article-page scope and dashboard mobile audit findings. Approved s
 
 **Key Principle:** Not a return to force-approve-after-cap churn. Downgrade only when Editor cannot name canonical blocker after blocker-only retry.
 
+
+## 2026-03-26T05:56:52Z — Multi-provider LLM Rollout Guardrails
+
+**Orchestration log:** .squad/orchestration-log/2026-03-26T05-56-52Z-lead.md
+**Session log:** .squad/log/2026-03-26T05-56-52Z-multi-provider-llm-review.md
+
+**Status:** ✓ Complete — Architecture review guardrails approved
+
+**Decision:**
+Approve the rollout only as a **small additive pass**:
+1. Make provider registration additive at startup
+2. Add provider preference as an optional gateway/runner hint
+3. Persist an optional article-level preferred provider
+4. Surface that override in existing article metadata UI
+5. Keep requested vs actual provider/model telemetry visible
+
+**Key Guardrails:**
+- Keep \ModelPolicy\ model-first in this pass
+- Article override should default to **prefer**, not **require**
+- \uto\ / unset must preserve current routing behavior
+- LM Studio provider-owned model behavior is acceptable initially, but explicit in telemetry and UI
+- JSON and HTMX metadata paths must stay aligned
+
+**Lockout Conditions:**
+- Provider rollout also rewrites \ModelPolicy\ into a provider-first engine
+- Startup still effectively exposes one provider at a time after the change
+- Article/provider UI persists intent but runner/gateway never receives it
+- Usage events provider or returned model values are rewritten to match requested intent
+- LM Studio universal \supportsModel()\ is used as proof that requested model fidelity was preserved
+- JSON and HTMX metadata paths diverge on accepted/validated provider values
+
+**Exact Seams:**
+- \src\dashboard\server.ts\ — additive provider registration at startup, /config reflects real provider set
+- \src\llm\gateway.ts\ — optional provider hint semantics without breaking auto
+- \src\agents\runner.ts\ — accept and forward provider intent
+- \src\pipeline\actions.ts\ — read article.llm_provider and pass to runner/gateway
+- \src\db\schema.sql\ — add stage_runs.requested_provider if needed
+- \src\db\repository.ts\ — persist/read requested-provider stage-run data
+- \src\types.ts\ — extend Article and StageRun types
+
+**Minimum Tests:**
+- Gateway: auto / prefer / require provider routing
+- Runner: provider hint propagation
+- Pipeline: article \llm_provider\ reaches execution path
+- Repository: \llm_provider\ round-trip and requested-provider stage-run round-trip if added
+- Dashboard: config page shows multiple providers; JSON + HTMX metadata editing both round-trip provider selection
+
+**Related Decisions:**
+- Code — Multi-provider LLM review (confirmed seams)
+- UX — Multi-provider article controls (UI contract confirmed)
