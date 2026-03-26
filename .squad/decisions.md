@@ -1,3 +1,102 @@
+---
+
+# Decision: Unified Local MCP Entrypoint + Implementation
+
+**Date:** 2026-03-28  
+**Owner:** DevOps, Research, Code  
+**Status:** Proposed — Multi-agent consensus
+
+## Decision
+
+Consolidate the nfl-eval local MCP surface into a single canonical operator-facing entrypoint (\mcp/server.mjs\) and shared source-of-truth seam (\src/mcp/server.ts\ and helpers). Three independent audits (DevOps-MCP-Audit, Research-MCP-Docs, Code-Provider-Rollout) converged on this approach.
+
+### Canonical path: \mcp/server.mjs\
+
+- Operator-facing entrypoint for all repo-local MCP clients
+- All configs (\.copilot/mcp-config.json\, \.mcp.json\) point here
+- \mcp/smoke-test.mjs\ validates this surface
+- Remains a thin wrapper/bootstrap to shared registration logic in \src/mcp/\
+
+### Source-of-truth seam: \src/mcp/server.ts\
+
+- Unified bootstrap/registration helpers
+- Merges pipeline tools and extension/local tools into one registry
+- Exposes stable adapter interface for both CLI and JS bootstrap paths
+- Becomes the single place where tool inventory is defined and validated
+
+### Compatibility wrappers
+
+- \src/cli.ts mcp\ → delegates to canonical bootstrap (not separate pipeline server)
+- \
+pm run v2:mcp\ → points to same entrypoint as \
+pm run mcp:server\
+- \
+pm run mcp:pipeline\ → explicit fallback for dev/debug only (no longer primary)
+
+### Guardrails
+
+- One backward-compatible wrapper so existing configs do not break
+- Unset provider defaults to current auto-routing behavior
+- Do not describe MCP as "unified" until docs and tests validate full canonical inventory
+- Canonical entrypoint does not expose different tool catalog than CLI wrapper
+
+## Why (Convergent reasons)
+
+### DevOps (devops-mcp-audit, devops-mcp-entrypoint)
+
+- Repo-local config already points to \mcp/server.mjs\
+- \src/cli.ts mcp\ drifted to separate pipeline-only server
+- CLI and configured clients saw different tool inventories
+- Need one stable place where available tool surface is obvious and consistent
+
+### Research (research-mcp-docs, research-unified-local-mcp-rollout)
+
+- \README.md\ already points operators to \mcp/server.mjs\ as primary
+- \.github/extensions/README.md\ documents only subset of tools
+- Test coverage fragmented (pipeline-only tests vs canonical coverage)
+- Operator docs incomplete for canonical tool inventory
+
+### Code (Code-provider-rollout)
+
+- Gateway and telemetry seams already support multi-provider routing
+- Real gaps were startup registration, hint propagation, article plumbing
+- Additive wiring preserves auto behavior while making provider choice explicit
+- Register all configured providers at startup, carry intent as routing hint
+
+## Implementation scope
+
+### Immediate (Code priority)
+
+1. Refactor \src/mcp/server.ts\ into reusable registration/bootstrap helpers
+2. Make \src/cli.ts mcp\ delegate to shared bootstrap (not separate server)
+3. Document contract seam in \src/mcp/\ for both pipeline and extension tools
+4. Wire multi-provider startup registration in \src/dashboard/server.ts\
+
+### Follow-up (DevOps + Research)
+
+1. Converge \package.json\ scripts (\mcp:server\, \2:mcp\) semantics
+2. Consolidate \.copilot/mcp-config.json\ and \.mcp.json\ alignment on entrypoint/cwd
+3. Expand \.github/extensions/README.md\ with complete local tool inventory
+4. Extend \mcp/smoke-test.mjs\ to validate all registered tools (both families)
+5. Add canonical-local MCP tests for tool registration and schema parity
+6. Update \README.md\ to describe one local MCP startup path (brief compatibility note for pipeline)
+
+### Validation
+
+- \
+pm run v2:build\
+- \
+px vitest run tests/mcp/server.test.ts tests/cli.test.ts\
+- \
+pm run mcp:smoke\ (artifact side-effects acceptable for local validation)
+- Manual \
+ode mcp/server.mjs\ sanity check
+
+## Decoupled: Multi-provider wiring
+
+The Code-provider-rollout decision (additive provider registration, hint-based routing) is orthogonal and should be implemented separately after shared MCP bootstrap seam is stable.
+
+
 # Decision: Writer Support Artifact — Minimal Fact/Name Compact
 
 **Date:** 2026-03-27  
@@ -10728,3 +10827,53 @@ This keeps the editorial override where operators already edit title, depth, and
 2. The metadata editor offers `Auto (recommended)` first, then explicit provider options.
 3. Config explains runtime capability; article metadata expresses per-article preference.
 
+
+
+---
+
+# Code Decision — MCP discoverability contract coverage
+
+**Date:** 2026-03-26  
+**Owner:** Code  
+**Status:** ✅ Approved  
+
+## Decision
+
+Lock the canonical local MCP discoverability contract at the registry layer with focused Vitest coverage in 	ests/mcp/local-tool-registry.test.ts, instead of relying on stdio smoke-only assertions.
+
+## Why
+
+- The last-mile contract risk is metadata/discoverability drift: catalog grouping, required-arg guidance, examples, and read-only vs mutating hints.
+- Those behaviors live in mcp/tool-registry.mjs, so direct egisterLocalTools() coverage is the smallest stable seam.
+- Smoke tests remain valuable for end-to-end boot and wrapper reachability, but they are noisier and less precise for catalog/help regressions.
+
+## Scope locked in
+
+- exported inventory parity (LOCAL_TOOL_NAMES, getLocalToolEntries, registered tools)
+- catalog category filtering
+- example suppression when include_examples=false
+- clear unknown-tool guidance
+- read-only vs mutating annotation expectations for representative tools
+
+---
+
+# Lead Decision — MCP Canonical Entrypoint Approval
+
+**Date:** 2026-03-26  
+**Owner:** Lead  
+**Status:** ✅ Approved  
+
+## Decision
+
+Treat mcp/server.mjs as the single canonical local MCP entrypoint for repo clients and ship the current rollout.
+
+## Why
+
+- src/cli.ts mcp delegates to mcp/server.mjs, so the CLI wrapper and direct server script converge on the same runtime.
+- package.json, README.md, .github/extensions/README.md, .mcp.json, and .copilot/mcp-config.json now all point at the same local server path.
+- local_tool_catalog materially improves discoverability because it exposes tool categories, required arguments, side effects, and examples from the same registry used for actual registration.
+
+## Notes
+
+- Keep mcp-pipeline documented as a compatibility/debug surface only.
+- Future review risk is config drift, not canonical-entrypoint ambiguity.

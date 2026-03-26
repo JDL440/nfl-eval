@@ -122,6 +122,12 @@ Research, Code, and UX agents completed V3 workflow simplification pass under Le
 
 ## Learnings
 
+### 2026-03-28 — Canonical local MCP closeout: config parity is part of the contract
+
+- The repo is effectively at a one-entrypoint MCP shape now: `mcp/server.mjs` is the canonical local server, `src\cli.ts mcp` is only a wrapper to that same file, and the pipeline server is clearly demoted to `mcp-pipeline` debug/compat usage.
+- Discoverability is strong enough to rely on because `local_tool_catalog` exposes categories, side-effect notes, required arguments, and example payloads from the same registration table the server uses. That keeps “what tools exist?” and “what is actually registered?” on one seam.
+- The remaining drift risk is config parity, not server code. `.copilot\mcp-config.json` and `.mcp.json` must keep matching command/args/cwd semantics or operators can hit repo-root-dependent wrapper failures even when the canonical entrypoint is correct.
+
 ### 2026-03-28 — Multi-provider review: treat this as wiring completion, not a fresh re-architecture
 
 - The repo is in a **partially landed** state already: `articles.llm_provider` exists in `src\db\schema.sql`, `src\types.ts`, and `src\db\repository.ts`, and `src\dashboard\views\article.ts` already renders provider display/edit UI. The unsafe part is the seam mismatch: startup in `src\dashboard\server.ts` still registers providers mutually exclusively, `AgentRunner` / `executeTransition()` do not thread article provider intent into runtime calls, and stage-run intent telemetry is still model-only.

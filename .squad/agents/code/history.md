@@ -1,3 +1,51 @@
+## 2026-03-28T08:41:23Z — MCP Rollout Decision Merged
+
+**Orchestration logs:** 
+- .squad/orchestration-log/2026-03-26T08-41-23Z-devops-mcp-audit.md
+- .squad/orchestration-log/2026-03-26T08-41-23Z-research-mcp-docs.md
+- .squad/orchestration-log/2026-03-26T08-41-23Z-devops-mcp-review-2.md
+
+**Status:** ✓ Decision merged to .squad/decisions.md — Ready for Code implementation
+
+**Three-Agent Convergence:** DevOps-MCP-Audit, Research-MCP-Docs, Code-Provider-Rollout all recommended unified local MCP entrypoint.
+
+**Decision Summary:**
+
+- **Canonical operator path:** `mcp/server.mjs`
+- **Source-of-truth seam:** `src/mcp/server.ts` + registration/bootstrap helpers
+- **Compatibility wrappers:** `src/cli.ts mcp` delegates to shared bootstrap (not separate pipeline server); `npm run v2:mcp` aliased to `npm run mcp:server`; `npm run mcp:pipeline` explicit fallback
+- **Multi-provider wiring:** Additive registration at startup, carry article/provider intent as routing hint (`prefer` by default, not `require`), persist requested provider separately from actual execution telemetry
+
+**Code Scope:**
+
+1. Refactor `src/mcp/server.ts` into reusable registration/bootstrap helpers
+2. Make `src/cli.ts mcp` delegation/wrapper (not separate pipeline server)
+3. Document contract seam in `src/mcp/` for both pipeline and extension tools
+4. Wire multi-provider startup registration in `src/dashboard/server.ts`
+5. `articles.llm_provider` / `articles.preferred_llm_provider` for requested intent capture
+6. `stage_runs.requested_provider` for execution telemetry separation
+
+**DevOps + Research Follow-Up:**
+
+- Converge `package.json` scripts semantics
+- Consolidate config file alignment (`.copilot/mcp-config.json`, `.mcp.json`)
+- Expand `.github/extensions/README.md` with complete local tool inventory table
+- Extend `mcp/smoke-test.mjs` coverage (prediction-market, rosters, publishing)
+- Add canonical-local MCP tests for tool registration and schema parity
+- Update `README.md` to describe one local MCP startup path
+
+**Validation:**
+- `npm run v2:build`
+- `npx vitest run tests/mcp/server.test.ts tests/cli.test.ts`
+- `npm run mcp:smoke` (artifact side-effects acceptable)
+
+**Guardrails:**
+- Unset provider must behave exactly like current auto routing
+- Do not describe MCP as "unified" in docs until canonical inventory is fully validated
+- Article override is a preference, not hard requirement, unless caller asks for `require`
+
+---
+
 ## 2026-03-27T07:30:00Z — V3 Workflow Simplification Pass Implementation (Phase 1 Shipped)
 
 **Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-code.md  
@@ -135,7 +183,12 @@
 
 
 ## Learnings
+- 2026-03-28 MCP contract finish: the safest automated coverage seam for canonical local-tool discoverability is `tests\mcp\local-tool-registry.test.ts` calling `registerLocalTools()` directly and exercising `tools/list` plus `tools/call` handlers in-process. That locks catalog filters, example suppression, read-only vs mutating annotations, and exported inventory parity without relying on stdio smoke or credentialed integrations.
+- 2026-03-28 local MCP contract audit: canonical repo-local client entrypoint is `mcp\server.mjs` via `.copilot\mcp-config.json`, `.mcp.json`, `npm run mcp:server`, and CLI `handleMcp()` in `src\cli.ts`; the separate pipeline-only seam remains `handlePipelineMcp()` + `src\mcp\server.ts` (`npm run mcp:pipeline`). Validation: `npm run mcp:smoke` passed tool registration but surfaced a telemetry-path warning from `.github\extensions\pipeline-telemetry.mjs` still shelling to `content\pipeline_state.py`, and `npx vitest run tests\cli.test.ts tests\mcp\server.test.ts --silent` passed.
+- 2026-03-28 unified local MCP rollout planning: the rollout contract spans four surfaces together — client configs (`.mcp.json`, `.copilot\mcp-config.json`), CLI wrapper (`src\cli.ts`), canonical stdio server (`mcp\server.mjs`), and docs/validation (`README.md`, `.github\extensions\README.md`, `mcp\smoke-test.mjs`). Keep `src\mcp\server.ts` explicitly labeled pipeline-only/compatibility until Code decides whether to fold those tools into the canonical local server.
+- 2026-03-28 MCP smoke-test caution: `.github\extensions\README.md` describes `npm run mcp:smoke` as safe/no-side-effects, but `mcp\smoke-test.mjs` currently renders a local table image and invokes image/publishing tools (stage targets or expected auth failures). Treat smoke-test wording as a contract seam that must match actual script behavior.
 - 2026-03-28 multi-provider dashboard rollout: in `src\dashboard\server.ts`, provider-mode copy must prefer the actual registered provider list over `MOCK_LLM` fallback flags when multiple providers are available, or `/config` will incorrectly say `Mock only` even while the article metadata form and runtime can route across more than one provider.
+- 2026-03-28 additive provider rollout: the clean seam for local/default-model providers is `supportsPreferredRouting()` in `src\llm\gateway.ts` + provider implementation, so article-level `prefer` routing can target LM Studio without letting auto-routing steal model-first traffic away from providers that truly support the resolved policy model.
 - 2026-03-28 preview/Substack packaging bug: the shared publish seam in `worktrees\V3\src\dashboard\server.ts` was converting raw `draft.md` straight to preview/Substack body and reading subtitle only from `articles.subtitle`, so preview repeated the H1/deck in-body and drafts lost the real subtitle field when DB metadata was blank. Fix by extracting markdown meta once at packaging time, stripping it from `bodyMarkdown`, and using extracted subtitle as the packaging fallback for preview/Substack fields.
 - 2026-03-28 second-pass workflow simplification: the live Seahawks JSN article was not stuck on Stage 5 structure anymore; it was stuck in Stage 6 because Editor kept issuing blockerless `REVISE` passes for missing comp ladders, source-label polish, and teaser specificity, which exhausted the revision cap and escalated to Lead review.
 - In `worktrees\V3\src\pipeline\actions.ts`, the safest runtime seam for this class of churn is after canonical verdict extraction: if Editor returns `REVISE` without any `[BLOCKER type:id]` lines, force one blocker-only normalization pass and treat any still-blockerless result as advisory approval instead of another revision loop.
@@ -145,6 +198,8 @@
 - Targeted V3 validation command: `npx vitest run tests\pipeline\writer-preflight.test.ts tests\pipeline\engine.test.ts tests\pipeline\actions.test.ts --silent`; current baseline has one failing actions test around name-preflight retry expectations.
 - 2026-03-25 send-back UX fix: in `worktrees\V3\src\dashboard\views\article.ts`, Stage 4 + `status='revision'` should render as `Revision Workspace`, prioritize `editor-review.md`/`draft.md` ahead of discussion artifacts, and default the artifact pane to the first persisted revision artifact rather than `idea.md`.
 - Lead-review regression controls should frame Stage 4 as a revision destination, not a discussion rollback: the send-back disclosure copy lives in `worktrees\V3\src\dashboard\views\article.ts`, helper styles in `worktrees\V3\src\dashboard\public\styles.css`, and regression coverage in `worktrees\V3\tests\dashboard\server.test.ts` with validation via `npm run test -- tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts && npm run v2:build`.
+- 2026-03-28 unified local MCP audit: `mcp/server.mjs` is the actual canonical local tool surface (`.copilot/mcp-config.json`, README, `v2:mcp`, smoke test), while `src/mcp/server.ts` remains a separate pipeline-only MCP server. Treat pipeline MCP as a compatibility/debug surface, not the user-facing local inventory.
+- 2026-03-28 unified local MCP audit: model-facing clarity currently drifts because `mcp/server.mjs` manually mirrors extension schemas and the data tools bypass `src/services/data.ts`; required args, default behavior, and script-vs-sidecar fallback semantics already differ for several queries. Prefer one shared contract source plus docs/smoke coverage before renaming tools.
 
 ## 2026-03-28T06-46-06Z — Second-Pass Workflow Simplification (Seahawks JSN Stall Fix)
 

@@ -46,6 +46,7 @@ Treat the rollout as **wiring completion**, not a new architecture.
 - Preserve unset/auto behavior exactly.
 - Keep requested provider distinct from actual provider/model returned by execution.
 - Review JSON and HTMX metadata paths together; partial acceptance is a common regression.
+- If a provider can satisfy explicit preference routing without literally supporting the resolved canonical model, expose that as a separate capability (for example `supportsPreferredRouting`) instead of weakening model-based auto-routing.
 
 ## Lockout Heuristics
 
@@ -59,3 +60,4 @@ Treat the rollout as **wiring completion**, not a new architecture.
 - `src/dashboard/server.ts` startup is the real unlock seam.
 - `articles.llm_provider` can land before runtime wiring is complete, so review for partial-rollout drift.
 - `usage_events.provider` shows actual execution; `stage_runs` may still need requested-provider intent to explain fallback behavior cleanly.
+- `src/llm/providers/lmstudio.ts` is the boundary case: allow article-level preferred routing into LM Studio, but do not let LM Studio auto-route requests for policy models it only proxies via its own local default.
