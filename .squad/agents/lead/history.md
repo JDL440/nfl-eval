@@ -1,3 +1,22 @@
+# Lead History
+
+## 2026-03-28T14:30:00Z — Post-Release Cleanup & Push EXECUTED
+
+**Status:** ✅ EXECUTED by Lead (Joe Robinson request)
+
+**Summary:**
+- Discarded 32 unstaged changes across all tracked files
+- Cleaned build artifacts, caches, .squad logs, and untracked files
+- Removed 3 standalone worktrees (issue93-clean, nfl-eval-issue92, nfl-eval-table-poc)
+- Preserved V3 branch and all related stage worktrees
+- Preserved main checkout at C:\github\nfl-eval
+- Verified v1-archive, v2-archive, main already synchronized with origin
+
+**Result:** Repository in clean state. All three push targets (v1-archive, v2-archive, main) already synced to origin; no new commits to push. V2-archive is snapshot-only branch—future updates require manual push.
+
+**Decision record:** .squad/decisions/cleanup-push-2026-03-28.md
+
+---
 #
 
 ## 2026-03-28T04:56:53Z — Release Cutover v2→v3 APPROVED & EXECUTED
@@ -31783,3 +31802,4 @@ Approve the rollout only as a **small additive pass**:
 **Related Decisions:**
 - Code — Multi-provider LLM review (confirmed seams)
 - UX — Multi-provider article controls (UI contract confirmed)
+
