@@ -9,6 +9,7 @@ import {
   type AgentRunParams,
 } from '../../src/agents/runner.js';
 import { AgentMemory, type MemoryEntry } from '../../src/agents/memory.js';
+import { Repository } from '../../src/db/repository.js';
 import {
   LLMGateway,
   type ChatRequest,
@@ -145,6 +146,7 @@ describe('AgentRunner', () => {
   let chartersDir: string;
   let skillsDir: string;
   let dbPath: string;
+  let pipelineDbPath: string;
   let memory: AgentMemory;
   let gateway: LLMGateway;
   let runner: AgentRunner;
@@ -155,6 +157,7 @@ describe('AgentRunner', () => {
     chartersDir = fixtures.chartersDir;
     skillsDir = fixtures.skillsDir;
     dbPath = fixtures.dbPath;
+    pipelineDbPath = join(tempDir, 'pipeline.db');
 
     memory = new AgentMemory(dbPath);
     const policy = loadPolicy();
@@ -667,6 +670,48 @@ describe('AgentRunner', () => {
       expect(result.provider).toBe('copilot-cli');
       expect(result.model).toMatch(/^gpt-5/);
       expect(result.tokensUsed).toEqual({ prompt: 321, completion: 123 });
+    });
+
+    it('persists canonical llm traces when trace context is provided', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const stageRunId = repo.startStageRun({
+        articleId: 'trace-article',
+        stage: 5,
+        surface: 'writeDraft',
+        actor: 'writer',
+      });
+
+      try {
+        const result = await runner.run({
+          agentName: 'writer',
+          task: 'Write a short traceable draft',
+          articleContext: {
+            slug: 'trace-article',
+            title: 'Trace Article',
+            stage: 5,
+            content: 'Artifact context',
+          },
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+            stageRunId,
+          },
+        });
+
+        const traces = repo.getStageRunLlmTraces(stageRunId);
+        expect(result.traceId).toBeTruthy();
+        expect(traces).toHaveLength(1);
+        expect(traces[0].agent_name).toBe('writer');
+        expect(traces[0].system_prompt).toContain('The Writer creates compelling analytical articles');
+        expect(traces[0].user_message).toContain('Artifact context');
+        expect(traces[0].output_text).toBe(result.content);
+        expect(traces[0].status).toBe('completed');
+      } finally {
+        repo.close();
+      }
     });
   });
 });

@@ -187,6 +187,23 @@ function longText(wordCount: number): string {
   return Array.from({ length: wordCount }, (_, i) => `word${i}`).join(' ');
 }
 
+function validDraft(wordCount = 1000): string {
+  return `# Headline
+
+*Subtitle*
+
+> **📋 TLDR**
+> - First takeaway
+> - Second takeaway
+> - Third takeaway
+> - Fourth takeaway
+
+**By: The NFL Lab Expert Panel**
+
+${longText(wordCount)}
+`;
+}
+
 // ── Integration tests (server routes) ────────────────────────────────────────
 
 describe('New Idea Routes', () => {
@@ -437,22 +454,96 @@ Writer + Analyst + Editor
       expect(article!.primary_team).toBe('SEA');
       expect(article!.depth_level).toBe(3);
     });
+
+    it('attaches idea-generation traces and stage runs to the created article', async () => {
+      const mockTraceId = repo.startLlmTrace({
+        stage: 1,
+        surface: 'ideaGeneration',
+        agentName: 'lead',
+        requestedModel: 'mock-model',
+        systemPrompt: 'Idea system prompt',
+        userMessage: 'Idea user prompt',
+      });
+
+      const traceRunner = {
+        gateway: {},
+        run: async () => ({
+          content: `# Article Idea: Traceable Idea
+
+## Working Title
+Traceable Idea
+
+## Angle / Tension
+Trace content.`,
+          model: 'mock-model',
+          provider: 'mock',
+          agentName: 'lead',
+          memoriesUsed: 0,
+          tokensUsed: { prompt: 120, completion: 45 },
+          traceId: mockTraceId,
+        }),
+      };
+      const mockActionContext = {
+        repo,
+        engine: {} as any,
+        runner: traceRunner as any,
+        auditor: {} as any,
+        config: makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+      };
+      const traceApp = createApp(
+        repo,
+        makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+        { actionContext: mockActionContext },
+      );
+
+      const res = await traceApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Create a traceable idea',
+          teams: ['SEA'],
+          depthLevel: 2,
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string };
+      const traces = repo.getArticleLlmTraces(body.id, 0);
+      const stageRuns = repo.getStageRuns(body.id);
+      const usageEvents = repo.getUsageEvents(body.id);
+
+      expect(stageRuns).toHaveLength(1);
+      expect(stageRuns[0].surface).toBe('ideaGeneration');
+      expect(traces).toHaveLength(1);
+      expect(traces[0].id).toBe(mockTraceId);
+      expect(traces[0].article_id).toBe(body.id);
+      expect(traces[0].stage_run_id).toBe(stageRuns[0].id);
+      expect(usageEvents[0]?.stage_run_id).toBe(stageRuns[0].id);
+    });
   });
 
   // ── Auto-advance ─────────────────────────────────────────────────────────
 
   describe('POST /api/articles/:id/auto-advance', () => {
     // Helper: wait for background auto-advance to finish (lightweight mode completes in <50ms)
-    async function waitForAdvance(slug: string, maxMs = 2000): Promise<void> {
+    async function waitForAdvance(slug: string, expectedStage?: number, maxMs = 2000): Promise<void> {
       const start = Date.now();
+      let lastStage: number | null = null;
+      let stablePolls = 0;
       while (Date.now() - start < maxMs) {
         await new Promise(r => setTimeout(r, 50));
-        // Check if the article has advanced (not stuck at initial stage)
         const a = repo.getArticle(slug);
         if (!a) return;
-        // If stage transitions have been recorded, the advance ran
-        const transitions = repo.getStageTransitions(slug);
-        if (transitions.length > 0) return;
+        if (expectedStage != null && a.current_stage >= expectedStage) return;
+
+        if (a.current_stage === lastStage) {
+          stablePolls += 1;
+        } else {
+          stablePolls = 0;
+          lastStage = a.current_stage;
+        }
+
+        if (stablePolls >= 3) return;
       }
     }
 
@@ -463,7 +554,7 @@ Writer + Analyst + Editor
       repo.artifacts.put(slug, 'discussion-prompt.md', 'Prompt content');
       repo.artifacts.put(slug, 'panel-composition.md', 'Panel: writer, editor');
       repo.artifacts.put(slug, 'discussion-summary.md', 'Discussion summary');
-      repo.artifacts.put(slug, 'draft.md', longText(850));
+      repo.artifacts.put(slug, 'draft.md', validDraft(850));
       repo.artifacts.put(slug, 'editor-review.md', '## Verdict: APPROVED\nLooks great.');
 
       const res = await app.request(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
@@ -471,7 +562,7 @@ Writer + Analyst + Editor
       const body = await res.json() as { id: string; status: string };
       expect(body.status).toBe('started');
 
-      await waitForAdvance(slug);
+      await waitForAdvance(slug, 7);
       const article = repo.getArticle(slug)!;
       expect(article.current_stage).toBe(7);
     });
@@ -486,7 +577,7 @@ Writer + Analyst + Editor
       const res = await app.request(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
       expect(res.status).toBe(200);
 
-      await waitForAdvance(slug);
+      await waitForAdvance(slug, 3);
       const article = repo.getArticle(slug)!;
       expect(article.current_stage).toBe(3);
     });
@@ -498,7 +589,7 @@ Writer + Analyst + Editor
       repo.artifacts.put(slug, 'discussion-prompt.md', 'Prompt');
       repo.artifacts.put(slug, 'panel-composition.md', 'Panel');
       repo.artifacts.put(slug, 'discussion-summary.md', 'Summary');
-      repo.artifacts.put(slug, 'draft.md', longText(850));
+      repo.artifacts.put(slug, 'draft.md', validDraft(850));
       repo.artifacts.put(slug, 'editor-review.md', '## Verdict: APPROVED\nGood.');
       // Even with publisher pass, auto-advance should stop at 7
       repo.recordPublisherPass(slug, {
@@ -511,7 +602,7 @@ Writer + Analyst + Editor
       const res = await app.request(`/api/articles/${slug}/auto-advance`, { method: 'POST' });
       expect(res.status).toBe(200);
 
-      await waitForAdvance(slug);
+      await waitForAdvance(slug, 7);
       const article = repo.getArticle(slug)!;
       expect(article.current_stage).toBe(7);
     });

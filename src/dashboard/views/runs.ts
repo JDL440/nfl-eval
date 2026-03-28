@@ -6,12 +6,14 @@
  */
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
-import type { StageRun } from '../../types.js';
+import type { LlmTrace, StageRun } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
+import { renderTraceCards } from './traces.js';
 
 export type RunRow = StageRun & {
   article_title: string | null;
   total_tokens?: number | null;
+  trace_count?: number;
 };
 
 export interface RunsFilters {
@@ -26,6 +28,12 @@ export interface RunsPageData {
   totalCount: number;
   offset: number;
   limit: number;
+}
+
+export interface RunDetailData {
+  config: AppConfig;
+  run: RunRow;
+  traces: LlmTrace[];
 }
 
 // ── Duration helper ──────────────────────────────────────────────────────────
@@ -138,10 +146,11 @@ export function renderRunsTable(
     const modelLabel = r.requested_model ?? r.actor ?? '—';
     return `
       <tr class="run-row run-status-${escapeHtml(r.status)}">
-        <td class="run-time" title="${escapeHtml(r.started_at)}">${formatDate(r.started_at)}</td>
+        <td class="run-time" title="${escapeHtml(r.started_at)}"><a href="/runs/${escapeHtml(r.id)}">${formatDate(r.started_at)}</a></td>
         <td class="run-article">
           <a href="/articles/${escapeHtml(r.article_id)}" class="article-link">${escapeHtml(articleTitle)}</a>
           <span class="run-surface muted">${escapeHtml(r.surface)}</span>
+          ${r.trace_count ? `<span class="run-surface muted">${r.trace_count} trace${r.trace_count === 1 ? '' : 's'}</span>` : ''}
         </td>
         <td class="run-stage">Stage ${r.stage}</td>
         <td class="run-status-cell">${statusBadge(r.status)}</td>
@@ -216,4 +225,33 @@ export function renderRunsPage(data: RunsPageData): string {
     </section>`;
 
   return renderLayout('Pipeline Runs', content, config.leagueConfig.name);
+}
+
+export function renderRunDetailPage(data: RunDetailData): string {
+  const { config, run, traces } = data;
+  const articleTitle = run.article_title ?? run.article_id;
+  const modelLabel = run.requested_model ?? run.actor ?? '—';
+  const content = `
+    <div class="page-header">
+      <a href="/runs" class="back-link">← Pipeline Runs</a>
+      <h1>Run Detail</h1>
+      <p class="page-subtitle">${escapeHtml(articleTitle)} · ${escapeHtml(run.surface)} · Stage ${run.stage}</p>
+    </div>
+    <section class="detail-section">
+      <div class="review-stats">
+        <span class="stat stat-note">Status: ${statusBadge(run.status)}</span>
+        <span class="stat stat-note">Model: ${escapeHtml(modelLabel)}</span>
+        <span class="stat stat-note">Started: ${escapeHtml(formatDate(run.started_at))}</span>
+        <span class="stat stat-note">Duration: ${escapeHtml(formatDuration(run.started_at, run.completed_at))}</span>
+        <span class="stat stat-note">Tokens: ${formatTokens(run.total_tokens)}</span>
+      </div>
+      ${run.notes ? `<div class="stage-run-error">${escapeHtml(run.notes)}</div>` : ''}
+      <p><a href="/articles/${escapeHtml(run.article_id)}">Open article detail</a></p>
+    </section>
+    <section class="detail-section">
+      <h2>LLM Traces</h2>
+      ${renderTraceCards(traces)}
+    </section>`;
+
+  return renderLayout(`Run ${run.id}`, content, config.leagueConfig.name);
 }

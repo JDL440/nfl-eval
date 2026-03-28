@@ -15,6 +15,8 @@ import type {
   ArticleRetrospective,
   ArticleRetrospectiveFinding,
   ArticleRun,
+  LlmTrace,
+  LlmTraceStatus,
   ArticleStatus,
   EditorReview,
   EditorVerdict,
@@ -69,7 +71,18 @@ function validateStatus<T extends string>(value: string, allowed: readonly T[], 
 function normalizeMetadataJson(metadata: unknown): string | null {
   if (metadata == null) return null;
   if (typeof metadata === 'string') return metadata;
-  return JSON.stringify(metadata, Object.keys(metadata as object).sort());
+  const stable = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+      return value.map((item) => stable(item));
+    }
+    if (value && typeof value === 'object') {
+      const entries = Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right));
+      return Object.fromEntries(entries.map(([key, nested]) => [key, stable(nested)]));
+    }
+    return value;
+  };
+  return JSON.stringify(stable(metadata));
 }
 
 // ── Publisher pass checklist defaults ─────────────────────────────────────────
@@ -114,6 +127,57 @@ interface UsageEventParams {
   metadata?: unknown;
   runId?: string | null;
   stageRunId?: string | null;
+}
+
+interface CreateLlmTraceParams {
+  runId?: string | null;
+  stageRunId?: string | null;
+  articleId?: string | null;
+  stage?: number | null;
+  surface?: string | null;
+  agentName: string;
+  requestedModel?: string | null;
+  stageKey?: string | null;
+  taskFamily?: string | null;
+  temperature?: number | null;
+  maxTokens?: number | null;
+  responseFormat?: string | null;
+  systemPrompt?: string | null;
+  userMessage?: string | null;
+  messages?: unknown;
+  contextParts?: unknown;
+  skills?: unknown;
+  memories?: unknown;
+  articleContext?: unknown;
+  conversationContext?: string | null;
+  rosterContext?: string | null;
+}
+
+interface CompleteLlmTraceParams {
+  provider?: string | null;
+  model?: string | null;
+  outputText?: string | null;
+  thinkingText?: string | null;
+  finishReason?: string | null;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  latencyMs?: number | null;
+}
+
+interface FailLlmTraceParams {
+  provider?: string | null;
+  model?: string | null;
+  errorMessage: string;
+  latencyMs?: number | null;
+}
+
+interface AttachLlmTraceParams {
+  runId?: string | null;
+  stageRunId?: string | null;
+  articleId: string;
+  stage?: number | null;
+  surface?: string | null;
 }
 
 interface ArticleRetrospectiveFindingInput {
@@ -244,10 +308,43 @@ export class Repository {
     return stmt.all(articleId, limit) as unknown as StageRun[];
   }
 
-  getAllStageRuns(filters?: { status?: string; search?: string; limit?: number; offset?: number }): (StageRun & { article_title: string | null; total_tokens: number | null })[] {
+  getStageRun(stageRunId: string): StageRun | null {
+    const stmt = this.db.prepare('SELECT * FROM stage_runs WHERE id = ?');
+    const row = stmt.get(stageRunId) as StageRun | undefined;
+    return row ?? null;
+  }
+
+  getStageRunDetail(stageRunId: string): (StageRun & {
+    article_title: string | null;
+    total_tokens: number | null;
+    trace_count: number;
+  }) | null {
+    const stmt = this.db.prepare(
+      `SELECT sr.*, a.title AS article_title,
+          (SELECT SUM(COALESCE(ue.prompt_tokens, 0) + COALESCE(ue.output_tokens, 0))
+           FROM usage_events ue WHERE ue.stage_run_id = sr.id) AS total_tokens,
+          (SELECT COUNT(*) FROM llm_traces lt WHERE lt.stage_run_id = sr.id) AS trace_count
+       FROM stage_runs sr
+       LEFT JOIN articles a ON sr.article_id = a.id
+       WHERE sr.id = ?`,
+    );
+    const row = stmt.get(stageRunId) as (StageRun & {
+      article_title: string | null;
+      total_tokens: number | null;
+      trace_count: number;
+    }) | undefined;
+    return row ?? null;
+  }
+
+  getAllStageRuns(filters?: { status?: string; search?: string; limit?: number; offset?: number }): (StageRun & {
+    article_title: string | null;
+    total_tokens: number | null;
+    trace_count: number;
+  })[] {
     let sql = `SELECT sr.*, a.title AS article_title,
         (SELECT SUM(COALESCE(ue.prompt_tokens, 0) + COALESCE(ue.output_tokens, 0))
-         FROM usage_events ue WHERE ue.stage_run_id = sr.id) AS total_tokens
+         FROM usage_events ue WHERE ue.stage_run_id = sr.id) AS total_tokens,
+        (SELECT COUNT(*) FROM llm_traces lt WHERE lt.stage_run_id = sr.id) AS trace_count
       FROM stage_runs sr
       LEFT JOIN articles a ON sr.article_id = a.id`;
     const params: (string | number)[] = [];
@@ -279,7 +376,37 @@ export class Repository {
     }
 
     const stmt = this.db.prepare(sql);
-    return stmt.all(...params) as unknown as (StageRun & { article_title: string | null; total_tokens: number | null })[];
+    return stmt.all(...params) as unknown as (StageRun & {
+      article_title: string | null;
+      total_tokens: number | null;
+      trace_count: number;
+    })[];
+  }
+
+  getArticleLlmTraces(articleId: string, limit = 25): LlmTrace[] {
+    if (limit <= 0) {
+      const stmt = this.db.prepare(
+        'SELECT * FROM llm_traces WHERE article_id = ? ORDER BY started_at DESC, id DESC',
+      );
+      return stmt.all(articleId) as unknown as LlmTrace[];
+    }
+    const stmt = this.db.prepare(
+      'SELECT * FROM llm_traces WHERE article_id = ? ORDER BY started_at DESC, id DESC LIMIT ?',
+    );
+    return stmt.all(articleId, limit) as unknown as LlmTrace[];
+  }
+
+  getStageRunLlmTraces(stageRunId: string): LlmTrace[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM llm_traces WHERE stage_run_id = ? ORDER BY started_at ASC, id ASC',
+    );
+    return stmt.all(stageRunId) as unknown as LlmTrace[];
+  }
+
+  getLlmTrace(traceId: string): LlmTrace | null {
+    const stmt = this.db.prepare('SELECT * FROM llm_traces WHERE id = ?');
+    const row = stmt.get(traceId) as LlmTrace | undefined;
+    return row ?? null;
   }
 
   countAllStageRuns(filters?: { status?: string; search?: string }): number {
@@ -713,6 +840,134 @@ export class Repository {
       throw new Error(`Article '${params.articleId}' not found in pipeline.db`);
     }
     this.insertUsageEvent(params);
+  }
+
+  startLlmTrace(params: CreateLlmTraceParams): string {
+    if (params.articleId != null) {
+      const article = this.getArticle(params.articleId);
+      if (article == null) {
+        throw new Error(`Article '${params.articleId}' not found in pipeline.db`);
+      }
+    }
+    if (params.stage != null) {
+      validateStage(params.stage);
+    }
+
+    const id = newRunId();
+    const stmt = this.db.prepare(
+      `INSERT INTO llm_traces
+       (id, run_id, stage_run_id, article_id, stage, surface, agent_name, requested_model,
+        stage_key, task_family, temperature, max_tokens, response_format, status,
+        system_prompt, user_message, messages_json, context_parts_json, skills_json,
+        memories_json, article_context_json, conversation_context, roster_context, started_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(
+      id,
+      params.runId ?? null,
+      params.stageRunId ?? null,
+      params.articleId ?? null,
+      params.stage ?? null,
+      params.surface ?? null,
+      params.agentName,
+      params.requestedModel ?? null,
+      params.stageKey ?? null,
+      params.taskFamily ?? null,
+      params.temperature ?? null,
+      params.maxTokens ?? null,
+      params.responseFormat ?? null,
+      'started',
+      params.systemPrompt ?? null,
+      params.userMessage ?? null,
+      normalizeMetadataJson(params.messages),
+      normalizeMetadataJson(params.contextParts),
+      normalizeMetadataJson(params.skills),
+      normalizeMetadataJson(params.memories),
+      normalizeMetadataJson(params.articleContext),
+      params.conversationContext ?? null,
+      params.rosterContext ?? null,
+      nowISO(),
+    );
+    return id;
+  }
+
+  completeLlmTrace(traceId: string, params: CompleteLlmTraceParams): void {
+    const stmt = this.db.prepare(
+      `UPDATE llm_traces
+       SET provider = ?,
+           model = ?,
+           output_text = ?,
+           thinking_text = ?,
+           finish_reason = ?,
+           prompt_tokens = ?,
+           completion_tokens = ?,
+           total_tokens = ?,
+           latency_ms = ?,
+           status = 'completed',
+           completed_at = ?
+       WHERE id = ?`,
+    );
+    stmt.run(
+      params.provider ?? null,
+      params.model ?? null,
+      params.outputText ?? null,
+      params.thinkingText ?? null,
+      params.finishReason ?? null,
+      params.promptTokens ?? null,
+      params.completionTokens ?? null,
+      params.totalTokens ?? null,
+      params.latencyMs ?? null,
+      nowISO(),
+      traceId,
+    );
+  }
+
+  failLlmTrace(traceId: string, params: FailLlmTraceParams): void {
+    const stmt = this.db.prepare(
+      `UPDATE llm_traces
+       SET provider = COALESCE(?, provider),
+           model = COALESCE(?, model),
+           error_message = ?,
+           latency_ms = ?,
+           status = 'failed',
+           completed_at = ?
+       WHERE id = ?`,
+    );
+    stmt.run(
+      params.provider ?? null,
+      params.model ?? null,
+      params.errorMessage,
+      params.latencyMs ?? null,
+      nowISO(),
+      traceId,
+    );
+  }
+
+  attachLlmTrace(traceId: string, params: AttachLlmTraceParams): void {
+    const article = this.getArticle(params.articleId);
+    if (article == null) {
+      throw new Error(`Article '${params.articleId}' not found in pipeline.db`);
+    }
+    if (params.stage != null) {
+      validateStage(params.stage);
+    }
+    const stmt = this.db.prepare(
+      `UPDATE llm_traces
+       SET run_id = COALESCE(?, run_id),
+           stage_run_id = COALESCE(?, stage_run_id),
+           article_id = ?,
+           stage = COALESCE(?, stage),
+           surface = COALESCE(?, surface)
+       WHERE id = ?`,
+    );
+    stmt.run(
+      params.runId ?? null,
+      params.stageRunId ?? null,
+      params.articleId,
+      params.stage ?? null,
+      params.surface ?? null,
+      traceId,
+    );
   }
 
   // ── Stage transitions ──────────────────────────────────────────────────────
