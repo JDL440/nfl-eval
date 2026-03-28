@@ -1,3 +1,136 @@
+# MERGED INBOX ENTRIES (2026-03-28T19:15:11Z)
+
+## lead lmstudio architecture review (REJECTED):
+
+# Lead Decision — LM Studio tools/MCP/web search architecture review
+
+- **Date:** 2026-03-28
+- **Owner:** Lead
+- **Status:** Rejected
+- **Risk:** Medium-high if forced without redesign
+
+## Decision
+
+Reject any proposal to "fully enable" LM Studio for tools, MCP servers, and web search **as a configuration-only change** in the current architecture.
+
+## Why
+
+1. **LM Studio is chat-only in the working tree.**  
+   `src\llm\providers\lmstudio.ts` issues one OpenAI-compatible chat request and returns one text response. It has no tool schema, tool-call loop, MCP client path, or web-search contract.
+
+2. **Tooling is intentionally provider-specific today.**  
+   `src\llm\providers\copilot-cli.ts` owns `toolAccessMode`, guarded web fetch, repo MCP wiring, and session reuse. `src\dashboard\server.ts` only passes those controls into Copilot CLI registration.
+
+3. **Gateway/runner are not provider-agnostic tool orchestrators in this checkout.**  
+   `src\agents\runner.ts` forwards plain chat requests into `src\llm\gateway.ts`, and the gateway expects providers to return final text. There is no shared tool-execution seam to drop LM Studio into safely.
+
+4. **Auto-routing would get riskier, not safer.**  
+   `src\llm\gateway.ts` picks the first provider whose `supportsModel()` matches. `src\llm\providers\lmstudio.ts` returns `true` for every model name, so moving LM Studio earlier in registration order widens its capture of model-policy traffic without adding tool safety.
+
+5. **Repo MCP exposure is broad.**  
+   `.mcp.json` and `.github\extensions\README.md` expose `nfl-eval-local` / `nfl-eval-pipeline` with `tools: ["*"]`. `mcp\server.mjs` includes mutating publish/media/cache tools alongside read-only queries, so "turn on MCP" is not equivalent to "safe read-only MCP."
+
+## Closest supported path
+
+- Keep **LM Studio** as the text-only local-model provider.
+- Use **Copilot CLI in `article-tools` mode** for guarded web search, repo MCP, and session reuse.
+- If the product wants "LM Studio + tools," build it as an **app-owned provider-agnostic tool loop** above providers, with explicit allowlisting and live end-to-end validation, rather than as an LM Studio-specific toggle.
+
+## Evidence
+
+- Provider boundary: `src\llm\gateway.ts`, `src\llm\providers\lmstudio.ts`, `src\llm\providers\copilot-cli.ts`
+- Startup wiring: `src\dashboard\server.ts`
+- Pipeline/runner threading: `src\agents\runner.ts`, `src\pipeline\actions.ts`
+- MCP exposure: `mcp\server.mjs`, `src\mcp\server.ts`, `.mcp.json`, `.github\extensions\README.md`
+- Tests: `tests\llm\provider-lmstudio.test.ts`, `tests\llm\gateway.test.ts`, `tests\llm\provider-copilot-cli.test.ts`, `tests\mcp\server.test.ts`
+
+## Validation
+
+Baseline validation passed in this review:
+
+- `npm run v2:build`
+- `npx vitest run tests\llm\provider-lmstudio.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\server.test.ts`
+
+---
+
+## devops lmstudio mcp audit (PROPOSED):
+
+# Decision Inbox — DevOps LM Studio MCP Audit
+
+**Date:** 2026-03-28  
+**Owner:** DevOps  
+**Status:** Proposed
+
+## Decision
+
+Do **not** enable LM Studio for repo MCP tools or web search in the current branch. Keep LM Studio on the existing chat-only path and keep tool-aware article work on the guarded Copilot CLI path until the app owns a provider-neutral allowlist/execution seam for LM Studio as well.
+
+## Why
+
+- `src/llm/providers/lmstudio.ts` only forwards OpenAI-compatible chat completions and optional JSON mode; it does not send tool definitions, MCP config, or web-search directives.
+- `src/llm/gateway.ts` and `src/agents/runner.ts` still exchange plain text responses with no provider-neutral tool-call contract in this branch.
+- `src/llm/providers/copilot-cli.ts` is the only provider that currently enforces explicit tool controls (`article-tools`, approved MCP server names, optional web fetch, repo-scoped MCP config, and bounded session reuse).
+- Repo MCP config files (`.copilot/mcp-config.json`, `.mcp.json`) expose `tools: ["*"]` for both local servers, and `mcp/server.mjs` includes mutating publish/render/cache tools alongside read-only queries, so attaching LM Studio directly would bypass the current provider boundary.
+
+## Operational Path
+
+1. Keep `LLM_PROVIDER=lmstudio` available for local chat-only runs.
+2. Keep `COPILOT_CLI_MODE=article-tools` as the closest supported path for guarded web search + repo MCP.
+3. If LM Studio parity is required later, add one of:
+   - an app-owned provider-neutral tool loop with an explicit allowlist, or
+   - an LM Studio-specific native tool adapter that reuses the same allowlist, validation, and audit rules.
+
+## Evidence
+
+- `src/llm/providers/lmstudio.ts`
+- `src/llm/providers/copilot-cli.ts`
+- `src/llm/gateway.ts`
+- `src/agents/runner.ts`
+- `mcp/server.mjs`
+- `.copilot/mcp-config.json`
+- `.mcp.json`
+- `tests/llm/provider-lmstudio.test.ts`
+- `tests/llm/provider-copilot-cli.test.ts`
+- `tests/llm/gateway.test.ts`
+- `tests/mcp/server.test.ts`
+
+---
+
+## devops lmstudio runtime (PROPOSED):
+
+# DevOps Decision — LM Studio runtime validation stays wiring-first
+
+## Context
+
+The repo already has two separate local MCP entrypoints (`npm run mcp:server` and `npm run v2:mcp`) plus repo-local Copilot MCP configs in `.copilot\mcp-config.json` and `.mcp.json`. At the same time, `src\llm\providers\lmstudio.ts` only speaks OpenAI-compatible chat completions and optional JSON mode, while `src\dashboard\server.ts` wires repo MCP + web search only for the Copilot CLI provider.
+
+## Decision
+
+For LM Studio work, DevOps should prepare **manual/live validation wiring** rather than imply tool support that the runtime does not implement yet:
+
+1. keep MCP inspection opt-in via `.\dev.ps1 -WithMcp`
+2. point operators at `http://localhost:<port>/config` to confirm the active provider, URL, and model
+3. document clearly that repo MCP and web search are not currently forwarded through LM Studio
+
+## Why
+
+This preserves truthful operator expectations while still making future LM Studio tool-path testing easy. It also avoids racing application feature work or over-promising capabilities that depend on provider-native LM Studio support or Code-owned runtime changes.
+
+## What is possible now
+
+- Start the dashboard against LM Studio with `LLM_PROVIDER=lmstudio`
+- Auto-detect or pin an LM Studio model
+- Keep both repo-local MCP servers visible during a run for future/manual inspection
+- Validate provider selection and env wiring on `/config`
+
+## What still depends on Code or provider work
+
+- Passing repo MCP tools through LM Studio requests
+- Brokering web search through LM Studio from the app runtime
+- Any LM Studio-native tool-calling or search feature that is not exposed through the provider/runtime contract
+
+---
+
 # MERGED INBOX ENTRIES (2026-03-28T18:07:22Z)
 
 ## code cli trace analysis:
