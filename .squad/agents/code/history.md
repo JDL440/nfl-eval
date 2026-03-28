@@ -219,7 +219,7 @@
 
 ## Learnings
 
-- 2026-03-28 in-app MCP tool wiring: for Copilot CLI, `--available-tools` controls tool visibility while `--allow-tool` controls non-interactive approval. Safe repo-local MCP enablement should expose only the explicit read-only subset and keep tool-enabled runs on the workspace root so `.copilot\mcp-config.json` can load.
+- 2026-03-28 in-app MCP tool wiring: the approved seam is an app-owned, provider-agnostic local tool loop in `src\agents\runner.ts`, not provider-side tool permissions. Derive the allowlist from `mcp\tool-registry.mjs`, require `readOnlyHint: true`, validate args against exported schemas, execute handlers in process, and fail closed on non-allowlisted tools or invalid payloads.
 
 ### 2026-03-28 Agent Tool-Wiring Inspection
 - **Current tool exposure architecture:** Three-layer system: (1) MCP tools exposed via stdio in `src/mcp/server.ts`, (2) Agent charters/skills loaded from markdown at runtime in `src/agents/runner.ts`, (3) prompt-injected instructions. Agents receive tool documentation as text in system prompt, NOT as structured manifests or through native MCP client.

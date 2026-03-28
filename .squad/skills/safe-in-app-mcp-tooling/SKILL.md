@@ -15,23 +15,23 @@ tools: [view, rg, powershell]
 
 ## Pattern
 
-Treat in-app MCP enablement as a **double-enforced allowlist**:
+Treat in-app MCP enablement as an **app-owned bounded loop**:
 
-1. **Provider layer**
-   - use `--available-tools=...` to decide what the model can even see
-   - use `--allow-tool=...` to pre-approve that exact surface for non-interactive runs
-2. **Prompt layer**
-   - tell the agent which local tools are allowed
-   - tell it to call `local_tool_catalog` first when it needs tool discovery or argument examples
+1. **Registry-derived allowlist**
+   - load runtime metadata from `mcp\tool-registry.mjs`
+   - keep only explicitly approved tool names
+   - require `readOnlyHint: true`
+2. **Prompt contract**
+   - tell the agent which tools are allowed
+   - tell it to call `local_tool_catalog` first when it needs argument examples
+   - require a strict machine-readable tool request shape
+3. **Runtime enforcement**
+   - validate arguments against the exported tool schema
+   - reject non-allowlisted tools
+   - bound the number of tool calls
+   - execute handlers in process
 
-This keeps the runtime explicit even if the MCP server itself exposes more tools.
-
-## Copilot CLI specifics
-
-- `--available-tools` controls visibility
-- `--allow-tool` controls approval prompts
-- If you need repo-local MCP config to load, run the CLI from the **workspace root** for tool-enabled calls
-- If you want plain text generation without repo context, keep no-tool calls in a sandbox cwd
+This keeps the policy provider-agnostic even if the MCP server itself exposes more tools.
 
 ## Safe default for this repo
 
@@ -55,6 +55,6 @@ Do **not** expose:
 ## Anti-patterns
 
 - Enabling the whole MCP server just because one safe tool is needed
-- Relying on prompt text alone without provider-side tool filtering
-- Leaving tool-enabled calls in a sandbox cwd that cannot load repo-local MCP config
+- Relying on prompt text alone without runtime validation
+- Letting providers own tool policy instead of the app runtime
 - Exposing mutating publish/media tools to writer/editor-style in-app agents

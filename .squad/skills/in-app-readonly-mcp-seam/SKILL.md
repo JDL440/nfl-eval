@@ -23,6 +23,7 @@ Treat tool access as an **application runtime contract**, not a provider feature
    - runtime validates it
    - runtime executes an allowlisted tool in-process
    - runtime feeds the result back into the conversation
+   - identical tool calls in the same run reuse cached results instead of re-executing
 3. Keep the first rollout provider-agnostic. Do not require provider-native function calling.
 4. Reuse the existing local tool registry metadata as the source of truth for:
    - tool names
@@ -50,10 +51,18 @@ Treat tool access as an **application runtime contract**, not a provider feature
 2. Execute shared handlers directly in-process.
 3. Bound tool hops per run.
 4. Fail closed on unknown tools or invalid arguments.
-5. Add tests that prove the in-app allowlist matches the approved registry subset.
+5. Require a final JSON-wrapped text answer once the tool budget is exhausted.
+6. Add tests that prove the in-app allowlist matches the approved registry subset.
+6. Deduplicate repeated identical tool calls inside one run so the same lookup is not re-executed.
+7. Keep an explicit blocked set for publishing, media-generation, and cache-refresh tools even if registry metadata drifts.
 
 ## NFL Lab Example
 
 - Discovery/source-of-truth seam: `mcp\tool-registry.mjs`
-- Current runtime seam: `src\agents\runner.ts` + `src\llm\gateway.ts`
-- Current blocker: `src\llm\providers\copilot-cli.ts` explicitly disables tool use, so provider-native rollout is not the first safe move.
+- Runtime implementation (COMPLETE): 
+  - `src\agents\local-tools.ts` — loads approved registry subset, validates schemas, executes handlers, deduplicates calls
+  - `src\agents\runner.ts` — injects tool prompt, loops on JSON decisions, integrates tool results into conversation
+  - `LOCAL_TOOL_DECISION_SCHEMA` — model proposes `{type: "tool_call", toolName, args}` or `{type: "final", content}`
+- Approved tools (12): `local_tool_catalog`, 11 nflverse queries
+- Blocked tools (6): `publish_to_substack`, `render_table_image`, `publish_note_to_substack`, `publish_tweet`, `generate_article_images`, `refresh_nflverse_cache`
+- Test coverage: `tests\agents\local-tools.test.ts` (allowlist + schema validation), `tests\agents\runner.test.ts` (tool loop integration)

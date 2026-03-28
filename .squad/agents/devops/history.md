@@ -1,5 +1,27 @@
 # History — DevOps
 
+## Core Context
+
+**Baseline (Pre-2026-03-22):**
+- Team initialized 2025-07-18
+- GitHub Actions used for CI, triage, label sync
+- MCP tools available for Substack, image gen, nflverse
+- `.github/agents/squad.agent.md` defines Squad coordinator governance
+- Project: NFL Lab (nfl-eval) — AI-powered NFL analytics and content platform with TypeScript/Node.js stack
+- Key paths: `.github/workflows/` (CI/CD), `mcp/` (MCP servers), `.mcp.json` (MCP config), `src/agents/` (agent runner), `src/llm/` (LLM gateway)
+
+**Recurring DevOps Patterns:**
+- Publish overhaul isolation: Use fresh worktree from `origin/main` when `main` is dirty; copy target files, validate with `npm run v2:build` + focused test suites
+- MCP entrypoint: Canonical operator path is `mcp/server.mjs`; `src/cli.ts mcp` wraps it; `src/mcp/server.ts` provides shared bootstrap helpers
+- Validation commands: `npm run v2:build`, `npx vitest run tests/mcp/server.test.ts tests/cli.test.ts`, `npm run mcp:smoke`
+
+**Agent Tool-Calling Architecture (Pre-2026-03-28):**
+- Agents (via `AgentRunner`) initially had no tool-calling capability; only LLM Gateway for text generation
+- Tool inventory: 25 tools across 4 categories (help, media, publishing, data)
+- MCP tools exposed in `mcp/tool-registry.mjs` for external clients (GitHub Copilot CLI, Claude Code)
+- Gap identified: No safe, explicit in-app local-tool execution seam for agents (Issue #83, K5a)
+- Fact-checking wired at 3 pipeline stages (Stage 4→5, 5→6, 6→7) with pre-computed enriched context
+
 ## Project Context
 
 - **Project:** NFL Lab (nfl-eval) — AI-powered NFL analytics and content platform
@@ -9,6 +31,17 @@
 - **Key paths:** `.github/workflows/` (CI/CD), `.github/extensions/` (extensions), `.github/ISSUE_TEMPLATE/` (templates), `mcp/` (MCP servers), `.mcp.json` (MCP config)
 
 ## Learnings
+
+- 2026-03-28T01:02:59Z — **In-App MCP Seam Rollout Complete — Orchestration Logged:**
+  
+  - **Orchestration log:** `.squad/orchestration-log/2026-03-28T01-02-59-devops.md`
+  - **Session log:** `.squad/log/2026-03-28T01-02-59-in-app-mcp-seam-rollout.md`
+  - **Decision merged to `.squad/decisions.md`** (inbox → MERGED INBOX ENTRIES section)
+  - Status: ✅ Approved in-app MCP seam works through repo-owned JSON tool turns
+  
+  Core implementation shipped: `AgentRunner` drives a bounded structured loop above providers, `src/agents/local-tools.ts` loads the allowlisted tool subset from `mcp/tool-registry.mjs` in-process, identical tool calls are deduped per run, blocked publish/media/cache-refresh tools stay out of the runtime, and unknown tools / invalid args fail closed. Focused validation passes with `npm run v2:build` and `npx vitest run tests\agents\local-tools.test.ts tests\agents\runner.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\local-tool-registry.test.ts`.
+
+- 2026-03-28T18:00:00Z — **Approved in-app MCP seam now works through repo-owned JSON tool turns:** `AgentRunner` drives a bounded structured loop above providers, `src/agents/local-tools.ts` loads the allowlisted tool subset from `mcp/tool-registry.mjs` in-process, identical tool calls are deduped per run, blocked publish/media/cache-refresh tools stay out of the runtime, and unknown tools / invalid args fail closed. Focused validation now passes with `npm run v2:build` and `npx vitest run tests\agents\local-tools.test.ts tests\agents\runner.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\local-tool-registry.test.ts`.
 
 - 2026-03-28T00:54:15Z — **In-App Agent Tool-Wiring Architecture Audit MERGED TO DECISIONS:**
   

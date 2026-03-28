@@ -1,5 +1,105 @@
 ---
 
+# MERGED INBOX ENTRIES (2026-03-28T01:02:59Z)
+
+## DevOps: In-App Read-Only MCP Loop Contract
+
+# DevOps Decision — In-App Read-Only MCP Loop Contract
+
+- **Date:** 2026-03-28
+- **Owner:** DevOps
+- **Status:** Implemented
+
+## Decision
+
+Keep the first in-app MCP rollout on a repo-owned JSON tool-turn contract:
+
+1. `AgentRunner` asks providers for a JSON decision, not provider-native tool calls.
+2. The runtime loads approved tool metadata from `mcp/tool-registry.mjs` in-process.
+3. The runtime validates args with the shared schemas, executes only the approved read-only handlers, and feeds normalized results back into the next model turn.
+4. Repeated identical tool calls in one run reuse the cached result instead of re-executing.
+
+## Why
+
+- This keeps the seam provider-agnostic and works even when the provider has no native function-calling contract.
+- It preserves the Copilot CLI safety posture: the provider stays text-only while the app owns allowlisting, validation, and execution.
+- Registry-backed loading keeps the in-app allowlist tied to the same metadata the local MCP server exposes, which reduces drift risk.
+
+## Guardrails
+
+- Allow only `local_tool_catalog` plus the approved read-only query tools.
+- Fail closed on unknown tool names, invalid arguments, or non-read-only metadata.
+- Keep the tool budget bounded and require a final text answer once the budget is exhausted.
+
+## Implementation Complete (2026-03-28T15:45:00Z)
+
+App-owned tool loop shipped and validated:
+
+- **Runtime** (`src/agents/local-tools.ts` + `src/agents/runner.ts`): Models propose `{type: "tool_call", toolName, args}` in JSON, app validates schemas and executes allowlisted handlers in-process, results fed back to conversation
+- **Allowlist enforcement**: 12 approved read-only tools, 6 explicitly blocked tools, non-read-only tools rejected at load time
+- **Deduplication**: Identical `{toolName, args}` calls reuse cached results within a run via `stableToolCallKey`
+- **Call budget**: Max 3 tool calls per agent run, then agent must provide `{type: "final", content}`
+- **Validation**: Zod schemas strict before execution, handler errors wrapped and returned to LLM
+- **Test coverage**: Allowlist correctness, blocked-tool enforcement, schema validation, handler errors, dedup logic all passing
+- **Provider neutral**: No provider customization needed; contract is JSON-only
+
+
+---
+
+## Code: MCP Tooling Allowlist Policy
+
+# Decision Inbox — Code Agent MCP Tooling
+
+**Date:** 2026-03-28  
+**Owner:** Code  
+**Status:** Proposed
+
+## Decision
+
+Enable repo-local MCP access for in-app agents only through an explicit safe subset:
+
+- `local_tool_catalog`
+- `query_player_stats`
+- `query_team_efficiency`
+- `query_positional_rankings`
+- `query_snap_counts`
+- `query_draft_history`
+- `query_ngs_passing`
+- `query_combine_profile`
+- `query_pfr_defense`
+- `query_historical_comps`
+- `query_rosters`
+- `query_prediction_markets`
+
+Do **not** expose publishing, media-generation, or cache-refresh tools to the in-app agent runtime.
+
+## Implementation seam
+
+Enforce the policy in the app runtime, above providers:
+
+1. **Registry-derived allowlist** — load local tool metadata from `mcp\tool-registry.mjs`, then keep only the explicit approved tool names that are also marked `readOnlyHint: true`.
+2. **Bounded tool loop** — let the model request at most three in-process tool calls through a strict JSON contract.
+3. **Fail closed** — reject non-allowlisted tools and invalid arguments before any handler runs.
+4. **In-process execution only** — call the local tool handlers directly from the app runtime; do not delegate tool permissions to provider-specific CLI flags.
+
+## Why
+
+- The MCP server already exposes both safe read-only tools and mutating tools.
+- The in-app runtime previously had no safe, explicit local-tool execution seam.
+- An app-owned loop keeps tool policy provider-agnostic and auditable while still enabling factual lookup work.
+
+## Validation
+
+- `npm run v2:build`
+- `npx vitest run tests\agents\runner.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\local-tool-registry.test.ts`
+
+
+---
+
+# ORIGINAL DECISIONS
+
+---
+
 # Decision: Unified Local MCP Entrypoint + Implementation
 
 **Date:** 2026-03-28  
@@ -10913,18 +11013,18 @@ Do **not** expose publishing, media-generation, or cache-refresh tools to the in
 
 ## Implementation seam
 
-Enforce the policy in two places:
+Enforce the policy in the app runtime, above providers:
 
-1. **Runtime visibility/permissions** — pass the exact tool subset to the Copilot CLI provider with tool filters, so non-allowlisted tools never appear to the model.
-2. **Prompt contract** — inject the same allowlist into the runner system prompt and tell agents to start with `local_tool_catalog` when they need argument help.
-
-Tool-enabled Copilot CLI runs should execute from the workspace root so repo-local MCP config loads correctly; no-tool runs can stay in the sandboxed cwd.
+1. **Registry-derived allowlist** — load local tool metadata from `mcp\tool-registry.mjs`, then keep only the explicit approved tool names that are also marked `readOnlyHint: true`.
+2. **Bounded tool loop** — let the model request at most three in-process tool calls through a strict JSON contract.
+3. **Fail closed** — reject non-allowlisted tools and invalid arguments before any handler runs.
+4. **In-process execution only** — call the local tool handlers directly from the app runtime; do not delegate tool permissions to provider-specific CLI flags.
 
 ## Why
 
 - The MCP server already exposes both safe read-only tools and mutating tools.
-- The in-app runtime previously blocked all tool usage entirely.
-- A provider-side allowlist is the narrowest change that enables factual lookup work without opening publishing or file-edit paths.
+- The in-app runtime previously had no safe, explicit local-tool execution seam.
+- An app-owned loop keeps tool policy provider-agnostic and auditable while still enabling factual lookup work.
 
 ## Validation
 
@@ -12511,4 +12611,5 @@ The codebase has **two separate, non-integrated systems**:
 2. Tests: Add runner-tools and tool-catalog test files
 3. Validate: Run articles; capture one system prompt; inspect tool catalog output
 4. Iterate: If agents reliably invoke tool_use tags → add Phase 4
+
 
