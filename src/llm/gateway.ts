@@ -19,6 +19,7 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   messages: ChatMessage[];
+  provider?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -107,9 +108,24 @@ export class LLMGateway {
     return this.providers.get(id);
   }
 
+  listProviders(): Array<{ id: string; name: string }> {
+    return [...this.providers.values()].map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+    }));
+  }
+
   // -- Chat ----------------------------------------------------------------
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
+    if (request.provider) {
+      const provider = this.getProvider(request.provider);
+      if (!provider) {
+        throw new GatewayError(`Requested provider not available: ${request.provider}`);
+      }
+      return provider.chat(request);
+    }
+
     const candidates = this.resolveCandidates(request);
 
     const errors: { model: string; error: Error }[] = [];

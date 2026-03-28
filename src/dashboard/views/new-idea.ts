@@ -4,6 +4,12 @@
 
 import { renderLayout, escapeHtml } from './layout.js';
 
+interface NewIdeaProviderOption {
+  id: string;
+  name: string;
+  default?: boolean;
+}
+
 // ── NFL teams with abbreviations ─────────────────────────────────────────────
 
 export const NFL_TEAMS = [
@@ -129,14 +135,33 @@ export function renderIdeaSuccess(article: { id: string; title: string }): strin
 
 // ── Smart idea form ──────────────────────────────────────────────────────────
 
-export function renderNewIdeaPage(config: { labName: string; expertAgents?: string[] }): string {
+export function renderNewIdeaPage(config: {
+  labName: string;
+  expertAgents?: string[];
+  llmProviders?: NewIdeaProviderOption[];
+}): string {
   const agents = config.expertAgents ?? [];
+  const llmProviders = config.llmProviders ?? [];
   const agentChips = agents.length > 0 ? agents.map(a => `
     <button type="button" class="agent-badge" data-agent="${escapeHtml(a)}"
       onclick="toggleAgent(this, '${escapeHtml(a)}')">
       ${escapeHtml(a)}
     </button>
   `).join('') : '<span class="form-hint">No expert agents available</span>';
+  const providerField = llmProviders.length > 0
+    ? `
+        <div class="form-group">
+          <label for="idea-provider">LLM Provider <span class="form-hint">(choose which provider generates the idea)</span></label>
+          <select id="idea-provider" name="provider" class="input input-full select">
+            ${llmProviders.map((provider) => `
+              <option value="${escapeHtml(provider.id)}"${provider.default ? ' selected' : ''}>
+                ${escapeHtml(provider.default ? `${provider.name} (default)` : provider.name)}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+      `
+    : '';
 
   return renderLayout('New Idea', `
     <div class="idea-form-container">
@@ -181,6 +206,8 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
             <option value="3">3 — Deep Dive</option>
           </select>
         </div>
+
+        ${providerField}
 
         <div class="form-group">
           <label>Pin Expert Agents <span class="form-hint">(optional — these agents will always be included on the panel)</span></label>
@@ -324,6 +351,7 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
               prompt,
               teams: Array.from(selectedTeams),
               depthLevel: parseInt(document.getElementById('depth-level').value, 10),
+              provider: document.getElementById('idea-provider')?.value || undefined,
               autoAdvance: document.getElementById('auto-advance').checked,
               pinnedAgents: Array.from(pinnedAgents),
             }),

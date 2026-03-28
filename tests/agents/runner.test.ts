@@ -638,6 +638,31 @@ describe('AgentRunner', () => {
       expect(request.maxTokens).toBe(2000);
     });
 
+    it('passes provider overrides to the gateway', async () => {
+      const stub = new StubProvider();
+      const chatSpy = vi.spyOn(stub, 'chat');
+
+      const spyGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [stub],
+      });
+      const spyRunner = new AgentRunner({
+        gateway: spyGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      await spyRunner.run({
+        agentName: 'writer',
+        task: 'Write with the explicit provider',
+        provider: 'stub',
+      });
+
+      const request = chatSpy.mock.calls[0][0];
+      expect(request.provider).toBe('stub');
+    });
+
     it('returns token usage when available', async () => {
       const result = await runner.run({
         agentName: 'writer',

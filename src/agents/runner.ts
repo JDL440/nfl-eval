@@ -34,6 +34,8 @@ export interface AgentSkill {
 export interface AgentRunParams {
   agentName: string;
   task: string;
+  /** Optional provider override when the gateway has multiple providers registered. */
+  provider?: string;
   articleContext?: {
     slug: string;
     title: string;
@@ -465,6 +467,7 @@ export class AgentRunner {
     const {
       agentName,
       task,
+      provider,
       articleContext,
       skills: skillNames,
       temperature,
@@ -549,6 +552,7 @@ export class AgentRunner {
       response = await this._gateway.chat({
         messages,
         model,
+        provider,
         temperature,
         maxTokens,
         responseFormat,
