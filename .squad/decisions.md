@@ -1,4 +1,51 @@
-# MERGED INBOX ENTRIES (2026-03-28T21:17:03Z)
+# MERGED INBOX ENTRIES (2026-03-28T21:52:59Z)
+
+## lead lmstudio v4 review (APPROVED):
+
+# Lead Decision — LM Studio v4 review gate
+
+**Date:** 2026-03-28  
+**Owner:** Lead  
+**Status:** APPROVED
+
+## Decision
+
+Do **not** approve the upcoming v4 LM Studio patch unless it proves the live `qwen/qwen3.5-35b-a3b` tool-loop failure is fixed at the actual structured-response seam, not just in stubbed tests.
+
+## Approval criteria
+
+1. **Structured-output request shaping is live-compatible**
+   - The LM Studio path no longer sends the failing `response_format: { type: 'json_object' }` shape for structured tool-loop turns.
+   - The replacement shape is explicitly compatible with the live LM Studio/Qwen path (for example `json_schema`) or the implementation ships a tested text fallback that still preserves bounded parsing safety.
+
+2. **Requested model/provider intent survives provider shaping**
+   - `src\llm\providers\lmstudio.ts` must not silently discard `request.model` when one is supplied.
+   - Any fallback/default behavior must stay explicit and traceable in provider metadata.
+
+3. **Tool-loop eligibility stays app-owned and model-safe**
+   - If `src\llm\gateway.ts` adds a route-preview seam, it must help the runner decide tool eligibility from the resolved provider without weakening model-first routing.
+   - Reject any patch that broadens `LMStudioProvider.supportsModel()` semantics or otherwise makes LM Studio capture policy-model traffic just to enable tools.
+
+4. **Trace envelopes prove what actually happened**
+   - Provider metadata should expose request/response envelopes that make the structured request shape and LM Studio response debuggable in traces.
+   - Review should be able to tell configured intent apart from effective runtime behavior.
+
+5. **Regression tests cover the real failure path**
+   - `tests\llm\provider-lmstudio.test.ts` should assert the new LM Studio request body shape and request-model behavior.
+   - `tests\agents\runner.test.ts` should still prove the bounded loop works with structured turns and persists trace metadata.
+   - Green tests alone are insufficient unless they directly exercise the code path that used to emit `json_object`.
+
+## Reject conditions
+
+- Docs/env wiring lands without fixing the LM Studio structured request.
+- The patch changes Copilot CLI behavior or broader tool policy instead of the LM Studio seam under review.
+- The change claims to fix Qwen live looping but leaves no trace evidence showing the new request/response envelope.
+
+## Why
+
+Current v4 baseline already passes targeted unit tests and `npm run v2:build`, yet prior live validation showed LM Studio rejecting the exact structured-output body the provider emits today. The review gate therefore has to focus on request-shape correctness, provider traceability, and model-safe routing rather than trusting existing green tests.
+
+---
 
 ## copilot directive 2026-03-28T21-10-32Z (USER DIRECTIVE):
 
