@@ -16,7 +16,7 @@ import {
 } from 'node:fs';
 import { join, basename } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { initDataDir } from '../config/index.js';
+import { initDataDir, refreshCorePromptDefaults } from '../config/index.js';
 import { AgentMemory } from '../agents/memory.js';
 
 // ── Public types ─────────────────────────────────────────────────────────────
@@ -35,6 +35,11 @@ export interface MigrationReport {
   articlesCopied: number;
   memoriesConverted: number;
   configsCopied: number;
+  promptsRefreshed: {
+    charters: number;
+    skills: number;
+    updated: string[];
+  };
   errors: string[];
   warnings: string[];
   dryRun: boolean;
@@ -431,6 +436,7 @@ export async function migrate(options: MigrationOptions): Promise<MigrationRepor
     articlesCopied: 0,
     memoriesConverted: 0,
     configsCopied: 0,
+    promptsRefreshed: { charters: 0, skills: 0, updated: [] },
     errors: [],
     warnings: [],
     dryRun,
@@ -493,6 +499,18 @@ export async function migrate(options: MigrationOptions): Promise<MigrationRepor
       convertHistoryFiles(options.v1Root, options.dataDir, dryRun, report);
     } catch (err) {
       report.errors.push(`Memory conversion: ${(err as Error).message}`);
+    }
+  }
+
+  // Step 9: Refresh the curated runtime prompts from current defaults so
+  // stale migrated .squad content does not keep polluting the live runtime.
+  if (!dryRun) {
+    try {
+      const refreshed = refreshCorePromptDefaults(options.dataDir, league);
+      report.promptsRefreshed = refreshed;
+      report.configsCopied += refreshed.charters + refreshed.skills;
+    } catch (err) {
+      report.errors.push(`Prompt refresh: ${(err as Error).message}`);
     }
   }
 

@@ -15,7 +15,7 @@
 
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { loadConfig, initDataDir, seedKnowledge } from './config/index.js';
+import { loadConfig, initDataDir, seedKnowledge, refreshCorePromptDefaults } from './config/index.js';
 import type { AppConfig } from './config/index.js';
 import type {
   RetrospectiveDigestArticleEvidence,
@@ -402,6 +402,7 @@ Usage: tsx src/cli.ts <command> [options]
 Commands:
   serve, dashboard    Start the dashboard HTTP server (default)
   init                Initialize the data directory structure
+  refresh-prompts     Refresh core runtime prompts from cleaned defaults
   migrate             Run v1 → v2 data migration
   status              Print pipeline summary table
   advance <id>        Advance a single article to its next stage
@@ -431,9 +432,22 @@ export async function handleInit(): Promise<void> {
   const config = loadConfig();
   initDataDir(config.dataDir, config.league);
   const seeded = seedKnowledge(config.dataDir, config.league);
+  const refreshed = refreshCorePromptDefaults(config.dataDir, config.league);
   console.log(`Data directory initialized: ${config.dataDir} (league: ${config.league})`);
   if (seeded.charters || seeded.skills || seeded.memory) {
     console.log(`  Seeded: ${seeded.charters} charters, ${seeded.skills} skills, ${seeded.memory} memory entries`);
+  }
+  console.log(`  Refreshed core prompts: ${refreshed.charters} charters, ${refreshed.skills} skills`);
+}
+
+export async function handleRefreshPrompts(): Promise<void> {
+  const config = loadConfig();
+  initDataDir(config.dataDir, config.league);
+  const refreshed = refreshCorePromptDefaults(config.dataDir, config.league);
+  console.log(`Core runtime prompts refreshed: ${config.dataDir} (league: ${config.league})`);
+  console.log(`  Updated: ${refreshed.charters} charters, ${refreshed.skills} skills`);
+  if (refreshed.updated.length > 0) {
+    console.log(`  Files  : ${refreshed.updated.join(', ')}`);
   }
 }
 
@@ -450,6 +464,10 @@ export async function handleMigrate(): Promise<void> {
   console.log(`  Articles copied  : ${report.articlesCopied}`);
   console.log(`  Memories imported: ${report.memoriesConverted}`);
   console.log(`  Configs copied   : ${report.configsCopied}`);
+  console.log(`  Prompts refreshed: ${report.promptsRefreshed.charters} charters, ${report.promptsRefreshed.skills} skills`);
+  if (report.promptsRefreshed.updated.length > 0) {
+    console.log(`  Prompt files     : ${report.promptsRefreshed.updated.join(', ')}`);
+  }
   if (report.warnings.length > 0) {
     console.log(`  Warnings (${report.warnings.length}):`);
     for (const w of report.warnings) {
@@ -647,6 +665,10 @@ export async function run(argv: string[] = process.argv): Promise<void> {
 
     case 'init':
       await handleInit();
+      break;
+
+    case 'refresh-prompts':
+      await handleRefreshPrompts();
       break;
 
     case 'migrate':

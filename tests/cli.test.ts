@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { printUsage, run, handleInit, handleRetrospectiveDigest, handleStatus } from '../src/cli.js';
+import { printUsage, run, handleInit, handleRefreshPrompts, handleRetrospectiveDigest, handleStatus } from '../src/cli.js';
 import { Repository } from '../src/db/repository.js';
 import { PipelineEngine } from '../src/pipeline/engine.js';
 import { PipelineScheduler } from '../src/pipeline/scheduler.js';
@@ -45,6 +45,7 @@ describe('CLI', () => {
       expect(output).toContain('NFL Lab v2');
       expect(output).toContain('serve');
       expect(output).toContain('init');
+      expect(output).toContain('refresh-prompts');
       expect(output).toContain('migrate');
       expect(output).toContain('status');
       expect(output).toContain('advance');
@@ -96,18 +97,52 @@ describe('CLI', () => {
   });
 
   describe('init command', () => {
-    it('creates data directory structure', async () => {
+    it('creates data directory structure and refreshes core prompts', async () => {
+      mkdirSync(join(tmpDir, 'agents', 'charters', 'nfl'), { recursive: true });
+      writeFileSync(join(tmpDir, 'agents', 'charters', 'nfl', 'lead.md'), '# Legacy lead prompt');
+
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await handleInit();
 
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Data directory initialized'));
+      expect(logSpy.mock.calls.map((call) => call[0]).join('\n')).toContain('Refreshed core prompts');
       // Verify core directories were created
       expect(existsSync(join(tmpDir, 'config'))).toBe(true);
       expect(existsSync(join(tmpDir, 'logs'))).toBe(true);
       expect(existsSync(join(tmpDir, 'leagues', 'nfl', 'articles'))).toBe(true);
       expect(existsSync(join(tmpDir, 'agents', 'charters'))).toBe(true);
+      expect(readFileSync(join(tmpDir, 'agents', 'charters', 'nfl', 'lead.md'), 'utf-8')).not.toBe('# Legacy lead prompt');
 
+      logSpy.mockRestore();
+    });
+  });
+
+  describe('refresh-prompts command', () => {
+    it('refreshes curated runtime prompts from defaults', async () => {
+      initDataDir(tmpDir);
+      mkdirSync(join(tmpDir, 'agents', 'charters', 'nfl'), { recursive: true });
+      writeFileSync(join(tmpDir, 'agents', 'charters', 'nfl', 'lead.md'), '# Legacy lead prompt');
+      writeFileSync(join(tmpDir, 'agents', 'skills', 'editor-review.md'), '# Custom non-core skill');
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await handleRefreshPrompts();
+
+      const allOutput = logSpy.mock.calls.map(c => c[0]).join('\n');
+      expect(allOutput).toContain('Core runtime prompts refreshed');
+      expect(allOutput).toContain('Updated:');
+      expect(readFileSync(join(tmpDir, 'agents', 'charters', 'nfl', 'lead.md'), 'utf-8')).not.toBe('# Legacy lead prompt');
+      expect(readFileSync(join(tmpDir, 'agents', 'skills', 'editor-review.md'), 'utf-8')).toBe('# Custom non-core skill');
+      logSpy.mockRestore();
+    });
+
+    it('dispatches through run()', async () => {
+      initDataDir(tmpDir);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await run(['node', 'cli.ts', 'refresh-prompts']);
+
+      expect(logSpy.mock.calls.map((call) => call[0]).join('\n')).toContain('Core runtime prompts refreshed');
       logSpy.mockRestore();
     });
   });
@@ -353,9 +388,10 @@ describe('programmatic index exports', () => {
   it('exports core types and classes', async () => {
     const idx = await import('../src/index.js');
 
-    // Config
-    expect(typeof idx.loadConfig).toBe('function');
-    expect(typeof idx.initDataDir).toBe('function');
+      // Config
+      expect(typeof idx.loadConfig).toBe('function');
+      expect(typeof idx.initDataDir).toBe('function');
+      expect(typeof idx.refreshCorePromptDefaults).toBe('function');
 
     // Types / constants
     expect(idx.VALID_STAGES).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);

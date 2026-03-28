@@ -230,7 +230,8 @@ describe('migrate', () => {
     const editorCharter = join(dataDir, 'agents', 'charters', 'nfl', 'editor.md');
     expect(existsSync(writerCharter)).toBe(true);
     expect(existsSync(editorCharter)).toBe(true);
-    expect(readFileSync(writerCharter, 'utf-8')).toBe('# Writer Charter\n');
+    expect(readFileSync(writerCharter, 'utf-8')).not.toBe('# Writer Charter\n');
+    expect(existsSync(join(dataDir, 'agents', 'charters', 'nfl', 'lead.md'))).toBe(true);
   });
 
   // ── Skill files ────────────────────────────────────────────────────────────
@@ -242,7 +243,31 @@ describe('migrate', () => {
 
     const skillFile = join(dataDir, 'agents', 'skills', 'data-analysis.md');
     expect(existsSync(skillFile)).toBe(true);
+    expect(existsSync(join(dataDir, 'agents', 'skills', 'article-lifecycle.md'))).toBe(true);
     expect(report.configsCopied).toBeGreaterThanOrEqual(1);
+  });
+
+  it('refreshes only the allowlisted core prompts after migration', async () => {
+    createV1Structure(v1Root);
+    mkdirSync(join(v1Root, '.squad', 'agents', 'lead'), { recursive: true });
+    writeFileSync(join(v1Root, '.squad', 'agents', 'lead', 'charter.md'), '# Legacy lead prompt\n');
+    mkdirSync(join(v1Root, '.squad', 'skills', 'substack-article'), { recursive: true });
+    writeFileSync(join(v1Root, '.squad', 'skills', 'substack-article', 'SKILL.md'), '# Legacy substack skill\n');
+
+    const report = await migrate({ v1Root, dataDir });
+
+    expect(report.promptsRefreshed.updated).toEqual(expect.arrayContaining([
+      'charter:lead',
+      'charter:writer',
+      'charter:editor',
+      'skill:article-discussion',
+      'skill:article-lifecycle',
+      'skill:idea-generation',
+      'skill:substack-article',
+    ]));
+    expect(readFileSync(join(dataDir, 'agents', 'charters', 'nfl', 'lead.md'), 'utf-8')).not.toBe('# Legacy lead prompt\n');
+    expect(readFileSync(join(dataDir, 'agents', 'skills', 'substack-article.md'), 'utf-8')).not.toBe('# Legacy substack skill\n');
+    expect(readFileSync(join(dataDir, 'agents', 'skills', 'data-analysis.md'), 'utf-8')).toBe('# Data Analysis\n');
   });
 
   // ── History.md conversion ──────────────────────────────────────────────────

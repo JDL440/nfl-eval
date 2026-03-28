@@ -51,8 +51,6 @@ describe('Bootstrap init', () => {
     rmSync(dataDir, { recursive: true, force: true });
   });
 
-  // ── initDataDir ──────────────────────────────────────────────
-
   describe('initDataDir', () => {
     it('creates directory structure', () => {
       initDataDir(dataDir, 'nfl');
@@ -92,7 +90,6 @@ describe('Bootstrap init', () => {
       const modelsPath = join(dataDir, 'config', 'models.json');
       writeFileSync(modelsPath, '{"custom":true}');
 
-      // Call again — should leave the custom file in place
       initDataDir(dataDir, 'nfl');
 
       const content = JSON.parse(readFileSync(modelsPath, 'utf-8'));
@@ -112,8 +109,6 @@ describe('Bootstrap init', () => {
       }
     });
   });
-
-  // ── seedKnowledge ────────────────────────────────────────────
 
   describe('seedKnowledge', () => {
     beforeEach(() => {
@@ -136,11 +131,7 @@ describe('Bootstrap init', () => {
       const result = seedKnowledge(dataDir, 'nfl');
 
       expect(result.charters).toBe(0);
-      // Custom file untouched
-      const content = readFileSync(
-        join(dataDir, 'agents', 'charters', 'nfl', 'writer.md'),
-        'utf-8',
-      );
+      const content = readFileSync(join(dataDir, 'agents', 'charters', 'nfl', 'writer.md'), 'utf-8');
       expect(content).toBe('# Custom');
     });
 
@@ -160,9 +151,7 @@ describe('Bootstrap init', () => {
 
       const result = seedKnowledge(dataDir, 'nfl');
 
-      // Custom file preserved
       expect(readFileSync(skillPath, 'utf-8')).toBe('# Custom Skill');
-      // One fewer skill copied
       expect(result.skills).toBe(seedCount('skills') - 1);
     });
 
@@ -173,7 +162,6 @@ describe('Bootstrap init', () => {
       expect(existsSync(memoryPath)).toBe(true);
       expect(result.memory).toBe(bootstrapMemoryCount());
 
-      // Verify entries actually exist in the database
       const mem = new AgentMemory(memoryPath);
       try {
         const entries = mem.recallGlobal({ limit: 100 });
@@ -185,7 +173,6 @@ describe('Bootstrap init', () => {
     });
 
     it('skips memory if db exists', () => {
-      // Create an empty file at the memory.db path
       writeFileSync(join(dataDir, 'agents', 'memory.db'), '');
 
       const result = seedKnowledge(dataDir, 'nfl');
@@ -198,12 +185,9 @@ describe('Bootstrap init', () => {
       expect(result).toHaveProperty('charters');
       expect(result).toHaveProperty('skills');
       expect(result).toHaveProperty('memory');
-
       expect(result.charters).toBeGreaterThan(0);
       expect(result.skills).toBeGreaterThan(0);
       expect(result.memory).toBeGreaterThan(0);
-
-      // Exact totals match seed content
       expect(result.charters).toBe(seedCount(join('charters', 'nfl')));
       expect(result.skills).toBe(seedCount('skills'));
       expect(result.memory).toBe(bootstrapMemoryCount());
@@ -213,11 +197,10 @@ describe('Bootstrap init', () => {
   describe('refreshCorePromptDefaults', () => {
     beforeEach(() => {
       initDataDir(dataDir, 'nfl');
+      seedKnowledge(dataDir, 'nfl');
     });
 
     it('overwrites only the allowlisted core runtime prompts', () => {
-      seedKnowledge(dataDir, 'nfl');
-
       const leadPath = join(dataDir, 'agents', 'charters', 'nfl', 'lead.md');
       const writerPath = join(dataDir, 'agents', 'charters', 'nfl', 'writer.md');
       const nonCoreCharterPath = join(dataDir, 'agents', 'charters', 'nfl', 'cap.md');
@@ -232,13 +215,12 @@ describe('Bootstrap init', () => {
 
       const result = refreshCorePromptDefaults(dataDir, 'nfl');
 
-      expect(result.charters).toBe(4);
+      expect(result.charters).toBe(3);
       expect(result.skills).toBe(4);
       expect(result.updated).toEqual([
         'charter:lead',
         'charter:writer',
         'charter:editor',
-        'charter:scribe',
         'skill:article-discussion',
         'skill:article-lifecycle',
         'skill:idea-generation',
@@ -252,15 +234,13 @@ describe('Bootstrap init', () => {
     });
 
     it('adds article-lifecycle to existing installs from defaults', () => {
-      seedKnowledge(dataDir, 'nfl');
-      rmSync(join(dataDir, 'agents', 'skills', 'article-lifecycle.md'), { force: true });
+      const lifecyclePath = join(dataDir, 'agents', 'skills', 'article-lifecycle.md');
+      rmSync(lifecyclePath, { force: true });
 
       const result = refreshCorePromptDefaults(dataDir, 'nfl');
 
       expect(result.updated).toContain('skill:article-lifecycle');
-      expect(existsSync(join(dataDir, 'agents', 'skills', 'article-lifecycle.md'))).toBe(true);
+      expect(existsSync(lifecyclePath)).toBe(true);
     });
   });
 });
-
-
