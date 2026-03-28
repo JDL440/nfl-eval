@@ -1,3 +1,45 @@
+# MERGED INBOX ENTRIES (2026-03-28T22:10:19Z)
+
+## devops lmstudio v4 revision (APPROVED):
+
+# Decision — DevOps LM Studio v4 Revision
+
+**Date:** 2026-03-28  
+**Owner:** DevOps  
+**Status:** APPROVED
+
+## Decision
+
+Keep the landed LM Studio structured-output fixes, but do **not** forward gateway policy aliases into LM Studio as backend model ids.
+
+## Why
+
+- In `worktrees\v4`, `src\llm\gateway.ts` still resolves policy aliases like `gpt-5-mini` for routing.
+- When LM Studio is the default/first provider, blindly forwarding that alias overrides the actually loaded local model and breaks the live path.
+- The safe contract is: LM Studio may accept the route, but it should only forward `request.model` when that value matches the discovered/default local LM Studio model set.
+
+## Applied Revision
+
+1. Preserve the good patch behavior:
+   - Qwen-style wrapped JSON parsing in `src\llm\gateway.ts`
+   - no `response_format.type = "json_object"` in `src\llm\providers\lmstudio.ts`
+2. Tighten LM Studio model selection:
+   - keep the default loaded local model for policy-routed aliases
+   - honor `request.model` only when it is a real LM Studio model id already known to the provider
+3. Keep the fallback visible in provider metadata so traces can show requested vs effective model.
+
+## Validation
+
+- `npm run v2:build`
+- `npx vitest run tests\llm\gateway.test.ts tests\llm\provider-lmstudio.test.ts tests\agents\runner.test.ts`
+- Live smoke against local LM Studio with `qwen/qwen3.5-35b-a3b` confirmed the gateway still resolved `gpt-5-mini` as the route hint while LM Studio executed `qwen/qwen3.5-35b-a3b`.
+
+## Durable Rule
+
+When LM Studio is the default provider, gateway policy aliases are route hints only; `src\llm\providers\lmstudio.ts` should forward `request.model` only when it matches the loaded/default LM Studio model set, otherwise keep the effective local default model.
+
+---
+
 # MERGED INBOX ENTRIES (2026-03-28T21:52:59Z)
 
 ## lead lmstudio v4 review (APPROVED):

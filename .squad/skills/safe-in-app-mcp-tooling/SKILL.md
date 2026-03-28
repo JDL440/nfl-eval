@@ -33,6 +33,8 @@ Treat in-app MCP enablement as an **app-owned bounded loop**:
 
 For LM Studio or other OpenAI-compatible local providers, keep the loop app-owned and request structured output with a JSON schema response format. Do not rely on provider-native MCP support or `json_object` shortcuts when the local runtime expects `json_schema`.
 
+If a local provider rejects the structured-response transport shape outright, the safe fallback is still fail-closed at the runtime seam: allow plain text transport, strip wrapper noise (thinking tags, code fences, surrounding prose), extract one balanced JSON candidate, and require full schema validation before any tool executes.
+
 This keeps the policy provider-agnostic even if the MCP server itself exposes more tools.
 
 ## Implementation in V4

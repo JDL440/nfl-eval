@@ -30,6 +30,7 @@ Audit changes where a shared gateway or runner asks for machine-readable output,
    - gateway parse/schema-validation assertions
    - caller/runner loop assertions proving the structured output still drives control flow end to end
 6. Include at least one provider-realistic failure fixture (invalid JSON, schema mismatch, reasoning prefix, wrong structured mode) so the regression is not hidden by happy-path mocks.
+7. If the provider advertises broad `supportsModel()` coverage or can be the default route, trace the non-explicit path too: verify gateway policy aliases are either translated to the provider's loaded/runtime model or intentionally suppressed, rather than assuming the provider-only request-shaping test proves the live path.
 
 ## Review Checklist
 
@@ -39,6 +40,7 @@ Audit changes where a shared gateway or runner asks for machine-readable output,
 - Is the backend-facing schema compatible with the caller’s expected object shape?
 - Are raw request/response envelopes visible in traces or provider metadata?
 - Do tests prove both success and failure at the real seam, not just a mocked final JSON string?
+- If this provider can be the default routed provider, do tests cover the gateway-policy-to-provider path as well as the explicit `provider:` override path?
 
 ## NFL Lab Example
 
