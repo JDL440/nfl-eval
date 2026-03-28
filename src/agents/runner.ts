@@ -798,21 +798,9 @@ export class AgentRunner {
       this.memory.touch(mem.id);
     }
 
-    // 9. Store learning memory — extract a meaningful summary from the output
-    const outputPreview = cleanContent.replace(/^#+\s.*/gm, '').replace(/\s+/g, ' ').trim().slice(0, 200);
-    if (outputPreview.length > 20) {
-      const context = articleContext
-        ? `[${articleContext.slug}] `
-        : '';
-      this.memory.store({
-        agentName,
-        category: 'learning',
-        content: `${context}${outputPreview}`,
-        relevanceScore: 0.6,
-      });
-    }
-
-    // 10. Return result — thinking stored separately so callers can save it as a debug artifact
+    // 9. Return result — thinking stored separately so callers can save it as a debug artifact.
+    // Generic model outputs are too noisy to auto-promote into reusable memory. Useful memories
+    // should be stored explicitly by the calling surface with a deliberate category and format.
     return {
       content: cleanContent,
       thinking,

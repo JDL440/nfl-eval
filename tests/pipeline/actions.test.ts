@@ -677,7 +677,7 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
       expect(requestContent).toContain(buildWriterPreflightChecklist());
-      expect(requestContent).toContain('Do not expand a last name into a full name');
+      expect(requestContent).toContain('do not stop the draft over harmless name expansions');
       expect(requestContent).toContain('contract figure, date, draft fact, or stat');
       expect(requestContent).not.toContain('Prose vs. tables');
       expect(requestContent).not.toContain('**Next from the panel:** teaser');
@@ -737,7 +737,7 @@ ${longText(450)}`,
       expect(result.error).toContain('TLDR');
     });
 
-    it('retries when the draft expands a name beyond what the supplied artifacts support', async () => {
+    it('does not retry when the draft only expands a name beyond what the supplied artifacts support', async () => {
       const provider = new RecordingProvider([
         PANEL_FACTCHECK_OK,
         draftWithNameMismatch(),
@@ -756,12 +756,11 @@ ${longText(450)}`,
       const result = await STAGE_ACTIONS.writeDraft('test-wd-name-preflight', fixtures.ctx);
 
       expect(result.success).toBe(true);
-      expect(runSpy).toHaveBeenCalledTimes(3);
-      const retryCall = runSpy.mock.calls[2]?.[0];
-      expect(retryCall?.agentName).toBe('writer');
-      expect(retryCall?.task).toContain('failed the writer preflight on hard factual issues');
-      expect(retryCall?.task).toContain('Jackson Smith-Njigba');
-      expect(retryCall?.task).toContain('Smith-Njigba');
+      expect(runSpy).toHaveBeenCalledTimes(2);
+      const preflightArtifact = fixtures.repo.artifacts.get('test-wd-name-preflight', 'writer-preflight.md') ?? '';
+      expect(preflightArtifact).toContain('**Status:** passed');
+      expect(preflightArtifact).toContain('**Repair triggered:** no');
+      expect(preflightArtifact).toContain('[unsupported-name-expansion]');
       runSpy.mockRestore();
     });
 
@@ -884,7 +883,7 @@ ${longText(450)}`,
       expect(userPrompt).toContain('Tighten the math.');
       expect(userPrompt).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
       expect(requestContent).toContain(buildWriterPreflightChecklist());
-      expect(requestContent).toContain('Do not expand a last name into a full name');
+      expect(requestContent).toContain('do not stop the draft over harmless name expansions');
       expect(requestContent).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
       expect(requestContent).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
       expect(requestContent).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');

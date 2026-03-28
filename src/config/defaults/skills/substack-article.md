@@ -186,4 +186,3 @@ Before a piece is considered publish-ready, Editor should verify:
 
 - `article-discussion` feeds this skill upstream
 - `editor.md` enforces this contract downstream
-- If older prompt text tells the model to invoke tools or perform publishing directly, that instruction is stale and should be ignored
