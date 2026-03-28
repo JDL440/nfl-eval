@@ -12,7 +12,7 @@ source: "manual — designed by Joe Robinson & Lead; updated 2026-03-14 to fix s
 
 Generate the single most pressing or interesting offseason question facing an NFL franchise, grounded in the current-season context supplied in the task.
 
-This skill is for article ideation inside the prompt-only runtime. It should sharpen the angle before discussion and drafting begin.
+This skill is for article ideation inside the current runtime. It should sharpen the angle before discussion and drafting begin.
 
 ## When to Use
 
@@ -30,7 +30,7 @@ Model selection is handled by the runtime's model policy. This skill stays model
 
 ### 2. Current Context — Required Before Generating Any Idea
 
-**Do not invent live research.** Use only the current roster, cap, schedule, news, and artifact context that the runtime already supplied.
+Use the supplied roster, cap, schedule, news, and artifact context first. If the runtime exposes approved web research, use it to fill freshness gaps that matter to the angle.
 
 Before proposing any angle, make sure the prompt includes enough context to answer:
 
@@ -39,7 +39,7 @@ Before proposing any angle, make sure the prompt includes enough context to answ
 - major carryover storylines from the 2025 season
 - any recent coaching, cap, or transaction changes already provided upstream
 
-If that context is missing, say the angle is provisional and name the missing inputs rather than pretending to have fetched them.
+If that context is still missing, say the angle is provisional and name the missing inputs rather than pretending to have fetched them.
 
 ### 3. Idea Format
 
@@ -99,5 +99,5 @@ Before locking the idea, sanity-check it against:
 
 ## Notes
 
-- Do not claim to have fetched, searched, or verified anything unless that evidence is already present in the prompt.
+- If you fetched, searched, or verified something through an approved runtime tool, say so plainly and use it as evidence.
 - If the context is thin, the correct move is to narrow the claim and name the missing inputs, not to bluff freshness.

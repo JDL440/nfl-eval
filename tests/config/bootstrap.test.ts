@@ -10,7 +10,7 @@ import {
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import Module from 'node:module';
-import { initDataDir, seedKnowledge, refreshCorePromptDefaults } from '../../src/config/index.ts';
+import { initDataDir, seedKnowledge, refreshCorePromptDefaults, prepareRuntimeDataDir } from '../../src/config/index.ts';
 import { AgentMemory } from '../../src/agents/memory.ts';
 
 // seedKnowledge uses a dynamic CJS `require('../agents/memory.js')` which
@@ -241,6 +241,24 @@ describe('Bootstrap init', () => {
 
       expect(result.updated).toContain('skill:article-lifecycle');
       expect(existsSync(lifecyclePath)).toBe(true);
+    });
+  });
+
+  describe('prepareRuntimeDataDir', () => {
+    it('creates runtime directories and refreshes curated core prompts', () => {
+      const leadPath = join(dataDir, 'agents', 'charters', 'nfl', 'lead.md');
+      const articleDiscussionPath = join(dataDir, 'agents', 'skills', 'article-discussion.md');
+
+      initDataDir(dataDir, 'nfl');
+      writeFileSync(leadPath, '# Legacy lead prompt');
+      writeFileSync(articleDiscussionPath, '# Legacy article discussion');
+
+      const result = prepareRuntimeDataDir(dataDir, 'nfl');
+
+      expect(result.refreshed.charters).toBe(3);
+      expect(result.refreshed.skills).toBe(4);
+      expect(readFileSync(leadPath, 'utf-8')).not.toBe('# Legacy lead prompt');
+      expect(readFileSync(articleDiscussionPath, 'utf-8')).not.toBe('# Legacy article discussion');
     });
   });
 });
