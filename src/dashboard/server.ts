@@ -124,7 +124,8 @@ import {
 import type { MemoryCategory } from '../agents/memory.js';
 import { renderConfigPage } from './views/config.js';
 import type { CharterSummary, SkillSummary } from './views/agents.js';
-import { renderRunsPage, renderRunsTable, type RunsFilters } from './views/runs.js';
+import { renderRunsPage, renderRunsTable, renderRunDetailPage, type RunsFilters } from './views/runs.js';
+import { renderArticleTraceTimelinePage } from './views/traces.js';
 import { renderLoginPage } from './views/login.js';
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
@@ -776,6 +777,7 @@ export function createApp(
         advanceCheck,
         usageEvents: repo.getUsageEvents(id),
         stageRuns: repo.getStageRuns(id),
+        llmTraces: repo.getArticleLlmTraces(id),
         artifactNames: repo.artifacts.list(id).map(a => a.name),
         flashMessage,
         errorMessage,
@@ -783,6 +785,17 @@ export function createApp(
         pinnedAgents: repo.getPinnedAgents(id),
       }),
     );
+  });
+
+  app.get('/articles/:id/traces', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.notFound();
+    return c.html(renderArticleTraceTimelinePage({
+      config,
+      article,
+      traces: repo.getArticleLlmTraces(id, 0),
+    }));
   });
 
   // ── htmx: inline article metadata editing ─────────────────────────────────
@@ -1118,6 +1131,7 @@ export function createApp(
       let ideaAgent = '';
       let ideaProvider = '';
       let ideaTokensUsed: { prompt: number; completion: number } | undefined;
+      let ideaTraceId: string | null = null;
 
       if (actionContext) {
         // Build team context for the task
@@ -1154,6 +1168,11 @@ export function createApp(
           task,
           skills: ['idea-generation'],
           rosterContext: rosterCtx ?? undefined,
+          trace: {
+            repo,
+            stage: 1,
+            surface: 'ideaGeneration',
+          },
         });
 
         ideaContent = result.content;
@@ -1163,6 +1182,7 @@ export function createApp(
         ideaAgent = result.agentName;
         ideaProvider = result.provider;
         ideaTokensUsed = result.tokensUsed;
+        ideaTraceId = result.traceId ?? null;
       } else {
         // Fallback: no LLM available — use raw prompt
         const generated = generateTitleAndSlug(prompt);
@@ -1187,6 +1207,14 @@ export function createApp(
         depth_level: depthLevel,
       });
 
+      const ideaStageRunId = repo.startStageRun({
+        articleId: slug,
+        stage: 1,
+        surface: 'ideaGeneration',
+        actor: 'ideaGeneration',
+        requestedModel: ideaModel || null,
+      });
+
       // Store pinned expert agents
       for (const agentName of pinnedAgents) {
         repo.pinAgent(slug, agentName);
@@ -1203,6 +1231,7 @@ export function createApp(
           articleId: slug,
           stage: 1,
           surface: 'ideaGeneration',
+          stageRunId: ideaStageRunId,
           provider: ideaProvider,
           modelOrTool: ideaModel,
           eventType: 'completed',
@@ -1210,6 +1239,17 @@ export function createApp(
           outputTokens: ideaTokensUsed.completion,
         });
       }
+
+      if (ideaTraceId) {
+        repo.attachLlmTrace(ideaTraceId, {
+          articleId: slug,
+          stage: 1,
+          surface: 'ideaGeneration',
+          stageRunId: ideaStageRunId,
+        });
+      }
+
+      repo.finishStageRun(ideaStageRunId, 'completed');
 
       bus.emit({ type: 'article_created', articleId: slug, data: { title }, timestamp: new Date().toISOString() });
 
@@ -1616,14 +1656,15 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('', 404);
-    return c.html(renderLiveSidebar(
-      article,
-      repo.getUsageEvents(id),
-      repo.getStageRuns(id),
-      repo.getStageTransitions(id),
-      repo.getPinnedAgents(id),
-    ));
-  });
+      return c.html(renderLiveSidebar(
+        article,
+        repo.getUsageEvents(id),
+        repo.getStageRuns(id),
+        repo.getStageTransitions(id),
+        repo.getArticleLlmTraces(id),
+        repo.getPinnedAgents(id),
+      ));
+    });
 
   // ── htmx: advance article ─────────────────────────────────────────────────
 
@@ -2721,6 +2762,17 @@ export function createApp(
     const runs = repo.getAllStageRuns({ ...filters, limit, offset });
     const totalCount = repo.countAllStageRuns(filters);
     return c.html(renderRunsTable(runs, filters, totalCount, offset, limit));
+  });
+
+  app.get('/runs/:id', (c) => {
+    const id = c.req.param('id');
+    const run = repo.getStageRunDetail(id);
+    if (!run) return c.notFound();
+    return c.html(renderRunDetailPage({
+      config,
+      run,
+      traces: repo.getStageRunLlmTraces(id),
+    }));
   });
 
   return app;

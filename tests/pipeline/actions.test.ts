@@ -428,6 +428,25 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('not found');
     });
+
+    it('links stage-run usage and llm traces during executeTransition', async () => {
+      createArticleWithStage(fixtures, 'test-gp-trace', 1 as Stage, {
+        'idea.md': '# Great Idea\nAnalyze the Seahawks draft.',
+      });
+
+      const result = await executeTransition('test-gp-trace', 1 as Stage, fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const stageRun = fixtures.repo.getStageRuns('test-gp-trace')[0];
+      const events = fixtures.repo.getUsageEvents('test-gp-trace');
+      const traces = fixtures.repo.getStageRunLlmTraces(stageRun.id);
+
+      expect(stageRun).toBeDefined();
+      expect(events.some((event) => event.stage_run_id === stageRun.id && event.surface === 'generatePrompt')).toBe(true);
+      expect(traces).toHaveLength(1);
+      expect(traces[0].surface).toBe('generatePrompt');
+      expect(traces[0].article_id).toBe('test-gp-trace');
+    });
   });
 
   // ── composePanel (2→3) ───────────────────────────────────────────────────

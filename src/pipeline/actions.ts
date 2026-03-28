@@ -9,7 +9,7 @@ import type { Stage } from '../types.js';
 import { STAGE_NAMES } from '../types.js';
 import type { Repository } from '../db/repository.js';
 import type { PipelineEngine } from './engine.js';
-import type { AgentRunner, AgentRunResult } from '../agents/runner.js';
+import type { AgentRunner, AgentRunParams, AgentRunResult } from '../agents/runner.js';
 import type { PipelineAuditor } from './audit.js';
 import type { AppConfig } from '../config/index.js';
 import { extractVerdict, inspectDraftStructure, MIN_DRAFT_WORDS } from './engine.js';
@@ -56,6 +56,7 @@ export interface ActionContext {
   runner: AgentRunner;
   auditor: PipelineAuditor;
   config: AppConfig;
+  currentStageRunId?: string | null;
 }
 
 export interface ActionResult {
@@ -503,6 +504,34 @@ export function writeAgentResult(
   }
 }
 
+function buildAgentTraceContext(
+  ctx: ActionContext,
+  articleId: string,
+  stage: number,
+  surface: string,
+): NonNullable<AgentRunParams['trace']> {
+  return {
+    repo: ctx.repo,
+    articleId,
+    stage,
+    surface,
+    stageRunId: ctx.currentStageRunId ?? null,
+  };
+}
+
+function runAgent(
+  ctx: ActionContext,
+  articleId: string,
+  stage: number,
+  surface: string,
+  params: Omit<AgentRunParams, 'trace'>,
+): Promise<AgentRunResult> {
+  return ctx.runner.run({
+    ...params,
+    trace: buildAgentTraceContext(ctx, articleId, stage, surface),
+  });
+}
+
 /** Record token usage from an agent run if usage data is present. */
 export function recordAgentUsage(
   ctx: ActionContext,
@@ -521,12 +550,14 @@ export function recordAgentUsage(
       articleId,
       stage,
       surface,
+      stageRunId: ctx.currentStageRunId ?? null,
       provider: result.provider,
       modelOrTool: result.model,
       eventType: 'completed',
       promptTokens: result.tokensUsed.prompt,
       outputTokens: result.tokensUsed.completion,
       costUsdEstimate: cost > 0 ? cost : null,
+      metadata: result.traceId ? { traceId: result.traceId } : null,
     });
   }
 }
@@ -552,6 +583,7 @@ function recordWriterFactCheckUsage(
     articleId,
     stage,
     surface: 'writeDraft-writer-factcheck',
+    stageRunId: ctx.currentStageRunId ?? null,
     provider: 'pipeline',
     actor: 'writer-factcheck',
     eventType: 'completed',
@@ -783,7 +815,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const ideaWithRoster = gatherContext(ctx.repo, articleId, 'generatePrompt', ctx.config);
 
-    const result = await ctx.runner.run({
+    const result = await runAgent(ctx, articleId, article.current_stage, 'generatePrompt', {
       agentName: 'lead',
       task: 'Generate a discussion prompt from the following idea. Cross-reference player names and team assignments against the roster context provided. If the roster data shows a player on a different team, correct the premise. If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
       skills: ['discussion-prompt'],
@@ -855,7 +887,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       'Use exactly this format. Do not use numbered lists or other formats.',
     ].filter(Boolean).join('\n');
 
-    const result = await ctx.runner.run({
+    const result = await runAgent(ctx, articleId, article.current_stage, 'composePanel', {
       agentName: 'lead',
       task,
       skills: ['panel-composition'],
@@ -902,7 +934,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       // Fallback: single-moderator approach when composition can't be parsed
       console.warn(`[runDiscussion] Could not parse panel-composition.md for '${articleId}', falling back to single-moderator`);
 
-      const result = await ctx.runner.run({
+      const result = await runAgent(ctx, articleId, article.current_stage, 'runDiscussion', {
         agentName: 'panel-moderator',
         task: 'Moderate the panel discussion and produce a summary.',
         skills: ['article-discussion'],
@@ -924,7 +956,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const panelResults = await Promise.all(
       panelists.map(async (panelist) => {
         try {
-          const result = await ctx.runner.run({
+          const result = await runAgent(ctx, articleId, article.current_stage, `panel-${panelist.agentName}`, {
             agentName: panelist.agentName,
             task: `You are participating in a panel discussion.\n\nYour assigned lane: ${panelist.role}\n\nDiscussion context:\n${discussionContext}\n\nProvide your expert analysis from your specific perspective. Be direct, cite specific data points, and don't hedge. If you disagree with conventional wisdom, say so.`,
             rosterContext: rosterCtx ?? undefined,
@@ -950,7 +982,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       // Fall back to single-moderator with the full panel context instead of throwing.
       console.warn(`[runDiscussion] All ${panelists.length} panelists failed for '${articleId}', falling back to single-moderator`);
 
-      const fallbackResult = await ctx.runner.run({
+      const fallbackResult = await runAgent(ctx, articleId, article.current_stage, 'runDiscussion-fallback', {
         agentName: 'panel-moderator',
         task: 'Moderate the panel discussion and produce a summary. Play each analyst role yourself and provide a comprehensive multi-perspective analysis.',
         skills: ['article-discussion'],
@@ -982,7 +1014,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
       .join('\n\n---\n\n');
 
     // Synthesize via moderator
-    const synthesisResult = await ctx.runner.run({
+    const synthesisResult = await runAgent(ctx, articleId, article.current_stage, 'runDiscussion-synthesis', {
       agentName: 'panel-moderator',
       task: `Synthesize these panel contributions into a coherent discussion summary. Preserve disagreements and tension — don't smooth over conflicts.\n\n${individualContributions}`,
       skills: ['article-discussion'],
@@ -1057,7 +1089,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       if (factCheckCtxArtifact) factcheckParts.push(factCheckCtxArtifact);
       const factcheckContent = factcheckParts.join('\n\n---\n\n');
 
-      const factCheckResult = await ctx.runner.run({
+      const factCheckResult = await runAgent(ctx, articleId, article.current_stage, 'writeDraft-factcheck', {
         agentName: 'lead',
         task: 'Run a lightweight preflight fact-check on the panel discussion output. Focus on high-risk claims: contract figures, statistics, injury timelines, draft facts, and direct quotes. Flag contradictions between panelists. Cross-reference player-team assignments against the roster data provided. Use the nflverse verification data (if included below) to compare claimed statistics against actual data — flag any discrepancies. If a player is mentioned but not found in the roster, flag as ⚠️ CAUTION (the data updates daily — very recent transactions may not be reflected yet). Only flag as 🔴 ERROR if a player is clearly on a different team in the roster data or if statistics are provably wrong per nflverse data.',
         skills: ['fact-checking'],
@@ -1147,7 +1179,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
 
     const task = buildWriterTask(isRevision);
 
-    const result = await ctx.runner.run({
+    const result = await runAgent(ctx, articleId, article.current_stage, 'writeDraft', {
       agentName: 'writer',
       task,
       skills: ['substack-article', WRITER_FACTCHECK_SKILL_NAME],
@@ -1178,7 +1210,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
           ? validation.structure.reason
           : validation.preflight.blockingIssues[0]?.message ?? 'writer preflight issue';
       console.warn(`[writeDraft] Draft validation failed for '${articleId}' (${repairReason}), retrying with targeted repair instruction`);
-      const retryResult = await ctx.runner.run({
+      const retryResult = await runAgent(ctx, articleId, article.current_stage, 'writeDraft-retry', {
         agentName: 'writer',
         task: buildDraftRepairInstruction(validation),
         skills: ['substack-article', WRITER_FACTCHECK_SKILL_NAME],
@@ -1267,7 +1299,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     const editorPreviousReviews = buildEditorPreviousReviews(editorTurns);
     const fullConversationCtx = [conversationCtx, editorPreviousReviews].filter(Boolean).join('\n\n---\n\n') || undefined;
 
-    const result = await ctx.runner.run({
+    const result = await runAgent(ctx, articleId, article.current_stage, 'runEditor', {
       agentName: 'editor',
       task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If `writer-factcheck.md` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
       skills: ['editor-review'],
@@ -1294,7 +1326,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     // This prevents the pipeline from getting stuck at the 6→7 guard.
     if (!verdict) {
       console.warn(`[runEditor] No verdict found for '${articleId}', retrying with strict format`);
-      const retryResult = await ctx.runner.run({
+      const retryResult = await runAgent(ctx, articleId, article.current_stage, 'runEditor-retry', {
         agentName: 'editor',
         task: `Your previous review did not contain a parseable verdict. Based on the draft quality, respond with ONLY a verdict section. Do not re-review. Just provide:\n\n## Verdict\nAPPROVED\n\nor\n\n## Verdict\nREVISE\n\nChoose one based on the draft quality. If in doubt, choose APPROVED.`,
         skills: ['editor-review'],
@@ -1357,7 +1389,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
     const revisions = getRevisionHistory(ctx.repo, articleId);
     const conversationCtx = buildRevisionSummaryContext(revisions) || undefined;
 
-    const result = await ctx.runner.run({
+    const result = await runAgent(ctx, articleId, article.current_stage, 'runPublisherPass', {
       agentName: 'publisher',
       task: 'Run the publisher pass to prepare the article for publication.',
       skills: ['publisher'],
@@ -1532,7 +1564,10 @@ export async function executeTransition(
   }
 
   // 2. Run the action
-  const actionResult = await action(articleId, ctx);
+  const actionResult = await action(articleId, {
+    ...ctx,
+    currentStageRunId: stageRunId ?? null,
+  });
 
   // 2b. Finish stage run
   if (stageRunId) {

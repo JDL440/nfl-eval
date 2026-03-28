@@ -9,6 +9,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { LLMGateway, type ChatMessage } from '../llm/gateway.js';
 import { AgentMemory, type MemoryEntry } from './memory.js';
+import type { Repository } from '../db/repository.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,14 @@ export interface AgentRunParams {
   rosterContext?: string;
   /** Optional conversation history — injected as formatted context in the user message. */
   conversationContext?: string;
+  trace?: {
+    repo: Repository;
+    articleId?: string;
+    stage?: number;
+    surface?: string;
+    stageRunId?: string | null;
+    runId?: string | null;
+  };
 }
 
 // Map agent names to model-policy stage keys so the correct model tier is used
@@ -92,6 +101,15 @@ export interface AgentRunResult {
   agentName: string;
   memoriesUsed: number;
   tokensUsed?: { prompt: number; completion: number };
+  traceId?: string;
+}
+
+interface PromptTracePart {
+  channel: 'system' | 'user';
+  kind: string;
+  label: string;
+  content: string;
+  metadata?: Record<string, unknown>;
 }
 
 // ── Parsing helpers ──────────────────────────────────────────────────────────
@@ -286,19 +304,43 @@ export class AgentRunner {
     memories: MemoryEntry[],
     rosterContext?: string,
   ): string {
+    return this.buildSystemPromptParts(charter, skills, memories, rosterContext)
+      .map((part) => part.content)
+      .join('\n\n');
+  }
+
+  private buildSystemPromptParts(
+    charter: AgentCharter,
+    skills: AgentSkill[],
+    memories: MemoryEntry[],
+    rosterContext?: string,
+  ): PromptTracePart[] {
     const parts: string[] = [];
+    const traceParts: PromptTracePart[] = [];
 
     // Identity
     if (charter.identity) {
       parts.push(charter.identity);
+      traceParts.push({
+        channel: 'system',
+        kind: 'charter_identity',
+        label: 'Charter Identity',
+        content: charter.identity,
+      });
     }
 
     // Responsibilities
     if (charter.responsibilities.length > 0) {
-      parts.push(
-        '## Responsibilities\n' +
-          charter.responsibilities.map((r) => `- ${r}`).join('\n'),
-      );
+      const content = '## Responsibilities\n' +
+        charter.responsibilities.map((r) => `- ${r}`).join('\n');
+      parts.push(content);
+      traceParts.push({
+        channel: 'system',
+        kind: 'charter_responsibilities',
+        label: 'Responsibilities',
+        content,
+        metadata: { count: charter.responsibilities.length },
+      });
     }
 
     // Skills
@@ -306,29 +348,116 @@ export class AgentRunner {
       const skillBlocks = skills.map(
         (s) => `### Skill: ${s.name}\n${s.content}`,
       );
-      parts.push('## Skills\n' + skillBlocks.join('\n\n'));
+      const content = '## Skills\n' + skillBlocks.join('\n\n');
+      parts.push(content);
+      traceParts.push({
+        channel: 'system',
+        kind: 'skills',
+        label: 'Skills',
+        content,
+        metadata: { names: skills.map((skill) => skill.name) },
+      });
     }
 
     // Memories
     if (memories.length > 0) {
       const memLines = memories.map((m) => `- [${m.category}] ${m.content}`);
-      parts.push('## Relevant Context\n' + memLines.join('\n'));
+      const content = '## Relevant Context\n' + memLines.join('\n');
+      parts.push(content);
+      traceParts.push({
+        channel: 'system',
+        kind: 'memories',
+        label: 'Relevant Context',
+        content,
+        metadata: {
+          ids: memories.map((memory) => memory.id),
+          categories: memories.map((memory) => memory.category),
+        },
+      });
     }
 
     // Roster context (live data)
     if (rosterContext) {
-      parts.push('## Current Team Roster\n' + rosterContext);
+      const content = '## Current Team Roster\n' + rosterContext;
+      parts.push(content);
+      traceParts.push({
+        channel: 'system',
+        kind: 'roster_context',
+        label: 'Roster Context',
+        content,
+      });
     }
 
     // Boundaries
     if (charter.boundaries.length > 0) {
-      parts.push(
-        '## Boundaries\n' +
-          charter.boundaries.map((b) => `- ${b}`).join('\n'),
-      );
+      const content = '## Boundaries\n' +
+        charter.boundaries.map((b) => `- ${b}`).join('\n');
+      parts.push(content);
+      traceParts.push({
+        channel: 'system',
+        kind: 'charter_boundaries',
+        label: 'Boundaries',
+        content,
+        metadata: { count: charter.boundaries.length },
+      });
     }
 
-    return parts.join('\n\n');
+    void parts;
+    return traceParts;
+  }
+
+  private buildUserPrompt(
+    task: string,
+    articleContext?: AgentRunParams['articleContext'],
+    conversationContext?: string,
+  ): { userMessage: string; traceParts: PromptTracePart[] } {
+    const traceParts: PromptTracePart[] = [];
+    let baseUserMessage = task;
+
+    if (articleContext) {
+      const contextParts = [
+        `Article: ${articleContext.title} (${articleContext.slug})`,
+        `Stage: ${articleContext.stage}`,
+      ];
+      if (articleContext.content) {
+        contextParts.push(`\n---\n${articleContext.content}\n---`);
+      }
+      const articleBlock = contextParts.join('\n');
+      traceParts.push({
+        channel: 'user',
+        kind: 'article_context',
+        label: 'Article Context',
+        content: articleBlock,
+        metadata: {
+          slug: articleContext.slug,
+          title: articleContext.title,
+          stage: articleContext.stage,
+        },
+      });
+      baseUserMessage = articleBlock + '\n\n' + task;
+    }
+
+    traceParts.push({
+      channel: 'user',
+      kind: 'task',
+      label: 'Task',
+      content: task,
+    });
+
+    if (conversationContext) {
+      traceParts.unshift({
+        channel: 'user',
+        kind: 'conversation_context',
+        label: 'Conversation Context',
+        content: conversationContext,
+      });
+      return {
+        userMessage: conversationContext + '\n\n---\n\n' + baseUserMessage,
+        traceParts,
+      };
+    }
+
+    return { userMessage: baseUserMessage, traceParts };
   }
 
   /** Main execution method — orchestrates charter, skills, memory, and LLM call. */
@@ -362,25 +491,12 @@ export class AgentRunner {
     const memories = this.memory.recall(agentName, { limit: 10 });
 
     // 4. Compose system prompt
-    const systemPrompt = this.composeSystemPrompt(charter, skills, memories, params.rosterContext);
+    const systemParts = this.buildSystemPromptParts(charter, skills, memories, params.rosterContext);
+    const systemPrompt = systemParts.map((part) => part.content).join('\n\n');
 
     // 5. Build user message
-    let userMessage = task;
-    if (articleContext) {
-      const contextParts = [
-        `Article: ${articleContext.title} (${articleContext.slug})`,
-        `Stage: ${articleContext.stage}`,
-      ];
-      if (articleContext.content) {
-        contextParts.push(`\n---\n${articleContext.content}\n---`);
-      }
-      userMessage = contextParts.join('\n') + '\n\n' + task;
-    }
-
-    // 5b. Inject conversation context (revision history + prior agent interactions)
-    if (params.conversationContext) {
-      userMessage = params.conversationContext + '\n\n---\n\n' + userMessage;
-    }
+    const userPrompt = this.buildUserPrompt(task, articleContext, params.conversationContext);
+    const userMessage = userPrompt.userMessage;
 
     // 6. Build messages
     const messages: ChatMessage[] = [
@@ -391,18 +507,81 @@ export class AgentRunner {
     // 7. Call LLM Gateway
     const model = charter.model && charter.model !== 'auto' ? charter.model : undefined;
     const stageKey = AGENT_STAGE_KEY[agentName];
-    const response = await this._gateway.chat({
+    const taskFamily = model || stageKey ? undefined : 'deep_reasoning';
+    const traceParts = [...systemParts, ...userPrompt.traceParts];
+    const traceId = params.trace?.repo.startLlmTrace({
+      runId: params.trace?.runId ?? null,
+      stageRunId: params.trace?.stageRunId ?? null,
+      articleId: params.trace?.articleId ?? articleContext?.slug ?? null,
+      stage: params.trace?.stage ?? articleContext?.stage ?? null,
+      surface: params.trace?.surface ?? null,
+      agentName,
+      requestedModel: model ?? null,
+      stageKey: model ? null : stageKey ?? null,
+      taskFamily: taskFamily ?? null,
+      temperature: temperature ?? null,
+      maxTokens: maxTokens ?? null,
+      responseFormat: responseFormat ?? 'text',
+      systemPrompt,
+      userMessage,
       messages,
-      model,
-      temperature,
-      maxTokens,
-      responseFormat,
-      stageKey: model ? undefined : stageKey,
-      taskFamily: model || stageKey ? undefined : 'deep_reasoning',
+      contextParts: traceParts,
+      skills: skills.map((skill) => ({
+        name: skill.name,
+        domain: skill.domain,
+        description: skill.description,
+        confidence: skill.confidence,
+        tools: skill.tools,
+      })),
+      memories: memories.map((memory) => ({
+        id: memory.id,
+        category: memory.category,
+        content: memory.content,
+        relevanceScore: memory.relevanceScore,
+      })),
+      articleContext: articleContext ?? null,
+      conversationContext: params.conversationContext ?? null,
+      rosterContext: params.rosterContext ?? null,
     });
+    const requestStartedAt = Date.now();
+    let response;
+    try {
+      response = await this._gateway.chat({
+        messages,
+        model,
+        temperature,
+        maxTokens,
+        responseFormat,
+        stageKey: model ? undefined : stageKey,
+        taskFamily,
+      });
+    } catch (error) {
+      if (traceId) {
+        const message = error instanceof Error ? error.message : String(error);
+        params.trace?.repo.failLlmTrace(traceId, {
+          model: model ?? null,
+          errorMessage: message,
+          latencyMs: Date.now() - requestStartedAt,
+        });
+      }
+      throw error;
+    }
 
     // 8. Separate thinking tokens from output (Qwen, DeepSeek, etc.)
     const { thinking, output: cleanContent } = separateThinking(response.content);
+    if (traceId) {
+      params.trace?.repo.completeLlmTrace(traceId, {
+        provider: response.provider,
+        model: response.model,
+        outputText: cleanContent,
+        thinkingText: thinking,
+        finishReason: response.finishReason ?? null,
+        promptTokens: response.usage?.promptTokens ?? null,
+        completionTokens: response.usage?.completionTokens ?? null,
+        totalTokens: response.usage?.totalTokens ?? null,
+        latencyMs: Date.now() - requestStartedAt,
+      });
+    }
 
     // 8b. Boost relevance of memories that were used in this successful run
     for (const mem of memories) {
@@ -434,6 +613,7 @@ export class AgentRunner {
       tokensUsed: response.usage
         ? { prompt: response.usage.promptTokens, completion: response.usage.completionTokens }
         : undefined,
+      traceId: traceId ?? undefined,
     };
   }
 }
