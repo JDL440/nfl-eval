@@ -1,3 +1,116 @@
+# MERGED INBOX ENTRIES (2026-03-28T18:07:22Z)
+
+## code cli trace analysis:
+
+# Code — Copilot CLI Tool-Access Diagnosis
+
+## Summary
+
+- Stage 1 / `ideaGeneration` showing no Copilot CLI tool access is expected under today's default startup contract.
+- The main user-facing issue is observability/labeling confusion, not a confirmed Stage 1 runtime bug.
+- There is one nearby real bug in trace metadata: effective execution cwd can be misreported.
+
+## Current Runtime Contract
+
+1. `src\dashboard\server.ts` registers `CopilotCLIProvider` with `toolAccessMode: 'none'` unless `COPILOT_CLI_MODE=article-tools` or legacy tool env flags are set.
+2. `src\dashboard\server.ts` sends Stage 1 ideas through `runner.run()` with `stage: 1` and `surface: 'ideaGeneration'`.
+3. `src\agents\runner.ts` forwards that stage/surface/article trace metadata into `providerContext`, but does not decide tool access.
+4. `src\llm\providers\copilot-cli.ts` uses stage only for session-reuse eligibility (`ARTICLE_STAGE_REUSE = [4,5,6,7]`); tool enablement still comes from provider instance mode plus runtime flags.
+
+## Expected Fields
+
+For a normal Stage 1 no-tools Copilot CLI trace, these are expected:
+
+- `toolAccessMode: "none"`
+- `toolAccessConfigured: false`
+- `toolsEnabled: false`
+- `allowedTools: []`
+- `webSearchEnabled: false`
+- `repoMcpEnabled: false`
+- `mcpServerNames: []`
+
+The prompt may also begin with the app-authored no-tools constraint telling the model to answer directly and avoid tools.
+
+## Suspicious Signals
+
+- Prompt starts with no-tools constraint **but** request envelope says `toolAccessMode: "article-tools"`.
+- `toolsEnabled: true` with an empty `allowedTools` array.
+- A no-tools run reports repo-root cwd instead of the sandbox cwd.
+- Reviewers infer tool policy from Stage 1 vs Stage 5 alone; today only session reuse is stage-gated.
+
+## Minimal Fixes (do not implement here)
+
+1. **UX fix:** rename `Provider Prompt Delta` in `src\dashboard\views\traces.ts` to `Provider Prompt` or `Provider-Composed Prompt`.
+2. **Real bug fix:** in `src\llm\providers\copilot-cli.ts`, report `plan.cwd` (effective cwd) instead of `this.workingDirectory ?? plan.cwd` in provider metadata.
+3. **Only if product wants stage-aware tools:** move tool-mode selection from provider construction time to request time, derived from `providerContext.stage/surface`.
+
+## Test Follow-ups
+
+- Add a Stage 1 `copilot-cli` test with provider configured for `article-tools` to lock current inheritance behavior.
+- Add a trace test proving no-tools mode stores the injected constraint in `incrementalPrompt`.
+- Add a metadata test proving no-tools mode reports sandbox cwd.
+- Update dashboard trace rendering tests if the prompt label is renamed.
+
+---
+
+## code trace label clarification:
+
+# Code — Trace Label Clarification
+
+## Context
+
+`src\dashboard\views\traces.ts` renders `trace.incremental_prompt` for dashboard trace timelines. For Copilot CLI traces, that field stores the full provider-composed prompt wrapper, not a semantic diff against an earlier prompt.
+
+## Decision
+
+Render that section as **Provider-Wrapped Prompt** instead of **Provider Prompt Delta**.
+
+## Why
+
+- It stays accurate for Copilot CLI traces that prepend wrapper text such as tool-policy or no-tools constraints.
+- It avoids implying the stored value is a delta or patch.
+- It still leaves room for other providers to store their full provider-side composed prompt in the same field.
+
+---
+
+## devops env sample:
+
+# DevOps Decision — Copilot CLI env sample coverage
+
+## Decision
+
+Document the Copilot CLI runtime surface in `.env.sample`, led by `COPILOT_CLI_MODE`, and include the still-supported compatibility flags that can widen tool access or session reuse.
+
+## Why
+
+`src\dashboard\server.ts` currently treats `COPILOT_CLI_MODE=article-tools` as the preferred switch, but it also honors older flags like `COPILOT_CLI_ENABLE_TOOLS`, `COPILOT_ENABLE_TOOLS`, and `COPILOT_ENABLE_SESSION_REUSE`. If the sample omits those knobs, operators can end up with behavior that looks undocumented when local env files or old runbooks still set legacy flags.
+
+## Scope
+
+- `.env.sample` should show the current preferred knobs and defaults
+- compatibility-only flags should stay documented, but clearly labeled as legacy
+- no runtime behavior changes are implied by this sample-file update
+
+---
+
+## devops history gitignore:
+
+# DevOps Decision — Local Agent History Files Stay Untracked
+
+## Context
+
+Agent-specific `.squad/**/history.md` files are useful as local working memory, but tracking them in Git creates noisy diffs and accidental churn across branches.
+
+## Decision
+
+Treat `.squad/**/history.md` as local-only artifacts. Keep them on disk for each operator, add the exact ignore rule in `.gitignore`, and remove any already-tracked copies from the Git index with cached deletes so the files remain locally available.
+
+## Guardrails
+
+- Only untrack files whose exact basename is `history.md` under `.squad/`.
+- Do not remove or untrack other `.squad` artifacts as part of this cleanup.
+- If unrelated local-only `.squad` changes exist, leave them untouched and call them out in the handoff.
+
 ---
 
 ---
@@ -3870,17 +3983,22 @@ Treat Issue #115 as **already satisfied on current mainline** and ready for issu
 
 ## Why
 
-- The runtime seam already exists as the manual etrospective-digest / etro-digest CLI flow.
+- The runtime seam already exists as the manual 
+etrospective-digest / 
+etro-digest CLI flow.
 - Structured retrospective persistence and read-side querying are already implemented over rticle_retrospectives and rticle_retrospective_findings.
 - The bounded actionable output exists in both markdown and JSON forms.
 - README.md now documents the operator workflow, so the previously identified docs-only gap appears closed.
 
 ## Evidence
 
-- src/cli.ts dispatches etrospective-digest / etro-digest and renders the digest.
+- src/cli.ts dispatches 
+etrospective-digest / 
+etro-digest and renders the digest.
 - src/db/repository.ts implements listRetrospectiveDigestFindings(limit) as the bounded read seam.
 - src/db/schema.sql defines the structured retrospective tables.
-- src/pipeline/actions.ts persists post-revision retrospectives through ecordPostRevisionRetrospectiveIfEligible().
+- src/pipeline/actions.ts persists post-revision retrospectives through 
+ecordPostRevisionRetrospectiveIfEligible().
 - 	ests/cli.test.ts, 	ests/db/repository.test.ts, and 	ests/pipeline/actions.test.ts cover CLI output, repository persistence/query behavior, and pipeline-side retrospective creation.
 - README.md includes a dedicated "Retrospective digest workflow" section with commands, read-only boundary, and operator loop.
 
@@ -4333,8 +4451,10 @@ Editor should consume writer-factcheck.md as **advisory upstream context**, not 
 
 ### Implementation
 
-- Added writer-factcheck.md to the default unEditor upstream context include list in src/pipeline/context-config.ts
-- Updated unEditor() task wording in src/pipeline/actions.ts so Editor is told how to use the artifact
+- Added writer-factcheck.md to the default 
+unEditor upstream context include list in src/pipeline/context-config.ts
+- Updated 
+unEditor() task wording in src/pipeline/actions.ts so Editor is told how to use the artifact
 - Updated src/config/defaults/charters/nfl/editor.md to describe the ledger as targeted, reusable evidence rather than final approval
 - Added focused regression coverage in 	ests/pipeline/actions.test.ts
 
@@ -4719,9 +4839,13 @@ Inspection of the New Idea page agent selector confirms clean architecture with 
 ### Files Involved
 
 - **Primary view:** src/dashboard/views/new-idea.ts
-  - Exports enderNewIdeaPage() (form rendering)
-  - Exports enderIdeaSuccess() (confirmation partial)
-  - Client-side JS: 	oggleAgent(), enderAgentChips(), emoveAgent()
+  - Exports 
+enderNewIdeaPage() (form rendering)
+  - Exports 
+enderIdeaSuccess() (confirmation partial)
+  - Client-side JS: 	oggleAgent(), 
+enderAgentChips(), 
+emoveAgent()
   
 - **Server route:** src/dashboard/server.ts (lines 847–861)
   - GET /ideas/new builds xpertAgents list from runner
@@ -4747,7 +4871,8 @@ Derived from AgentRunner.listAgents() (line 851) after removing:
 - **Selection:** Client-side toggle via onclick="toggleAgent(button, agentName)"
 - **Persistence:** Selected agents stored in hidden input #pinned-agents (comma-separated)
 - **Display:** Real-time chip rendering in #selected-agents container
-- **Removal:** Chip × button calls emoveAgent(name)
+- **Removal:** Chip × button calls 
+emoveAgent(name)
 
 Team selection uses separate grid (lines 166–172) with its own toggle mechanics.
 
@@ -4880,7 +5005,8 @@ Keep the existing team-agent filter for the expert pin selector, but treat the l
 
 ### Decision
 
-Stage Runs panel (\enderStageRunsPanel()\) must render persisted \stage_runs.stage\ directly without transformation. This stage value is the persisted article/dashboard stage, not a "next stage" target, and must maintain semantic alignment with \rticle.current_stage\.
+Stage Runs panel (\
+enderStageRunsPanel()\) must render persisted \stage_runs.stage\ directly without transformation. This stage value is the persisted article/dashboard stage, not a "next stage" target, and must maintain semantic alignment with \rticle.current_stage\.
 
 ### Rationale
 
@@ -4888,7 +5014,8 @@ The dashboard header badge shows \rticle.current_stage\. Stage Runs panel was i
 
 ### Implementation
 
-- **src/dashboard/views/article.ts:** Removed \+ 1\ transformation in \enderStageRunsPanel()\
+- **src/dashboard/views/article.ts:** Removed \+ 1\ transformation in \
+enderStageRunsPanel()\
 - **tests/dashboard/wave2.test.ts:** Updated stage assertions to expect persisted values
 - **tests/db/repository.test.ts:** Added round-trip validation for stage persistence
 
@@ -5881,7 +6008,8 @@ Further loosening should **not** remove the current minimal Stage 5 shell guards
   - article did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right
   - current_stage = 6
   - status = needs_lead_review
-- evision_summaries show three editor-driven REVISE cycles on 2026-03-25 with the same missing-contract-facts theme; blocker metadata is null, so repeated-blocker fingerprint escalation could not fire.
+- 
+evision_summaries show three editor-driven REVISE cycles on 2026-03-25 with the same missing-contract-facts theme; blocker metadata is null, so repeated-blocker fingerprint escalation could not fire.
 - worktrees\V3\src\pipeline\engine.ts keeps Stage 5 deterministic and narrow
 - worktrees\V3\src\pipeline\writer-preflight.ts now hard-blocks only placeholder leakage
 - Current source worktrees\V3\src\config\defaults\charters\nfl\editor.md defines accuracy-first lightweight Editor, but live runtime was still loading stale files dated 2026-03-20
@@ -9070,17 +9198,22 @@ Treat Issue #115 as **already satisfied on current mainline** and ready for issu
 
 ## Why
 
-- The runtime seam already exists as the manual etrospective-digest / etro-digest CLI flow.
+- The runtime seam already exists as the manual 
+etrospective-digest / 
+etro-digest CLI flow.
 - Structured retrospective persistence and read-side querying are already implemented over rticle_retrospectives and rticle_retrospective_findings.
 - The bounded actionable output exists in both markdown and JSON forms.
 - README.md now documents the operator workflow, so the previously identified docs-only gap appears closed.
 
 ## Evidence
 
-- src/cli.ts dispatches etrospective-digest / etro-digest and renders the digest.
+- src/cli.ts dispatches 
+etrospective-digest / 
+etro-digest and renders the digest.
 - src/db/repository.ts implements listRetrospectiveDigestFindings(limit) as the bounded read seam.
 - src/db/schema.sql defines the structured retrospective tables.
-- src/pipeline/actions.ts persists post-revision retrospectives through ecordPostRevisionRetrospectiveIfEligible().
+- src/pipeline/actions.ts persists post-revision retrospectives through 
+ecordPostRevisionRetrospectiveIfEligible().
 - 	ests/cli.test.ts, 	ests/db/repository.test.ts, and 	ests/pipeline/actions.test.ts cover CLI output, repository persistence/query behavior, and pipeline-side retrospective creation.
 - README.md includes a dedicated "Retrospective digest workflow" section with commands, read-only boundary, and operator loop.
 
@@ -9533,8 +9666,10 @@ Editor should consume writer-factcheck.md as **advisory upstream context**, not 
 
 ### Implementation
 
-- Added writer-factcheck.md to the default unEditor upstream context include list in src/pipeline/context-config.ts
-- Updated unEditor() task wording in src/pipeline/actions.ts so Editor is told how to use the artifact
+- Added writer-factcheck.md to the default 
+unEditor upstream context include list in src/pipeline/context-config.ts
+- Updated 
+unEditor() task wording in src/pipeline/actions.ts so Editor is told how to use the artifact
 - Updated src/config/defaults/charters/nfl/editor.md to describe the ledger as targeted, reusable evidence rather than final approval
 - Added focused regression coverage in 	ests/pipeline/actions.test.ts
 
@@ -9919,9 +10054,13 @@ Inspection of the New Idea page agent selector confirms clean architecture with 
 ### Files Involved
 
 - **Primary view:** src/dashboard/views/new-idea.ts
-  - Exports enderNewIdeaPage() (form rendering)
-  - Exports enderIdeaSuccess() (confirmation partial)
-  - Client-side JS: 	oggleAgent(), enderAgentChips(), emoveAgent()
+  - Exports 
+enderNewIdeaPage() (form rendering)
+  - Exports 
+enderIdeaSuccess() (confirmation partial)
+  - Client-side JS: 	oggleAgent(), 
+enderAgentChips(), 
+emoveAgent()
   
 - **Server route:** src/dashboard/server.ts (lines 847–861)
   - GET /ideas/new builds xpertAgents list from runner
@@ -9947,7 +10086,8 @@ Derived from AgentRunner.listAgents() (line 851) after removing:
 - **Selection:** Client-side toggle via onclick="toggleAgent(button, agentName)"
 - **Persistence:** Selected agents stored in hidden input #pinned-agents (comma-separated)
 - **Display:** Real-time chip rendering in #selected-agents container
-- **Removal:** Chip × button calls emoveAgent(name)
+- **Removal:** Chip × button calls 
+emoveAgent(name)
 
 Team selection uses separate grid (lines 166–172) with its own toggle mechanics.
 
@@ -10080,7 +10220,8 @@ Keep the existing team-agent filter for the expert pin selector, but treat the l
 
 ### Decision
 
-Stage Runs panel (\enderStageRunsPanel()\) must render persisted \stage_runs.stage\ directly without transformation. This stage value is the persisted article/dashboard stage, not a "next stage" target, and must maintain semantic alignment with \rticle.current_stage\.
+Stage Runs panel (\
+enderStageRunsPanel()\) must render persisted \stage_runs.stage\ directly without transformation. This stage value is the persisted article/dashboard stage, not a "next stage" target, and must maintain semantic alignment with \rticle.current_stage\.
 
 ### Rationale
 
@@ -10088,7 +10229,8 @@ The dashboard header badge shows \rticle.current_stage\. Stage Runs panel was i
 
 ### Implementation
 
-- **src/dashboard/views/article.ts:** Removed \+ 1\ transformation in \enderStageRunsPanel()\
+- **src/dashboard/views/article.ts:** Removed \+ 1\ transformation in \
+enderStageRunsPanel()\
 - **tests/dashboard/wave2.test.ts:** Updated stage assertions to expect persisted values
 - **tests/db/repository.test.ts:** Added round-trip validation for stage persistence
 
@@ -11081,7 +11223,8 @@ Further loosening should **not** remove the current minimal Stage 5 shell guards
   - article did-the-seahawks-pay-jaxon-smith-njigba-at-exactly-the-right
   - current_stage = 6
   - status = needs_lead_review
-- evision_summaries show three editor-driven REVISE cycles on 2026-03-25 with the same missing-contract-facts theme; blocker metadata is null, so repeated-blocker fingerprint escalation could not fire.
+- 
+evision_summaries show three editor-driven REVISE cycles on 2026-03-25 with the same missing-contract-facts theme; blocker metadata is null, so repeated-blocker fingerprint escalation could not fire.
 - worktrees\V3\src\pipeline\engine.ts keeps Stage 5 deterministic and narrow
 - worktrees\V3\src\pipeline\writer-preflight.ts now hard-blocks only placeholder leakage
 - Current source worktrees\V3\src\config\defaults\charters\nfl\editor.md defines accuracy-first lightweight Editor, but live runtime was still loading stale files dated 2026-03-20
@@ -11458,7 +11601,8 @@ Lock the canonical local MCP discoverability contract at the registry layer with
 ## Why
 
 - The last-mile contract risk is metadata/discoverability drift: catalog grouping, required-arg guidance, examples, and read-only vs mutating hints.
-- Those behaviors live in mcp/tool-registry.mjs, so direct egisterLocalTools() coverage is the smallest stable seam.
+- Those behaviors live in mcp/tool-registry.mjs, so direct 
+egisterLocalTools() coverage is the smallest stable seam.
 - Smoke tests remain valuable for end-to-end boot and wrapper reachability, but they are noisier and less precise for catalog/help regressions.
 
 ## Scope locked in
@@ -13397,5 +13541,6 @@ All three branches now exist on origin:
 
 ## Conclusion
 **Job complete.** All nfl-eval worktrees removed except main checkout. All three branches (main, v1-archive, v2-archive) synchronized with origin.
+
 
 
