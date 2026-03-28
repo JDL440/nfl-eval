@@ -13544,3 +13544,60 @@ All three branches now exist on origin:
 
 
 
+
+---
+
+## Code Decision — Copilot CLI Article Defaults (2026-03-28T18:17:20Z)
+
+### Decision
+When the dashboard wires the copilot-cli provider and no explicit Copilot CLI env overrides are set, use shared runtime defaults:
+- COPILOT_MODEL=claude-sonnet-4.6
+- COPILOT_CLI_MODE=article-tools
+- COPILOT_CLI_SESSION_REUSE=1
+
+COPILOT_CLI_MODE=none remains a valid explicit opt-out, and legacy enable flags still upgrade to rticle-tools for compatibility.
+
+### Status
+✅ Implemented, tested, approved.
+
+---
+
+## Lead Decision — Copilot CLI Article Defaults Review (2026-03-28T18:17:20Z)
+
+### Decision
+Approve Code's fix for Copilot CLI article defaults. Minimal and architecture-consistent.
+
+### Status
+✅ Approved, verified by Code (tests pass, build succeeds).
+
+---
+
+## DevOps Decision — Repo-local Copilot MCP Config (2026-03-28T18:17:20Z)
+
+### Decision
+Treat .copilot\mcp-config.json as primary Copilot CLI MCP config.
+
+### Status
+📋 Pending implementation review.
+
+---
+
+## DevOps Decision — Local Dev MCP Server Orchestration (2026-03-28T18:17:20Z)
+
+### Decision
+Enhance dev.ps1 with optional -McpServers switch to launch MCP servers as background jobs.
+
+### Status
+📋 Pending implementation.
+
+---
+
+## Research Decision — Local Dev Startup Flow Analysis (2026-03-28T18:17:20Z)
+
+### Decision (Summary)
+Recommended Option: **Option B (CLI flag)**, with **Option C as stretch goal**.
+
+Use --with-mcp flag on TypeScript CLI for cross-platform consistency and watch mode support.
+
+### Status
+📋 Pending Code implementation decision.
