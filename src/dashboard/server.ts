@@ -21,7 +21,6 @@ import type { Stage, Article } from '../types.js';
 import { PipelineEngine } from '../pipeline/engine.js';
 import {
   renderHome,
-  renderContinueArticles,
   renderReadyToPublish,
   renderRecentIdeas,
   renderPublished,
@@ -193,47 +192,6 @@ function buildLoginUrl(request: Request): string {
   const url = new URL(request.url);
   const returnTo = buildLoginRedirectPath(`${url.pathname}${url.search}`);
   return `/login?returnTo=${encodeURIComponent(returnTo)}`;
-}
-
-function buildDashboardIdeaTask(params: {
-  prompt: string;
-  teams: string[];
-  depthLevel: number;
-  pinnedAgents: string[];
-}): string {
-  const { prompt, teams, depthLevel, pinnedAgents } = params;
-  const teamContext = teams.length > 0
-    ? teams.map(abbr => {
-        const t = NFL_TEAMS.find(x => x.abbr === abbr);
-        return t ? `${t.abbr} — ${t.city} ${t.name}` : abbr;
-      }).join(', ')
-    : 'Open brief — infer the best team context from the prompt if needed.';
-  const depthLabels: Record<number, string> = {
-    1: '1 — Casual Fan (~800 words, 2 agents)',
-    2: '2 — The Beat (~1500 words, 3 agents)',
-    3: '3 — Deep Dive (~2500 words, 4-5 agents)',
-    4: '4 — Feature (~4000 words)',
-  };
-  const pinnedContext = pinnedAgents.length > 0
-    ? pinnedAgents.join(', ')
-    : 'None';
-
-  return [
-    'This is a dashboard Stage 1 ideation request, not a GitHub issue workflow.',
-    'Use the operator prompt as the source of truth and shape one strong article idea.',
-    'Treat teams, depth, and pinned agents as optional steering metadata rather than a reason to widen scope.',
-    'Do not mention GitHub comments, issue automation, external publishing, or later pipeline stages in the output.',
-    'Fill the template exactly once with concise, dashboard-ready content.',
-    '',
-    `Team context: ${teamContext}`,
-    `Depth level: ${depthLabels[depthLevel] ?? depthLabels[2]}`,
-    `Pinned agents to keep in mind: ${pinnedContext}`,
-    '',
-    'Use this output template:',
-    IDEA_TEMPLATE,
-    '',
-    `Operator prompt: ${prompt}`,
-  ].join('\n');
 }
 
 // ── App factory ──────────────────────────────────────────────────────────────
@@ -765,7 +723,7 @@ export function createApp(
       renderHome({
         config,
         readyArticles: articles.filter(a => a.current_stage === 7),
-        continueArticles: articles.filter(a => a.current_stage >= 1 && a.current_stage < 7),
+        recentIdeas: articles.filter(a => a.current_stage === 1),
         published: articles.filter(a => a.current_stage === 8),
         pipelineSummary: buildPipelineSummary(articles),
         teams,
@@ -833,7 +791,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-    return c.html(renderArticleMetaDisplay(article, activeAdvances.has(id)));
+    return c.html(renderArticleMetaDisplay(article));
   });
 
   app.get('/htmx/articles/:id/edit-meta', (c) => {
@@ -879,7 +837,7 @@ export function createApp(
 
     try {
       const updated = repo.updateArticle(id, updates);
-      return c.html(renderArticleMetaDisplay(updated, activeAdvances.has(id)));
+      return c.html(renderArticleMetaDisplay(updated));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       return c.html(`<p class="empty-state">${escapeHtml(message)}</p>`, 400);
@@ -1162,16 +1120,39 @@ export function createApp(
       let ideaTokensUsed: { prompt: number; completion: number } | undefined;
 
       if (actionContext) {
-        // Use AgentRunner with Lead charter + idea-generation skill.
-        // Inject roster context so the LLM can stay grounded when a team is pinned.
+        // Build team context for the task
+        const teamContext = teams.length > 0
+          ? teams.map(abbr => {
+              const t = NFL_TEAMS.find(x => x.abbr === abbr);
+              return t ? `${t.abbr} — ${t.city} ${t.name}` : abbr;
+            }).join(', ')
+          : 'No specific team';
+
+        const depthLabels: Record<number, string> = {
+          1: '1 — Casual Fan (~800 words, 2 agents)',
+          2: '2 — The Beat (~1500 words, 3 agents)',
+          3: '3 — Deep Dive (~2500 words, 4-5 agents)',
+          4: '4 — Feature (~4000 words)',
+        };
+
+        // Use AgentRunner with Lead charter + idea-generation skill
+        // Inject roster context so the LLM doesn't reference stale player data
         const rosterCtx = teams.length > 0 ? buildTeamRosterContext(teams[0]) : null;
-        const task = buildDashboardIdeaTask({ prompt, teams, depthLevel, pinnedAgents });
+
+        const task = [
+          'Generate a structured article idea from the following prompt.',
+          `\nTeam context: ${teamContext}`,
+          `Depth level: ${depthLabels[depthLevel] ?? depthLabels[2]}`,
+          '\nUse this output template:\n',
+          IDEA_TEMPLATE,
+          '\nFill in every section with specific, actionable content. The Working Title should be clickbait-adjacent but honest, 60-80 characters.',
+          `\nUser prompt: ${prompt}`,
+        ].join('\n');
 
         const result = await actionContext.runner.run({
           agentName: 'lead',
           task,
           skills: ['idea-generation'],
-          maxTokens: 1400,
           rosterContext: rosterCtx ?? undefined,
         });
 
@@ -1398,14 +1379,6 @@ export function createApp(
     );
   });
 
-  app.get('/htmx/continue-articles', (c) => {
-    return c.html(
-      renderContinueArticles(
-        repo.getAllArticles().filter(a => a.current_stage >= 1 && a.current_stage < 7 && a.status !== 'archived'),
-      ),
-    );
-  });
-
   app.get('/htmx/recent-ideas', (c) => {
     return c.html(
       renderRecentIdeas(repo.getAllArticles().filter(a => a.current_stage === 1 && a.status !== 'archived')),
@@ -1629,7 +1602,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('', 404);
-    return c.html(renderLiveHeader(article, repo.getStageTransitions(id), activeAdvances.has(id)));
+    return c.html(renderLiveHeader(article, repo.getStageTransitions(id)));
   });
 
   app.get('/htmx/articles/:id/live-artifacts', (c) => {

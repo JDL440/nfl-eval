@@ -49,3 +49,15 @@
 
 ### 2026-03-26T12-05-00Z: Issue #123 closeout
 - **Closeout:** Issue #123 is implemented and Lead-approved; exact consecutive blocker signatures now escalate to `lead-review.md`, the article stays at Stage 6 with `needs_lead_review`, and non-repeat cases keep the existing path.
+
+### 2026-03-27T06-46-06Z: Warner Preflight Hardening Scribe pass
+- **Decision merged:** Lead's Warner Last-Name Heuristic Boundary Review moved from inbox to `decisions.md`.
+- **Inbox cleanup:** Deleted `lead-warner-heuristic-review.md` after merge.
+- **Scope locked:** Recommendation is to add "Lose" to BANNED_FIRST_TOKENS (action-verb blocklist). Do NOT extend last-name heuristics. Bridges until writer-support.md canonical-names allowlist.
+- **Orchestration logs:** Created for Lead and Code agents (reviewer + implementer).
+- **Session log:** Brief session summary documenting the handoff.
+- **Agent history updates:** Lead and Code histories updated with session learnings.
+- **Routing:** Code owns implementation; affects `src/pipeline/writer-preflight.ts` + tests.
+- **Ready for implementation:** Small, focused change. No new architecture required. Complements existing Sentence-Starter Name Consistency Policy.
+
+

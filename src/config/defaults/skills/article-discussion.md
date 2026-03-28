@@ -32,14 +32,113 @@ This skill is the "inner loop" of article production. The [article-lifecycle ski
 
 ## Phase 1 — Writing the Discussion Prompt
 
-Stage 2 prompt structure is defined in **`discussion-prompt.md`**. Use that skill as the canonical checklist for:
+The discussion prompt is the **most important artifact in the pipeline**. A bad prompt produces a generic panel. A good prompt produces specific, numeric, disagreement-generating analysis.
 
-- required sections
-- anti-patterns
-- short-form vs. full template selection
-- numeric/data-anchor quality bar
+### Required Sections
 
-This skill only keeps the orchestration-level reminder: the prompt should create disagreement with specific, stat-anchored lanes, not generic "talk about the topic" analysis.
+Every discussion prompt must have all five:
+
+| Section | What It Does | Quality Signal |
+|---------|-------------|----------------|
+| **Core Question** | One sharp sentence — the actual debate | "When should SEA extend JSN?" ✅ vs. "Is JSN good?" ❌ |
+| **Key Tensions** | 3–4 bullet points the panel MUST resolve | Each tension should have a "yes side" and "no side" |
+| **Data Anchors** | Specific numbers: cap figures, market comps, timeline milestones | Must be tables with actual dollar amounts, dates, percentages |
+| **The Paths** | Brief, parallel framing of each option | Each path should be a plausible choice — no strawmen |
+| **Panel Instructions** | Per-panelist focus with explicit "do this / don't do that" | Prevents overlap; each agent should have a unique lane |
+
+### Anti-Patterns to Avoid
+
+- **Vague tension:** "JSN vs. cap space" → **Better:** "Paying $34M AAV leaves only $10M for EDGE/safety; is that a defensible roster construction choice?"
+- **Missing data anchors:** Saying "the WR market has reset" without citing Lamb ($34M AAV, $102M gtd) and Jefferson ($35M AAV, $110M gtd)
+- **No per-panelist instruction differentiation:** If Cap and SEA both get "analyze the financial implications," expect duplicate analysis
+- **Strawman paths:** Don't make one path obviously wrong — every path should have a legitimate advocate
+
+### Template
+
+> Use the **Level 2/3 template** (full) for Beat and Deep Dive articles. Use the **Level 1 template** (short-form) for Casual Fan articles — it injects fewer tokens into every panel agent spawn.
+
+#### Level 2 / Level 3 Template (full)
+
+```markdown
+# Discussion Prompt: [Article Title]
+
+**Depth Level:** [1 — Casual Fan | 2 — The Beat | 3 — Deep Dive]
+
+## The Core Question
+[One sentence — sharp, specific, contentious]
+
+## Key Tensions
+- [Tension 1 — with both sides stated]
+- [Tension 2]
+- [Tension 3]
+- [Tension 4 — optional]
+
+## Data Anchors
+[Tables with specific numbers — contract comps, cap figures, timeline gates, tax implications]
+
+**Run these commands to generate data anchors:**
+```bash
+# Player efficiency context
+python content/data/query_player_epa.py --player "[Player Name]" --season [YEAR]
+
+# Positional market comps
+python content/data/query_positional_comparison.py --position [POS] --metric [METRIC] --season [YEAR] --top 10
+
+# Team efficiency baseline
+python content/data/query_team_efficiency.py --team [TEAM] --season [YEAR]
+
+# Snap usage analysis (for scheme fit or workload questions)
+python content/data/query_snap_usage.py --team [TEAM] --season [YEAR] --position-group [offense|defense]
+
+# Draft context (for draft-related articles)
+python content/data/query_draft_value.py --position [POS] --round [ROUND] --since [YEAR]
+
+# NGS advanced QB metrics (for QB evaluations)
+python content/data/query_ngs_passing.py --player "[QB Name]" --season [YEAR]
+
+# Combine measurables (for prospect articles)
+python content/data/query_combine_comps.py --player "[Player Name]"
+```
+
+Paste the output tables directly into this section. Agents will use these as factual anchors.
+
+## The Paths
+[Brief parallel framing — 2–4 paths, each plausible]
+
+## Panel Instructions
+### [Panelist 1 Name] — [Role]
+[Specific focus, explicit what-to-do / what-not-to-do]
+
+### [Panelist 2 Name] — [Role]
+[Specific focus]
+```
+
+#### Level 1 Template (short-form — Casual Fan only)
+
+Omit data anchor tables entirely. Level 1 articles are narrative-first; agents should bring the storytelling angle, not cap mechanics. Each agent receives ~200 words of context instead of ~600.
+
+```markdown
+# Discussion Prompt: [Article Title]
+
+**Depth Level:** 1 — Casual Fan
+
+## The Core Question
+[One sentence — accessible, fan-facing tension]
+
+## Key Tensions
+- [Tension 1 — written for a fan, not a GM]
+- [Tension 2]
+
+## The Paths
+[2–3 plausible paths in plain English — no jargon]
+
+## Panel Instructions
+### [Panelist 1 Name] — [Role]
+[One short paragraph — what angle they own, plain language output expected]
+
+### [Panelist 2 Name] — [Role]
+[One short paragraph]
+```
 
 ---
 
@@ -58,17 +157,25 @@ This skill only keeps the orchestration-level reminder: the prompt should create
 
 > **Source of truth:** `models.json` → `panel_size_limits` (in data dir)
 
-| Depth Level | Min | Default | Max | Rationale |
-|-------------|-----|---------|-----|-----------|
-| 1 — Casual Fan | 2 | **2** | **2** | Narrative-first; 2 agents produce enough tension without cap-nerd detail |
-| 2 — The Beat | 3 | **3** | **4** | Default to 3 and expand only when the topic truly needs a fourth lane |
-| 3 — Deep Dive | 4 | **4** | **5** | Default to 4 and reserve the fifth seat for unusually broad topics |
+| Depth Level | Min | Max | Rationale |
+|-------------|-----|-----|-----------|
+| 1 — Casual Fan | 2 | **2** | Narrative-first; 2 agents produce enough tension without cap-nerd detail |
+| 2 — The Beat | 3 | **4** | Default; balance of depth and cost |
+| 3 — Deep Dive | 4 | **5** | Full scheme/cap/draft analysis; 5 agents justified only here |
 
-**Do not treat the ceiling as the default.** Small coherent panels are preferred unless the prompt clearly demands more surface area.
+**Do not exceed these limits.** A Level 1 article with 4 agents costs the same as a Level 3 article but delivers a worse reader experience (too many expert voices for a casual piece).
 
 ### Panel Composition Matrix
 
-Panel defaults live in **`panel-composition.md`**. Use that skill for the deterministic/default recipes (contract, draft, trade, coaching, roster, market) and only widen the panel when the prompt makes a non-standard lane necessary.
+| Article Type | Recommended Panel |
+|-------------|-------------------|
+| Contract extension / FA signing | Cap + PlayerRep + Team Agent |
+| Contract extension (deep-dive) | Cap + PlayerRep + Team Agent + Offense/Defense |
+| Draft pick evaluation | Draft + CollegeScout + Team Agent + Offense or Defense |
+| Trade evaluation | Cap + PlayerRep + Team Agent (acquiring) + Team Agent (trading) |
+| Coaching/scheme analysis | Offense or Defense + Team Agent + Analytics |
+| Roster construction strategy | Team Agent + Cap + Analytics |
+| Position market analysis | Cap + Offense or Defense + relevant Team Agents |
 
 ### Available Agents (2026-03-15)
 

@@ -1,4 +1,165 @@
-# History — Code
+## 2026-03-28T00:54:15Z — In-App Agent Tool-Wiring Architecture DECISION MERGED
+
+**Status:** DECISION MERGED TO `.squad/decisions.md` — Ready for Code implementation
+
+**Orchestration log:** `.squad/orchestration-log/2026-03-28T00-54-15-devops.md`
+
+**Key Finding:** Agent system and MCP tool system are completely decoupled. Lead has approved a 4-phase implementation plan.
+
+**Architecture Pattern:**
+- Agent system: stateless LLM orchestrator with skills/memories + provider abstraction
+- Tool system: standalone MCP server with catalog + safe read-only NFL data
+- Gap: No bridge between TS agents and JS tool registry
+- Approved Solution: Extract tool catalog to shared TypeScript module; inject into system prompts; allow agents to invoke via tool_use XML
+
+**Lead-Approved 4-Phase Implementation:**
+1. **Phase 1 (Foundation):** Extend ChatRequest with tool capability; extend AgentRunParams; inject tool catalog into system prompt
+2. **Phase 2 (Catalog Extraction):** Export tool registry as TypeScript module; define safe-list of read-only tools
+3. **Phase 3 (Agent Access):** Determine allowlist per agent role; pass tools to gateway; update ChatRequest call
+4. **Phase 4 (Execution):** Tool execution handler + multi-turn tool refinement (deferred)
+
+**Decision Points:**
+1. Tool allowlist is role-based: Writer→data-query; Editor→data only; Publisher→all safe + publishing
+2. Inject full tool catalog into system prompt
+3. Start with Phases 1–3; Phase 4 deferred until agents reliably format tool_use tags
+4. No breaking changes; tool access is opt-in
+
+**Build Blockers (HIGH priority):**
+- `src/llm/providers/copilot-cli.ts` — `verify()` calls `exec()` with 2 args; signature expects 1
+- `tests/agents/runner.test.ts` — imports removed file `src/llm/in-app-tools.js`
+
+**Detailed Plan:** See `.squad/decisions.md` (MERGED INBOX ENTRIES section) — multiple reviews document exact file changes, test plan, risks + mitigations
+
+---
+
+## 2026-03-28T08:41:23Z — MCP Rollout Decision Merged
+
+
+**Orchestration logs:** 
+- .squad/orchestration-log/2026-03-26T08-41-23Z-devops-mcp-audit.md
+- .squad/orchestration-log/2026-03-26T08-41-23Z-research-mcp-docs.md
+- .squad/orchestration-log/2026-03-26T08-41-23Z-devops-mcp-review-2.md
+
+**Status:** ✓ Decision merged to .squad/decisions.md — Ready for Code implementation
+
+**Three-Agent Convergence:** DevOps-MCP-Audit, Research-MCP-Docs, Code-Provider-Rollout all recommended unified local MCP entrypoint.
+
+**Decision Summary:**
+
+- **Canonical operator path:** `mcp/server.mjs`
+- **Source-of-truth seam:** `src/mcp/server.ts` + registration/bootstrap helpers
+- **Compatibility wrappers:** `src/cli.ts mcp` delegates to shared bootstrap (not separate pipeline server); `npm run v2:mcp` aliased to `npm run mcp:server`; `npm run mcp:pipeline` explicit fallback
+- **Multi-provider wiring:** Additive registration at startup, carry article/provider intent as routing hint (`prefer` by default, not `require`), persist requested provider separately from actual execution telemetry
+
+**Code Scope:**
+
+1. Refactor `src/mcp/server.ts` into reusable registration/bootstrap helpers
+2. Make `src/cli.ts mcp` delegation/wrapper (not separate pipeline server)
+3. Document contract seam in `src/mcp/` for both pipeline and extension tools
+4. Wire multi-provider startup registration in `src/dashboard/server.ts`
+5. `articles.llm_provider` / `articles.preferred_llm_provider` for requested intent capture
+6. `stage_runs.requested_provider` for execution telemetry separation
+
+**DevOps + Research Follow-Up:**
+
+- Converge `package.json` scripts semantics
+- Consolidate config file alignment (`.copilot/mcp-config.json`, `.mcp.json`)
+- Expand `.github/extensions/README.md` with complete local tool inventory table
+- Extend `mcp/smoke-test.mjs` coverage (prediction-market, rosters, publishing)
+- Add canonical-local MCP tests for tool registration and schema parity
+- Update `README.md` to describe one local MCP startup path
+
+**Validation:**
+- `npm run v2:build`
+- `npx vitest run tests/mcp/server.test.ts tests/cli.test.ts`
+- `npm run mcp:smoke` (artifact side-effects acceptable)
+
+**Guardrails:**
+- Unset provider must behave exactly like current auto routing
+- Do not describe MCP as "unified" in docs until canonical inventory is fully validated
+- Article override is a preference, not hard requirement, unless caller asks for `require`
+
+---
+
+## 2026-03-27T07:30:00Z — V3 Workflow Simplification Pass Implementation (Phase 1 Shipped)
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-code.md  
+**Session log:** .squad/log/2026-03-27T07-30-00Z-v3-workflow-simplify.md
+
+**Status:** ✓ Completed — Phase 1 shipped and validated in worktrees/V3; Phases 2–6 ready for next iteration
+
+**Phase 1: Warner Preflight Hardening**
+- Added "Lose" to BANNED_FIRST_TOKENS in writer-preflight.ts
+- Release-context verbs: Lose, Cut, Release, Drop (action-verb blocklist extended)
+- Test case: filters release-context action verbs before name checks
+- Validation: preflight test suite passing in worktrees/V3
+
+**Supporting Implementation (worktrees/V3):**
+- Writer support artifact scaffolding (writer-support.ts prep)
+- Preflight minimization guard logic
+- Editor accuracy-only blocker enforcement
+- Revision cap at 2; escalate on 3rd (findConsecutiveRepeatedRevisionBlocker reused)
+- Context reduction (roster, factcheck, preflight deduplication)
+- Mobile width fix: min-width: 0 on grid containers, overflow-x: auto on tables
+
+**Files Modified:**
+- src/pipeline/writer-preflight.ts (BANNED_FIRST_TOKENS + "Lose")
+- src/pipeline/writer-support.ts (artifact scaffolding)
+- src/dashboard/views/article.ts (mobile CSS, revision display)
+- src/dashboard/views/runs.ts (revision simplification)
+- src/dashboard/public/styles.css (grid overflow handling)
+- tests/pipeline/writer-preflight.test.ts (release-context verb test)
+- tests/dashboard/wave2.test.ts (mobile viewport validation)
+- tests/dashboard/publish.test.ts (revision escalation validation)
+
+**Rollback Triggers Guarded:**
+- Structure blockers will fail fast if Editor logic regresses
+- Stage regression (6→4) wired and tested
+- Repeated blocker escalation metadata preserved
+
+**Validation Results:**
+- npm run v2:build — passed
+- Vitest dashboard + pipeline tests — passed
+- worktrees/V3 focused regression suite — passed
+- Mobile viewport tests (320px, 768px, 1024px) — passed
+
+**Decisions Implemented:**
+- V3 Workflow Simplification — Implementation-Pass Checklist (Lead-approved phases)
+- Warner Last-Name Heuristic Boundary Review (added "Lose" to BANNED_FIRST_TOKENS)
+- Article Mobile Width Fix (min-width: 0 on grids, overflow-x: auto for tables)
+
+**Next:** Implement Phases 2–3 (writer-support artifact, preflight minimization), then Phases 4–6 (revision cap, context reduction, UX alignment).
+
+---
+
+## 2026-03-27T06-46-06Z — Warner Preflight Hardening Implementation
+
+**Orchestration log:** .squad/orchestration-log/2026-03-27T06-46-06Z-code.md  
+**Session log:** .squad/log/2026-03-27T06-46-06Z-warner-preflight-hardening.md
+
+**Status:** ✓ Completed — Preflight hardening implemented and validated in worktrees/V3
+
+**Implementation:** Add "Lose" to BANNED_FIRST_TOKENS in writer-preflight.ts
+- Release-context verbs: Lose, Cut, Release, Drop (extending the action-verb blocklist)
+- Test case: filters release-context action verbs before checking names
+- Validation: preflight test suite passing in V3 worktree
+
+**Decision:** [Warner Last-Name Heuristic Boundary Review](../../decisions.md)
+
+---
+
+## 2026-03-25T05-51-20Z — Option B Article-Page Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-code.md  
+**Session log:** .squad/log/2026-03-25T05-51-20Z-option-b-article-plan.md
+
+**Status:** ✓ Completed — Option B server/rendering/test wiring reviewed
+
+**Findings:**
+- Article-view-only implementation approved by Lead.
+- No type system changes required.
+- Server wiring for transient status only.
+- Smallest-safe pass confirmed.
 
 ## Project Context
 
@@ -10,85 +171,144 @@
 
 ## Core Context
 
-- Issue #107 locked the canonical `substack-article` contract: one TLDR/image policy source for Writer, Editor, Publisher, and pipeline guards.
-- Issue #108 added the post-Stage-7 retrospective runtime and repository persistence, with structured tables plus a synthesized `revision-retrospective-rN.md` artifact.
-- Issue #109 renders revision history from the conversation/revision seams; Issue #110 keeps stage timing as a dashboard aggregation over existing timestamps.
-- Dashboard architecture is Hono + HTMX + SSE on port 3456, with config loaded from `.env` and `~/.nfl-lab/config/.env`.
-- Issue #115 runtime already satisfied by existing manual/read-only retrospective digest seam: `src/cli.ts` provides `retrospective-digest` / `retro-digest`, `src/db/repository.ts` reads joined structured retrospective rows, `src/pipeline/actions.ts` persists findings, and operator guidance is documented in `README.md`.
-- Issue #117 keeps the retrospective digest CLI read-only, using one joined repository query plus normalized-text dedupe and bounded markdown/JSON output.
-- Issue #118 promotion rule: repeated `process_improvement` findings must promote to issue-ready independent of author or priority. Added explicit repetition check to `promoteIssueCandidates()`.
-- Issue #120 stores revision blocker metadata directly on `revision_summaries` via `blocker_type` + JSON `blocker_ids`, with backward-compatible handoff through `feedback_summary` and `key_issues`. Write seam: `src/pipeline/actions.ts` (parses `[BLOCKER type:id]` tags from `## 🔴 ERRORS`); read seam: `src/pipeline/conversation.ts` + `src/db/repository.ts`.
-- Issue #123 repeated-blocker escalation at Stage 6: detects exact consecutive Editor `REVISE` comparison using normalized blocker fingerprint (`blockerType` lowercase + `blockerIds` sorted/deduped), writes `lead-review.md`, sets status to `needs_lead_review`, blocks normal regress/force-approve path only for repeated case. Cleanup via `clearArtifactsAfterStage` on regression below Stage 6. Test coverage: 5 focused tests in actions.test.ts, 2 in conversation.test.ts, 2 in repository.test.ts, 1 in server.test.ts. Approved and ready for merge.
-- Issue #125 writer fact-check: three-slice arc complete (Policy Definition → Runtime Enforcement → Editor Consumption). Slice A: bounded policy in `src/pipeline/writer-factcheck.ts`. Slice B: Stage 5 wall-clock budget enforcement via fetch-level abort signal. Slice C: Editor consumption of `writer-factcheck.md` as advisory context in `src/pipeline/context-config.ts` + `src/pipeline/actions.ts`. Writer provides bounded verification ledger; Editor maintains final authority. Validation passed.
-- Optional dashboard services (Substack, Twitter) resolve through startup dependency injection via `resolveDashboardDependencies()` helper in `src/dashboard/server.ts`. Tests exercise real startup path; env-configured services work correctly.
-- Writer revision retry: `writeDraft()` self-heal failures append failed draft under `## Failed Draft To Revise` for revision instead of restarting. Prompt guidance aligned across `src/config/defaults/charters/nfl/{editor,publisher}.md` plus `src/config/defaults/skills/{editor-review,publisher}.md`. TLDR fixes framed as revisions that preserve working analysis.
-- Writer revision handoff is assembled in `src/pipeline/actions.ts` inside `writeDraft()`: shared cross-role context from `buildRevisionSummaryContext()`, full `editor-review.md` and previous `draft.md` injected into `articleContext`. Merged writer prompt is runtime-only in `src/agents/runner.ts`; SQLite persists pieces (`artifacts`, `article_conversations`, `revision_summaries`) but not canonical per-iteration prompt snapshot.
-- Publish payload: HTML→ProseMirror handling refactored to operate on document nodes instead of string replacement. All validation passed (45 passing tests).
-- `buildRevisionHistoryEntries()` must normalize missing legacy/in-memory `blocker_type` values to `null` before dashboard/API consumers render revision history.
-- Stage 5 context seam for new artifacts is `src/pipeline/context-config.ts`: low-risk way to make artifacts available to Writer without widening Editor/Publisher scope.
+**Stage & Architecture:**
+- Issue #107: `substack-article` contract (TLDR/image).
+- Issue #108: Post-Stage-7 retrospective persistence + `revision-retrospective-rN.md`.
+- Issue #109: Revision history from conversation/revision seams. Issue #110: Stage timing as dashboard aggregation.
+- Dashboard: Hono + HTMX + SSE on port 3456.
+- Issue #115–118: Manual retrospective digest CLI + promotion rules via `src/cli.ts` + repository persistence.
+- Issue #120: Blocker metadata on `revision_summaries` (`blocker_type` + JSON `blocker_ids`).
+- Issue #123: Repeated-blocker escalation at Stage 6 with Lead-review hold.
+- Issue #125: Writer fact-check via `src/pipeline/writer-factcheck.ts` (policy, runtime enforcement, Editor consumption).
+- Writer support (2026-03-27): `writer-support.md` normalizes names/facts/cautions from `writer-factcheck`, `roster-context`, `writer-preflight`.
+- Optional services via dependency injection in `src/dashboard/server.ts`.
+- Writer revision retry: `## Failed Draft To Revise` seam in `writeDraft()`.
+- Writer revision handoff: `buildRevisionSummaryContext()` + `editor-review.md` + previous `draft.md` injected into `articleContext`.
+- Publish: HTML→ProseMirror document-node refactoring.
+- Stage 5 context seam: `src/pipeline/context-config.ts` for new Writer artifacts.
+
+## Recent Learnings & Critical Seams
+
+- 2026-03-28 — V3 workflow simplification implementation complete. Applied simplifications to prompt contracts, engine/preflight behavior, and focused test suite in worktrees/V3. Validation: 184 tests passing. Decision inbox merged. Orchestration log: .squad/orchestration-log/2026-03-28T06-46-06Z-code.md.
+- 2026-03-27 — Warner Preflight Hardening Implementation: added "Lose" to BANNED_FIRST_TOKENS in writer-preflight.ts. Release-context verbs extended with action-verb blocklist.
+- 2026-03-25 — Option B Article-Page Review: approved article-view-only implementation, no type system changes required, server wiring for transient status only.
+- Article detail Option B: `src/dashboard/views/article.ts` should keep one canonical `Current stage` block plus one compact workflow-status line. Put run diagnostics under `renderAdvancedSection()` as `Execution History`, render persisted `stage_runs.stage` directly (not `stage + 1`), keep revisions collapsed, and mirror header/status changes through `renderLiveHeader()` + `src/dashboard/server.ts`. Validation seam: `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`, `npm run v2:build`.
+- Writer preflight opener false-positive: `writer-preflight.ts` + `writer-support.ts` sentence-opener filtering must stay synchronized (25+ conjunctions: Because, Since, Due, Given, If, When, While, Before, After, During, Following, Although, However, Furthermore, Moreover, Thus, Therefore, Consequently, As, Or, And, But, Yet, Unless, Except, Unlike, Regarding, Concerning, Considering).
+- Roster parquet current-snapshot: Missing `week` field signals current snapshot. Skip week filtering; render "Current snapshot" in `roster-context.ts`.
+- Dashboard mobile: Shell/nav → data-surface → detail/preview → page cleanup → regression coverage. Markup hooks exist; CSS selectors incomplete.
+- Article detail mobile width: Stage 5+ overflow came from `src/dashboard/public/styles.css` `.image-gallery` using `minmax(280px, 1fr)` inside padded `.detail-section` cards. Fix the root cause with `minmax(min(100%, 280px), 1fr)` and lock it with `renderImageGallery()` + `tests/dashboard/wave2.test.ts` rather than hiding overflow globally.
+- Stage 5 coverage: writer-support.test.ts, writer-preflight.test.ts, roster-context.test.ts, actions.test.ts all carry focused regression paths.
+
+## Core Context Summary
+
+**Architecture & Patterns:**
+- Stage 5/6/7 contracts: `substack-article.md` (structure/TLDR/image), `writer-fact-check.md` (verification), `editor-review.md` (review). Context via `context-config.ts` + `actions.ts`.
+- Issue #102 (Auth): Config-driven mode with SQLite sessions, Hono middleware, secure defaults (opaque ids, httpOnly/SameSite, 24h TTL).
+- Issue #123 (Repeated Blocker): Normalized fingerprint, escalates at Stage 6, blocks loop bypass only on repeat.
+- Optional services (Substack, Twitter): Dependency injection via `resolveDashboardDependencies()` in `src/dashboard/server.ts`.
+- Writer revision retry: Self-heal via `## Failed Draft To Revise` seam in `writeDraft()`.
+- Publish: HTML→ProseMirror document-node refactoring (45+ tests).
+- Stage 5 context seam: `src/pipeline/context-config.ts` provides Writer scope without expanding Editor/Publisher.
+
+**Recent Work (2026-03-24 to 2026-03-25):**
+- Audited writer-support/preflight/roster integration for runtime regressions; coverage adequate via focused test paths.
+- Fixed preflight opener false-positive: synchronized 25+ conjunctions in BANNED_FIRST_TOKENS across preflight + writer-support; preflight now trusts canonical names first.
+- Mobile width: identified gallery card minmax root cause, implemented CSS fix with regression coverage.
+- Sentence-starter: expanded BANNED_FIRST_TOKENS with action verbs (Take, Hit, Draft, Grab, Pick, Select, Land, Sign, Ink, Target, Pursue, Add, Trade, Watch, Build, Keep, Leave, Get).
+
 
 ## Learnings
 
-- 2026-03-28T17:30:00Z — **Article provider choice persistence audit**: Backend already persists `articles.provider` (schema line 13) as optional metadata, used at runtime via `buildArticleProviderHint()` in `src/pipeline/actions.ts` to hint preferred LLM provider. Repository `updateArticle()` supports provider updates (lines 496–500). **Current gaps:** (1) article-detail view does not display provider; (2) metadata edit form/PATCH handler excludes provider from editable fields (allowed set only has title/subtitle/depth_level/teams; line 1079); (3) no dashboard UI to set/edit provider; (4) usage events track `run_id.stage_runs.requested_provider` (ephemeral, per-run), distinct from persistent article metadata. **Missing seams for UX:** Edit form in `renderArticleMetaEditForm()` needs provider field; HTMX POST handler needs to accept provider in body and call repo.updateArticle(); article detail view needs to display current provider via `renderArticleMetaDisplay()`. **Smallest delta:** (1) Add provider field to metadata edit form HTML (show/clear); (2) Add provider to PATCH `/api/articles/:id` allowed set (string | null); (3) Add provider to HTMX POST `/htmx/articles/:id/edit-meta` body parsing; (4) Optional: Display provider badge in article header if set; (5) Create focused regressions in `tests/dashboard/metadata-edit.test.ts` + `tests/dashboard/server.test.ts` to verify provider roundtrip and display. Key files: `src/types.ts` (Article type already exposes provider), `src/db/schema.sql` (column exists), `src/db/repository.ts` (updateArticle already handles it), `src/dashboard/server.ts` (PATCH + POST handlers need update), `src/dashboard/views/article.ts` (display + edit form need update).
-- 2026-03-25T11:15:00Z — **Substack packaging metadata seam**: preview and draft publishing should both flow through `buildPublishPresentation()` in `src/dashboard/server.ts`, which must extract markdown H1 + italic deck with `extractMetaFromMarkdown()` and feed only `bodyMarkdown` into `markdownToProseMirror()`. Reuse the extracted subtitle for preview chrome and `SubstackService.createDraft()` / `updateDraft()` so title/deck are not duplicated in the body and Substack `draft_subtitle` stays aligned. Focused regression coverage lives in `tests/dashboard/publish.test.ts`.
-- 2026-03-28T00:45:00Z — **Stage 5 retry boundary**: after the workflow simplification pass, `writeDraft()` in `src/pipeline/actions.ts` should only self-heal deterministic Stage 5 misses (short draft, missing shell, placeholder leakage). Keep writer-preflight name/accuracy findings in `writer-preflight.md` for Editor context instead of forcing another Writer retry; the lightweight Stage 6 gate plus `autoAdvanceArticle()` lead escalation after 2 retries is the intended churn-control seam. Key files: `src/pipeline/actions.ts`, `tests/pipeline/actions.test.ts`, `.squad/skills/writer-structure-guard/SKILL.md`.
-- 2026-03-28T00:30:00Z — **V3 workflow simplification pass**: keep Stage 5 deterministic guards narrow and low-false-positive. In `src/pipeline/engine.ts`, only block on missing H1 headline, missing italic subheadline, missing recognizable TLDR block, or a too-short draft; let finer structure polish move upstream to Writer and obvious factual safety stay with Stage 6 Editor. In `src/pipeline/writer-preflight.ts`, keep placeholder leakage as the only Stage 5 repair blocker while downgrading unsupported precise claims and exact-name drift to editor-facing findings so `writeDraft()` in `src/pipeline/actions.ts` stops behaving like a second editor. Stage 6 churn policy now escalates to `lead-review.md` instead of force-approving after max revisions; key seams are `src/pipeline/actions.ts`, `src/config/defaults/charters/nfl/{writer,editor}.md`, and `src/config/defaults/skills/{editor-review,substack-article}.md`.
-- 2026-03-27T23:55:00Z — **Writer preflight last-name lead-in seam**: the earlier sentence-initial hardening in `src/pipeline/writer-preflight.ts` only normalized 3+ token matches, so a 2-token opener like `Lose Warner` still survived extraction and tripped `name-consistency` against supported `Fred Warner`. The narrow follow-up keeps the general exact-name guard but adds a tiny sentence-initial lead-in path that only resolves a supported last name when it maps to exactly one artifact-backed full name. Lock this with focused regressions in `tests/pipeline/writer-preflight.test.ts` and validate with those tests plus `npm run v2:build`.
-- 2026-03-27T23:26:00Z — **Writer preflight sentence-starter hardening**: `src/pipeline/writer-preflight.ts` now treats sentence-initial capitalized lead-in words as removable only when dropping the first token yields an exact supported full name from source artifacts (for example `Take Trent Williams` → `Trent Williams`). This keeps the fix reusable and narrow: no giant allowlist, no broader matcher changes, and genuine unsupported expansions still block. Regression coverage lives in `tests/pipeline/writer-preflight.test.ts`; validation was focused preflight vitest plus `npm run v2:build`.
-- 2026-03-26T19:05:00Z — **Writer preflight false-positive path**: `extractSupportedNames()` in `src/pipeline/writer-preflight.ts` can misread clause-openers like `If/For/In` as the first token of a person name because `NAME_PATTERN` matches any capitalized two-token phrase. In the live Pittsburgh draft this produced `If Rodgers` / `If Pat Freiermuth` from prose and compared them against supported `Aaron Rodgers'` / `Pat Freiermuth`, which triggered bogus `name-consistency` failures. Tight fix: treat `If`, `For`, and `In` as banned first tokens for extracted names so sentence-openers are ignored without broadening unrelated behavior. Validated with focused preflight + writeDraft regression tests and a local rerun against the live article artifacts.
-- 2026-03-23T21:53:55Z — **Issue #102 Auth Flow Rundown Complete**: Quick technical summary of auth implementation provided. Config loading via `DASHBOARD_AUTH_MODE` from `.env` + `~/.nfl-lab/config/.env`, login/logout via POST routes, session persistence in SQLite with opaque ids, secure cookie settings (httpOnly, SameSite, Secure), centralized middleware enforcement of protected/public route split. All test files documented and passing. Ready for merge. See `.squad/orchestration-log/20260323T215355Z-code.md` and session log `.squad/log/20260323T215355Z-issue-102-auth-review-rundown.md`.
-- 2026-03-24T04:46:45Z — **Issue #102 Local Dashboard Auth Implementation Complete**: Config-driven `DASHBOARD_AUTH_MODE=off|local` auth hardening delivered and validated. Implementation seams: config parsing in `src/config/index.ts`, login/logout routes + centralized middleware in `src/dashboard/server.ts`, session persistence in `src/db/schema.sql` + `src/db/repository.ts`, middleware enforcement of protected/public routes. Secure defaults applied: opaque session ids, `httpOnly` + `SameSite=Lax` cookies with production `Secure` flag, server-side TTL (24h default). All focused auth tests passing across `tests/dashboard/server.test.ts`, `tests/dashboard/config.test.ts`, `tests/dashboard/publish.test.ts`, `tests/e2e/live-server.test.ts`. TypeScript build failure fixed. Ready for merge pending operator docs. See `.squad/orchestration-log/2026-03-24T04-46-45Z-code.md` and `.squad/decisions.md` (Code Decision — Issue #102).
-- 2026-03-25T21:45:00Z — **Issue #123 Closeout & Approval**: Repeated-blocker escalation implementation for Stage 6 handoff completed and approved by Lead. All contract points validated: exact consecutive Editor `REVISE` comparison with normalized blocker fingerprint, repeated case escalates at Stage 6 without new stage, normal loop bypass narrow (skips auto-regress and max-revision force-approve), read paths expose state/artifact appropriately, artifact lifecycle bounded. All focused tests passed. Build passed. Issue ready for merge. See `.squad/orchestration-log/2026-03-24T03-26-23Z-Code.md`.
-- 2026-03-24T00:00:00Z — Generate-idea selector seams: the visible team picker on `/ideas/new` is the static `NFL_TEAMS` list in `src/dashboard/views/new-idea.ts`, while the pinned-agent picker is built server-side in `src/dashboard/server.ts` from `runner.listAgents()`. The league-wide charter key is lowercase `nfl` in runtime/team-classification code (`src/dashboard/views/agents.ts`, `src/pipeline/actions.ts`), but the UI team badge uses uppercase `NFL`; keeping those two identifiers aligned is the key to making the NFL-wide agent selectable without surfacing all 32 team charters in the expert picker.
-- 2026-03-26T22:39:00Z — **Generate-idea selector seam**: `/ideas/new` uses two different sources. Team-like choices come from the static `NFL_TEAMS` array in `src/dashboard/views/new-idea.ts`, while the optional pinned-expert picker is built in `src/dashboard/server.ts` from `runner.listAgents()` (`config.chartersDir`) after filtering production/team agents. League-wide NFL support should use UI key `NFL` for article/team context and agent key `nfl` for charter/runner classification; keep both in sync across `src/dashboard/server.ts`, `src/pipeline/actions.ts`, `src/dashboard/views/agents.ts`, and `tests/dashboard/{new-idea,agents}.test.ts`.
-- 2026-03-26T22:46:00Z — **Stage Runs badge semantics**: \stage_runs.stage\ is already the persisted article/dashboard stage, not a "next stage" target. Keep \enderStageRunsPanel()\ aligned with \rticle.current_stage\ semantics by rendering the stored stage number/name directly; lock that expectation in \	ests/dashboard/wave2.test.ts\ and \	ests/db/repository.test.ts\. Key seams: \src/dashboard/views/article.ts\, \src/db/repository.ts\, \src/types.ts\.
-- 2026-03-23T22:44:04Z — **Stage Badge Mismatch Fix Complete**: Fixed dashboard Stage Runs badge display. Article header badge (\rticle.current_stage\) and Stage Runs panel (\stage + 1\ pre-fix) showed different stage numbers for the same article. Narrow fix in \src/dashboard/views/article.ts\ removes the \+ 1\ increment; Stage Runs now renders persisted \stage_runs.stage\ directly. Updated tests in \	ests/dashboard/wave2.test.ts\ (Stage 5 expectation) and \	ests/db/repository.test.ts\ (regression test). All tests passing, build passing. Decision merged to \.squad/decisions.md\. See \.squad/orchestration-log/2026-03-23T22-44-04Z-code.md\.
+- 2026-03-28 in-app MCP tool wiring: the approved seam is an app-owned, provider-agnostic local tool loop in `src\agents\runner.ts`, not provider-side tool permissions. Derive the allowlist from `mcp\tool-registry.mjs`, require `readOnlyHint: true`, validate args against exported schemas, execute handlers in process, and fail closed on non-allowlisted tools or invalid payloads.
 
-## Generate Idea Selector — Implementation (2026-03-24T05:37:47Z)
+### 2026-03-28 Agent Tool-Wiring Inspection
+- **Current tool exposure architecture:** Three-layer system: (1) MCP tools exposed via stdio in `src/mcp/server.ts`, (2) Agent charters/skills loaded from markdown at runtime in `src/agents/runner.ts`, (3) prompt-injected instructions. Agents receive tool documentation as text in system prompt, NOT as structured manifests or through native MCP client.
+- **No tool discovery mechanism:** Agents have no ability to query available tools at runtime. Tool awareness is purely text-based in skills markdown (e.g., `src/config/defaults/skills/nflverse-data.md` documents 10 MCP tools as a markdown table).
+- **No explicit allowlists:** Tool access is implicit through skill loading (`runner.run(params.skills)`). No charter-level or agent-level allowlist structure. No safety classification (read-only vs. side-effect).
+- **Proposed wiring cost:** 6–8 surgical edits across `src/agents/runner.ts` (parse `## Tools` from charter, inject manifest into system prompt), `src/services/tool-catalog.ts` (new centralized registry), `src/config/defaults/charters/nfl/*.md` (add `## Tools` sections), `src/mcp/server.ts` (add `tools_list` discovery tool), tests (parse validation, prompt injection, MCP discovery). No architectural changes; purely additive.
+- **Backward-compatible approach:** Extend charters with optional `## Tools` section; inject only if present and catalog provided. Existing agents without tool allowlists receive same behavior as today (no tool block in prompt).
+- **Safety enforcement seam:** Tool allowlist lives in charter markdown (audit-friendly), validation happens at MCP invocation time in `src/mcp/server.ts`. Prevents caller-identity spoofing while keeping allowlist visible to code review.
+- **Tool catalog design recommendation:** Build from MCP schema definitions, not manual duplication. Add category + safety level as first-class fields. Populate examples field to improve agent UX. Test schema parity between catalog and actual tools.
 
-**Status:** Filesystem verified; pending lead approval
+- 2026-03-28 MCP contract finish: the safest automated coverage seam for canonical local-tool discoverability is `tests\mcp\local-tool-registry.test.ts` calling `registerLocalTools()` directly and exercising `tools/list` plus `tools/call` handlers in-process. That locks catalog filters, example suppression, read-only vs mutating annotations, and exported inventory parity without relying on stdio smoke or credentialed integrations.
+- 2026-03-28 local MCP contract audit: canonical repo-local client entrypoint is `mcp\server.mjs` via `.copilot\mcp-config.json`, `.mcp.json`, `npm run mcp:server`, and CLI `handleMcp()` in `src\cli.ts`; the separate pipeline-only seam remains `handlePipelineMcp()` + `src\mcp\server.ts` (`npm run mcp:pipeline`). Validation: `npm run mcp:smoke` passed tool registration but surfaced a telemetry-path warning from `.github\extensions\pipeline-telemetry.mjs` still shelling to `content\pipeline_state.py`, and `npx vitest run tests\cli.test.ts tests\mcp\server.test.ts --silent` passed.
+- 2026-03-28 unified local MCP rollout planning: the rollout contract spans four surfaces together — client configs (`.mcp.json`, `.copilot\mcp-config.json`), CLI wrapper (`src\cli.ts`), canonical stdio server (`mcp\server.mjs`), and docs/validation (`README.md`, `.github\extensions\README.md`, `mcp\smoke-test.mjs`). Keep `src\mcp\server.ts` explicitly labeled pipeline-only/compatibility until Code decides whether to fold those tools into the canonical local server.
+- 2026-03-28 MCP smoke-test caution: `.github\extensions\README.md` describes `npm run mcp:smoke` as safe/no-side-effects, but `mcp\smoke-test.mjs` currently renders a local table image and invokes image/publishing tools (stage targets or expected auth failures). Treat smoke-test wording as a contract seam that must match actual script behavior.
+- 2026-03-28 multi-provider dashboard rollout: in `src\dashboard\server.ts`, provider-mode copy must prefer the actual registered provider list over `MOCK_LLM` fallback flags when multiple providers are available, or `/config` will incorrectly say `Mock only` even while the article metadata form and runtime can route across more than one provider.
+- 2026-03-28 additive provider rollout: the clean seam for local/default-model providers is `supportsPreferredRouting()` in `src\llm\gateway.ts` + provider implementation, so article-level `prefer` routing can target LM Studio without letting auto-routing steal model-first traffic away from providers that truly support the resolved policy model.
+- 2026-03-28 preview/Substack packaging bug: the shared publish seam in `worktrees\V3\src\dashboard\server.ts` was converting raw `draft.md` straight to preview/Substack body and reading subtitle only from `articles.subtitle`, so preview repeated the H1/deck in-body and drafts lost the real subtitle field when DB metadata was blank. Fix by extracting markdown meta once at packaging time, stripping it from `bodyMarkdown`, and using extracted subtitle as the packaging fallback for preview/Substack fields.
+- 2026-03-28 second-pass workflow simplification: the live Seahawks JSN article was not stuck on Stage 5 structure anymore; it was stuck in Stage 6 because Editor kept issuing blockerless `REVISE` passes for missing comp ladders, source-label polish, and teaser specificity, which exhausted the revision cap and escalated to Lead review.
+- In `worktrees\V3\src\pipeline\actions.ts`, the safest runtime seam for this class of churn is after canonical verdict extraction: if Editor returns `REVISE` without any `[BLOCKER type:id]` lines, force one blocker-only normalization pass and treat any still-blockerless result as advisory approval instead of another revision loop.
+- 2026-03-28 writer/editor churn research: Stage 5 churn is concentrated in `worktrees\V3\src\pipeline\actions.ts` (`buildWriterTask`, `buildDraftRepairInstruction`, `writeDraft`) plus deterministic guards in `writer-preflight.ts` and `engine.ts`.
+- Stage 6 churn surfaces also live in `worktrees\V3\src\pipeline\actions.ts` (`EDITOR_APPROVAL_GATE_TASK`, `runEditor`, auto-advance regression/force-approve paths) and prompt policy files under `worktrees\V3\src\config\defaults\charters\nfl\{writer,editor}.md` plus skills `substack-article.md` and `editor-review.md`.
+- Shared revision-loop state is persisted through `worktrees\V3\src\pipeline\conversation.ts` (`RevisionSummary`, `buildRevisionSummaryContext`, repeated-blocker helpers), so simplifying Editor to a lightweight accuracy pass may allow pruning blocker metadata, lead-review escalation, and retrospective churn logic if the team chooses a less loop-heavy model.
+- Targeted V3 validation command: `npx vitest run tests\pipeline\writer-preflight.test.ts tests\pipeline\engine.test.ts tests\pipeline\actions.test.ts --silent`; current baseline has one failing actions test around name-preflight retry expectations.
+- 2026-03-25 send-back UX fix: in `worktrees\V3\src\dashboard\views\article.ts`, Stage 4 + `status='revision'` should render as `Revision Workspace`, prioritize `editor-review.md`/`draft.md` ahead of discussion artifacts, and default the artifact pane to the first persisted revision artifact rather than `idea.md`.
+- Lead-review regression controls should frame Stage 4 as a revision destination, not a discussion rollback: the send-back disclosure copy lives in `worktrees\V3\src\dashboard\views\article.ts`, helper styles in `worktrees\V3\src\dashboard\public\styles.css`, and regression coverage in `worktrees\V3\tests\dashboard\server.test.ts` with validation via `npm run test -- tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts && npm run v2:build`.
+- 2026-03-28 unified local MCP audit: `mcp/server.mjs` is the actual canonical local tool surface (`.copilot/mcp-config.json`, README, `v2:mcp`, smoke test), while `src/mcp/server.ts` remains a separate pipeline-only MCP server. Treat pipeline MCP as a compatibility/debug surface, not the user-facing local inventory.
+- 2026-03-28 unified local MCP audit: model-facing clarity currently drifts because `mcp/server.mjs` manually mirrors extension schemas and the data tools bypass `src/services/data.ts`; required args, default behavior, and script-vs-sidecar fallback semantics already differ for several queries. Prefer one shared contract source plus docs/smoke coverage before renaming tools.
 
-**UX confirmed:** Clean render path, no UX gaps. Expert selector correctly filters NFL-wide specialists from production and team agents.
+## 2026-03-28T06-46-06Z — Second-Pass Workflow Simplification (Seahawks JSN Stall Fix)
 
-**Changes verified:**
-- src/dashboard/views/new-idea.ts (selector integration)
-- src/dashboard/server.ts (expert agents filter, lines 847–861)
-- tests/dashboard/new-idea.test.ts (selector tests)
+**Orchestration log:** .squad/orchestration-log/2026-03-28T06-46-06Z-code.md  
+**Session log:** .squad/log/2026-03-28T06-46-06Z-second-pass-workflow-fix.md
 
-**Next:** Implement hygiene fixes (DRY, abbreviation) pending Lead approval.
+**Status:** ✓ Completed — Second-pass workflow simplification diagnosed and implemented
 
-- 2026-03-24T05:41:29Z — **Generate-Idea Selector Implementation Complete**: Minimal support for league-wide NFL team selection delivered and validated. Changes: `nfl` team classification support in `src/dashboard/views/agents.ts`, `NFL` team grid option in `src/dashboard/views/new-idea.ts`, expert picker server filter update in `src/dashboard/server.ts` to include `nfl` charter. Validation: ✅ `npm run v2:build` passed, ✅ `npm run v2:test -- tests/dashboard/agents.test.ts` passed, ✅ focused new-idea NFL selector tests passed, ⚠️ 2 pre-existing auto-advance failures in `tests/dashboard/new-idea.test.ts` unrelated to selector. **Key correction:** Current workspace allows runtime `nfl` charter to remain selectable in expert pins (not filtered out); change scope is adding/selecting `NFL` in team grid + handling team-classification. Decision documented: Keep existing team-agent filter but treat `nfl` charter as selectable exception. See `.squad/orchestration-log/2026-03-24T05-41-29Z-code.md` and `.squad/decisions.md` (Code Decision — Generate-Idea NFL Selector Support).
-- 2026-03-24T05:45:02Z — **Stage Runs Panel Stage Number Alignment Complete**: Fixed Stage Runs badge to render persisted `stage_runs.stage` directly without transformation. Changes in `src/dashboard/views/article.ts` and tests in `tests/dashboard/wave2.test.ts` + `tests/db/repository.test.ts`. All focused tests passing; v2 build passing. Key learning: `stage_runs.stage` is the persisted article/dashboard stage (not a "next stage" target); render semantics must align with `article.current_stage`. See `.squad/orchestration-log/2026-03-24T05-45-02Z-code.md`.
+**Diagnosis:**
+- Seahawks JSN article stall is Stage 6 blockerless/advisory revise loop, not Stage 5 hard-block failure
+- Article reached APPROVED verdict at pass 2, but looped for third advisory-only cleanup pass
+- Root cause: Editor emits blockerless REVISE reviews for missing comp ladders and source-label polish
+
+**Implementation Direction:**
+- Runtime normalization seam in worktrees\V3\src\pipeline\actions.ts
+- If Editor returns REVISE with no [BLOCKER type:id] lines, force one blocker-only retry
+- If still blockerless, treat as APPROVED instead of looping
+- Preserve Stage 5 hard rails for shell minimums and placeholder leakage
+
+**Validation:**
+- Lead approved direction with explicit guardrails
+- Research confirmed issue class is evidence-deficit/editor churn at Stage 6
+- Guardrails preserve: minimal Stage 5 shell, placeholder hard guard, approval finality, escalation intact
+
+**Rollback Triggers Guarded:**
+- Minimal shell guard weakened, placeholder leakage publish-safe, APPROVED still triggers revision, blocker taxonomy widened, escalation broken, advisory becomes hidden blocker
 
 
+## 2026-03-26T05:56:52Z — Multi-provider LLM Rollout Architecture Review
 
-## Update — Stage 5/6 Workflow Simplification (2026-03-25T07-26-44Z)
+**Orchestration log:** .squad/orchestration-log/2026-03-26T05-56-52Z-code.md
+**Session log:** .squad/log/2026-03-26T05-56-52Z-multi-provider-llm-review.md
 
-Backend spawned Code agent for focused Stage 5/6 loop simplification:
-- Stage 5 deterministic guards narrowed to: headline, subheadline, TLDR, length, placeholder checks
-- Unsupported stats/contracts/dates moved to warnings (not hard blocks)  
-- Stage 6 escalates to lead-review after churn instead of force-approving
-- Sentence-starter hardening applied for 2-token lead-in + last-name matches
-- Writer/Editor prompt contracts updated
-- 184/184 targeted tests preserved/updated
+**Status:** ✓ Complete — Architecture review validated, seams and tests confirmed
 
-Related decisions: code-sentence-starter-hardening, code-warner-preflight-fix, code-workflow-simplify
-- 2026-03-25T00:00:00Z — **Substack packaging title/subtitle fix**: Fixed shared metadata packaging seam between preview and Substack publishing. Root cause: Substack expects ProseMirror JSON documents, not HTML strings. Solution: Restored ProseMirror JSON format, refactored enrichment to manipulate document structure instead of HTML strings, created ProseMirror node builders for type-safe construction, fixed image upload/URL rewriting, ensured preview/publish parity. Files: src/dashboard/server.ts, src/dashboard/views/publish.ts, 	ests/dashboard/publish.test.ts. Validation: 45 publish tests pass, build succeeds, payload structure validated. Team: Code (implementation), Publisher (rendering validation), DevOps (service injection). Decisions: Restore ProseMirror JSON, implement node-level enrichment, preserve draft-first flow, create focused regressions. Next: First production republish to validate end-to-end.
+**Findings:**
+- Startup registration is the unlock seam in src/dashboard/server.ts
+- Repository/schema/type seams already mostly exist
+- Test focus: additive registration, prefer-vs-require behavior, fallback, config truthfulness
+- No architectural rewrites needed—wiring completion only
 
-## V3 Article Provider Choice — Architecture Analysis (2026-03-28T02:00:00Z)
+**Code Seams Validated:**
+- Gateway: optional provider hint handling requires new semantics
+- Runner: provider propagation is additive
+- Pipeline: article \llm_provider\ reaches execution path
+- Repository: schema and read/write paths exist
+- Dashboard: config multi-provider display and metadata editing (JSON + HTMX)
 
-Backend spawned Code for UX architecture review: article-level provider choice display/edit in V3 detail view.
+**Key Constraints:**
+- Keep \ModelPolicy\ model-first
+- Preserve auto/unset behavior exactly
+- Treat article override as prefer, not require
+- Requested provider is observability, not truth
 
-**Key findings:**
-- Schema & repository write seams already exist: `articles.provider` (TEXT nullable), `updateArticle()` handles provider updates
-- Form & HTMX handler gaps identified: `renderArticleMetaEditForm()` missing provider input field; POST `/htmx/articles/:id/edit-meta` doesn't parse provider from form body
-- JSON API PATCH `/api/articles/:id` partially supports provider (not explicitly whitelisted in validation)
-- Test coverage recommendations: form render, HTMX submission, JSON API, behavior preservation, wave2 integration
-- Minimal backend effort: ~2 hours (form HTML, HTMX parser, JSON validation, focused tests)
+**Test Priorities:**
+- Gateway: auto / prefer / require provider routing
+- Runner: provider hint propagation to gateway calls
+- Pipeline: article \llm_provider\ reaches execution path
+- Repository: new field round-trip and requested-provider stage-run persistence
+- Dashboard: config multi-provider display and metadata editing (JSON + HTMX)
 
-Decision points for Lead: provider input type (free-text vs. dropdown), display badge in article header, pipeline consumption verification, immutability rules post-Stage-5.
-
-Detailed analysis in `.squad/analysis/V3-provider-choice-analysis.md`.
-
-- 2026-03-26T06:35:50Z — **V3 Provider Choice Backend Seams Audit**: Verified provider persistence infrastructure already exists—`articles.provider` column (TEXT nullable), `repository.updateArticle()` handles updates (lines 496–500). Missing seams identified: (1) `renderArticleMetaEditForm()` in `src/dashboard/views/article.ts` (lines 193–254) missing provider input field; (2) HTMX POST `/htmx/articles/:id/edit-meta` (lines 857–898 in `src/dashboard/server.ts`) doesn't parse provider from form body; (3) PATCH `/api/articles/:id` (line 1079) doesn't whitelist provider in allowed fields. Minimal delta: ~3 lines form HTML, ~1 line whitelist, ~2–3 lines HTMX parser, focused tests for form/HTMX/JSON/wave2. UX recommends provider selector in meta-edit-row-2col, empty badge for unset, early-stage copy. Handed to Code for implementation pending Lead approval of input type (free-text vs. dropdown) and display placement. See `.squad/orchestration-log/2026-03-26T06-35-50Z-code.md`.
-
+**Related Decisions:**
+- Lead — Multi-provider LLM review (in decisions.md)
+- UX — Multi-provider article controls (in decisions.md)
+- Code — Multi-provider dashboard copy alignment (in decisions.md)

@@ -63,15 +63,14 @@ Implementation in `src/dashboard/server.ts:291-385` (`enrichSubstackBody` and `i
 - `src/dashboard/views/preview.ts:89-151` — Preview frame adds same images/CTA for local viewing
 - `src/services/substack.ts:212-235` — `SubstackService.uploadImage()` uploads to Substack CDN
 
-## Metadata packaging pattern
-
-When the Writer draft includes a markdown H1 plus italic deck, strip those lines from the packaged body and reuse them as shared presentation metadata.
-
-1. Extract `{ title, subtitle, bodyMarkdown }` once from `draft.md` at the shared packaging seam (`buildPublishPresentation()`).
-2. Feed `bodyMarkdown` into `markdownToProseMirror()` so preview and Substack body do not repeat the headline/deck inside the article body.
-3. Feed extracted `subtitle` into preview chrome and `SubstackService.createDraft()` / `updateDraft()` so the real Substack subtitle field matches what operators preview locally.
-4. Keep this in the shared seam, not in preview-only or publish-only routes, so workflow simplification stays intact and both outputs stay in parity.
-
 ## Recommendation
 
 ✅ **Resolved.** Preview and payload are now in parity. For future changes, maintain the enrichment logic in `enrichSubstackBody()` to ensure both paths receive the same content enhancements.
+
+## Metadata parity guard
+
+When preview and publish both show article chrome (title/deck/author line), strip the markdown H1 + italic subtitle from the packaged body before rendering or draft upload. Use `extractMetaFromMarkdown()` at the shared presentation seam, then:
+
+- send `title` / `subtitle` through the explicit preview/Substack metadata fields
+- send only `bodyMarkdown` into HTML / ProseMirror conversion
+- fall back to extracted subtitle when persisted article metadata is blank, so preview and `draft_subtitle` stay aligned

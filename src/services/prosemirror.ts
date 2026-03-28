@@ -875,7 +875,7 @@ export function markdownToProseMirror(markdown: string, options: ConvertOptions 
       const firstBqLine = normalizedBqLines[0] || '';
       const remainingBqLines = normalizedBqLines.slice(1);
       const isTldrBlock =
-        /TL;?DR/i.test(firstBqLine.replace(/\*/g, '')) &&
+        /TLDR/i.test(firstBqLine.replace(/\*/g, '')) &&
         remainingBqLines.length > 0 &&
         remainingBqLines.every((l) => /^[-*+]\s+/.test(l));
 

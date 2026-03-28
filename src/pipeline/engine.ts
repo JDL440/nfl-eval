@@ -106,17 +106,12 @@ export interface DraftStructureCheck {
   issue?: 'missing-tldr' | 'tldr-too-low' | 'tldr-too-short';
 }
 
-function isTldrHeading(line: string): boolean {
-  const normalized = line
-    .replace(/\*/g, '')
-    .replace(/📋/g, '')
-    .trim();
-  return /^>\s*TL;?DR\b/i.test(normalized);
-}
-
 export function inspectDraftStructure(draft: string): DraftStructureCheck {
   const lines = draft.replace(/\r\n/g, '\n').split('\n');
-  const tldrStart = lines.findIndex(isTldrHeading);
+  const tldrStart = lines.findIndex((line) => {
+    const normalized = line.replace(/\*/g, '').trim();
+    return /^>\s*(?:📋\s*)?TLDR\b/i.test(normalized);
+  });
 
   if (tldrStart === -1) {
     return {

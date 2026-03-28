@@ -1,125 +1,131 @@
-# History — UX
+## 2026-03-27T07:30:00Z — V3 Revision-State UX Pass & Mobile Width Fix Implementation
 
-## Core Context
+**Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-ux.md  
+**Session log:** .squad/log/2026-03-27T07-30-00Z-v3-workflow-simplify.md
 
-**Project:** NFL Lab (nfl-eval) — AI-powered NFL analytics and content platform  
-**Stack:** Hono, HTMX, SSE, CSS | **Port:** 3456 | **Owner:** Joe Robinson | **Repo:** JDL440/nfl-eval
+**Status:** ✓ Completed — Revision-state UX simplification and mobile width fix shipped in worktrees/V3
 
-**Key architectural facts:**
-- Dashboard is primary human interface with editorial workflow
-- Cover images: 1920×1080 (16:9) via Gemini 3 Pro in `src/services/image.ts` (STYLE_GUIDE controls prompts)
-- Social OG images: controlled by Substack from ProseMirror draft_body first image2 node
-- Publishing flow: Two-step (Draft → Publish) with explicit state transitions  
-- Article detail: Status hub ("No draft yet" / "Draft ready" / "Published") with routing to richer preview or Substack draft
-- Publish page: Single workflow container with Create Draft + Publish Now as distinct primary actions
-- Publish errors: Short alert text ("Substack publishing is not configured.") with actionable recovery in separate hint (env vars, /config link). HTMX responses enable in-panel handling; JSON 500 for non-HTMX.
-- Agent selector (New Idea): Server-side filtering of expertAgents (10 NFL-wide specialists) from PROD (7) + TEAMS (32 team agents)
-- Platform cropping varies: Twitter/X 2:1, LinkedIn 1.91:1 — center-weight critical elements
-- Substack API may support separate `cover_image` field (future enhancement opportunity)
-- Mobile dashboard header: Two-tier layout with brand + utilities on row 1, horizontally scrollable nav pills on row 2. Desktop remains single-row grid. Decorative icons hidden below 768px. New Idea isolated as primary action.
+**Article-Detail View Simplification:**
+- Canonical current-stage display as primary focus
+- Advanced-only stage runs (collapsed by default)
+- Latest failed-attempt summary only (removed historical clutter)
 
-## Publish-Overhaul Team Coordination (2026-03-24)
+**Mobile Width Fix Implementation:**
+- Root cause: intrinsic content (image-gallery minmax(280px, 1fr)) expands beyond ~320px phone width
+- CSS applied to .detail-grid, .detail-main, .detail-sidebar (min-width: 0)
+- .artifact-table now scrolls horizontally instead of pushing viewport
+- Padding tightened at 768px breakpoint
 
-**Team session:** Coordinated with Code, Publisher, Validation, and Coordinator agents on Stage 7 publish-flow architecture.
+**Revision Display Alignment:**
+- Revision history now supports compact display (collapsed by default)
+- Latest blocker summary only (UX-aligned with simplification goal)
+- Escalation metadata preserved for lead-review indication
 
-**Two-step UX model decision:** Submitted to `.squad/decisions.md`. Recommendation treats Stage 7 as explicit two-step workflow:
-- Article detail: Clean status hub ("No draft yet" / "Draft ready" / "Published live") with routing actions
-- Publish page: Single workflow panel with "Create Draft" and "Publish Now" as distinct primary actions
+**Dashboard Mobile Audit Integration:**
+- Article-detail view aligns with shared mobile contract (no per-page workarounds)
+- Revision display respects mobile-safe selectors and fragment scoping
+- HTMX partial-render behavior validated with wrapper scoping
 
-**Key UX improvements:**
-- Richer preview reuse: Embed `/articles/:id/preview` rendering on publish page (cover, inline images, mobile toggle)
-- Single workflow container: Fix HTMX target split (`#publish-actions` vs `#publish-result`) so draft creation and publish stay together
-- Clearer copy: Action-first language ("No draft yet — create one to continue" vs "publish workspace")
-- Error clarity: Explicit next-step guidance for each state (no draft, draft ready, published, error)
+**Files Modified (worktrees/V3):**
+- src/dashboard/views/article.ts (mobile CSS + revision display)
+- src/dashboard/public/styles.css (grid overflow handling, mobile padding)
+- tests/dashboard/wave2.test.ts (mobile viewport validation)
+- tests/dashboard/publish.test.ts (revision display and escalation tests)
 
-**Mental model improvements:**
-- Distinguish lab preview page (local sanity check) from Substack draft (editable account) from go-live action (published)
-- Remove redundant disabled-state tooltips that the page itself gates
-- One unified "Publish" section on article detail instead of overlapping controls across detail + publish pages
+**Test Validation:**
+- Dashboard mobile tests passing (viewport-specific assertions)
+- Article-detail view rendering correctly on 320px–768px–1024px breakpoints
+- Revision summary and escalation metadata preserved in test assertions
 
-**Status:** Recommendations merged to `.squad/decisions.md` as "Decision: Publish Flow UX — Two-Step Model with Explicit Workflow". Coordinator implemented all findings. Regressions passing.
+**Decisions Implemented:**
+- Article Mobile Width Fix (min-width: 0 on grids, overflow-x: auto)
+- Revision-State UX Pass (collapsed revisions, canonical stage display)
+- Dashboard Mobile Audit Findings (system-level approach, not page-by-page)
 
-- 2026-03-23T22:44:04Z — **Stage Badge Mismatch Investigation**: Investigated dashboard display inconsistency: article header badge used rticle.current_stage while Stage Runs panel showed stage + 1 from stored value. Investigation completed and handed off to Code for implementation. Decision: render Stage Runs using persisted stage_runs.stage directly, aligning with article/dashboard semantics. See .squad/orchestration-log/2026-03-23T22-44-04Z-ux.md.
-- 2026-03-23T02-30-59Z — **Ralph Round 2 session**: Stage 7 publish-flow mental models and terminology review completed. Key findings: "publish workspace" is ambiguous/jargon; warning copy conflicts with intended two-step workflow; success states need stronger language. UX decision merged into decisions.md. Recommendations: rename/clarify workspace term, strengthen warnings, upgrade publish preview, add draft status indicator. Implementation pending Code's create-draft validation and Publisher's draft-first model adoption.
-- 2026-03-23 — Publish config-error review: `src/dashboard/server.ts` intentionally returns HTTP 200 HTMX fragments for missing Substack config via `renderMissingSubstackConfig(...)`, while non-HTMX callers still receive JSON 500s.
-- 2026-03-23 — `src/dashboard/views/publish.ts` follows the better dashboard pattern for operator-fixable publish failures when the primary alert stays terse (`Substack publishing is not configured.`) and the recovery steps live in a separate hint with the exact env vars and `/config` link.
-- 2026-03-23 — Relevant files for publish error UX are `src/dashboard/views/publish.ts`, `src/dashboard/server.ts`, `src/dashboard/views/config.ts`, and `tests/dashboard/publish.test.ts`; the Config page is the established place to confirm env status for publishing integrations.
+---
 
-- 2026-03-23T04:12:59Z — **UX Dashboard Publish Review (read-only)**: Conducted exploratory review of dashboard publish/draft missing Substack configuration messaging. Examined HTMX vs JSON error surfacing patterns and adjacent dashboard conventions. **Findings:** (1) HTMX 500 responses do not swap publish panel—operators see raw failure instead of recovery guidance; (2) Adjacent panels use inline state messages for setup guidance (config status, missing credentials); (3) Recommended smallest actionable message: combine current error text with environment setup hints inline, no additional modals or redirects. **Outcome:** Read-only review completed. No code edits requested. Findings documented for Code decision on publish workflow error handling. See orchestration-log/2026-03-23T04-12-59Z-ux.md.
-- 2026-03-23 — Accepted publish-page error handling pattern: for operator-fixable Substack config failures, keep JSON callers on HTTP 500 with the raw machine-readable error, but return an HTMX-swappable publish-workflow fragment with the short alert, exact env vars (`SUBSTACK_PUBLICATION_URL`, `SUBSTACK_TOKEN`), restart guidance, and `/config` link.
-- 2026-03-23 — Exact validation commands for the final scoped publish fix: `npx vitest run tests/dashboard/publish.test.ts -t "creates the startup Substack service when publish env vars are present|returns an actionable HTMX message when Substack is not configured|returns error when SubstackService not configured|returns error when publishing without an existing linked Substack draft|shows empty state when no draft exists|renders publish preview page with article content"` and `npm run v2:build`.
+## 2026-03-25T06:26:29Z — Mobile Width Fix Proposal
 
-### 2026-03-23T04-16-31Z: Scribe Cross-Agent Update — Publish Config Fix Coordination
+**Orchestration log:** .squad/orchestration-log/2026-03-25T06-26-29Z-ux.md  
+**Session log:** .squad/log/2026-03-25T06-26-29Z-mobile-and-preflight-hardening.md
 
-**Coordinated Session:** Multi-agent Publish Config investigation  
+**Status:** ✓ Completed — Mobile overflow root cause identified and CSS fix proposed
 
-**UX decisions finalized and merged:**
+**Finding:**
+- Article-detail mobile horizontal overflow traced to CSS grid children (.detail-grid, .detail-main, .detail-sidebar) missing min-width: 0.
+- Intrinsic content (.image-gallery with minmax(280px, 1fr)) expands beyond usable width on ~320px phones.
 
-1. **Publisher — Substack Dashboard Config UX Decision:** Detect service availability before rendering publish actions. Distinguish missing configuration from service-unavailability-despite-config. Use appropriate copy for each state (env-setup vs. editor-language).
+**CSS Fix (minimal scope):**
+- Add min-width: 0 to grid containers to enable content shrinking.
+- Change .artifact-table to display: block; overflow-x: auto (horizontal scroll instead of viewport push).
+- Tighten padding at 768px breakpoint.
 
-2. **UX Decision — Publish Missing Config Copy:** Primary alert text should be short ("Substack publishing is not configured.") with actionable recovery details in separate hint (env var names, /config link, restart guidance).
+**Decision:** [Article Mobile Width Fix](../../decisions.md)
 
-**Design guidance:**
-- Short error labels match adjacent dashboard patterns (scannable, repeatable)
-- Separate alert from recovery hints prevents cluttered UI
-- Consistent copy across publish page, config page, and error states
-- HTMX responses enable in-panel error handling instead of raw 500s
+---
+## 2026-03-25T05-51-20Z — Option B Article-Page Simplification Review
 
-**Validation:** Focused publish and server tests passed. Full build blocked by pre-existing src/cli.ts errors (unrelated). Both decisions merged to .squad/decisions.md.
+**Orchestration log:** .squad/orchestration-log/2026-03-25T05-51-20Z-ux.md  
+**Session log:** .squad/log/2026-03-25T05-51-20Z-option-b-article-plan.md
 
-- **2026-03-24: Generate Idea Page Inspection — Agent Selector Architecture**
+**Status:** ✓ Completed — Article-page simplification approved
 
-**Focus:** UI/rendering path for the agent pin-selector on the New Idea page.
+**Recommended approach:**
+- Canonical current-stage display as primary.
+- Advanced-only stage runs.
+- Collapsed revisions.
+- Latest failed-attempt summary only.
 
-**Findings:**
-- **Rendering files:** `src/dashboard/views/new-idea.ts` (renderNewIdeaPage, renderIdeaSuccess) and `src/dashboard/server.ts` (route `/ideas/new`)
-- **Data source:** Expert agents list populated from `AgentRunner.listAgents()` filtered server-side (lines 849–860 in server.ts)
-- **Filter logic:** Excludes two categories—PROD agents (lead, writer, editor, scribe, coordinator, panel-moderator, publisher) and TEAMS agents (32 lowercase team abbreviations: ari, atl, bal, buf, etc.)
-- **NFL-wide agents (expert agents) visible in selector:** analytics, cap, collegescout, defense, draft, injury, media, offense, playerrep, specialteams (10 specialists)
-- **Team agents:** 32 separate file-based agents with lowercase 3-letter abbreviations (sea, sf, gb, kc, etc.); separately selected via team grid (lines 166–172)
-- **UI pattern:** Client-side JS toggle mechanics (toggleAgent, renderAgentChips) persist selection in hidden input `#pinned-agents`; CSS `.agent-badge` (lines 1017–1041 in styles.css) uses border-based chip design with selected state highlight
-- **Mental model clarity:** Expert agents are labeled "Pin Expert Agents" (optional); teams are labeled separately as checkboxes; mental model is clear — agents pinned at idea-generation time, but teams are context separate from panel selection
-- **No architectural issues found:** Selector properly gates NFL-wide agents, team agents remain available as roster context, no UI redress or logic errors detected
-- **Data freshness:** Agent list is live from runner state; no stale agent names in markup — rendering happens fresh each request
-- 2026-03-24 — Generate Idea selector UI path is still anchored in `src/dashboard/server.ts` GET `/ideas/new` and `src/dashboard/views/new-idea.ts`; the selector is server-rendered as plain buttons from `expertAgents`, then maintained client-side with `toggleAgent()`, `renderAgentChips()`, and `removeAgent()`.
-- 2026-03-24 — The selector list is driven by `AgentRunner.listAgents()` against `config.chartersDir` (`<dataDir>\agents\charters\nfl`), not by a hardcoded frontend constant. Default seeded repo charters live in `src/config/defaults/charters/nfl/`, and the visible specialist set is whatever remains after the route excludes PROD names plus 32 team abbreviations.
-- 2026-03-24 — New Idea does not sort `expertAgents` before rendering, so chip order follows filesystem / `readdirSync` order from the charters directory. If deterministic UX ordering matters, Code should sort in the route before calling `renderNewIdeaPage()`.
-- 2026-03-24 — `src/dashboard/public/styles.css` defines `.agent-grid` twice: once for the New Idea chip row (`flex` layout at lines 1010–1015) and later globally for the Agents directory cards (`grid` layout at line 2009). Because the later selector is unscoped, it can override the selector layout on `/ideas/new`.
-- 2026-03-24 — Current automated coverage in `tests/dashboard/new-idea.test.ts` verifies the page generally renders, but does not specifically assert expert-agent filtering, ordering, or chip rendering. Focused route/view tests would be needed to lock down selector behavior.
+## 2026-03-25T03:30:39Z — Dashboard Mobile Audit Session (UX Audit)
 
-## Generate Idea Selector — Architecture Inspection (2026-03-24T05:37:47Z)
+**Orchestration log:** .squad/orchestration-log/2026-03-25T03-30-39Z-ux.md  
+**Session log:** .squad/log/2026-03-25T03-30-39Z-dashboard-mobile-audit.md
 
-**Status:** Confirmed / No issues found
+**Status:** ✓ Completed — system-level audit findings documented
 
-**Render path:** src/dashboard/views/new-idea.ts (renderNewIdeaPage, renderIdeaSuccess)  
-**Server filtering:** src/dashboard/server.ts lines 847–861 (expert agents, live from runner)  
-**Styling:** src/dashboard/public/styles.css (.agent-badge, .agent-grid)
+**Three-agent audit findings (UX):**
+- Shell-level failures: sticky header, primary nav (.header-nav), page layout collapse inconsistently across breakpoints
+- Repeated patterns: same data-table, action-group, filter patterns used across multiple pages with no centralized mobile contract
+- HTMX fragment mismatch: swapped content from partial renders doesn't inherit shell mobile behavior; needs wrapper scoping
+- Mobile-unsafe selectors: .agent-grid overloaded; .card-actions, .quick-actions, .preview-toolbar lack stacking/wrapping rules
+- Test gap: current dashboard tests focus on route/copy validation; no viewport-specific assertions for mobile hooks or fragment structure
 
-**Assessment:** ✅ Clean architecture. No UX gaps. Mental model clear. Selector correctly separates NFL-wide specialists from production and team agents.
-
-**Recommendation:** No changes required. Ready for implementation.
-
-- 2026-03-24T05:41:29Z — **Generate-Idea Selector Trace Complete**: Full render-path investigation completed. Team picker source confirmed: static `NFL_TEAMS` in `src/dashboard/views/new-idea.ts`. Expert picker source confirmed: server-side `runner.listAgents()` filter in `src/dashboard/server.ts` lines 847–861. Render path clean from GET `/ideas/new` → `renderNewIdeaPage()` → team-grid + expert-grid templates. No UX gaps. Styling/layout watch-outs noted for responsive mobile. UX validation complete; handed off to Code for implementation. See `.squad/orchestration-log/2026-03-24T05-41-29Z-ux.md`.
-
-
-
-- 2026-03-26T06:35:50Z — **V3 Provider Choice UX Review Complete**: Article-level provider choice rendered in article detail via metadata edit form. Recommended placement: provider selector in `renderArticleMetaEditForm()` meta-edit-row-2col section paired with teams field. Display behavior: empty state badge placeholder when unset (null). Copy pattern: follow depth_level warning (early-stage guidance). Validation: form render, HTMX round-trip, display state tests. Minimal diff: ~10–12 lines in form template. Key files: `src/dashboard/views/article.ts` (lines 193–254, 179–189), `src/dashboard/server.ts` (lines 1079, 857–898), `src/db/repository.ts` (lines 496–500), `src/types.ts` (provider field at line 35). See `.squad/orchestration-log/2026-03-26T06-35-50Z-ux.md`. Handed to Code for implementation.
+**Recommended approach:** Treat dashboard mobile work as a **shared-system change**, not page-by-page cleanup.
 
 ## Learnings
-- 2026-03-25T01:24:56Z — Shared dashboard header cleanup:keep desktop on a single-row grid, but on mobile move to a compact two-tier treatment with logo + utilities on the first row and a horizontally scrollable nav pill row underneath. Hide decorative nav icons below 768px, keep `New Idea` as the only strong primary action, and keep the env badge/theme toggle grouped in `src/dashboard/views/layout.ts` with styling in `src/dashboard/public/styles.css`. Focused regression coverage now lives in `tests/dashboard/server.test.ts` for the shared header shell.
 
-- 2026-03-25T01:26:48Z — **Mobile Dashboard Header Cleanup**: Completed two-tier mobile header refactor with compact brand + utilities row and horizontally scrollable nav pills. Desktop single-row behavior preserved. Decorative icons hidden below 768px. \New Idea\ isolated as primary action. Focused shared-header assertion added to dashboard server tests. All regressions passing. See .squad/orchestration-log/2026-03-25T01-26-48-ux.md.
-- 2026-03-25T10:45:00Z — V3 revision-state UX review: keep the existing dirty article-detail work in `src/dashboard/views/article.ts` that renames Stage 4 revision to `Revision Workspace` and folds lead-review send-back into `Send to Revision`, but finish the simplification by making revision read as draft work. The landed draft-first contract is `Working Draft` → `Editor Feedback` → `Background Context`, paired with copy like `Draft revision in progress` and `Open Working Draft first...`; do not disturb the mobile-safety guards already added in `src/dashboard/public/styles.css` (`min-width: 0`, smaller mobile padding, wrapped artifact content, and `.image-gallery` using `minmax(min(100%, 280px), 1fr)`). Smallest regression surface stays in `tests/dashboard/server.test.ts` for revision labels/order/send-back copy and `tests/dashboard/wave2.test.ts` for the mobile-width CSS assertion.
+- 2026-03-26 — Multi-provider rollout should reuse the existing article metadata HTMX seam instead of adding a new settings surface. In `src\dashboard\views\article.ts`, the stable UX is a provider badge in the read view plus an `AI Provider` select in the inline metadata editor with `Auto (recommended)` as the null/default value; route glue in `src\dashboard\server.ts` only needs to pass provider options into `/htmx/articles/:id/edit-meta` and persist `llm_provider` alongside the existing metadata fields. The persistent contract now lives in `src\types.ts`, `src\db\schema.sql`, and `src\db\repository.ts`, with focused regression coverage in `tests\dashboard\{config,metadata-edit,server}.test.ts`.
+- 2026-03-28 — Finalized the V3 revision workspace copy around the draft-first scan path. In `worktrees\V3\src\dashboard\views\article.ts`, Stage 4 + `status='revision'` now stays consistently framed as `Revision Workspace`, the workflow line reads `Draft revision in progress · Next: Article Drafting`, revision tabs emphasize `Working Draft` and `Editor Feedback` before `Background Context`, and the lead-review send-back hint uses the same wording. Focused regression coverage lives in `worktrees\V3\tests\dashboard\server.test.ts`; `worktrees\V3\tests\dashboard\wave2.test.ts` still guards the earlier mobile-safe article gallery behavior, and `npm run v2:build` is currently blocked by an unrelated existing TypeScript error in `worktrees\V3\src\pipeline\actions.ts`.
+- 2026-03-28 — V3 revision-state simplification should stay draft-first even when the canonical stage remains 4. In `worktrees\V3\src\dashboard\views\article.ts`, treat `current_stage === 4 && status === 'revision'` as a `Revision Workspace`, alias the stage timeline/pipeline label away from `Panel Discussion`, and order artifact tabs as `draft.md` → `editor-review.md` → `discussion-summary.md` with a short hint explaining that background context is secondary. Keep the earlier mobile-width hardening in `worktrees\V3\src\dashboard\public\styles.css` intact, and protect the behavior with focused assertions in `worktrees\V3\tests\dashboard\server.test.ts` plus the mobile-safe gallery check in `worktrees\V3\tests\dashboard\wave2.test.ts`.
+- 2026-03-25 — Article detail Option B landed as a hierarchy pass, not a redesign: `src/dashboard/views/article.ts` now makes the top `Current stage` block + status line the primary state surface, collapses revision history behind a summary disclosure, and moves Stage Runs into Advanced while keeping only one failed-attempt summary in the action card. Supporting CSS lives in `src/dashboard/public/styles.css`, and focused coverage sits in `tests/dashboard/{server,publish}.test.ts` plus `tests/dashboard/{runs,wave2}.test.ts`.
+- 2026-03-27 — Dashboard mobile rework shipped as a shared-system pass instead of page-by-page hacks. The stable pattern is: compact scrollable header nav in `src/dashboard/views/layout.ts`, responsive table-to-card transforms via `.responsive-table` in `src/dashboard/public/styles.css`, and mobile ordering handled by shared detail-layout hooks (`.mobile-detail-layout`, `.mobile-primary-column`, `.mobile-secondary-column`) so article detail can keep artifacts first while publish moves workflow/status ahead of preview on phones.
+- 2026-03-27 — The old `.agent-grid` collision is now avoided by keeping the New Idea picker on `.idea-agent-grid` and the Agents directory on `.agents-directory-grid`. Future dashboard/mobile work should avoid reusing selector names across chip pickers and card grids because the responsive layer is global.
+- 2026-03-27 — **Dashboard mobile implementation shipped**: `src/dashboard/views/layout.ts` and `src/dashboard/public/styles.css` now carry the real mobile system behind the shared hook classes: compact scrollable nav, tighter phone spacing, 44px tap targets, stacked action/filter/composer rows, responsive table/card treatment, and explicit article/publish column ordering. Supporting markup updates live in `src/dashboard/views/{article,config,home,login,memory,new-idea,preview,publish,runs}.ts`, with focused coverage in `tests/dashboard/{server,new-idea,publish,runs}.test.ts`.
+- 2026-03-27 — **Dashboard mobile audit refresh (system contract)**: mobile hook classes now exist in markup (`shared-mobile-header`, `shared-mobile-nav`, `mobile-detail-layout`, `mobile-primary-column`, `mobile-secondary-column`, `publish-workflow-actions`, `idea-agent-grid`), and focused tests in `tests/dashboard/{server,runs,publish,new-idea}.test.ts` assert those hooks. But `src/dashboard/public/styles.css` still has no selectors for most of those hook classes, so the tests currently protect structural intent more than actual responsive behavior. Future mobile work should pair hook-class assertions with shared CSS rules and should move inline layout styles in `home.ts`, `publish.ts`, `login.ts`, and `article.ts` into reusable shell/action primitives before patching individual pages.
+- 2026-03-26 — Shared mobile hook classes now exist in markup/tests, but not in the stylesheet. `src/dashboard/views/layout.ts` renders `shared-mobile-header`, `shared-mobile-nav`, `header-nav-link`, and `header-env-badge`; `src/dashboard/views/article.ts` and `publish.ts` render `mobile-detail-layout`, `mobile-primary-column`, and `mobile-secondary-column`; `tests/dashboard/server.test.ts`, `publish.test.ts`, and `runs.test.ts` assert those hooks. `src/dashboard/public/styles.css` has no matching selectors, so current tests protect mobile intent only, not actual narrow-screen behavior.
+- 2026-03-26 — Cross-page mobile drift is being driven by shared desktop-first primitives rather than isolated pages: `.site-header`/`.header-inner`/`.btn-header`, `.detail-grid`, `.action-bar`, `.filter-bar`, `.artifact-table`, `.runs-table`, `.memory-table`, `.preview-toolbar`, `.team-grid`, and `.agent-badge` all stay dense or row-oriented on phones. The strongest risks are fixed header crowding, table-only data surfaces, inline-style action rows, and tap targets under 44px in `src/dashboard/public/styles.css`.
+- 2026-03-26 — Preview and publish mobile behavior are not the same thing in this repo. `src/dashboard/views/preview.ts` uses a manual `preview-mobile` class toggle to simulate a 375px Substack viewport, while the real page shell still depends on `renderLayout()` and shared CSS. Treat the preview toggle as a content simulation tool, not proof that the surrounding dashboard page works on a phone.
+- 2026-03-26 — Several dashboard pages use unscoped or missing style contracts that are easy to mistake for completed mobile work: `runs.ts` uses `.page-header` and `.runs-filter-bar`, `publish.ts` uses `.publish-detail-header`, `.article-preview`, `.status-info`, and `.publish-workflow-actions`, and `login.ts` uses `.publisher-form`, but those selectors are absent from `src/dashboard/public/styles.css`. Future mobile fixes should reconcile class contracts before adding more breakpoint rules.
+- 2026-03-27 — **Article mobile width fix**: Added `min-width: 0` to `.detail-grid`, `.detail-main`, `.detail-sidebar`, and `.detail-section` in `src/dashboard/public/styles.css` to prevent grid blowout on narrow screens. Also added `overflow: hidden` on `.detail-section`, `overflow-wrap: break-word` on `.artifact-rendered`, and `display: block; overflow-x: auto` on `.artifact-table` so tables scroll horizontally instead of pushing the viewport. Mobile breakpoint now also tightens `.content` and `.detail-section` padding. This is a CSS-only fix with no markup changes in `article.ts`.
+- 2026-03-27 — **Revision send-back UX fix**: Fixed misleading article-detail UX when editor REVISE verdict sends article back to stage 4. Changed `renderArtifactTabs()` default tab logic to show `draft.md` (the artifact that needs work) instead of discussion artifacts when `article.status === 'revision'`. Also updated workflow status line from "Revision requested" to "Draft revision in progress" to clarify what needs attention. Minimal safe change with focused test in `tests/dashboard/server.test.ts`.
+- 2026-03-27 — **Revision workspace simplification**: The stable V3 article-detail pattern is now draft-first whenever Stage 4 carries `status='revision'`: `src/dashboard/views/article.ts` aliases stage/tooltips/header copy to `Revision Workspace`, keeps the workflow sentence explicit (`Draft revision in progress · Next: Article Drafting`), orders artifact tabs as draft → editor feedback → discussion context, and uses revision-specific helper copy plus a `Resume Drafting` CTA so the page reads like patching a draft instead of re-running discussion. Supporting UI styling lives in `src/dashboard/public/styles.css`, and focused coverage remains in `tests/dashboard/server.test.ts` while `tests/dashboard/wave2.test.ts` continues protecting the earlier mobile-safe gallery clamp.
 
-## Update — V3 Revision-State Dashboard UX Plan (2026-03-25T07-26-44Z)
 
-Decision: revision state should read as draft work
-- Stage 4 relabeled as "Revision Workspace"
-- Artifact priority: draft → editor-review → discussion-summary
-- Copy: "Draft revision in progress"
-- Mobile-width protections preserved
-- Test impact: tests/dashboard/server.test.ts assertions updated
 
-Related decision: ux-v3-revision-plan
 
-- 2026-03-26T11:00:00Z — **Provider Choice Metadata Analysis (V3)**: Reviewed article-detail view, article.ts template, metadata edit endpoints, and types to determine minimal UX changes for article-level provider choice. **Status quo:** `provider` field exists in `Article` type and `updateArticle()` method (repo.ts:496–500), both support null. Form submit paths in place (PATCH /api/articles/:id at line 1079, HTMX POST /htmx/articles/:id/edit-meta at line 857). **UI location:** Provider selector should appear in `renderArticleMetaEditForm()` (src/dashboard/views/article.ts:193–254) as a new select/dropdown in the meta-edit-row-2col section, paired with teams field. **Display behavior:** When unset (null), show empty state badge placeholder on display form (renderArticleMetaDisplay, line 179–189 detail-meta section). **Copy pattern:** Follow depth_level warning pattern (line 203: "⚠️ Changing depth level after Stage 1 may desync prompts/panel sizing"); provider changes early-stage (suggest Stage 1–2 only to avoid resync). **Whitelisting:** Add 'provider' to allowed fields in PATCH endpoint (line 1079), already in repository.updateArticle() signature. **Test coverage:** Extend tests/dashboard/metadata-edit.test.ts with provider field updates (null → value → trimmed); extend PATCH and HTMX POST tests to verify provider round-trip. Add assertion to wave2.test.ts for display state when provider is null vs. set. **Key files:** `src/dashboard/views/article.ts` (lines 193–254, 179–189), `src/dashboard/server.ts` (lines 1079, 857–898), `src/db/repository.ts` (lines 496–500), `src/types.ts` (Article interface, line 35). **Minimal diff impact:** ~10–12 lines in form template, ~1 line whitelist, 0 new database/type work.
+## 2026-03-25T07:15:45Z — Frontend-Only V3 Revision-State Simplification Review
+
+**Orchestration log:** .squad/orchestration-log/2026-03-25T07-15-45Z-ux.md  
+**Session log:** .squad/log/2026-03-25T07-15-45Z-v3-revision-ux-plan.md
+
+**Status:** ✓ Completed — Frontend review and plan finalized
+
+**Surface reviewed:**
+- article.ts
+- styles.css
+- server.test.ts
+- wave2.test.ts
+- Research memo guidance
+
+**Outcome:** Concise no-edit plan preserving dirty Stage 4/Stage 6 wording changes, artifact priority, and mobile-safe CSS behavior ready for Code team implementation.
+

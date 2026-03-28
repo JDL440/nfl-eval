@@ -131,9 +131,6 @@ export function renderIdeaSuccess(article: { id: string; title: string }): strin
 
 export function renderNewIdeaPage(config: { labName: string; expertAgents?: string[] }): string {
   const agents = config.expertAgents ?? [];
-  const teamOptions = NFL_TEAMS.map(t => `
-    <option value="${t.abbr}">${t.abbr} — ${escapeHtml(t.city)} ${escapeHtml(t.name)}</option>
-  `).join('');
   const agentChips = agents.length > 0 ? agents.map(a => `
     <button type="button" class="agent-badge" data-agent="${escapeHtml(a)}"
       onclick="toggleAgent(this, '${escapeHtml(a)}')">
@@ -144,11 +141,15 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
   return renderLayout('New Idea', `
     <div class="idea-form-container">
       <h1>New Article Idea</h1>
-      <p class="idea-page-intro">Lead with one prompt, then set a primary team and depth if you already know the shape of the article. Expert pinning and automation controls stay tucked away until you need them.</p>
 
       <div class="quick-actions">
         <button type="button" class="quick-action-btn" id="surprise-btn"
           onclick="surpriseMe()">🎲 Surprise Me</button>
+        <button type="button" class="quick-action-btn quick-action-btn--disabled" id="breaking-btn"
+          onclick="breakingNews()">📰 Breaking News</button>
+      </div>
+      <div id="breaking-msg" class="quick-action-msg" style="display:none">
+        Coming soon — automated news detection is not yet available
       </div>
 
       <form id="idea-form" class="idea-form">
@@ -156,16 +157,20 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
           <label for="prompt">What's the idea?</label>
           <textarea id="prompt" name="prompt" rows="5" required
             placeholder="Analyze the Seahawks' defensive secondary heading into 2025, focusing on Devon Witherspoon's development and the safety room depth..."></textarea>
-          <p class="form-hint">Describe the angle you want. The dashboard can infer the rest unless you need to guide it.</p>
         </div>
 
         <div class="form-group">
-          <label for="primary-team">Primary Team</label>
-          <select id="primary-team" name="primaryTeam" class="input input-full select">
-            <option value="">Let the prompt infer it</option>
-            ${teamOptions}
-          </select>
-          <p class="form-hint">Optional, but useful when you already know the main team for the article.</p>
+          <label>Teams <span class="form-hint">(click to select)</span></label>
+          <div id="selected-teams" class="team-chips"></div>
+          <div class="team-grid">
+            ${NFL_TEAMS.map(t => `
+              <button type="button" class="team-badge" data-team="${t.abbr}"
+                onclick="toggleTeam(this, '${t.abbr}')">
+                ${t.abbr}
+              </button>
+            `).join('')}
+          </div>
+          <input type="hidden" id="teams" name="teams" value="">
         </div>
 
         <div class="form-group">
@@ -175,104 +180,40 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
             <option value="2" selected>2 — The Beat</option>
             <option value="3">3 — Deep Dive</option>
           </select>
-          <p class="form-hint">This is the default Stage 1 setup. Open advanced options only when you need extra steering.</p>
         </div>
 
-        <details class="idea-advanced">
-          <summary>Advanced options</summary>
-          <p class="idea-advanced-copy">Use these only when you want cross-team context, expert pinning, or automation controls before Stage 1 runs.</p>
-
-          <div class="form-group">
-            <label>Additional Teams <span class="form-hint">(optional cross-team context)</span></label>
-            <div id="selected-teams" class="team-chips"></div>
-            <div class="team-grid">
-              ${NFL_TEAMS.map(t => `
-                <button type="button" class="team-badge" data-team="${t.abbr}"
-                  onclick="toggleTeam(this, '${t.abbr}')">
-                  ${t.abbr}
-                </button>
-              `).join('')}
-            </div>
-            <input type="hidden" id="teams" name="teams" value="">
+        <div class="form-group">
+          <label>Pin Expert Agents <span class="form-hint">(optional — these agents will always be included on the panel)</span></label>
+          <div id="selected-agents" class="team-chips"></div>
+          <div class="agent-grid">
+            ${agentChips}
           </div>
-
-          <div class="form-group">
-            <label>Pin Expert Agents <span class="form-hint">(optional — always include these agents on the panel)</span></label>
-            <div id="selected-agents" class="team-chips"></div>
-            <div class="agent-grid">
-              ${agentChips}
-            </div>
-            <input type="hidden" id="pinned-agents" name="pinnedAgents" value="">
-          </div>
-
-          <div class="form-group form-checkbox">
-            <label>
-              <input type="checkbox" id="auto-advance" name="autoAdvance">
-              Auto-advance through pipeline
-              <span class="form-hint">(stops at Stage 7 for review)</span>
-            </label>
-          </div>
-        </details>
+          <input type="hidden" id="pinned-agents" name="pinnedAgents" value="">
+        </div>
 
         <div id="form-status" class="form-status" style="display:none"></div>
+
+        <div class="form-group form-checkbox">
+          <label>
+            <input type="checkbox" id="auto-advance" name="autoAdvance">
+            Auto-advance through pipeline
+            <span class="form-hint">(stops at Stage 7 for review)</span>
+          </label>
+        </div>
 
         <div class="form-actions">
           <a href="/" class="btn btn-secondary">Cancel</a>
           <button type="submit" class="btn btn-primary" id="submit-btn">
-            Create Idea
+            Create Article
           </button>
         </div>
       </form>
     </div>
 
     <script>
-      let primaryTeam = '';
-      const selectedTeams = new Set();
-
-      function buildTeamsPayload() {
-        const teams = primaryTeam
-          ? [primaryTeam].concat(Array.from(selectedTeams).filter(abbr => abbr !== primaryTeam))
-          : Array.from(selectedTeams);
-        document.getElementById('teams').value = teams.join(',');
-        return teams;
-      }
-
-      function renderTeamButtons() {
-        document.querySelectorAll('.team-badge').forEach(function(btn) {
-          const abbr = btn.getAttribute('data-team');
-          const isPrimary = abbr === primaryTeam;
-          const isSelected = !isPrimary && selectedTeams.has(abbr);
-          btn.classList.toggle('selected', isSelected);
-          btn.classList.toggle('team-badge-primary', isPrimary);
-          btn.setAttribute('aria-pressed', (isPrimary || isSelected) ? 'true' : 'false');
-        });
-      }
-
-      function renderChips() {
-        const container = document.getElementById('selected-teams');
-        const chips = [];
-        if (primaryTeam) {
-          chips.push('<span class="team-chip team-chip-primary">Primary: ' + primaryTeam + '</span>');
-        }
-        chips.push(...Array.from(selectedTeams).map(abbr =>
-          '<span class="team-chip">' + abbr +
-          ' <button type="button" onclick="removeTeam(\\'' + abbr + '\\')">&times;</button></span>'
-        ));
-        container.innerHTML = chips.join('');
-      }
-
-      function setPrimaryTeam(abbr) {
-        primaryTeam = abbr || '';
-        if (primaryTeam) selectedTeams.delete(primaryTeam);
-        document.getElementById('primary-team').value = primaryTeam;
-        buildTeamsPayload();
-        renderChips();
-        renderTeamButtons();
-      }
-
       function surpriseMe() {
         const prompt = document.getElementById('prompt');
-        const teams = buildTeamsPayload();
+        const teams = Array.from(selectedTeams);
         let text = 'Generate a surprising, timely NFL article idea.';
         if (teams.length > 0) {
           text += ' Focus on the ' + teams.join(', ') + '.';
@@ -282,29 +223,46 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
         text += ' Focus on an underreported storyline, a bold prediction, or a contrarian take that challenges conventional wisdom.';
         prompt.value = text;
         prompt.focus();
+        // Flash the prompt to show it was filled
         prompt.classList.add('highlight-flash');
         setTimeout(() => prompt.classList.remove('highlight-flash'), 1200);
       }
 
+      function breakingNews() {
+        const msg = document.getElementById('breaking-msg');
+        msg.style.display = msg.style.display === 'none' ? 'block' : 'none';
+      }
+
+      const selectedTeams = new Set();
+
       function toggleTeam(btn, abbr) {
-        if (abbr === primaryTeam) return;
         if (selectedTeams.has(abbr)) {
           selectedTeams.delete(abbr);
+          btn.classList.remove('selected');
         } else {
           selectedTeams.add(abbr);
+          btn.classList.add('selected');
         }
-        buildTeamsPayload();
+        document.getElementById('teams').value = Array.from(selectedTeams).join(',');
         renderChips();
-        renderTeamButtons();
+      }
+
+      function renderChips() {
+        const container = document.getElementById('selected-teams');
+        container.innerHTML = Array.from(selectedTeams).map(abbr =>
+          '<span class="team-chip">' + abbr +
+          ' <button type="button" onclick="removeTeam(\\'' + abbr + '\\')">&times;</button></span>'
+        ).join('');
       }
 
       function removeTeam(abbr) {
         selectedTeams.delete(abbr);
-        buildTeamsPayload();
+        document.querySelector('.team-badge[data-team="' + abbr + '"]').classList.remove('selected');
+        document.getElementById('teams').value = Array.from(selectedTeams).join(',');
         renderChips();
-        renderTeamButtons();
       }
 
+      // ── Pinned agents ──────────────────────────
       const pinnedAgents = new Set();
 
       function toggleAgent(btn, name) {
@@ -335,6 +293,7 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
         renderAgentChips();
       }
 
+      // Persist auto-advance preference via localStorage
       (function initAutoAdvance() {
         const cb = document.getElementById('auto-advance');
         const saved = localStorage.getItem('nfl-lab-auto-advance');
@@ -343,13 +302,6 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
           localStorage.setItem('nfl-lab-auto-advance', cb.checked ? 'true' : 'false');
         });
       })();
-
-      document.getElementById('primary-team').addEventListener('change', function(e) {
-        setPrimaryTeam(e.target.value);
-      });
-
-      renderChips();
-      renderTeamButtons();
 
       document.getElementById('idea-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -362,7 +314,7 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
         btn.textContent = 'Creating...';
         status.style.display = 'block';
         status.className = 'form-status info';
-        status.textContent = '🧠 Building your Stage 1 idea from the prompt…';
+        status.textContent = '🧠 Generating idea from your prompt…';
 
         try {
           const res = await fetch('/api/ideas', {
@@ -370,7 +322,7 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               prompt,
-              teams: buildTeamsPayload(),
+              teams: Array.from(selectedTeams),
               depthLevel: parseInt(document.getElementById('depth-level').value, 10),
               autoAdvance: document.getElementById('auto-advance').checked,
               pinnedAgents: Array.from(pinnedAgents),
@@ -389,15 +341,15 @@ export function renderNewIdeaPage(config: { labName: string; expertAgents?: stri
             }
           } else {
             status.className = 'form-status error';
-            status.textContent = data.error || 'Failed to create idea';
+            status.textContent = data.error || 'Failed to create article';
             btn.disabled = false;
-            btn.textContent = 'Create Idea';
+            btn.textContent = 'Create Article';
           }
         } catch (err) {
           status.className = 'form-status error';
           status.textContent = 'Network error: ' + err.message;
           btn.disabled = false;
-          btn.textContent = 'Create Idea';
+          btn.textContent = 'Create Article';
         }
       });
     </script>

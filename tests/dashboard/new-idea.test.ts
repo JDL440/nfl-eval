@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -131,16 +131,14 @@ The Actual Title Here
 // ── View rendering tests ────────────────────────────────────────────────────
 
 describe('renderNewIdeaPage', () => {
-  it('renders the smart form with prompt, primary team, depth level, and deferred advanced controls', () => {
+  it('renders the smart form with prompt, team grid, depth level, and auto-advance', () => {
     const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('<!DOCTYPE html>');
     expect(html).toContain('New Article Idea');
     expect(html).toContain('name="prompt"');
-    expect(html).toContain('name="primaryTeam"');
     expect(html).toContain('team-grid');
     expect(html).toContain('auto-advance');
     expect(html).toContain('name="depthLevel"');
-    expect(html).toContain('Advanced options');
     expect(html).toContain('1 — Casual Fan');
     expect(html).toContain('2 — The Beat');
     expect(html).toContain('3 — Deep Dive');
@@ -159,18 +157,16 @@ describe('Quick-action buttons', () => {
     expect(html).toContain('id="surprise-btn"');
   });
 
+  it('contains Breaking News button', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
+    expect(html).toContain('Breaking News');
+    expect(html).toContain('id="breaking-btn"');
+    expect(html).toContain('quick-action-btn--disabled');
+  });
+
   it('Surprise Me preset prompt is embedded in page script', () => {
     const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('Generate a surprising, timely NFL article idea');
-  });
-
-  it('keeps advanced controls behind an optional settings disclosure', () => {
-    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
-    expect(html).toContain('<details class="idea-advanced">');
-    expect(html).toContain('Lead with one prompt');
-    expect(html).toContain('Primary Team');
-    expect(html).toContain('Pin Expert Agents');
-    expect(html).toContain('Auto-advance through pipeline');
   });
 });
 
@@ -219,13 +215,10 @@ describe('New Idea Routes', () => {
       const html = await res.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('New Article Idea');
-      expect(html).toContain('Lead with one prompt');
       expect(html).toContain('name="prompt"');
-      expect(html).toContain('name="primaryTeam"');
       expect(html).toContain('team-grid');
       expect(html).toContain('auto-advance');
       expect(html).toContain('name="depthLevel"');
-      expect(html).toContain('Advanced options');
     });
   });
 
@@ -348,7 +341,6 @@ describe('New Idea Routes', () => {
 
   describe('POST /api/ideas (with actionContext / LLM)', () => {
     let llmApp: ReturnType<typeof createApp>;
-    let runMock: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
       // Build a mock actionContext with a fake runner.run()
@@ -381,16 +373,15 @@ Writer + Analyst + Editor
 - Uniqueness: 2
 - **Total: 10/12**`;
 
-      runMock = vi.fn().mockResolvedValue({
-        content: mockIdeaContent,
-        model: 'mock-model',
-        provider: 'mock',
-        agentName: 'lead',
-        memoriesUsed: 0,
-      });
       const mockRunner = {
         gateway: {},
-        run: runMock,
+        run: async () => ({
+          content: mockIdeaContent,
+          model: 'mock-model',
+          provider: 'mock',
+          agentName: 'lead',
+          memoriesUsed: 0,
+        }),
       };
       const mockActionContext = {
         repo,
@@ -446,55 +437,26 @@ Writer + Analyst + Editor
       expect(article!.primary_team).toBe('SEA');
       expect(article!.depth_level).toBe(3);
     });
-
-    it('uses the simplified dashboard stage 1 brief for the LLM request', async () => {
-      const res = await llmApp.request('/api/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: 'Build me a fast Seahawks secondary reset idea',
-          teams: ['SEA'],
-          depthLevel: 2,
-          pinnedAgents: ['cap-expert', 'film-room'],
-        }),
-      });
-
-      expect(res.status).toBe(201);
-      expect(runMock).toHaveBeenCalledTimes(1);
-      const call = runMock.mock.calls[0]?.[0];
-      expect(call.agentName).toBe('lead');
-      expect(call.skills).toEqual(['idea-generation']);
-      expect(call.maxTokens).toBe(1400);
-      expect(call.task).toContain('This is a dashboard Stage 1 ideation request');
-      expect(call.task).toContain('Do not mention GitHub comments');
-      expect(call.task).toContain('Pinned agents to keep in mind: cap-expert, film-room');
-      expect(call.task).toContain('Operator prompt: Build me a fast Seahawks secondary reset idea');
-    });
   });
 
   // ── Auto-advance ─────────────────────────────────────────────────────────
 
   describe('POST /api/articles/:id/auto-advance', () => {
-    // Helper: wait until the background runner settles on a final stage.
+    // Helper: wait for background auto-advance to finish (lightweight mode completes in <50ms)
     async function waitForAdvance(slug: string, maxMs = 2000): Promise<void> {
       const start = Date.now();
-      let lastStage: number | null = null;
-      let stablePolls = 0;
       while (Date.now() - start < maxMs) {
         await new Promise(r => setTimeout(r, 50));
+        // Check if the article has advanced (not stuck at initial stage)
         const a = repo.getArticle(slug);
         if (!a) return;
-        if (a.current_stage === lastStage) {
-          stablePolls += 1;
-        } else {
-          lastStage = a.current_stage;
-          stablePolls = 0;
-        }
-        if (stablePolls >= 3) return;
+        // If stage transitions have been recorded, the advance ran
+        const transitions = repo.getStageTransitions(slug);
+        if (transitions.length > 0) return;
       }
     }
 
-    it('advances article through the satisfied lightweight guards', async () => {
+    it('advances article through all satisfied guards', async () => {
       const slug = 'auto-adv-test';
       repo.createArticle({ id: slug, title: 'Auto Advance Test' });
       repo.artifacts.put(slug, 'idea.md', '# Test Idea\nContent here.');
@@ -511,7 +473,7 @@ Writer + Analyst + Editor
 
       await waitForAdvance(slug);
       const article = repo.getArticle(slug)!;
-      expect(article.current_stage).toBe(5);
+      expect(article.current_stage).toBe(7);
     });
 
     it('stops when a guard fails', async () => {
@@ -529,7 +491,7 @@ Writer + Analyst + Editor
       expect(article.current_stage).toBe(3);
     });
 
-    it('does not advance past the last satisfied lightweight stage', async () => {
+    it('does not advance past stage 7', async () => {
       const slug = 'auto-adv-cap';
       repo.createArticle({ id: slug, title: 'Cap Test' });
       repo.artifacts.put(slug, 'idea.md', '# Idea\nContent.');
@@ -551,7 +513,7 @@ Writer + Analyst + Editor
 
       await waitForAdvance(slug);
       const article = repo.getArticle(slug)!;
-      expect(article.current_stage).toBe(5);
+      expect(article.current_stage).toBe(7);
     });
 
     it('returns 404 for unknown article', async () => {

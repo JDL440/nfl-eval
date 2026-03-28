@@ -27,12 +27,9 @@ export const CONTEXT_CONFIG: Record<string, StageContextEntry> = {
   generatePrompt:   { primary: 'idea.md',               include: [] },
   composePanel:     { primary: 'discussion-prompt.md',  include: ['idea.md'] },
   runDiscussion:    { primary: 'discussion-prompt.md',  include: [] },  // panel-composition injected separately
-  // V3: Stage 5 keeps the writer on the discussion summary plus only the bounded verification artifacts that materially change the draft.
-  writeDraft:       { primary: 'discussion-summary.md', include: ['panel-factcheck.md', 'writer-factcheck.md'] },
-  // V3: Stage 6 keeps the editor on the draft plus deterministic verification evidence only.
-  runEditor:        { primary: 'draft.md',              include: ['roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
-  // V3: Stage 7 keeps the publisher on required publish-readiness inputs only.
-  runPublisherPass: { primary: 'draft.md',              include: ['editor-review.md'] },
+  writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+  runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+  runPublisherPass: { primary: 'draft.md',              include: ['editor-review.md', 'roster-context.md'] },
 };
 
 export const CONTEXT_CONFIG_PRESETS: Record<ContextPreset, Record<string, StageContextEntry>> = {
@@ -41,10 +38,9 @@ export const CONTEXT_CONFIG_PRESETS: Record<ContextPreset, Record<string, StageC
     generatePrompt:   { primary: 'idea.md',               include: ['roster-context.md'] },
     composePanel:     { primary: 'discussion-prompt.md',  include: ['idea.md', 'roster-context.md'] },
     runDiscussion:    { primary: 'discussion-prompt.md',  include: ['idea.md', 'panel-composition.md', 'roster-context.md'] },
-    // V3: Rich mode no longer replays Stage 2-4 narrative context into the writer/editor/publisher passes.
-    writeDraft:       { primary: 'discussion-summary.md', include: ['panel-factcheck.md', 'writer-factcheck.md'] },
-    runEditor:        { primary: 'draft.md',              include: ['roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
-    runPublisherPass: { primary: 'draft.md',              include: ['editor-review.md'] },
+    writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+    runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+    runPublisherPass: { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md', 'editor-review.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
   },
 };
 

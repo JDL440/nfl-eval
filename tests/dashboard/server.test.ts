@@ -232,23 +232,13 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('NFL Lab');
-      expect(html).toContain('aria-label="Primary navigation"');
-      expect(html).toContain('class="header-meta"');
-      expect(html).toContain('class="header-link-label">New Idea</span>');
-      expect(html).toContain('Start Here');
       expect(html).toContain('Ready to Publish');
       expect(html).toContain('Pipeline');
-      expect(html).toContain('Continue Articles');
-      expect(html).toContain('Create Idea');
-      expect(html).toContain('Continue article');
+      expect(html).toContain('Recent Ideas');
     });
 
     it('home page shows articles in correct sections', async () => {
       repo.createArticle({ id: 'idea-1', title: 'Idea One' });
-      repo.createArticle({ id: 'drafting-1', title: 'Drafting One' });
-      for (let s = 2; s <= 5; s++) {
-        repo.advanceStage('drafting-1', s - 1, s, 'test');
-      }
       repo.createArticle({ id: 'ready-1', title: 'Ready One' });
       // Advance ready-1 through stages to 7
       for (let s = 2; s <= 7; s++) {
@@ -258,11 +248,7 @@ describe('Dashboard Server', () => {
       const res = await app.request('/');
       const html = await res.text();
       expect(html).toContain('Idea One');
-      expect(html).toContain('Drafting One');
       expect(html).toContain('Ready One');
-      expect(html).toContain('Stage 5');
-      expect(html).toContain('Continue Article');
-      expect(html).toContain('/articles/ready-1/publish');
     });
 
     it('article detail page renders', async () => {
@@ -272,10 +258,7 @@ describe('Dashboard Server', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Detail Test Article');
-      expect(html).toContain('Current stage');
-      expect(html).toContain('Stage 1 · Idea Generation');
-      expect(html).toContain('Workflow status');
-      expect(html).toContain('Working · Next: Discussion Prompt');
+      expect(html).toContain('Stage 1');
       expect(html).toContain('Audit Log');
       expect(html).toContain('Agent Context Settings');
       expect(html).toContain('/htmx/articles/detail-test/context-config');
@@ -316,9 +299,7 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/detail-revisions');
       expect(res.status).toBe(200);
       const html = await res.text();
-      expect(html).toContain('class="revision-history-disclosure"');
       expect(html).toContain('Revision History');
-      expect(html).toContain('1 iteration · Latest outcome: REVISE · Top blocker: stale-stat');
       expect(html).toContain('Iteration 1');
       expect(html).toContain('Writer pass');
       expect(html).toContain('Editor pass');
@@ -342,8 +323,6 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/detail-lead-review');
       expect(res.status).toBe(200);
       const html = await res.text();
-      expect(html).toContain('Workflow status');
-      expect(html).toContain('Paused for lead review');
       expect(html).toContain('Needs Lead review');
       expect(html).toContain('Lead review required: repeated editor blocker detected');
       expect(html).toContain('/htmx/articles/detail-lead-review/artifact/lead-review.md');
@@ -520,23 +499,14 @@ describe('Dashboard Server', () => {
       expect(html).toContain('card-ready');
     });
 
-    it('GET /htmx/continue-articles returns active Stage 1-6 articles', async () => {
+    it('GET /htmx/recent-ideas returns HTML fragment', async () => {
       repo.createArticle({ id: 'idea-htmx', title: 'Idea Htmx' });
-      repo.createArticle({ id: 'discussion-htmx', title: 'Discussion Htmx' });
-      repo.advanceStage('discussion-htmx', 1, 2, 'test');
-      repo.createArticle({ id: 'publish-htmx', title: 'Publish Htmx' });
-      for (let s = 2; s <= 7; s++) {
-        repo.advanceStage('publish-htmx', s - 1, s, 'test');
-      }
 
-      const res = await app.request('/htmx/continue-articles');
+      const res = await app.request('/htmx/recent-ideas');
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Idea Htmx');
-      expect(html).toContain('Discussion Htmx');
       expect(html).toContain('card-idea');
-      expect(html).not.toContain('Publish Htmx');
-      expect(html).toContain('Continue Article');
     });
 
     it('GET /htmx/articles/:id/context-config returns defaults when no overrides', async () => {
@@ -906,11 +876,11 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/stage7-publish');
       const html = await res.text();
 
-      expect(html).toContain('Continue to Publish');
+      expect(html).toContain('Open Publish Page');
       expect(html).not.toContain('Publish to Substack');
-      expect(html).toContain('Substack draft ready. Continue to Publish');
+      expect(html).toContain('Substack draft saved. Open the Publish Page');
       expect(html).not.toContain('substack_url not set on article');
-      expect(html).toContain('View Draft ↗');
+      expect(html).toContain('Open Draft ↗');
     });
   });
 

@@ -44,17 +44,15 @@ export function renderLayout(title: string, content: string, labName: string): s
   <header class="site-header">
     <div class="header-inner">
       <a href="/" class="logo">${escapeHtml(labName)}</a>
-      <nav class="header-nav" aria-label="Primary navigation">
-        <a href="/agents" class="btn btn-header"><span class="header-link-icon" aria-hidden="true">🤖</span><span class="header-link-label">Agents</span></a>
-        <a href="/memory" class="btn btn-header"><span class="header-link-icon" aria-hidden="true">🧠</span><span class="header-link-label">Memory</span></a>
-        <a href="/runs" class="btn btn-header"><span class="header-link-icon" aria-hidden="true">📊</span><span class="header-link-label">Runs</span></a>
-        <a href="/config" class="btn btn-header"><span class="header-link-icon" aria-hidden="true">⚙️</span><span class="header-link-label">Config</span></a>
-        <a href="/ideas/new" class="btn btn-header btn-header-primary"><span class="header-link-icon" aria-hidden="true">+</span><span class="header-link-label">New Idea</span></a>
-      </nav>
-      <div class="header-meta">
-        <button id="theme-toggle" class="btn btn-header btn-icon" type="button" aria-label="Toggle theme" title="Toggle theme" onclick="toggleTheme()">🌓</button>
+      <nav class="header-nav">
+        <a href="/agents" class="btn btn-header">🤖 Agents</a>
+        <a href="/memory" class="btn btn-header">🧠 Memory</a>
+        <a href="/runs" class="btn btn-header">📊 Runs</a>
+        <a href="/config" class="btn btn-header">⚙️ Config</a>
+        <a href="/ideas/new" class="btn btn-header">+ New Idea</a>
+        <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
         <span class="env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
-      </div>
+      </nav>
     </div>
   </header>
   <main class="content">

@@ -11,12 +11,14 @@
 
 ## Responsibilities
 
-- Run the required Stage 7 publish-readiness pass: structure, formatting, image placement, and metadata readiness
-- Verify the article against the canonical `src/config/defaults/skills/substack-article.md` contract
+- Verify article file structure (headline, subtitle, author line, boilerplate footer)
+- Verify the article against the canonical `src/config/defaults/skills/substack-article.md` structure contract (including TLDR and image placement expectations)
 - If the article misses that canonical structure, flag it as a revision of the current draft — do not ask for a full rewrite when the existing analysis is still usable
+- Verify subscribe button markers are present
+- Run a final content read-through for spelling, formatting, and orphaned sections
+- Prepare Substack metadata (title, subtitle, audience)
 - Record the publisher pass in pipeline.db
 - Hand off to the dashboard for Joe's final review and live publish
-- Keep optional promotion work (Substack Note, Tweet, Publish All extras) separate from the required Stage 7 gate
 
 ## Knowledge
 
@@ -30,6 +32,5 @@
 - Does NOT re-evaluate editorial quality — that's Editor's job (Stage 6)
 - Does NOT make football evaluations or change expert conclusions
 - Does NOT publish directly — stops at dashboard handoff
-- Does NOT treat optional promotion tasks as part of required publish readiness
 - If a new factual error is found, flags it to Editor rather than fixing it
 - Follows the publisher checklist strictly and in order

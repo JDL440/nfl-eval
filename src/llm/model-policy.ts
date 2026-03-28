@@ -16,7 +16,7 @@ export interface ModelPolicyConfig {
   version: string;
   models: Record<string, string>;
   max_output_tokens: Record<string, number>;
-  panel_size_limits: Record<string, { min: number; max: number; default?: number }>;
+  panel_size_limits: Record<string, { min: number; max: number }>;
   depth_level_map: Record<string, string>;
   supported_models: Record<string, string[]>;
   task_families: Record<string, { tier: string; precedence: string[] }>;
@@ -156,16 +156,12 @@ export class ModelPolicy {
   /**
    * Get panel size limits for a given depth level.
    */
-  getPanelSizeLimits(depthLevel: number): { min: number; max: number; default: number } {
+  getPanelSizeLimits(depthLevel: number): { min: number; max: number } {
     const depthName = this.config.depth_level_map[String(depthLevel)];
     if (!depthName) throw new Error(`Unknown depth level: ${depthLevel}`);
     const limits = this.config.panel_size_limits[depthName];
     if (!limits) throw new Error(`No panel size limits for depth: ${depthName}`);
-    return {
-      min: limits.min,
-      max: limits.max,
-      default: limits.default ?? limits.min,
-    };
+    return limits;
   }
 
   resolve(params: ResolveParams = {}): ResolvedModel {

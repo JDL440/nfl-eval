@@ -1,4 +1,4 @@
 # Now — NFL Lab
 
-**Focus:** Publish payload repairs validated and staged. Active investigation on Note/Tweet publishing 500s.  
-**Last updated:** 2026-03-25T10:30:00Z
+**Focus:** Cleaning stale V3 port state and fixing article-page mobile width in `worktrees\V3`.  
+**Last updated:** 2026-03-27T14:00:00Z

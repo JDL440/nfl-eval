@@ -14,7 +14,7 @@ source: "designed 2026-03-15 — based on validated substack-publishing skill an
 
 ## Purpose
 
-The Publisher agent takes an Editor-approved article with images and prepares it for dashboard-led publication. This is **not** editorial review (that's Stage 6 — Editor's job). The Publisher focuses on required publish-readiness checks, then hands the article to the dashboard for live publish.
+The Publisher agent takes an Editor-approved article with images and prepares it for dashboard-led publication. This is **not** editorial review (that's Stage 6 — Editor's job). The Publisher focuses on formatting, metadata, image placement, and recording a complete publisher pass so the dashboard can publish the article live after review.
 
 ---
 
@@ -28,7 +28,7 @@ Editor: ✅ APPROVED → Publisher: prep + dashboard handoff → dashboard revie
 
 ---
 
-## Required Stage 7 Pass
+## Publisher Checklist
 
 Run this in order. Each step is a gate before the next.
 
@@ -163,11 +163,7 @@ Post the following to the article thread:
 - Images: {N} (cover: {N}, inline: {N})
 ```
 
-## Optional Promotion Follow-Up
-
-Promotion is **not** part of the required Stage 7 gate. Handle it only after the live publish step or during manual recovery.
-
-### Promotion Note fallback (only if the dashboard publish step skipped or failed it)
+### Step 6b — Promotion Note fallback (only if the dashboard publish step skipped or failed it)
 
 The default Stage 8 flow is to let the **dashboard publish action** send the live article and dispatch the default Substack Note in the same step. Use `publish_note_to_substack` only after the article is live if the Note was intentionally skipped, failed, or needs a manual retry / alternate variant.
 
@@ -197,13 +193,13 @@ See `docs/substack-notes-feature-design.md` §11 for the full rollout plan and `
 
 | | Editor (Stage 6) | Publisher (Stage 7) |
 |---|---|---|
-| **Focus** | Accuracy + editorial quality | Required publish readiness |
+| **Focus** | Accuracy + editorial quality | Formatting + publish readiness |
 | **Checks** | Facts, stats, structure, style | Images, metadata, syntax, file paths |
 | **Output** | Verdict (APPROVED/REVISE/REJECT) | Dashboard article URL + handoff checklist |
 | **Can reject?** | Yes — sends back to Writer | No — escalates to Joe or back to Editor |
 | **Mindset** | "Is this article good?" | "Is this article ready to ship?" |
 
-Publisher does **not** re-evaluate editorial quality, and optional promotion work does not block Stage 7 readiness. If Publisher finds a new factual error, they flag it to Editor (not fix it themselves).
+Publisher does **not** re-evaluate editorial quality. If Publisher finds a new factual error, they flag it to Editor (not fix it themselves).
 
 ### Post-Publish Follow-On Rule
 

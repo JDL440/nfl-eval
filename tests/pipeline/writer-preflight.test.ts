@@ -6,10 +6,10 @@ describe('writer preflight', () => {
   it('builds a short checklist focused on top blockers', () => {
     const checklist = buildWriterPreflightChecklist();
 
-    expect(checklist).toContain('short essentials preflight');
-    expect(checklist).toContain('do not invent fuller versions');
-    expect(checklist).toContain('numbers, dates, draft facts, and contract details');
-    expect(checklist).toContain('unsupported specifics');
+    expect(checklist).toContain('short editor-style preflight on only the top blockers');
+    expect(checklist).toContain('Do not expand a last name into a full name');
+    expect(checklist).toContain('contract figure, date, draft fact, or stat');
+    expect(checklist).toContain('No guesswork');
   });
 
   it('flags unsupported name variants against supplied artifacts', () => {
@@ -25,21 +25,6 @@ describe('writer preflight', () => {
     expect(state.blockingIssues[0]?.message).toContain('Jaxon Smith-Njigba');
   });
 
-  it('does not treat sentence-openers plus a supported last name as an invented expansion', () => {
-    const state = runWriterPreflight({
-      draft: 'If Rodgers comes back, the offense still has to flow through structure. If Pat Freiermuth stays central, the tight end room still matters.',
-      sourceArtifacts: [
-        {
-          name: 'discussion-summary.md',
-          content: "Aaron Rodgers' headline value still matters. Pat Freiermuth stays central to the tight end room.",
-        },
-      ],
-    });
-
-    expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
-    expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
-  });
-
   it('ignores NFL Lab team branding phrases when extracting supported names', () => {
     const state = runWriterPreflight({
       draft: '**Micah Parsons** is the hinge point of this Cowboys defense.',
@@ -50,36 +35,6 @@ describe('writer preflight', () => {
 
     expect(state.blockingIssues.some((issue) => issue.message.includes('Lab Cowboys'))).toBe(false);
     expect(state.blockingIssues.some((issue) => issue.message.includes('cowboys'))).toBe(false);
-  });
-
-  it('ignores sentence-opener pseudo-names like "Because San Francisco" in source artifacts', () => {
-    const state = runWriterPreflight({
-      draft: 'San Francisco still has to decide how aggressive to be at receiver.',
-      sourceArtifacts: [
-        {
-          name: 'discussion-summary.md',
-          content: 'Because San Francisco still lacks easy answers here, the panel kept circling the receiver question.',
-        },
-      ],
-    });
-
-    expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
-    expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
-  });
-
-  it('ignores sibling opener phrases when checking supported names', () => {
-    const state = runWriterPreflight({
-      draft: 'Seattle still needs another answer at guard.',
-      sourceArtifacts: [
-        {
-          name: 'discussion-summary.md',
-          content: 'If Seattle wants this offense to travel, it must get sturdier inside. When Seattle gets boxed in, the whole plan narrows.',
-        },
-      ],
-    });
-
-    expect(state.blockingIssues.some((issue) => issue.code === 'name-consistency')).toBe(false);
-    expect(state.blockingIssues.some((issue) => issue.code === 'unsupported-name-expansion')).toBe(false);
   });
 
   it('flags unsupported precise claims but allows supported local claims through', () => {

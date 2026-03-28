@@ -186,24 +186,6 @@ describe('Guard functions', () => {
       expect(result.passed).toBe(true);
     });
 
-    it('accepts the common TL;DR heading variant', () => {
-      const result = inspectDraftStructure(`# Headline
-
-*Subtitle*
-
-> **TL;DR**
-> - One
-> - Two
-> - Three
-> - Four
-
-**By: The NFL Lab Expert Panel**
-
-${longText(400)}
-`);
-      expect(result.passed).toBe(true);
-    });
-
     it('fails when TLDR appears after the first section heading', () => {
       const result = inspectDraftStructure(`# Headline
 

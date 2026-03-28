@@ -14,13 +14,13 @@ Defines the rules Lead follows when selecting a panel of analysts for an article
 
 ## Panel Size Limits by Depth Level
 
-| Depth Level | Min | Default | Max | Rationale |
-|-------------|-----|---------|-----|-----------|
-| 1 — Casual Fan | 2 | **2** | **2** | Narrative-first; 2 agents produce enough tension without cap-nerd detail |
-| 2 — The Beat | 3 | **3** | **4** | Default to 3; only expand when the article truly needs a fourth lane |
-| 3 — Deep Dive | 4 | **4** | **5** | Default to 4; fifth seat is optional for unusually broad topics |
+| Depth Level | Min | Max | Rationale |
+|-------------|-----|-----|-----------|
+| 1 — Casual Fan | 2 | **2** | Narrative-first; 2 agents produce enough tension without cap-nerd detail |
+| 2 — The Beat | 3 | **4** | Default; balance of depth and cost |
+| 3 — Deep Dive | 4 | **5** | Full scheme/cap/draft analysis; 5 agents justified only here |
 
-**Default to the middle lane, not the ceiling.** A Level 2 article should usually run with 3 panelists, not 4. A Level 3 article should usually run with 4 panelists, not 5.
+**Do not exceed these limits.** A Level 1 article with 4 agents costs the same as a Level 3 article but delivers a worse reader experience.
 
 ## Selection Rules
 
@@ -32,20 +32,15 @@ Defines the rules Lead follows when selecting a panel of analysts for an article
 
 ## Panel Composition Matrix
 
-| Article Type | Default Recipe | Expand Only If Needed |
-|-------------|----------------|------------------------|
-| Contract extension / FA signing | Team Agent + Cap + PlayerRep | Add Analytics or Offense/Defense for Deep Dive |
-| Draft pick evaluation | Team Agent + Draft + CollegeScout | Add Analytics or Offense/Defense for Deep Dive |
-| Trade evaluation | Team Agent + Cap + PlayerRep | Add second Team Agent or Analytics when both sides matter |
-| Coaching/scheme analysis | Team Agent + Offense/Defense + Analytics | Add opposite side of the ball for Deep Dive |
-| Roster construction strategy | Team Agent + Cap + Analytics | Add Offense/Defense for Deep Dive |
-| Position market analysis | Team Agent + Cap + Analytics | Add PlayerRep or Offense/Defense when leverage or usage matters |
-
-## Deterministic Bias
-
-- Prefer the default recipes above when they satisfy the article.
-- Only ask Lead to improvise a wider panel when the prompt clearly needs a non-standard lane.
-- Pinned agents still win: include required agents first, then fill remaining seats with the smallest coherent recipe.
+| Article Type | Recommended Panel |
+|-------------|-------------------|
+| Contract extension / FA signing | Cap + PlayerRep + Team Agent |
+| Contract extension (deep-dive) | Cap + PlayerRep + Team Agent + Offense/Defense |
+| Draft pick evaluation | Draft + CollegeScout + Team Agent + Offense or Defense |
+| Trade evaluation | Cap + PlayerRep + Team Agent (acquiring) + Team Agent (trading) |
+| Coaching/scheme analysis | Offense or Defense + Team Agent + Analytics |
+| Roster construction strategy | Team Agent + Cap + Analytics |
+| Position market analysis | Cap + Offense or Defense + relevant Team Agents |
 
 ## Output Format
 

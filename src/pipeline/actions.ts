@@ -12,7 +12,7 @@ import type { PipelineEngine } from './engine.js';
 import type { AgentRunner, AgentRunResult } from '../agents/runner.js';
 import type { PipelineAuditor } from './audit.js';
 import type { AppConfig } from '../config/index.js';
-import { inspectDraftStructure, MIN_DRAFT_WORDS } from './engine.js';
+import { extractVerdict, inspectDraftStructure, MIN_DRAFT_WORDS } from './engine.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ensureRosterContext, validatePlayerMentions } from './roster-context.js';
@@ -81,27 +81,6 @@ export interface PanelMember {
   role: string;
 }
 
-interface PanelSizeLimits {
-  min: number;
-  max: number;
-  default: number;
-}
-
-interface AvailableAgentRoster {
-  specialists: string[];
-  teamAgents: string[];
-  allAgents: Set<string>;
-}
-
-type PanelArchetype =
-  | 'contract'
-  | 'draft'
-  | 'trade'
-  | 'coaching'
-  | 'roster'
-  | 'market'
-  | 'general';
-
 interface RetrospectiveIssueSummary {
   text: string;
   count: number;
@@ -129,14 +108,6 @@ function readArtifact(repo: Repository, articleId: string, filename: string): st
 function writeArtifact(repo: Repository, articleId: string, filename: string, content: string): void {
   repo.artifacts.put(articleId, filename, content);
 }
-
-const GENERATE_DISCUSSION_PROMPT_TASK = [
-  'Generate a discussion prompt from the following idea.',
-  'Use the discussion-prompt skill as the canonical structure and quality bar for this stage.',
-  'Cross-reference player names and team assignments against the roster context provided.',
-  'If the roster data shows a player on a different team, correct the premise.',
-  'If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
-].join(' ');
 
 function buildLeadReviewHandoff(
   repo: Repository,
@@ -230,234 +201,6 @@ function summarizeMarkdownLine(text: string | null | undefined, maxLength = 180)
   if (!normalized) return null;
   if (normalized.length <= maxLength) return normalized;
   return normalized.slice(0, maxLength).trimEnd() + '…';
-}
-
-function normalizeAgentName(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, '-');
-}
-
-function getPanelSizeLimits(ctx: ActionContext, depthLevel: number): PanelSizeLimits {
-  const limits = ctx.runner.gateway.getModelPolicy().getPanelSizeLimits(depthLevel);
-  return {
-    min: limits.min,
-    max: limits.max,
-    default: limits.default,
-  };
-}
-
-const AGENT_DISPLAY_NAMES: Record<string, string> = {
-  analytics: 'Analytics',
-  cap: 'Cap',
-  collegescout: 'CollegeScout',
-  defense: 'Defense',
-  draft: 'Draft',
-  injury: 'Injury',
-  media: 'Media',
-  offense: 'Offense',
-  playerrep: 'PlayerRep',
-  specialteams: 'SpecialTeams',
-};
-
-const SPECIALIST_ROLE_LANES: Record<string, string> = {
-  analytics: 'Analytics lens: efficiency, historical comps, and probabilistic tradeoffs',
-  cap: 'Salary cap analysis: market comps, structure, and flexibility',
-  collegescout: 'Prospect evaluation: traits, development curve, and scheme translation',
-  defense: 'Defensive fit: role, usage, and matchup consequences',
-  draft: 'Draft capital strategy: pick value, board alternatives, and class context',
-  injury: 'Availability lens: durability, recovery timelines, and risk tolerance',
-  media: 'Narrative framing: expectations, leverage, and market perception',
-  offense: 'Offensive fit: usage, play design, and deployment tradeoffs',
-  playerrep: 'Player valuation: leverage, guarantees, and negotiation pressure points',
-  specialteams: 'Hidden roster value: special teams role, depth pressure, and game-day math',
-};
-
-const PANEL_RECIPE_BY_ARCHETYPE: Record<PanelArchetype, string[]> = {
-  contract: ['cap', 'playerrep', 'analytics', 'offense', 'defense'],
-  draft: ['draft', 'collegescout', 'analytics', 'offense', 'defense'],
-  trade: ['cap', 'playerrep', 'analytics', 'offense', 'defense'],
-  coaching: ['offense', 'defense', 'analytics', 'specialteams'],
-  roster: ['cap', 'analytics', 'offense', 'defense', 'draft'],
-  market: ['cap', 'analytics', 'playerrep', 'offense', 'defense'],
-  general: ['analytics', 'cap', 'offense', 'defense', 'draft'],
-};
-
-function inferPanelArchetype(text: string): PanelArchetype {
-  const normalized = text.toLowerCase();
-  if (/\btrade|traded|swap\b/.test(normalized)) return 'trade';
-  if (/\bdraft|mock draft|prospect|pick\b/.test(normalized)) return 'draft';
-  if (/\bextend|extension|contract|free agent|free-agency|free agency|signing|aav|guarantee\b/.test(normalized)) return 'contract';
-  if (/\bcoach|coaching|coordinator|scheme|play-caller|playcaller|play caller\b/.test(normalized)) return 'coaching';
-  if (/\bmarket|ranking|value\b/.test(normalized)) return 'market';
-  if (/\broster|offseason plan|competitive window|cap space|team building\b/.test(normalized)) return 'roster';
-  return 'general';
-}
-
-function getAvailableAgentRoster(runner: AgentRunner): AvailableAgentRoster {
-  const specialists: string[] = [];
-  const teamAgents: string[] = [];
-  const allAgents = new Set<string>();
-
-  for (const rawName of runner.listAgents()) {
-    const name = normalizeAgentName(rawName);
-    if (PRODUCTION_AGENTS.has(name)) continue;
-    allAgents.add(name);
-    if (TEAM_ABBRS.has(name)) {
-      teamAgents.push(name);
-    } else {
-      specialists.push(name);
-    }
-  }
-
-  specialists.sort();
-  teamAgents.sort();
-  return { specialists, teamAgents, allAgents };
-}
-
-function buildPanelMemberRole(
-  agentName: string,
-  article: NonNullable<ReturnType<Repository['getArticle']>>,
-): string {
-  if (TEAM_ABBRS.has(agentName)) {
-    return `${agentName.toUpperCase()} team context: roster needs, timeline, and competitive window`;
-  }
-  return SPECIALIST_ROLE_LANES[agentName] ?? `${agentName} specialist perspective`;
-}
-
-function buildPanelArtifact(members: PanelMember[]): string {
-  return [
-    '## Panel',
-    '',
-    ...members.map((member) => {
-      const displayName = TEAM_ABBRS.has(member.agentName)
-        ? member.agentName.toUpperCase()
-        : (AGENT_DISPLAY_NAMES[member.agentName] ?? member.agentName);
-      return `- **${displayName}** — ${member.role}`;
-    }),
-  ].join('\n');
-}
-
-function buildRecipeCandidateNames(
-  article: NonNullable<ReturnType<Repository['getArticle']>>,
-  promptContent: string,
-  roster: AvailableAgentRoster,
-  archetype: PanelArchetype,
-): string[] {
-  const candidates: string[] = [];
-  const seen = new Set<string>();
-  const add = (name: string | null | undefined) => {
-    if (!name) return;
-    const normalized = normalizeAgentName(name);
-    if (!roster.allAgents.has(normalized) || seen.has(normalized)) return;
-    seen.add(normalized);
-    candidates.push(normalized);
-  };
-
-  add(article.primary_team);
-
-  if (archetype === 'trade') {
-    for (const team of roster.teamAgents) {
-      if (team === normalizeAgentName(article.primary_team ?? '')) continue;
-      if (new RegExp(`\\b${team}\\b`, 'i').test(promptContent)) {
-        add(team);
-        break;
-      }
-    }
-  }
-
-  for (const specialist of PANEL_RECIPE_BY_ARCHETYPE[archetype]) {
-    add(specialist);
-  }
-
-  for (const specialist of roster.specialists) {
-    add(specialist);
-  }
-
-  return candidates;
-}
-
-function normalizePanelMembers(
-  article: NonNullable<ReturnType<Repository['getArticle']>>,
-  promptContent: string,
-  roster: AvailableAgentRoster,
-  initialMembers: PanelMember[],
-  pinnedAgents: Array<{ agent_name: string; role: string | null }>,
-  limits: PanelSizeLimits,
-): PanelMember[] | null {
-  const membersByName = new Map<string, PanelMember>();
-  const pushMember = (agentName: string, role?: string | null) => {
-    const normalized = normalizeAgentName(agentName);
-    if (!roster.allAgents.has(normalized) || membersByName.has(normalized)) return;
-    membersByName.set(normalized, {
-      agentName: normalized,
-      role: role?.trim() || buildPanelMemberRole(normalized, article),
-    });
-  };
-
-  const requiredNames = new Set<string>();
-  for (const pinned of pinnedAgents) {
-    const normalized = normalizeAgentName(pinned.agent_name);
-    if (!roster.allAgents.has(normalized)) continue;
-    requiredNames.add(normalized);
-    pushMember(normalized, pinned.role);
-  }
-
-  const primaryTeam = normalizeAgentName(article.primary_team ?? '');
-  if (primaryTeam && roster.allAgents.has(primaryTeam)) {
-    requiredNames.add(primaryTeam);
-  }
-
-  for (const member of initialMembers) {
-    pushMember(member.agentName, member.role);
-  }
-
-  if (primaryTeam && !membersByName.has(primaryTeam)) {
-    pushMember(primaryTeam);
-  }
-
-  const archetype = inferPanelArchetype(`${article.title}\n${promptContent}`);
-  for (const candidate of buildRecipeCandidateNames(article, promptContent, roster, archetype)) {
-    if (membersByName.size >= Math.max(limits.default, requiredNames.size)) break;
-    if (!membersByName.has(candidate)) {
-      pushMember(candidate);
-    }
-  }
-
-  const members = [...membersByName.values()];
-  const hasTeamAgent = members.some((member) => TEAM_ABBRS.has(member.agentName));
-  const hasSpecialist = members.some((member) => !TEAM_ABBRS.has(member.agentName));
-  if (!hasTeamAgent || !hasSpecialist || members.length < limits.min) {
-    return null;
-  }
-
-  const targetCount = Math.max(limits.min, Math.max(limits.default, requiredNames.size));
-  const hardCap = Math.max(limits.max, requiredNames.size);
-  const recipePriority = new Map<string, number>(
-    buildRecipeCandidateNames(article, promptContent, roster, archetype).map((name, index) => [name, index]),
-  );
-
-  const prioritized = members
-    .map((member, index) => ({ member, index }))
-    .sort((a, b) => {
-      const aRequired = requiredNames.has(a.member.agentName) ? 1 : 0;
-      const bRequired = requiredNames.has(b.member.agentName) ? 1 : 0;
-      if (aRequired !== bRequired) return bRequired - aRequired;
-
-      const aPriority = recipePriority.get(a.member.agentName) ?? Number.MAX_SAFE_INTEGER;
-      const bPriority = recipePriority.get(b.member.agentName) ?? Number.MAX_SAFE_INTEGER;
-      if (aPriority !== bPriority) return aPriority - bPriority;
-
-      return a.index - b.index;
-    })
-    .map(({ member }) => member);
-
-  const kept = prioritized.slice(0, Math.min(hardCap, Math.max(targetCount, limits.min)));
-  const keptHasTeam = kept.some((member) => TEAM_ABBRS.has(member.agentName));
-  const keptHasSpecialist = kept.some((member) => !TEAM_ABBRS.has(member.agentName));
-  if (!keptHasTeam || !keptHasSpecialist || kept.length < limits.min) {
-    return null;
-  }
-
-  return kept;
 }
 
 function parseRevisionIssues(raw: string | null): string[] {
@@ -709,40 +452,9 @@ const WRITER_EDITOR_PREFLIGHT_CHECKLIST = buildWriterPreflightChecklist();
 
 function buildWriterTask(isRevision: boolean): string {
   const modeInstruction = isRevision
-    ? 'You are REVISING an existing draft — NOT writing from scratch. Use the current editor review to make the smallest complete set of fixes while preserving what already works.'
-    : 'Write the full article draft from the panel discussion summary.';
-  return [
-    modeInstruction,
-    'Stay inside the supplied evidence and use the bounded writer fact-check contract only for specific risky claims. Do not turn Stage 5 into open-ended research.',
-    WRITER_EDITOR_PREFLIGHT_CHECKLIST,
-    'Return only the complete article markdown.',
-  ].join('\n\n');
-}
-
-const EDITOR_VERDICT_SECTION_PATTERN = /(?:^|\n)\s*##\s*Verdict\s*\n+\s*(APPROVED|REVISE|REJECT)\s*(?=\n|$)/gim;
-
-const EDITOR_APPROVAL_GATE_TASK = [
-  'Review the article draft as the final approval gate before publish.',
-  'Follow the editor-review skill as the canonical review protocol and output format.',
-  'Use roster context only to block confirmed wrong-team assignments; a player missing from roster data alone is a caution, not a blocker.',
-  'Treat writer-factcheck.md as an advisory Stage 5 ledger only.',
-  'End with exactly one canonical ## Verdict section.',
-].join('\n\n');
-
-const PUBLISHER_REQUIRED_PASS_TASK = [
-  'Run the publisher pass for the required Stage 7 publish-readiness checks only.',
-  'Use the publisher skill for formatting, structure, metadata readiness, image placement, and dashboard handoff expectations.',
-  'Stop at publish readiness. Optional promotion work such as Notes, Tweets, or Publish All follow-ons is handled separately.',
-].join('\n\n');
-
-function extractCanonicalEditorVerdict(text: string): ActionResult['outcome'] | null {
-  const matches = [...text.matchAll(EDITOR_VERDICT_SECTION_PATTERN)]
-    .map((match) => match[1]?.toUpperCase())
-    .filter((value): value is string => value !== undefined)
-    .filter((value): value is 'APPROVED' | 'REVISE' | 'REJECT' => value === 'APPROVED' || value === 'REVISE' || value === 'REJECT');
-  if (matches.length === 0) return null;
-  const unique = [...new Set(matches)];
-  return unique.length === 1 ? unique[0] : null;
+    ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised.'
+    : 'Write an analytical article draft based on the panel discussion.';
+  return `${modeInstruction} Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.\n\n${WRITER_EDITOR_PREFLIGHT_CHECKLIST}\n\nOutput the complete article markdown.`;
 }
 
 function validateDraftOutput(
@@ -911,7 +623,7 @@ export function parsePanelComposition(content: string): PanelMember[] {
     }
 
     if (agentName) {
-      const normalized = normalizeAgentName(agentName);
+      const normalized = agentName.trim().toLowerCase().replace(/\s+/g, '-');
       if (normalized && role.trim() && !seen.has(normalized)) {
         seen.add(normalized);
         members.push({ agentName: normalized, role: role.trim() });
@@ -1028,11 +740,13 @@ const TEAM_ABBRS = new Set([
 
 /** Build a categorized roster string from available agent charters. */
 function buildAgentRoster(runner: AgentRunner): string {
-  const roster = getAvailableAgentRoster(runner);
+  const agents = runner.listAgents();
   const specialists: string[] = [];
   const teamAgents: string[] = [];
 
-  for (const name of [...roster.specialists, ...roster.teamAgents]) {
+  for (const name of agents) {
+    if (PRODUCTION_AGENTS.has(name)) continue;
+
     const charter = runner.loadCharter(name);
     const identity = charter?.identity ?? '';
     const summary = identity.split('\n')[0]?.slice(0, 120) || name;
@@ -1071,7 +785,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const result = await ctx.runner.run({
       agentName: 'lead',
-      task: GENERATE_DISCUSSION_PROMPT_TASK,
+      task: 'Generate a discussion prompt from the following idea. Cross-reference player names and team assignments against the roster context provided. If the roster data shows a player on a different team, correct the premise. If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
       skills: ['discussion-prompt'],
       articleContext: {
         slug: articleId,
@@ -1102,26 +816,11 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
 
     const promptContent = gatherContext(ctx.repo, articleId, 'composePanel', ctx.config);
 
+    const roster = buildAgentRoster(ctx.runner);
     const depthLevel = article.depth_level ?? 2;
-    const limits = getPanelSizeLimits(ctx, depthLevel);
-    const roster = getAvailableAgentRoster(ctx.runner);
 
     // Check for pinned agents
     const pinnedAgents = ctx.repo.getPinnedAgents(articleId);
-    const deterministicPanel = normalizePanelMembers(
-      article,
-      promptContent,
-      roster,
-      [],
-      pinnedAgents,
-      limits,
-    );
-
-    if (deterministicPanel) {
-      writeArtifact(ctx.repo, articleId, 'panel-composition.md', buildPanelArtifact(deterministicPanel));
-      return { success: true, duration: Date.now() - start };
-    }
-
     const pinnedSection = pinnedAgents.length > 0
       ? [
           '',
@@ -1134,21 +833,20 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       : '';
 
     const task = [
-      'Compose a panel of analysts for this discussion from the available roster.',
+      'Select a panel of analysts for this discussion from the available roster.',
       '',
-      `Depth Level: ${depthLevel} (default ${limits.default}, hard max ${Math.max(limits.max, pinnedAgents.length)})`,
+      `Depth Level: ${depthLevel} (${depthLevel === 1 ? '2 agents max' : depthLevel === 2 ? '3-4 agents' : '4-5 agents'})`,
       pinnedSection,
       '',
       '## Available Agents',
-      buildAgentRoster(ctx.runner),
+      roster,
       '',
       'Rules:',
       '- Always include the relevant team agent for the primary team',
       '- Always include at least one specialist',
       pinnedAgents.length > 0 ? '- Always include the required/pinned agents listed above' : '',
       '- Select agents whose expertise matches the article topic',
-      `- Default to ${limits.default} panelists unless pinned agents force a larger panel`,
-      '- Panel size must respect the depth-level limits',
+      '- Panel size must respect the depth level limits',
       '- Each panelist should have a distinct analytical lane',
       '',
       '⚠️ CRITICAL OUTPUT FORMAT: List each panelist as a markdown bullet with bold agent name, em-dash, and role. Example:',
@@ -1169,16 +867,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
       },
     });
 
-    const parsed = parsePanelComposition(result.content);
-    const normalizedPanel = parsed.length > 0
-      ? normalizePanelMembers(article, promptContent, roster, parsed, pinnedAgents, limits)
-      : null;
-
-    if (normalizedPanel) {
-      writeArtifact(ctx.repo, articleId, 'panel-composition.md', buildPanelArtifact(normalizedPanel));
-    } else {
-      writeAgentResult(ctx.repo, articleId, 'panel-composition.md', result);
-    }
+    writeAgentResult(ctx.repo, articleId, 'panel-composition.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'composePanel', result);
     return { success: true, duration: Date.now() - start };
   } catch (err) {
@@ -1199,10 +888,6 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
 
     const prompt = readArtifact(ctx.repo, articleId, 'discussion-prompt.md');
     const panel = readArtifact(ctx.repo, articleId, 'panel-composition.md');
-    const depthLevel = article.depth_level ?? 2;
-    const limits = getPanelSizeLimits(ctx, depthLevel);
-    const pinnedAgents = ctx.repo.getPinnedAgents(articleId);
-    const roster = getAvailableAgentRoster(ctx.runner);
 
     // Inject roster context for panel discussion accuracy
     const rosterCtx = article.primary_team
@@ -1211,10 +896,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     const discussionContext = gatherContext(ctx.repo, articleId, 'runDiscussion', ctx.config);
 
     // Try to parse individual panelists for parallel execution
-    const parsedPanelists = parsePanelComposition(panel);
-    const panelists = parsedPanelists.length > 0
-      ? normalizePanelMembers(article, `${prompt}\n${panel}`, roster, parsedPanelists, pinnedAgents, limits) ?? parsedPanelists
-      : [];
+    const panelists = parsePanelComposition(panel);
 
     if (panelists.length === 0) {
       // Fallback: single-moderator approach when composition can't be parsed
@@ -1557,13 +1239,22 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
+    let content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
+
     // Inject current roster data for fact-checking player-team assignments
     const team = article.primary_team;
     if (team) {
-      ensureRosterContext(ctx.repo, articleId, team);
+      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team);
+      if (rosterCtx) {
+        content = content + '\n\n---\n\n' + rosterCtx;
+      }
     }
 
-    const content = gatherContext(ctx.repo, articleId, 'runEditor', ctx.config);
+    // Inject fact-check context if available (built during writeDraft stage)
+    const factCheckArtifact = ctx.repo.artifacts.get(articleId, 'fact-check-context.md');
+    if (factCheckArtifact) {
+      content = content + '\n\n---\n\n' + factCheckArtifact;
+    }
 
     // Editor gets compact shared handoff plus its own prior reviews, not the raw cross-role transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
@@ -1578,7 +1269,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     const result = await ctx.runner.run({
       agentName: 'editor',
-      task: EDITOR_APPROVAL_GATE_TASK,
+      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If `writer-factcheck.md` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
       skills: ['editor-review'],
       conversationContext: fullConversationCtx,
       articleContext: {
@@ -1595,25 +1286,17 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     // Record editor review as a conversation turn
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'editor', 'assistant', result.content);
 
-    // Require the single canonical verdict section from the editor-review skill.
+    // Extract semantic verdict from the editor review content
     let finalReviewContent = result.content;
-    let verdict = extractCanonicalEditorVerdict(finalReviewContent);
+    let verdict = extractVerdict(finalReviewContent);
 
-    // Self-heal once if the review drifted from the canonical verdict section.
+    // Self-heal: if verdict is unparseable, retry once with stricter format instruction.
+    // This prevents the pipeline from getting stuck at the 6→7 guard.
     if (!verdict) {
-      console.warn(`[runEditor] No canonical verdict found for '${articleId}', retrying with strict format`);
+      console.warn(`[runEditor] No verdict found for '${articleId}', retrying with strict format`);
       const retryResult = await ctx.runner.run({
         agentName: 'editor',
-        task: [
-          'Your previous review did not end with the canonical verdict section required by the editor-review skill.',
-          'Reply with ONLY the final verdict section in this exact format:',
-          '## Verdict\nAPPROVED',
-          'or',
-          '## Verdict\nREVISE',
-          'or',
-          '## Verdict\nREJECT',
-          'Preserve the decision already implied by your prior review. If that review was ambiguous, choose REVISE.',
-        ].join('\n\n'),
+        task: `Your previous review did not contain a parseable verdict. Based on the draft quality, respond with ONLY a verdict section. Do not re-review. Just provide:\n\n## Verdict\nAPPROVED\n\nor\n\n## Verdict\nREVISE\n\nChoose one based on the draft quality. If in doubt, choose APPROVED.`,
         skills: ['editor-review'],
         articleContext: {
           slug: articleId,
@@ -1627,15 +1310,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       writeAgentResult(ctx.repo, articleId, 'editor-review.md', { ...result, content: combined });
       recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor-retry', retryResult);
       finalReviewContent = combined;
-      verdict = extractCanonicalEditorVerdict(finalReviewContent);
-    }
-
-    if (!verdict) {
-      return {
-        success: false,
-        error: 'Editor review did not include the required canonical verdict section after retry.',
-        duration: Date.now() - start,
-      };
+      verdict = extractVerdict(finalReviewContent);
     }
 
     // If editor returns REVISE, create a revision summary
@@ -1653,7 +1328,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     return {
       success: true,
       duration: Date.now() - start,
-      outcome: verdict,
+      outcome: verdict ? verdict as ActionResult['outcome'] : undefined,
     };
   } catch (err) {
     return {
@@ -1673,14 +1348,20 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     const content = gatherContext(ctx.repo, articleId, 'runPublisherPass', ctx.config);
 
+    // Inject roster context for publisher agent
+    const rosterCtx = article.primary_team
+      ? ensureRosterContext(ctx.repo, articleId, article.primary_team)
+      : null;
+
     // Publisher only needs the shared handoff, not the raw editorial transcript.
     const revisions = getRevisionHistory(ctx.repo, articleId);
     const conversationCtx = buildRevisionSummaryContext(revisions) || undefined;
 
     const result = await ctx.runner.run({
       agentName: 'publisher',
-      task: PUBLISHER_REQUIRED_PASS_TASK,
+      task: 'Run the publisher pass to prepare the article for publication.',
       skills: ['publisher'],
+      rosterContext: rosterCtx ?? undefined,
       conversationContext: conversationCtx,
       articleContext: {
         slug: articleId,

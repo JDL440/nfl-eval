@@ -138,10 +138,10 @@ export function renderPublishPreview(data: PublishPreviewData): string {
   } = data;
 
   const content = `
-    <div class="article-detail publish-page">
+    <div class="article-detail">
       <div class="detail-header">
         <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article Detail</a>
-        <h1>Review &amp; Publish: ${escapeHtml(article.title)}</h1>
+        <h1>Publish Page: ${escapeHtml(article.title)}</h1>
         ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
         <div class="detail-meta">
           ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
@@ -149,10 +149,10 @@ export function renderPublishPreview(data: PublishPreviewData): string {
             Stage ${article.current_stage}
           </span>
         </div>
-        <p class="hint">Save or update a Substack draft, review it in context, then publish that linked draft live when ready.</p>
+        <p class="hint">Save a Substack draft for review, then publish that linked draft live when ready.</p>
       </div>
 
-      <div class="detail-grid publish-layout">
+      <div class="detail-grid">
         <div class="detail-main">
           <section class="detail-section">
             <div class="action-bar" style="justify-content:space-between; margin-bottom:0.75rem;">
@@ -169,16 +169,12 @@ export function renderPublishPreview(data: PublishPreviewData): string {
         </div>
 
         <div class="detail-sidebar">
-          <section class="detail-section publish-flow-summary">
-            <h2>Next Steps</h2>
-            <ol class="flow-list">
-              <li>Save or update the linked Substack draft.</li>
-              <li>Review the draft preview or open the live Substack editor.</li>
-              <li>Publish the linked draft live when everything looks right.</li>
-            </ol>
-          </section>
           ${renderPublishWorkflow({ article, substackConfigured })}
-          ${renderPromotionTools(article, substackConfigured)}
+
+          ${renderNoteComposer(article)}
+          ${renderTweetComposer(article)}
+
+          ${renderPublishAll(article.id, substackConfigured)}
         </div>
       </div>
     </div>`;
@@ -338,17 +334,6 @@ export function checkAllPassed(pass: PublisherPass): boolean {
   return true;
 }
 
-export function renderPromotionTools(article: Article, substackConfigured: boolean = true): string {
-  return `
-    <section class="detail-section">
-      <h2>Optional Promotion</h2>
-      <p class="hint">These tools are optional follow-ons after the required publish path above. Use them for distribution, not to clear the article for publish.</p>
-    </section>
-    ${renderNoteComposer(article)}
-    ${renderTweetComposer(article)}
-    ${renderPublishAll(article.id, substackConfigured)}`;
-}
-
 // ── Note composer ─────────────────────────────────────────────────────────────
 
 export function renderNoteComposer(article: Article): string {
@@ -357,7 +342,7 @@ export function renderNoteComposer(article: Article): string {
 
   return `
     <section class="detail-section">
-      <h2>📝 Optional Substack Note</h2>
+      <h2>📝 Substack Note</h2>
       <div id="note-composer">
         <textarea id="note-content" name="content" rows="4" class="form-textarea"
           placeholder="Write a Note to promote this article...">${defaultText}</textarea>
@@ -389,7 +374,7 @@ export function renderTweetComposer(article: Article): string {
 
   return `
     <section class="detail-section">
-      <h2>🐦 Optional Tweet</h2>
+      <h2>🐦 Tweet</h2>
       <div id="tweet-composer">
         <textarea id="tweet-content" name="content" rows="3" class="form-textarea"
           placeholder="Compose a tweet...">${defaultText}</textarea>
@@ -437,8 +422,8 @@ export function renderPublishAll(articleId: string, substackConfigured: boolean 
     : '<p class="hint">Configure Substack on the <a href="/config">Config</a> page before using Publish All.</p>';
   return `
     <section class="detail-section">
-      <h2>🚀 Publish + Optional Promotion</h2>
-      <p class="hint">Convenience bundle: run the required publish step, then optionally post a Note and Tweet in sequence.</p>
+      <h2>🚀 Publish All</h2>
+      <p class="hint">Publish the latest article live, then optionally post a Note and Tweet in sequence.</p>
       ${unavailableHint}
       <div class="publish-all-options">
         <label class="composer-check">

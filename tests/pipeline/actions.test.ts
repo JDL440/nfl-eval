@@ -444,42 +444,6 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-cp', 'panel-composition.md')).toBeTruthy();
     });
-
-    it('uses the deterministic default recipe when the roster supports it', async () => {
-      const provider = new RecordingProvider(['# This response should not be used']);
-      setRunnerProvider(fixtures, provider);
-
-      writeFileSync(join(fixtures.chartersDir, 'sea.md'),
-        '# SEA\n\n## Identity\nSeahawks team agent.\n\n## Responsibilities\n- Analyze roster\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
-      writeFileSync(join(fixtures.chartersDir, 'cap.md'),
-        '# Cap\n\n## Identity\nCap specialist.\n\n## Responsibilities\n- Analyze contracts\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
-      writeFileSync(join(fixtures.chartersDir, 'playerrep.md'),
-        '# PlayerRep\n\n## Identity\nPlayer valuation specialist.\n\n## Responsibilities\n- Analyze leverage\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
-      writeFileSync(join(fixtures.chartersDir, 'analytics.md'),
-        '# Analytics\n\n## Identity\nAnalytics specialist.\n\n## Responsibilities\n- Analyze efficiency\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n');
-
-      fixtures.repo.createArticle({
-        id: 'test-cp-deterministic',
-        title: 'Should Seattle extend its star receiver now?',
-        primary_team: 'sea',
-        depth_level: 2,
-      });
-      fixtures.repo.advanceStage('test-cp-deterministic', 1, 2 as Stage, 'test-setup');
-      fixtures.repo.artifacts.put('test-cp-deterministic', 'idea.md', '# Idea\nPay the receiver now or wait a year?');
-      fixtures.repo.artifacts.put(
-        'test-cp-deterministic',
-        'discussion-prompt.md',
-        '# Prompt\n## The Core Question\nShould Seattle extend its receiver now or wait?\n\n## Data Anchors\n- Market comps\n- Guarantees\n',
-      );
-
-      const result = await STAGE_ACTIONS.composePanel('test-cp-deterministic', fixtures.ctx);
-
-      expect(result.success).toBe(true);
-      expect(provider.lastRequest).toBeNull();
-      expect(fixtures.repo.artifacts.get('test-cp-deterministic', 'panel-composition.md')).toBe(
-        '## Panel\n\n- **SEA** — SEA team context: roster needs, timeline, and competitive window\n- **Cap** — Salary cap analysis: market comps, structure, and flexibility\n- **PlayerRep** — Player valuation: leverage, guarantees, and negotiation pressure points',
-      );
-    });
   });
 
   // ── runDiscussion (3→4) ──────────────────────────────────────────────────
@@ -576,46 +540,6 @@ describe('STAGE_ACTIONS', () => {
       expect(fixtures.repo.artifacts.get('test-rd-think', 'panel-sea.md')).toBeTruthy();
       expect(fixtures.repo.artifacts.get('test-rd-think', 'discussion-summary.md')).toBeTruthy();
     });
-
-    it('trims oversized depth-2 panels back to the default discussion size', async () => {
-      for (const [name, identity] of [
-        ['sea', 'Seahawks team agent.'],
-        ['cap', 'Cap specialist.'],
-        ['playerrep', 'Player valuation specialist.'],
-        ['analytics', 'Analytics specialist.'],
-      ] as const) {
-        writeFileSync(join(fixtures.chartersDir, `${name}.md`),
-          `# ${name}\n\n## Identity\n${identity}\n\n## Responsibilities\n- Analyze assigned lane\n\n## Boundaries\n- Stay on topic\n\n## Model\nauto\n`);
-      }
-
-      fixtures.repo.createArticle({
-        id: 'test-rd-trim',
-        title: 'Should Seattle extend its receiver now?',
-        primary_team: 'sea',
-        depth_level: 2,
-      });
-      fixtures.repo.advanceStage('test-rd-trim', 1, 2 as Stage, 'test-setup');
-      fixtures.repo.advanceStage('test-rd-trim', 2, 3 as Stage, 'test-setup');
-      fixtures.repo.artifacts.put('test-rd-trim', 'idea.md', '# Idea');
-      fixtures.repo.artifacts.put(
-        'test-rd-trim',
-        'discussion-prompt.md',
-        '# Prompt\n## The Core Question\nShould Seattle extend its receiver now or wait?\n\n## Data Anchors\n- Market comps',
-      );
-      fixtures.repo.artifacts.put(
-        'test-rd-trim',
-        'panel-composition.md',
-        '## Panel\n- **SEA** — Seahawks context\n- **Cap** — Cap analysis\n- **PlayerRep** — Player leverage\n- **Analytics** — Historical comps',
-      );
-
-      const result = await STAGE_ACTIONS.runDiscussion('test-rd-trim', fixtures.ctx);
-
-      expect(result.success).toBe(true);
-      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-sea.md')).toBeTruthy();
-      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-cap.md')).toBeTruthy();
-      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-playerrep.md')).toBeTruthy();
-      expect(fixtures.repo.artifacts.get('test-rd-trim', 'panel-analytics.md')).toBeNull();
-    });
   });
 
   // ── parsePanelComposition ────────────────────────────────────────────────
@@ -704,6 +628,9 @@ describe('STAGE_ACTIONS', () => {
       const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-factcheck-skill', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary\nUse current roster facts carefully.',
       });
 
@@ -712,12 +639,17 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       const systemPrompt = provider.lastRequest?.messages.find((message) => message.role === 'system')?.content ?? '';
       expect(systemPrompt).toContain('### Skill: writer-fact-check');
+      expect(systemPrompt).toContain('Raw open-ended web search');
+      expect(systemPrompt).toContain('External approved-source checks: **max 3**');
     });
 
     it('passes a short editor-style preflight checklist to the writer prompt', async () => {
       const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-preflight-prompt', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary\nJaxon Smith-Njigba is central to the passing game.',
       });
 
@@ -726,29 +658,10 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
       expect(requestContent).toContain(buildWriterPreflightChecklist());
+      expect(requestContent).toContain('Do not expand a last name into a full name');
+      expect(requestContent).toContain('contract figure, date, draft fact, or stat');
       expect(requestContent).not.toContain('Prose vs. tables');
       expect(requestContent).not.toContain('**Next from the panel:** teaser');
-    });
-
-    it('keeps writer upstream context focused on essentials by default', async () => {
-      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'test-wd-essential-context', 4 as Stage, {
-        'idea.md': '# Idea\nSeattle needs trench help.',
-        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
-        'panel-factcheck.md': '# Panel Fact-Check\nUse careful contract framing.',
-        'writer-factcheck.md': '# Writer Fact-Check\nTracked risky claims.',
-        'roster-context.md': '# Roster Context\nTHIS SHOULD STAY OUT OF THE WRITER PROMPT',
-        'fact-check-context.md': '# Fact Check Context\nTHIS SHOULD STAY OUT OF THE WRITER PROMPT',
-      });
-
-      const result = await STAGE_ACTIONS.writeDraft('test-wd-essential-context', fixtures.ctx);
-
-      expect(result.success).toBe(true);
-      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
-      expect(userPrompt).toContain('panel-factcheck.md');
-      expect(userPrompt).toContain('writer-factcheck.md');
-      expect(userPrompt).not.toContain('THIS SHOULD STAY OUT OF THE WRITER PROMPT');
     });
 
     it('self-heals drafts missing the TLDR structure before succeeding', async () => {
@@ -952,6 +865,7 @@ ${longText(450)}`,
       expect(userPrompt).toContain('Tighten the math.');
       expect(userPrompt).toContain('FULL_EDITOR_FEEDBACK_SHOULD_APPEAR');
       expect(requestContent).toContain(buildWriterPreflightChecklist());
+      expect(requestContent).toContain('Do not expand a last name into a full name');
       expect(requestContent).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
       expect(requestContent).not.toContain('OLDER_EDITOR_THREAD_SHOULD_NOT_APPEAR');
       expect(requestContent).not.toContain('PUBLISHER_THREAD_SHOULD_NOT_APPEAR');
@@ -961,6 +875,9 @@ ${longText(450)}`,
       const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-revision-task', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary\nSmith-Njigba remains the featured separator.',
         'draft.md': validDraft(500),
         'editor-review.md': '## Verdict\nREVISE\n\nTighten the lede and keep the facts cautious.',
@@ -970,8 +887,10 @@ ${longText(450)}`,
       const result = await STAGE_ACTIONS.writeDraft('test-wd-revision-task', fixtures.ctx);
 
       expect(result.success).toBe(true);
-      const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
-      expect(requestContent).toContain(buildWriterPreflightChecklist());
+      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+      expect(userPrompt).toContain('You are REVISING an existing draft — NOT writing from scratch.');
+      expect(userPrompt).toContain(buildWriterPreflightChecklist());
+      expect(userPrompt).toContain('do not turn Stage 5 into open-ended research');
     });
   });
 
@@ -1031,11 +950,11 @@ ${longText(450)}`,
       setRunnerProvider(fixtures, new RecordingProvider([
         `# Editor Review
 
-## 🔴 ERRORS (Must Fix Before Publish)
-- [BLOCKER structure:missing-tldr] Restore the required TLDR block near the top before another pass.
-- [BLOCKER evidence:stale-stat] Refresh the stale stat before another pass.
+        ## 🔴 ERRORS (Must Fix Before Publish)
+        - [BLOCKER structure:missing-tldr] Restore the required TLDR block near the top before another pass.
+        - [BLOCKER evidence:stale-stat] Refresh the stale stat before another pass.
 
-## Verdict
+        ## Verdict
 REVISE`,
       ]));
       createArticleWithStage(fixtures, 'test-re-revise', 5 as Stage, {
@@ -1067,6 +986,9 @@ APPROVED`,
       ]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-re-writer-fc', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
         'discussion-summary.md': '# Summary\nKey discussion points.',
         'draft.md': validDraft(1000),
         'writer-factcheck.md': [
@@ -1083,59 +1005,7 @@ APPROVED`,
       const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
       expect(userPrompt).toContain('## Upstream Context: writer-factcheck.md');
       expect(userPrompt).toContain('## Verified Facts Used in Draft');
-    });
-
-    it('does not duplicate fact-check context in the editor prompt', async () => {
-      const provider = new RecordingProvider([
-        `# Editor Review
-
-## Verdict
-APPROVED`,
-      ]);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'test-re-no-dup', 5 as Stage, {
-        'discussion-summary.md': '# Summary\nKey discussion points.',
-        'draft.md': validDraft(1000),
-        'fact-check-context.md': '# Fact Check Context\nUNIQUE_FACTCHECK_SENTINEL',
-      });
-
-      const result = await STAGE_ACTIONS.runEditor('test-re-no-dup', fixtures.ctx);
-
-      expect(result.success).toBe(true);
-      const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
-      expect(requestContent.match(/UNIQUE_FACTCHECK_SENTINEL/g) ?? []).toHaveLength(1);
-    });
-
-    it('self-heals to a canonical verdict section when the first review drifts', async () => {
-      setRunnerProvider(fixtures, new RecordingProvider([
-        '# Editor Review\n\nThis draft is close, but the teaser is vague and needs one more pass.',
-        '## Verdict\nREVISE',
-      ]));
-      createArticleWithStage(fixtures, 'test-re-canonical-retry', 5 as Stage, {
-        'draft.md': validDraft(1000),
-      });
-
-      const result = await STAGE_ACTIONS.runEditor('test-re-canonical-retry', fixtures.ctx);
-
-      expect(result.success).toBe(true);
-      expect(result.outcome).toBe('REVISE');
-      const review = fixtures.repo.artifacts.get('test-re-canonical-retry', 'editor-review.md') ?? '';
-      expect(review).toContain('## Verdict\nREVISE');
-    });
-
-    it('fails when the editor still misses the canonical verdict section after retry', async () => {
-      setRunnerProvider(fixtures, new RecordingProvider([
-        '# Editor Review\n\nNeeds another pass.',
-        '# Still not a verdict',
-      ]));
-      createArticleWithStage(fixtures, 'test-re-canonical-fail', 5 as Stage, {
-        'draft.md': validDraft(1000),
-      });
-
-      const result = await STAGE_ACTIONS.runEditor('test-re-canonical-fail', fixtures.ctx);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('canonical verdict section');
+      expect(userPrompt).toContain('treat it as an advisory Stage 5 ledger');
     });
   });
 
@@ -1189,29 +1059,6 @@ APPROVED`,
       expect(publisherPass).toContain('Tighten the math.');
       expect(publisherPass).not.toContain('WRITER_THREAD_SHOULD_NOT_APPEAR');
       expect(publisherPass).not.toContain('EDITOR_THREAD_SHOULD_NOT_APPEAR');
-    });
-
-    it('keeps publisher pass inputs focused on required publish checks', async () => {
-      const provider = new RecordingProvider(['# Publisher Pass\n\n## Final Status\nREADY FOR PUBLICATION']);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'test-rp-essential-context', 6 as Stage, {
-        'idea.md': '# Idea\nThis should stay out of the default publisher input.',
-        'discussion-summary.md': '# Summary\nThis can stay in rich mode only.',
-        'draft.md': validDraft(1000),
-        'editor-review.md': '## Verdict\nAPPROVED',
-        'roster-context.md': '# Roster Context\nPUBLISHER_ROSTER_SENTINEL',
-        'fact-check-context.md': '# Fact Check Context\nPUBLISHER_FACTCHECK_SENTINEL',
-        'writer-factcheck.md': '# Writer Fact-Check\nPUBLISHER_WRITER_FACTCHECK_SENTINEL',
-      });
-
-      const result = await STAGE_ACTIONS.runPublisherPass('test-rp-essential-context', fixtures.ctx);
-
-      expect(result.success).toBe(true);
-      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
-      expect(userPrompt).toContain('editor-review.md');
-      expect(userPrompt).not.toContain('PUBLISHER_ROSTER_SENTINEL');
-      expect(userPrompt).not.toContain('PUBLISHER_FACTCHECK_SENTINEL');
-      expect(userPrompt).not.toContain('PUBLISHER_WRITER_FACTCHECK_SENTINEL');
     });
   });
 
@@ -1426,10 +1273,10 @@ describe('autoAdvanceArticle draft structure recovery', () => {
       '# Editor Review\n\nNeeds a clearer verdict block.',
       `# Editor Review
 
-## 🔴 ERRORS (Must Fix Before Publish)
-- [BLOCKER structure:missing-tldr] Tighten the opening and rework the TLDR framing.
+        ## 🔴 ERRORS (Must Fix Before Publish)
+        - [BLOCKER structure:missing-tldr] Tighten the opening and rework the TLDR framing.
 
-## Verdict
+        ## Verdict
 REVISE`,
       '# Panel Fact-Check\n\nNo blocking issues found in the panel summary.',
       `# Headline
@@ -1629,71 +1476,58 @@ describe('Configurable upstream context', () => {
     resetContextConfigCache();
   });
 
-  it('writeDraft keeps default upstream context focused on summary plus fact-check essentials', async () => {
-    const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
-    setRunnerProvider(fixtures, provider);
+  it('writeDraft includes idea.md as upstream context by default', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]));
     createArticleWithStage(fixtures, 'test-ctx-wd', 4 as Stage, {
-      'idea.md': '# Original Angle\nUNUSED_IDEA_CONTEXT',
-      'discussion-prompt.md': '# Prompt\nUNUSED_PROMPT_CONTEXT',
-      'panel-composition.md': '# Panel\nUNUSED_PANEL_CONTEXT',
-      'discussion-summary.md': '# Summary\nPRIMARY_SUMMARY_CONTEXT',
+      'idea.md': '# Original Angle\nSeahawks cap space.',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel\nCap + SEA',
+      'discussion-summary.md': '# Summary\nKey findings about cap.',
     });
 
     const result = await STAGE_ACTIONS.writeDraft('test-ctx-wd', fixtures.ctx);
     expect(result.success).toBe(true);
 
-    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
-    expect(userPrompt).toContain('PRIMARY_SUMMARY_CONTEXT');
-    expect(userPrompt).toContain('panel-factcheck.md');
+    const draft = fixtures.repo.artifacts.get('test-ctx-wd', 'draft.md');
+    expect(draft).toBeTruthy();
   });
 
-  it('runEditor keeps default upstream context focused on the draft plus deterministic verification evidence', async () => {
-    const provider = new RecordingProvider(['## Verdict\nAPPROVED']);
-    setRunnerProvider(fixtures, provider);
+  it('runEditor includes idea.md, discussion-summary.md, and writer-factcheck.md by default', async () => {
     const draft = validDraft(900);
     createArticleWithStage(fixtures, 'test-ctx-ed', 5 as Stage, {
-      'idea.md': '# Angle\nUNUSED_IDEA_CONTEXT',
+      'idea.md': '# Angle\nSeahawks secondary.',
       'discussion-prompt.md': '# Prompt',
       'panel-composition.md': '# Panel',
-      'discussion-summary.md': '# Summary\nUNUSED_DISCUSSION_CONTEXT',
+      'discussion-summary.md': '# Summary\nKey discussion points.',
       'draft.md': draft,
-      'roster-context.md': '# Roster Context\nROSTER_SENTINEL',
-      'fact-check-context.md': '# Fact Check Context\nFACTCHECK_SENTINEL',
-      'writer-factcheck.md': '# Writer Fact-Check\n\nWRITER_FACTCHECK_CONTEXT',
+      'writer-factcheck.md': '# Writer Fact-Check\n\nTracked risky claims.',
     });
 
     const result = await STAGE_ACTIONS.runEditor('test-ctx-ed', fixtures.ctx);
     expect(result.success).toBe(true);
 
-    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
-    expect(userPrompt).toContain('ROSTER_SENTINEL');
-    expect(userPrompt).toContain('FACTCHECK_SENTINEL');
-    expect(userPrompt).toContain('WRITER_FACTCHECK_CONTEXT');
-    expect(userPrompt).not.toContain('UNUSED_IDEA_CONTEXT');
-    expect(userPrompt).not.toContain('UNUSED_DISCUSSION_CONTEXT');
+    const review = fixtures.repo.artifacts.get('test-ctx-ed', 'editor-review.md');
+    expect(review).toBeTruthy();
+    expect(review).toContain('writer-factcheck.md');
   });
 
-  it('runPublisherPass keeps default upstream context focused on editor approval only', async () => {
-    const provider = new RecordingProvider(['# Publisher Pass\n\nReady.']);
-    setRunnerProvider(fixtures, provider);
+  it('runPublisherPass includes editor-review.md by default', async () => {
     const draft = validDraft(900);
     createArticleWithStage(fixtures, 'test-ctx-pub', 6 as Stage, {
-      'idea.md': '# Idea\nUNUSED_IDEA_CONTEXT',
+      'idea.md': '# Idea',
       'discussion-prompt.md': '# Prompt',
       'panel-composition.md': '# Panel',
-      'discussion-summary.md': '# Summary\nUNUSED_DISCUSSION_CONTEXT',
+      'discussion-summary.md': '# Summary',
       'draft.md': draft,
-      'editor-review.md': '# Review\n## Verdict\nAPPROVED\n\nEDITOR_APPROVAL_CONTEXT',
+      'editor-review.md': '# Review\n## Verdict\nAPPROVE\n\nLooks good.',
     });
 
     const result = await STAGE_ACTIONS.runPublisherPass('test-ctx-pub', fixtures.ctx);
     expect(result.success).toBe(true);
 
-      const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
-      expect(userPrompt).toContain('EDITOR_APPROVAL_CONTEXT');
-      expect(userPrompt).not.toContain('UNUSED_IDEA_CONTEXT');
-      expect(userPrompt).not.toContain('UNUSED_DISCUSSION_CONTEXT');
-    });
+    const pass = fixtures.repo.artifacts.get('test-ctx-pub', 'publisher-pass.md');
+    expect(pass).toBeTruthy();
+  });
 
   it('respects pipeline-context.json overrides', async () => {
     setRunnerProvider(fixtures, new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]));
@@ -1801,6 +1635,9 @@ describe('Configurable upstream context', () => {
     setRunnerProvider(fixtures, provider);
     fixtures.ctx.config.contextPreset = 'rich';
     createArticleWithStage(fixtures, 'test-ctx-rich', 4 as Stage, {
+      'idea.md': '# Idea\nUPSTREAM IDEA',
+      'discussion-prompt.md': '# Prompt\nPROMPT CONTEXT',
+      'panel-composition.md': '# Panel\nPANEL CONTEXT',
       'discussion-summary.md': '# Summary\nPRIMARY SUMMARY',
     });
 
@@ -1808,10 +1645,8 @@ describe('Configurable upstream context', () => {
     expect(result.success).toBe(true);
 
     const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
-    // V3: Rich mode includes panel-factcheck and writer-factcheck, but not discussion-prompt/panel-composition
-    expect(userPrompt).toContain('PRIMARY SUMMARY');
-    expect(userPrompt).not.toContain('PROMPT CONTEXT');
-    expect(userPrompt).not.toContain('PANEL CONTEXT');
+    expect(userPrompt).toContain('PROMPT CONTEXT');
+    expect(userPrompt).toContain('PANEL CONTEXT');
   });
 });
 
@@ -2471,169 +2306,5 @@ describe('writeDraft fact-check preflight', () => {
     expect(fixtures.repo.artifacts.get('test-fc-skip', 'panel-factcheck.md')).toBeNull();
 
     runSpy.mockRestore();
-  });
-});
-
-describe('V3 Simplification: Stages 5-7', () => {
-  let fixtures: TestFixtures;
-
-  beforeEach(() => {
-    fixtures = createFixtures();
-    resetContextConfigCache();
-  });
-
-  afterEach(() => {
-    fixtures.memory.close();
-    fixtures.repo.close();
-    rmSync(fixtures.tempDir, { recursive: true, force: true });
-    resetContextConfigCache();
-  });
-
-  describe('Stage 5 Writer context simplification', () => {
-    it('includes only the simplified Stage 5 upstream artifacts', async () => {
-      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
-      setRunnerProvider(fixtures, provider);
-      
-      createArticleWithStage(fixtures, 'v3-writer-ctx', 4 as Stage, {
-        'discussion-summary.md': '# Summary\nCore panel analysis.',
-        'roster-context.md': '# Roster\nMore old context.',
-      });
-
-      const result = await STAGE_ACTIONS.writeDraft('v3-writer-ctx', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const userPrompt = provider.lastRequest?.messages.find((m) => m.role === 'user')?.content ?? '';
-      // V3: Should stay on the summary + fact-check artifacts, not broader upstream context.
-      expect(userPrompt).toContain('Core panel analysis');
-      expect(userPrompt).not.toContain('More old context.');
-    });
-
-    it('uses simplified task instruction for new drafts', async () => {
-      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'v3-writer-task', 4 as Stage, {
-        'discussion-summary.md': '# Summary\nPanel discussion.',
-      });
-
-      const result = await STAGE_ACTIONS.writeDraft('v3-writer-task', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const requestContent = provider.lastRequest?.messages.map((m) => m.content).join('\n\n---\n\n') ?? '';
-      expect(requestContent).toContain(buildWriterPreflightChecklist());
-      expect(requestContent).toContain('### Skill: substack-article');
-    });
-
-    it('uses simplified revision instruction', async () => {
-      const provider = new RecordingProvider([PANEL_FACTCHECK_OK, validDraft()]);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'v3-writer-revise', 4 as Stage, {
-        'discussion-summary.md': '# Summary\nPanel discussion.',
-        'draft.md': validDraft(500),
-        'editor-review.md': '## Verdict\nREVISE',
-      });
-
-      const result = await STAGE_ACTIONS.writeDraft('v3-writer-revise', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const requestContent = provider.lastRequest?.messages.map((m) => m.content).join('\n\n---\n\n') ?? '';
-      expect(requestContent).toContain(buildWriterPreflightChecklist());
-    });
-  });
-
-  describe('Stage 6 Editor context simplification', () => {
-    it('includes only deterministic verification evidence, not redundant upstream narrative', async () => {
-      const provider = new RecordingProvider(['## Verdict\nAPPROVED']);
-      setRunnerProvider(fixtures, provider);
-      
-      createArticleWithStage(fixtures, 'v3-editor-ctx', 5 as Stage, {
-        'draft.md': validDraft(1000),
-        'roster-context.md': '# Roster\nSEA roster sentinel.',
-        'fact-check-context.md': '# Fact Check\nClaim sentinel.',
-        'writer-factcheck.md': '# Writer Fact-Check\n## Verified Facts',
-        'discussion-summary.md': '# Summary\nOld context.',
-        'idea.md': '# Idea\nOld context.',
-      });
-
-      const result = await STAGE_ACTIONS.runEditor('v3-editor-ctx', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const userPrompt = provider.lastRequest?.messages.find((m) => m.role === 'user')?.content ?? '';
-      // V3: Should include deterministic verification evidence but not discussion-summary or idea.md
-      expect(userPrompt).toContain('SEA roster sentinel.');
-      expect(userPrompt).toContain('Claim sentinel.');
-      expect(userPrompt).toContain('## Verified Facts');
-      expect(userPrompt).toContain(validDraft(1000).slice(0, 50)); // Has the draft
-      expect(userPrompt).not.toContain('Old context.');
-    });
-
-    it('uses simplified approval gate task', async () => {
-      const provider = new RecordingProvider(['## Verdict\nAPPROVED']);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'v3-editor-task', 5 as Stage, {
-        'draft.md': validDraft(1000),
-      });
-
-      const result = await STAGE_ACTIONS.runEditor('v3-editor-task', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const requestContent = provider.lastRequest?.messages.map((message) => message.content).join('\n\n---\n\n') ?? '';
-      // V3: Simplified editor task
-      expect(requestContent).toContain('writer-factcheck.md');
-      expect(requestContent).toContain('advisory');
-    });
-  });
-
-  describe('Stage 7 Publisher input simplification', () => {
-    it('includes only editor-review, not redundant upstream', async () => {
-      const provider = new RecordingProvider(['# Publisher Pass\nAll checks passed.']);
-      setRunnerProvider(fixtures, provider);
-      
-      createArticleWithStage(fixtures, 'v3-pub-ctx', 6 as Stage, {
-        'draft.md': validDraft(1000),
-        'editor-review.md': '## Verdict\nAPPROVED\n\nLooks good.',
-        'writer-factcheck.md': '# Writer\nOld context.',
-        'discussion-summary.md': '# Summary\nOld context.',
-      });
-
-      const result = await STAGE_ACTIONS.runPublisherPass('v3-pub-ctx', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const userPrompt = provider.lastRequest?.messages.find((m) => m.role === 'user')?.content ?? '';
-      // V3: Should include editor-review but not writer-factcheck or discussion-summary
-      expect(userPrompt).toContain('Looks good');
-      expect(userPrompt).not.toContain('Old context.');
-    });
-
-    it('uses simplified publisher task focusing on required checks', async () => {
-      const provider = new RecordingProvider(['# Publisher Pass\nChecks passed.']);
-      setRunnerProvider(fixtures, provider);
-      createArticleWithStage(fixtures, 'v3-pub-task', 6 as Stage, {
-        'draft.md': validDraft(1000),
-        'editor-review.md': '## Verdict\nAPPROVED',
-      });
-
-      const result = await STAGE_ACTIONS.runPublisherPass('v3-pub-task', fixtures.ctx);
-      expect(result.success).toBe(true);
-
-      const userPrompt = provider.lastRequest?.messages.find((m) => m.role === 'user')?.content ?? '';
-      expect(userPrompt).toContain('## Upstream Context: editor-review.md');
-    });
-
-    it('runs deterministic validation and creates validation artifacts', async () => {
-      const provider = new RecordingProvider(['# Publisher Pass\nReady.']);
-      setRunnerProvider(fixtures, provider);
-      
-      createArticleWithStage(fixtures, 'v3-pub-valid', 6 as Stage, {
-        'draft.md': '# Test\n\n**Geno Smith** is the QB.',
-      });
-      fixtures.repo.updateArticle('v3-pub-valid', { primary_team: 'sea' });
-
-      const result = await STAGE_ACTIONS.runPublisherPass('v3-pub-valid', fixtures.ctx);
-      expect(result.success).toBe(true);
-      
-      // Should have run deterministic validation and possibly created artifacts
-      const publisherPass = fixtures.repo.artifacts.get('v3-pub-valid', 'publisher-pass.md');
-      expect(publisherPass).toBeTruthy();
-    });
   });
 });
