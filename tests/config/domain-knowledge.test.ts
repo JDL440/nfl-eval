@@ -23,7 +23,7 @@ describe('Structured domain knowledge proof of concept', () => {
         const content = readFileSync(join(glossaryDir, file), 'utf-8');
 
         expect(content).toContain('schema_version: 1');
-        expect(content).toMatch(/^id:\s[\w-]+/m);
+        expect(content).toMatch(/^glossary:\s[\w-]+/m);
         expect(content).toContain('glossary:');
         expect(content).toContain('description:');
         expect(content).toContain('entry_fields:');
@@ -54,16 +54,16 @@ describe('Structured domain knowledge proof of concept', () => {
 
     it('includes the initial proof-of-concept team sheets', () => {
       for (const team of expectedTeams) {
-        expect(existsSync(join(teamSheetsDir, ${team}.md))).toBe(true);
+        expect(existsSync(join(teamSheetsDir, `${team}.md`))).toBe(true);
       }
     });
 
     it('ensures each proof-of-concept team sheet includes an H1 and the expected sections', () => {
       for (const team of expectedTeams) {
-        const content = readFileSync(join(teamSheetsDir, ${team}.md), 'utf-8');
+        const content = readFileSync(join(teamSheetsDir, `${team}.md`), 'utf-8');
 
         expect(content.startsWith('# ')).toBe(true);
-        expect(content).toContain(() Team Identity Sheet);
+        expect(content).toContain('Team Identity Sheet');
         expect(content).toContain('**Verified date:** 2026-03-22');
         expect(content).toContain('**Primary sources:**');
 

@@ -50,6 +50,22 @@ function wordsOf(count: number): string {
   return Array.from({ length: count }, (_, i) => `word${i}`).join(' ');
 }
 
+function buildValidDraft(totalWords: number, title: string): string {
+  const prefix = [
+    `# ${title}`,
+    '',
+    '> **📋 TLDR**',
+    '> - Fix the line first.',
+    '> - Preserve flexibility for core extensions.',
+    '> - Target Day 2 value in the secondary.',
+    '> - Turn the panel consensus into a clear offseason plan.',
+    '',
+  ].join('\n');
+  const prefixWords = prefix.split(/\s+/).filter(Boolean).length;
+  const remaining = Math.max(totalWords - prefixWords, 0);
+  return `${prefix}${remaining > 0 ? `\n${wordsOf(remaining)}` : ''}`;
+}
+
 /* ── test suite ── */
 
 describe('UX Happy Path — full user journey', () => {
@@ -178,7 +194,7 @@ describe('UX Happy Path — full user journey', () => {
     repo.artifacts.put(
       articleId,
       'draft.md',
-      `# Seahawks Secondary Analysis\n\n${wordsOf(250)}`,
+      buildValidDraft(250, 'Seahawks Secondary Analysis'),
     );
 
     const res = await htmxPost(`/htmx/articles/${articleId}/advance`);
@@ -246,8 +262,8 @@ describe('UX Happy Path — full user journey', () => {
     const html = await res.text();
     // Draft preview rendered
     expect(html).toContain('word0');
-    // Publish actions visible
-    expect(html).toContain('Publish Actions');
+    // Publish workflow actions visible
+    expect(html).toContain('Publish Status');
   });
 
   /* ─── 13. Toggle a checklist item ─────────────────────── */
@@ -324,7 +340,7 @@ describe('UX Happy Path — full user journey', () => {
     repo.artifacts.put(
       articleId,
       'draft.md',
-      `# Revised Seahawks Secondary Analysis\n\n${wordsOf(260)}`,
+      buildValidDraft(260, 'Revised Seahawks Secondary Analysis'),
     );
     repo.artifacts.put(
       articleId,

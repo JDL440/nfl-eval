@@ -558,14 +558,31 @@ export class AgentRunner {
         responseFormat,
         stageKey: model ? undefined : stageKey,
         taskFamily,
+        providerContext: {
+          articleId: params.trace?.articleId ?? articleContext?.slug ?? null,
+          runId: params.trace?.runId ?? null,
+          stageRunId: params.trace?.stageRunId ?? null,
+          stage: params.trace?.stage ?? articleContext?.stage ?? null,
+          surface: params.trace?.surface ?? null,
+          traceId: traceId ?? null,
+        },
       });
     } catch (error) {
       if (traceId) {
         const message = error instanceof Error ? error.message : String(error);
+        const providerMetadata = error instanceof Error
+          ? (error as Error & { providerMetadata?: import('../llm/gateway.js').ProviderMetadata }).providerMetadata
+          : undefined;
         params.trace?.repo.failLlmTrace(traceId, {
           model: model ?? null,
           errorMessage: message,
           latencyMs: Date.now() - requestStartedAt,
+          providerMode: providerMetadata?.providerMode ?? null,
+          providerSessionId: providerMetadata?.providerSessionId ?? null,
+          workingDirectory: providerMetadata?.workingDirectory ?? null,
+          incrementalPrompt: providerMetadata?.incrementalPrompt ?? null,
+          providerRequest: providerMetadata?.requestEnvelope,
+          providerResponse: providerMetadata?.responseEnvelope,
         });
       }
       throw error;
@@ -584,6 +601,12 @@ export class AgentRunner {
         completionTokens: response.usage?.completionTokens ?? null,
         totalTokens: response.usage?.totalTokens ?? null,
         latencyMs: Date.now() - requestStartedAt,
+        providerMode: response.providerMetadata?.providerMode ?? null,
+        providerSessionId: response.providerMetadata?.providerSessionId ?? null,
+        workingDirectory: response.providerMetadata?.workingDirectory ?? null,
+        incrementalPrompt: response.providerMetadata?.incrementalPrompt ?? null,
+        providerRequest: response.providerMetadata?.requestEnvelope,
+        providerResponse: response.providerMetadata?.responseEnvelope,
       });
     }
 

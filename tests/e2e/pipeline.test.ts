@@ -177,6 +177,22 @@ function longText(wordCount: number): string {
   return Array.from({ length: wordCount }, (_, i) => `word${i}`).join(' ');
 }
 
+function buildValidDraft(totalWords: number, title = 'Draft'): string {
+  const prefix = [
+    `# ${title}`,
+    '',
+    '> **📋 TLDR**',
+    '> - Fix the line first.',
+    '> - Preserve flexibility for core extensions.',
+    '> - Target Day 2 value in the secondary.',
+    '> - Turn the panel consensus into a clear offseason plan.',
+    '',
+  ].join('\n');
+  const prefixWords = prefix.split(/\s+/).filter(Boolean).length;
+  const remaining = Math.max(totalWords - prefixWords, 0);
+  return `${prefix}${remaining > 0 ? `\n${longText(remaining)}` : ''}`;
+}
+
 // ── Fixture builder ──────────────────────────────────────────────────────────
 
 interface E2EFixtures {
@@ -572,7 +588,7 @@ describe('E2E: Full Pipeline', () => {
     expect(check3.reason).toContain('words');
 
     // Long draft — guard should pass
-    writeArticleFile(f, slug, 'draft.md', longText(900));
+    writeArticleFile(f, slug, 'draft.md', buildValidDraft(900));
     const check4 = f.engine.canAdvance(slug, 5 as Stage);
     expect(check4.allowed).toBe(true);
   });

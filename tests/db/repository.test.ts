@@ -723,6 +723,11 @@ describe('Repository', () => {
         completionTokens: 45,
         totalTokens: 165,
         latencyMs: 321,
+        providerMode: 'one-shot',
+        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
+        incrementalPrompt: 'Provider delta',
+        providerRequest: { allowedTools: ['url', 'nfl-eval-pipeline', 'nfl-eval-local'] },
+        providerResponse: { stdout: 'Trace output' },
       });
 
       const byArticle = repo.getArticleLlmTraces('trace-article');
@@ -735,6 +740,11 @@ describe('Repository', () => {
       expect(byArticle[0].status).toBe('completed');
       expect(byArticle[0].output_text).toBe('Trace output');
       expect(byArticle[0].thinking_text).toBe('Trace thinking');
+      expect(byArticle[0].provider_mode).toBe('one-shot');
+      expect(byArticle[0].working_directory).toBe('C:\\github\\worktrees\\copilot-session-reuse');
+      expect(byArticle[0].incremental_prompt).toBe('Provider delta');
+      expect(byArticle[0].provider_request_json).toContain('nfl-eval-pipeline');
+      expect(byArticle[0].provider_response_json).toContain('Trace output');
       expect(JSON.parse(byArticle[0].context_parts_json ?? '[]')).toEqual([
         {
           channel: 'system',

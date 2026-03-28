@@ -61,6 +61,10 @@ LLM selection:
 - `LMSTUDIO_URL` — LM Studio base URL, default `http://localhost:1234/v1`
 - `LMSTUDIO_MODEL` — optional LM Studio default model override
 - `GITHUB_TOKEN` — GitHub Models / Copilot auth when using the Copilot provider
+- `COPILOT_CLI_MODE` — `none` (default, text-only) or `article-tools` (guarded web search + repo MCP for Copilot CLI only)
+- `COPILOT_CLI_WEB_SEARCH` — set to `0` to disable Copilot CLI web search access (default enabled)
+- `COPILOT_CLI_MCP_CONFIG` — override the repo-scoped Copilot MCP config file (default `.copilot/mcp-config.json`)
+- `COPILOT_CLI_SESSION_REUSE` — opt into the guarded Copilot session-reuse experiment; currently traces the request and falls back to one-shot mode
 
 Optional service integrations:
 

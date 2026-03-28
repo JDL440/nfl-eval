@@ -9,6 +9,15 @@ interface TracePart {
   content?: string;
 }
 
+function parseJson(raw: string | null): unknown {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return raw;
+  }
+}
+
 function parseTraceParts(raw: string | null): TracePart[] {
   if (!raw) return [];
   try {
@@ -50,6 +59,25 @@ function renderTextBlock(title: string, content: string | null, open = false): s
       <summary>${escapeHtml(title)}</summary>
       <pre class="artifact-pre trace-pre">${escapeHtml(content)}</pre>
     </details>`;
+}
+
+function renderJsonBlock(title: string, raw: string | null, open = false): string {
+  if (!raw) return '';
+  const parsed = parseJson(raw);
+  const text = typeof parsed === 'string'
+    ? parsed
+    : JSON.stringify(parsed, null, 2);
+  return renderTextBlock(title, text, open);
+}
+
+function renderProviderSessionSummary(trace: LlmTrace): string {
+  const bits: string[] = [];
+  if (trace.provider_mode) bits.push(`Mode: ${escapeHtml(trace.provider_mode)}`);
+  if (trace.provider_session_id) bits.push(`Session: ${escapeHtml(trace.provider_session_id)}`);
+  if (trace.working_directory) bits.push(`CWD: ${escapeHtml(trace.working_directory)}`);
+  return bits.length > 0
+    ? `<div class="muted" style="margin-top:0.5rem">${bits.join(' · ')}</div>`
+    : '';
 }
 
 export function renderTraceSummaryPanel(articleId: string, traces: LlmTrace[]): string {
@@ -116,12 +144,16 @@ export function renderTraceCards(traces: LlmTrace[]): string {
               <span class="stat stat-note">Latency: ${trace.latency_ms != null ? `${trace.latency_ms}ms` : '—'}</span>
             </div>
             ${trace.error_message ? `<div class="stage-run-error">❌ ${escapeHtml(trace.error_message)}</div>` : ''}
+            ${renderProviderSessionSummary(trace)}
             <div class="advanced-subsection">
               <h3>Context Stack</h3>
               ${contextList}
             </div>
             ${renderTextBlock('System Prompt', trace.system_prompt, index === 0)}
             ${renderTextBlock('User Message', trace.user_message, index === 0)}
+            ${renderTextBlock('Provider Prompt Delta', trace.incremental_prompt)}
+            ${renderJsonBlock('Provider Request Envelope', trace.provider_request_json)}
+            ${renderJsonBlock('Provider Response Envelope', trace.provider_response_json)}
             ${renderTextBlock('Thinking', trace.thinking_text)}
             ${renderTextBlock('Assistant Output', trace.output_text, true)}
           </article>`;

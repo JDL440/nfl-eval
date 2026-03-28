@@ -17,6 +17,24 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ProviderContext {
+  articleId?: string | null;
+  runId?: string | null;
+  stageRunId?: string | null;
+  stage?: number | null;
+  surface?: string | null;
+  traceId?: string | null;
+}
+
+export interface ProviderMetadata {
+  providerMode?: string | null;
+  providerSessionId?: string | null;
+  workingDirectory?: string | null;
+  incrementalPrompt?: string | null;
+  requestEnvelope?: unknown;
+  responseEnvelope?: unknown;
+}
+
 export interface ChatRequest {
   messages: ChatMessage[];
   provider?: string;
@@ -27,6 +45,7 @@ export interface ChatRequest {
   depthLevel?: number;
   taskFamily?: string;
   responseFormat?: 'text' | 'json';
+  providerContext?: ProviderContext;
 }
 
 export interface ChatResponse {
@@ -39,6 +58,7 @@ export interface ChatResponse {
     totalTokens: number;
   };
   finishReason?: string;
+  providerMetadata?: ProviderMetadata;
 }
 
 export interface LLMProvider {
@@ -153,6 +173,8 @@ export class LLMGateway {
       const summary = errors.map(e => `${e.model}: ${e.error.message.slice(0, 100)}`).join(' | ');
       const combined = new Error(`All ${errors.length} model candidate(s) failed: ${summary}`);
       (combined as any).cause = errors[0].error;
+      (combined as Error & { providerMetadata?: ProviderMetadata }).providerMetadata =
+        (errors[0].error as Error & { providerMetadata?: ProviderMetadata }).providerMetadata;
       throw combined;
     }
     throw new NoProviderError(candidates[0] ?? request.model ?? 'unknown');

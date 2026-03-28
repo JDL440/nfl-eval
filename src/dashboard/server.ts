@@ -882,6 +882,10 @@ export function createApp(
     const envVars = [
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'COPILOT_CLI_MODE',
+      'COPILOT_CLI_MCP_CONFIG',
+      'COPILOT_CLI_SESSION_REUSE',
+      'COPILOT_CLI_WEB_SEARCH',
       'GEMINI_API_KEY',
       'SUBSTACK_TOKEN',
       'SUBSTACK_PUBLICATION_URL',
@@ -898,6 +902,10 @@ export function createApp(
     const displayableVars = new Set([
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'COPILOT_CLI_MODE',
+      'COPILOT_CLI_MCP_CONFIG',
+      'COPILOT_CLI_SESSION_REUSE',
+      'COPILOT_CLI_WEB_SEARCH',
       'SUBSTACK_PUBLICATION_URL',
       'DATA_SOURCE',
       'DASHBOARD_AUTH_MODE',
@@ -907,6 +915,10 @@ export function createApp(
     ]);
     const envDefaultValues: Record<string, string> = {
       DATA_SOURCE: 'scripts',
+      COPILOT_CLI_MODE: 'none',
+      COPILOT_CLI_MCP_CONFIG: join(process.cwd(), '.copilot', 'mcp-config.json'),
+      COPILOT_CLI_SESSION_REUSE: '0',
+      COPILOT_CLI_WEB_SEARCH: '1',
       DASHBOARD_AUTH_MODE: dashboardAuth.mode,
       DASHBOARD_SESSION_COOKIE: dashboardAuth.sessionCookieName,
       DASHBOARD_SESSION_TTL_HOURS: String(dashboardAuth.sessionTtlHours),
@@ -2908,9 +2920,39 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     const registerCopilotCliProvider = async (): Promise<void> => {
       if (gateway.getProvider('copilot-cli')) return;
       try {
+        const repoRoot = resolve(__dirname, '..', '..');
+        const cliMode = process.env['COPILOT_CLI_MODE'] === 'article-tools'
+          || process.env['COPILOT_CLI_ENABLE_TOOLS'] === '1'
+          || process.env['COPILOT_ENABLE_TOOLS'] === '1'
+          ? 'article-tools'
+          : 'none';
+        const extraFlags = (process.env['COPILOT_EXTRA_FLAGS'] ?? '')
+          .split(',')
+          .map((flag) => flag.trim())
+          .filter((flag) => flag.length > 0);
         const cliProvider = new CopilotCLIProvider({
           defaultModel: process.env['COPILOT_MODEL'] ?? undefined,
           copilotPath: process.env['COPILOT_PATH'] ?? undefined,
+          extraFlags,
+          repoRoot,
+          workingDirectory: process.env['COPILOT_WORKING_DIRECTORY'] ?? repoRoot,
+          toolAccessMode: cliMode,
+          enableWebFetch:
+            cliMode === 'article-tools'
+            && process.env['COPILOT_ENABLE_WEB_FETCH'] !== '0'
+            && process.env['COPILOT_CLI_WEB_SEARCH'] !== '0',
+          enableRepoMcp:
+            cliMode === 'article-tools'
+            && process.env['COPILOT_ENABLE_REPO_MCP'] !== '0',
+          mcpConfigPath:
+            process.env['COPILOT_CLI_MCP_CONFIG']
+            ?? join(repoRoot, '.copilot', 'mcp-config.json'),
+          enableSessionReuse:
+            cliMode === 'article-tools'
+            && (
+              process.env['COPILOT_CLI_SESSION_REUSE'] === '1'
+              || process.env['COPILOT_ENABLE_SESSION_REUSE'] === '1'
+            ),
         });
         const version = await cliProvider.verify();
         gateway.registerProvider(cliProvider);

@@ -151,6 +151,12 @@ interface CreateLlmTraceParams {
   articleContext?: unknown;
   conversationContext?: string | null;
   rosterContext?: string | null;
+  providerMode?: string | null;
+  providerSessionId?: string | null;
+  workingDirectory?: string | null;
+  incrementalPrompt?: string | null;
+  providerRequest?: unknown;
+  providerResponse?: unknown;
 }
 
 interface CompleteLlmTraceParams {
@@ -163,6 +169,12 @@ interface CompleteLlmTraceParams {
   completionTokens?: number | null;
   totalTokens?: number | null;
   latencyMs?: number | null;
+  providerMode?: string | null;
+  providerSessionId?: string | null;
+  workingDirectory?: string | null;
+  incrementalPrompt?: string | null;
+  providerRequest?: unknown;
+  providerResponse?: unknown;
 }
 
 interface FailLlmTraceParams {
@@ -170,6 +182,12 @@ interface FailLlmTraceParams {
   model?: string | null;
   errorMessage: string;
   latencyMs?: number | null;
+  providerMode?: string | null;
+  providerSessionId?: string | null;
+  workingDirectory?: string | null;
+  incrementalPrompt?: string | null;
+  providerRequest?: unknown;
+  providerResponse?: unknown;
 }
 
 interface AttachLlmTraceParams {
@@ -226,6 +244,7 @@ export class Repository {
     const sql = readFileSync(schemaPath, 'utf-8');
     this.db.exec(sql);
     this.ensureRevisionSummaryColumns();
+    this.ensureLlmTraceColumns();
   }
 
   private ensureRevisionSummaryColumns(): void {
@@ -238,6 +257,30 @@ export class Repository {
 
     if (!columnNames.has('blocker_ids')) {
       this.db.exec('ALTER TABLE revision_summaries ADD COLUMN blocker_ids TEXT');
+    }
+  }
+
+  private ensureLlmTraceColumns(): void {
+    const columns = this.db.prepare('PRAGMA table_info(llm_traces)').all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+
+    if (!columnNames.has('provider_mode')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN provider_mode TEXT');
+    }
+    if (!columnNames.has('provider_session_id')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN provider_session_id TEXT');
+    }
+    if (!columnNames.has('working_directory')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN working_directory TEXT');
+    }
+    if (!columnNames.has('incremental_prompt')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN incremental_prompt TEXT');
+    }
+    if (!columnNames.has('provider_request_json')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN provider_request_json TEXT');
+    }
+    if (!columnNames.has('provider_response_json')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN provider_response_json TEXT');
     }
   }
 
@@ -856,11 +899,13 @@ export class Repository {
     const id = newRunId();
     const stmt = this.db.prepare(
       `INSERT INTO llm_traces
-       (id, run_id, stage_run_id, article_id, stage, surface, agent_name, requested_model,
-        stage_key, task_family, temperature, max_tokens, response_format, status,
-        system_prompt, user_message, messages_json, context_parts_json, skills_json,
-        memories_json, article_context_json, conversation_context, roster_context, started_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, run_id, stage_run_id, article_id, stage, surface, agent_name, requested_model,
+         stage_key, task_family, temperature, max_tokens, response_format, status,
+         system_prompt, user_message, messages_json, context_parts_json, skills_json,
+         memories_json, article_context_json, conversation_context, roster_context, provider_mode,
+         provider_session_id, working_directory, incremental_prompt, provider_request_json,
+         provider_response_json, started_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     );
     stmt.run(
       id,
@@ -886,6 +931,12 @@ export class Repository {
       normalizeMetadataJson(params.articleContext),
       params.conversationContext ?? null,
       params.rosterContext ?? null,
+      params.providerMode ?? null,
+      params.providerSessionId ?? null,
+      params.workingDirectory ?? null,
+      params.incrementalPrompt ?? null,
+      normalizeMetadataJson(params.providerRequest),
+      normalizeMetadataJson(params.providerResponse),
       nowISO(),
     );
     return id;
@@ -895,17 +946,23 @@ export class Repository {
     const stmt = this.db.prepare(
       `UPDATE llm_traces
        SET provider = ?,
-           model = ?,
-           output_text = ?,
-           thinking_text = ?,
-           finish_reason = ?,
-           prompt_tokens = ?,
-           completion_tokens = ?,
-           total_tokens = ?,
-           latency_ms = ?,
-           status = 'completed',
-           completed_at = ?
-       WHERE id = ?`,
+            model = ?,
+            output_text = ?,
+            thinking_text = ?,
+            finish_reason = ?,
+            prompt_tokens = ?,
+            completion_tokens = ?,
+            total_tokens = ?,
+            provider_mode = COALESCE(?, provider_mode),
+            provider_session_id = COALESCE(?, provider_session_id),
+            working_directory = COALESCE(?, working_directory),
+            incremental_prompt = COALESCE(?, incremental_prompt),
+            provider_request_json = COALESCE(?, provider_request_json),
+            provider_response_json = COALESCE(?, provider_response_json),
+            latency_ms = ?,
+            status = 'completed',
+            completed_at = ?
+        WHERE id = ?`,
     );
     stmt.run(
       params.provider ?? null,
@@ -916,6 +973,12 @@ export class Repository {
       params.promptTokens ?? null,
       params.completionTokens ?? null,
       params.totalTokens ?? null,
+      params.providerMode ?? null,
+      params.providerSessionId ?? null,
+      params.workingDirectory ?? null,
+      params.incrementalPrompt ?? null,
+      normalizeMetadataJson(params.providerRequest),
+      normalizeMetadataJson(params.providerResponse),
       params.latencyMs ?? null,
       nowISO(),
       traceId,
@@ -926,17 +989,29 @@ export class Repository {
     const stmt = this.db.prepare(
       `UPDATE llm_traces
        SET provider = COALESCE(?, provider),
-           model = COALESCE(?, model),
-           error_message = ?,
-           latency_ms = ?,
-           status = 'failed',
-           completed_at = ?
-       WHERE id = ?`,
+            model = COALESCE(?, model),
+            error_message = ?,
+            provider_mode = COALESCE(?, provider_mode),
+            provider_session_id = COALESCE(?, provider_session_id),
+            working_directory = COALESCE(?, working_directory),
+            incremental_prompt = COALESCE(?, incremental_prompt),
+            provider_request_json = COALESCE(?, provider_request_json),
+            provider_response_json = COALESCE(?, provider_response_json),
+            latency_ms = ?,
+            status = 'failed',
+            completed_at = ?
+        WHERE id = ?`,
     );
     stmt.run(
       params.provider ?? null,
       params.model ?? null,
       params.errorMessage,
+      params.providerMode ?? null,
+      params.providerSessionId ?? null,
+      params.workingDirectory ?? null,
+      params.incrementalPrompt ?? null,
+      normalizeMetadataJson(params.providerRequest),
+      normalizeMetadataJson(params.providerResponse),
       params.latencyMs ?? null,
       nowISO(),
       traceId,

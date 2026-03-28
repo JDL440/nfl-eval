@@ -15,6 +15,22 @@ function longText(wordCount: number): string {
   return Array.from({ length: wordCount }, (_, i) => `word${i}`).join(' ');
 }
 
+function buildValidDraft(totalWords: number): string {
+  const prefix = [
+    '# Draft',
+    '',
+    '> **📋 TLDR**',
+    '> - Fix the line first.',
+    '> - Preserve flexibility for core extensions.',
+    '> - Target Day 2 value in the secondary.',
+    '> - Turn the panel consensus into a clear offseason plan.',
+    '',
+  ].join('\n');
+  const prefixWords = prefix.split(/\s+/).filter(Boolean).length;
+  const remaining = Math.max(totalWords - prefixWords, 0);
+  return `${prefix}${remaining > 0 ? `\n${longText(remaining)}` : ''}`;
+}
+
 // ── Test suite ──────────────────────────────────────────────────────────────
 
 describe('PipelineScheduler', () => {
@@ -70,7 +86,7 @@ describe('PipelineScheduler', () => {
       engine.advance('published', 3 as Stage);
       repo.artifacts.put('published', 'discussion-summary.md', 'summary');
       engine.advance('published', 4 as Stage);
-      repo.artifacts.put('published', 'draft.md', longText(900));
+      repo.artifacts.put('published', 'draft.md', buildValidDraft(900));
       engine.advance('published', 5 as Stage);
       repo.artifacts.put('published', 'editor-review.md', '## Verdict: APPROVED\nLGTM.');
       engine.advance('published', 6 as Stage);
