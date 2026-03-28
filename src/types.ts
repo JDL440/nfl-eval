@@ -304,6 +304,7 @@ export interface LlmTrace {
   article_context_json: string | null;
   conversation_context: string | null;
   roster_context: string | null;
+  metadata_json: string | null;
   output_text: string | null;
   thinking_text: string | null;
   finish_reason: string | null;

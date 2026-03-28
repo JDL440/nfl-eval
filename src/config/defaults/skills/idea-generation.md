@@ -4,6 +4,7 @@ description: "How to generate the best article idea for an NFL team from supplie
 domain: "content-production"
 confidence: "high"
 source: "manual — designed by Joe Robinson & Lead; updated 2026-03-14 to fix stale-angle problem"
+tools: [nflverse-data, prediction-markets]
 ---
 
 # Idea Generation — Skill

@@ -1168,6 +1168,21 @@ export function createApp(
           task,
           skills: ['idea-generation'],
           rosterContext: rosterCtx ?? undefined,
+          toolCalling: {
+            enabled: true,
+            includeLocalExtensions: true,
+            allowWriteTools: false,
+            requestedTools: ['nflverse-data', 'prediction-markets'],
+            context: {
+              repo,
+              engine: actionContext.engine,
+              config,
+              actionContext,
+              stage: 1,
+              surface: 'ideaGeneration',
+              agentName: 'lead',
+            },
+          },
           trace: {
             repo,
             stage: 1,
@@ -2640,6 +2655,20 @@ export function createApp(
       agentName: name,
       task: knowledgePromptFor(name),
       skills,
+      toolCalling: {
+        enabled: true,
+        includeLocalExtensions: true,
+        allowWriteTools: false,
+        requestedTools: skills,
+        context: {
+          repo,
+          engine: deps?.actionContext?.engine,
+          config,
+          actionContext: deps?.actionContext,
+          surface: 'knowledgeRefresh',
+          agentName: name,
+        },
+      },
     }).then((result) => {
       const structured = JSON.stringify({
         type: 'knowledge_refresh',
@@ -2700,6 +2729,20 @@ export function createApp(
             agentName: name,
             task: knowledgePromptFor(name),
             skills,
+            toolCalling: {
+              enabled: true,
+              includeLocalExtensions: true,
+              allowWriteTools: false,
+              requestedTools: skills,
+              context: {
+                repo,
+                engine: deps?.actionContext?.engine,
+                config,
+                actionContext: deps?.actionContext,
+                surface: 'knowledgeRefresh',
+                agentName: name,
+              },
+            },
           });
           memory.store({
             agentName: name,

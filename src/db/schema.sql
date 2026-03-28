@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS llm_traces (
     article_context_json TEXT,
     conversation_context TEXT,
     roster_context      TEXT,
+    metadata_json       TEXT,
     output_text         TEXT,
     thinking_text       TEXT,
     finish_reason       TEXT,

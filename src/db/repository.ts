@@ -151,6 +151,7 @@ interface CreateLlmTraceParams {
   articleContext?: unknown;
   conversationContext?: string | null;
   rosterContext?: string | null;
+  metadata?: unknown;
 }
 
 interface CompleteLlmTraceParams {
@@ -163,6 +164,7 @@ interface CompleteLlmTraceParams {
   completionTokens?: number | null;
   totalTokens?: number | null;
   latencyMs?: number | null;
+  metadata?: unknown;
 }
 
 interface FailLlmTraceParams {
@@ -226,6 +228,7 @@ export class Repository {
     const sql = readFileSync(schemaPath, 'utf-8');
     this.db.exec(sql);
     this.ensureRevisionSummaryColumns();
+    this.ensureLlmTraceMetadataColumn();
   }
 
   private ensureRevisionSummaryColumns(): void {
@@ -238,6 +241,14 @@ export class Repository {
 
     if (!columnNames.has('blocker_ids')) {
       this.db.exec('ALTER TABLE revision_summaries ADD COLUMN blocker_ids TEXT');
+    }
+  }
+
+  private ensureLlmTraceMetadataColumn(): void {
+    const columns = this.db.prepare('PRAGMA table_info(llm_traces)').all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+    if (!columnNames.has('metadata_json')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN metadata_json TEXT');
     }
   }
 
@@ -859,8 +870,8 @@ export class Repository {
        (id, run_id, stage_run_id, article_id, stage, surface, agent_name, requested_model,
         stage_key, task_family, temperature, max_tokens, response_format, status,
         system_prompt, user_message, messages_json, context_parts_json, skills_json,
-        memories_json, article_context_json, conversation_context, roster_context, started_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        memories_json, article_context_json, conversation_context, roster_context, metadata_json, started_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     stmt.run(
       id,
@@ -886,6 +897,7 @@ export class Repository {
       normalizeMetadataJson(params.articleContext),
       params.conversationContext ?? null,
       params.rosterContext ?? null,
+      normalizeMetadataJson(params.metadata),
       nowISO(),
     );
     return id;
@@ -900,12 +912,13 @@ export class Repository {
            thinking_text = ?,
            finish_reason = ?,
            prompt_tokens = ?,
-           completion_tokens = ?,
-           total_tokens = ?,
-           latency_ms = ?,
-           status = 'completed',
-           completed_at = ?
-       WHERE id = ?`,
+            completion_tokens = ?,
+            total_tokens = ?,
+            latency_ms = ?,
+            metadata_json = COALESCE(?, metadata_json),
+            status = 'completed',
+            completed_at = ?
+        WHERE id = ?`,
     );
     stmt.run(
       params.provider ?? null,
@@ -917,6 +930,7 @@ export class Repository {
       params.completionTokens ?? null,
       params.totalTokens ?? null,
       params.latencyMs ?? null,
+      normalizeMetadataJson(params.metadata),
       nowISO(),
       traceId,
     );

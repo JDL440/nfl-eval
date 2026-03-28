@@ -26,6 +26,7 @@ export interface ChatRequest {
   depthLevel?: number;
   taskFamily?: string;
   responseFormat?: 'text' | 'json';
+  disallowedProviderIds?: string[];
 }
 
 export interface ChatResponse {
@@ -114,7 +115,7 @@ export class LLMGateway {
 
     const errors: { model: string; error: Error }[] = [];
     for (const model of candidates) {
-      const provider = this.findProviderForModel(model);
+      const provider = this.findProviderForModel(model, request.disallowedProviderIds);
       if (!provider) continue;
 
       try {
@@ -145,6 +146,14 @@ export class LLMGateway {
   // -- Structured output ---------------------------------------------------
 
   async chatStructured<T>(request: ChatRequest, schema: ZodType<T>): Promise<T> {
+    const result = await this.chatStructuredWithResponse(request, schema);
+    return result.data;
+  }
+
+  async chatStructuredWithResponse<T>(
+    request: ChatRequest,
+    schema: ZodType<T>,
+  ): Promise<{ data: T; response: ChatResponse }> {
     const response = await this.chat({ ...request, responseFormat: 'json' });
     const raw = response.content;
 
@@ -166,7 +175,7 @@ export class LLMGateway {
       );
     }
 
-    return result.data;
+    return { data: result.data, response };
   }
 
   // -- Private helpers -----------------------------------------------------
@@ -194,8 +203,12 @@ export class LLMGateway {
     return resolved.candidates;
   }
 
-  private findProviderForModel(model: string): LLMProvider | undefined {
+  private findProviderForModel(model: string, disallowedProviderIds?: string[]): LLMProvider | undefined {
+    const disallowed = new Set(disallowedProviderIds ?? []);
     for (const provider of this.providers.values()) {
+      if (disallowed.has(provider.id)) {
+        continue;
+      }
       if (provider.supportsModel(model)) {
         return provider;
       }
