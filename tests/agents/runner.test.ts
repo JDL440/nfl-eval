@@ -560,7 +560,7 @@ describe('AgentRunner', () => {
       touchSpy.mockRestore();
     });
 
-    it('stores a learning memory after successful run', async () => {
+    it('does not auto-store generic learning memories after successful run', async () => {
       const beforeCount = memory.recall('writer').length;
 
       await runner.run({
@@ -569,11 +569,12 @@ describe('AgentRunner', () => {
       });
 
       const afterMemories = memory.recall('writer');
-      expect(afterMemories.length).toBe(beforeCount + 1);
-      expect(afterMemories.some((m) => m.content.includes('Analyze rushing efficiency'))).toBe(true);
+      expect(afterMemories).toHaveLength(beforeCount);
     });
 
-    it('stores learning memory with article context', async () => {
+    it('does not auto-store article-scoped outputs as learning memories', async () => {
+      const beforeCount = memory.recall('writer').length;
+
       await runner.run({
         agentName: 'writer',
         task: 'Draft intro paragraph',
@@ -585,9 +586,7 @@ describe('AgentRunner', () => {
       });
 
       const memories = memory.recall('writer');
-      const learning = memories.find((m) => m.content.includes('Seahawks 2025 Draft Preview'));
-      expect(learning).toBeDefined();
-      expect(learning!.content).toContain('seahawks-draft-2025');
+      expect(memories).toHaveLength(beforeCount);
     });
 
     it('throws when charter is missing', async () => {
