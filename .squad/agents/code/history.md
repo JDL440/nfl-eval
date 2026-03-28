@@ -221,6 +221,8 @@
 
 - 2026-03-28 in-app MCP tool wiring: the approved seam is an app-owned, provider-agnostic local tool loop in `src\agents\runner.ts`, not provider-side tool permissions. Derive the allowlist from `mcp\tool-registry.mjs`, require `readOnlyHint: true`, validate args against exported schemas, execute handlers in process, and fail closed on non-allowlisted tools or invalid payloads.
 
+- 2026-03-28 provider-capture verification: the intended persistence seam is `POST /api/ideas` storing `requestedProvider` on `articles.llm_provider` in `src\dashboard\server.ts`, with later pipeline stages inheriting it through `runAgent()` in `src\pipeline\actions.ts`. A stale live server on `localhost:3456` still showed the old bug (`llm_provider` stayed null, Stage 1 used `copilot`, Stage 2 fell back to `lmstudio`), so end-to-end checks need a fresh server restart to validate the fixed code path.
+
 ### 2026-03-28 Agent Tool-Wiring Inspection
 - **Current tool exposure architecture:** Three-layer system: (1) MCP tools exposed via stdio in `src/mcp/server.ts`, (2) Agent charters/skills loaded from markdown at runtime in `src/agents/runner.ts`, (3) prompt-injected instructions. Agents receive tool documentation as text in system prompt, NOT as structured manifests or through native MCP client.
 - **No tool discovery mechanism:** Agents have no ability to query available tools at runtime. Tool awareness is purely text-based in skills markdown (e.g., `src/config/defaults/skills/nflverse-data.md` documents 10 MCP tools as a markdown table).
@@ -312,3 +314,33 @@
 - Lead — Multi-provider LLM review (in decisions.md)
 - UX — Multi-provider article controls (in decisions.md)
 - Code — Multi-provider dashboard copy alignment (in decisions.md)
+## 2026-03-28T10:19:40Z — Provider Persistence Bug Trace
+
+**Issue:** User selects Copilot Pro+ on new-idea page, but later article stages (2-7) default to gpt-4o/lmstudio instead.
+
+**Root Cause:** Provider selection from Stage 1 (idea generation) is NOT passed to downstream stage actions. All runAgent() calls in Stages 2-7 omit the provider field, causing gateway.chat() to fall back to default provider routing.
+
+**Location:** 
+- Bug point: src/pipeline/actions.ts lines 522-533 (runAgent function) and all stage action callsites (818, 890, etc.)
+- Data point: Provider IS correctly stored in usage_events.provider after Stage 1 execution
+- Missing link: Stage 2-7 actions do not retrieve/pass provider from Stage 1
+
+**Technical Details:**
+- runAgent() accepts AgentRunParams which includes optional provider?: string
+- All stage actions (generatePrompt, composePanel, runDiscussion, writeDraft, runEditor, runPublisherPass) call runAgent() without provider field
+- ctx.runner.run() receives provider: undefined, so gateway defaults to ModelPolicy resolution
+- User intent (select Copilot Pro+) is lost after Stage 1
+
+**Why It Works in Stage 1:**
+- Dashboard endpoint POST /api/ideas captures requestedProvider from form (line 1140)
+- Passes directly to actionContext.runner.run() with provider: requestedProvider (line 1190)
+- Result: Stage 1 usage_events.provider is correctly set
+
+**Fix Strategy (not implemented, as requested):**
+1. Create helper: getArticleProviderFromStage1(repo: Repository, articleId: string): string | null
+2. Query usage_events WHERE article_id = ? AND stage = 1 ORDER BY created_at DESC LIMIT 1
+3. Pass result to all runAgent() calls: provider: getArticleProviderFromStage1(...) || undefined
+
+**Scope:** All articles created with non-default provider selection will silently revert on Stage 1-to-2 transition.
+
+**Reference:** .squad/decisions/inbox/code-provider-trace.md (full technical analysis)

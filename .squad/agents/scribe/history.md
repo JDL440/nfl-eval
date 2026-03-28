@@ -60,4 +60,18 @@
 - **Routing:** Code owns implementation; affects `src/pipeline/writer-preflight.ts` + tests.
 - **Ready for implementation:** Small, focused change. No new architecture required. Complements existing Sentence-Starter Name Consistency Policy.
 
+### 2026-03-28T10-32-00Z: Provider Label & Persistence Decision Inbox
+- **Directive captured:** Two related provider issues logged to decision inbox:
+  1. **Label ambiguity:** Dashboard "GitHub Copilot Pro+" label maps to GitHub Models API provider; confuses it with "GitHub Copilot CLI" which is a separate provider with different routing.
+  2. **Persistence bug (FIXED):** Provider selection from idea-generation stage (Stage 1) was not being propagated to subsequent stages (generatePrompt, composePanel, runDiscussion, writeDraft, runEditor, runPublisherPass). Root cause: `runAgent()` calls omitted provider parameter despite signature supporting it. Fix retrieved provider from Stage 1 via `usage_events` and passed it through all downstream stages.
+- **Inbox file:** `scribe-provider-label-and-persistence.md` — documents both issues, root causes, validation points, and architectural considerations.
+- **Scope:** Issue 1 (labeling) is a naming/UX review task; Issue 2 (persistence) is already fixed in code.
+- **Seams affected:** `src/dashboard/views/new-idea.ts` (labels), `src/dashboard/server.ts` (Stage 1 capture), `src/pipeline/actions.ts` (Stages 2-7 propagation), `src/types.ts` (provider enum and documentation).
+
+### 2026-03-29T...: Provider Fixes Approved for Mainline
+- **Ship request received from:** Joe Robinson ("Looks good. commit and merge to main")
+- **Scope approved:** Provider-persistence fix (propagation through all pipeline stages) + provider-label clarification (Dashboard label mapping consolidation)
+- **Status:** Approved for mainline merge pending coordinator git-safety confirmation
+- **Next step:** Lead/Coordinator to validate git state, then execute commit and merge to main
+
 
