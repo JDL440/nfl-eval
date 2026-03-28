@@ -52,6 +52,12 @@ Do **not** expose:
 - `npm run v2:build`
 - `npx vitest run tests\agents\runner.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\local-tool-registry.test.ts`
 
+## Provider compatibility check
+
+- The app-owned tool loop depends on provider-supported **structured JSON output** even when provider-native tool calling is not used.
+- For LM Studio in this repo, verify the provider accepts the exact `response_format` shape emitted by `src\llm\providers\lmstudio.ts` before assuming the tool loop will work live.
+- A live LM Studio run with `qwen/qwen3.5-35b-a3b` rejected `response_format: { type: 'json_object' }` and required `json_schema` or `text`, so direct text chat can work while the tool loop still fails on its first structured turn.
+
 ## Anti-patterns
 
 - Enabling the whole MCP server just because one safe tool is needed
