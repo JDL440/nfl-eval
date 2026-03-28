@@ -1111,8 +1111,8 @@ export function createApp(
       return c.json({ error: 'id and title are required' }, 400);
     }
 
-    try {
-      const article = repo.createArticle({ id, title, primary_team, league, depth_level });
+      try {
+        const article = repo.createArticle({ id, title, primary_team, league, depth_level });
 
       // Store idea artifact in DB
       repo.artifacts.put(id, 'idea.md', `# ${title}\n`);
@@ -1225,6 +1225,7 @@ export function createApp(
       repo.createArticle({
         id: slug,
         title,
+        llm_provider: requestedProvider || undefined,
         primary_team: teams[0] ?? undefined,
         league: config.league,
         depth_level: depthLevel,

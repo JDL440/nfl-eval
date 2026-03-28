@@ -413,6 +413,23 @@ describe('STAGE_ACTIONS', () => {
       expect(content).toBeTruthy();
     });
 
+    it('reuses the article provider for later stage runs', async () => {
+      const provider = new RecordingProvider(['# Prompt\n\nGenerated prompt.']);
+      fixtures.runner.gateway.registerProvider(provider);
+      fixtures.repo.createArticle({
+        id: 'test-gp-provider',
+        title: 'Test: provider persistence',
+        llm_provider: 'recording',
+      });
+      fixtures.repo.artifacts.put('test-gp-provider', 'idea.md', '# Great Idea\nAnalyze the Chargers run game.');
+
+      const result = await STAGE_ACTIONS.generatePrompt('test-gp-provider', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(provider.lastRequest).not.toBeNull();
+      expect(provider.lastRequest!.provider).toBe('recording');
+    });
+
     it('returns error when idea.md is missing', async () => {
       createArticleWithStage(fixtures, 'test-gp-no-idea', 1 as Stage);
 

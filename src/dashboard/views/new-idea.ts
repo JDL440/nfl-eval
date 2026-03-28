@@ -151,7 +151,7 @@ export function renderNewIdeaPage(config: {
   const providerField = llmProviders.length > 0
     ? `
         <div class="form-group">
-          <label for="idea-provider">LLM Provider <span class="form-hint">(choose which provider generates the idea)</span></label>
+          <label for="idea-provider">LLM Provider <span class="form-hint">(saved on the article and reused for later LLM stages)</span></label>
           <select id="idea-provider" name="provider" class="input input-full select">
             ${llmProviders.map((provider) => `
               <option value="${escapeHtml(provider.id)}"${provider.default ? ' selected' : ''}>
@@ -159,6 +159,10 @@ export function renderNewIdeaPage(config: {
               </option>
             `).join('')}
           </select>
+          <div class="form-hint" style="margin-top:0.35rem">
+            <strong>copilot</strong> = GitHub Copilot Pro+ via GitHub Models API ·
+            <strong>copilot-cli</strong> = GitHub Copilot CLI agent.
+          </div>
         </div>
       `
     : '';
