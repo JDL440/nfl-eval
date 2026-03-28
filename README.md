@@ -37,6 +37,14 @@ Open `http://localhost:3456`.
 
 Use `npm run v2:serve` for source-mode development and `npm run v2:start` only after `npm run v2:build` has produced `dist/`.
 
+On Windows, `.\dev.ps1` wraps `npm run v2:serve`. If you want to inspect the two repo-local MCP stdio servers during local development, use:
+
+```powershell
+.\dev.ps1 -WithMcp
+```
+
+That opens separate PowerShell windows for `npm run mcp:server` and `npm run v2:mcp` while the dashboard stays in your current shell. Leave `-WithMcp` off for normal work: Copilot and other repo-local MCP clients should still launch those stdio servers on demand from `.copilot\mcp-config.json` / `.mcp.json`.
+
 ### Production-style run
 
 ```bash
@@ -46,6 +54,8 @@ npm run v2:start
 ```
 
 ### Common environment variables
+
+Copy `.env.sample` to `.env` and fill in only the integrations you need.
 
 Core runtime:
 

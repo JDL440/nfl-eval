@@ -8,7 +8,7 @@
  * image references ready to paste into the article.
  *
  * Auth: GEMINI_API_KEY from Google AI Studio (https://ai.google.dev/gemini-api/docs/get-api-key)
- * Set GEMINI_API_KEY in .env (see .env.example for instructions).
+ * Set GEMINI_API_KEY in .env (see .env.sample for instructions).
  */
 
 import {
@@ -189,7 +189,7 @@ export async function generateArticleImages(params) {
     const apiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error(
-            "GEMINI_API_KEY not set. Add it to .env — see .env.example for instructions.\n" +
+            "GEMINI_API_KEY not set. Add it to .env — see .env.sample for instructions.\n" +
             "Get a key at: https://ai.google.dev/gemini-api/docs/get-api-key"
         );
     }

@@ -1,6 +1,7 @@
 param(
     [int]$Port,
-    [switch]$CommandOnly
+    [switch]$CommandOnly,
+    [switch]$WithMcp
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -28,12 +29,63 @@ if ($PSBoundParameters.ContainsKey('Port')) {
     $npmArgs += $Port.ToString()
 }
 
+$dashboardCommand = "npm $($npmArgs -join ' ')"
 $displayPort = if ($PSBoundParameters.ContainsKey('Port')) { $Port } else { 3456 }
+$mcpServers = @(
+    [pscustomobject]@{
+        Name = 'nfl-eval-local'
+        Command = 'npm run mcp:server'
+        Description = 'canonical local MCP server'
+    },
+    [pscustomobject]@{
+        Name = 'nfl-eval-pipeline'
+        Command = 'npm run v2:mcp'
+        Description = 'pipeline MCP server'
+    }
+)
+
+function Get-PowerShellCommandPath {
+    $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+    if ($pwsh) {
+        return $pwsh.Source
+    }
+
+    $powershell = Get-Command powershell.exe -ErrorAction SilentlyContinue
+    if ($powershell) {
+        return $powershell.Source
+    }
+
+    throw 'Unable to locate pwsh.exe or powershell.exe for MCP debug windows.'
+}
+
+function Start-RepoWindow {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Title,
+        [Parameter(Mandatory = $true)]
+        [string]$Command
+    )
+
+    $psExe = Get-PowerShellCommandPath
+    $escapedRepoRoot = $repoRoot.Replace("'", "''")
+    $escapedTitle = $Title.Replace("'", "''")
+    $escapedCommand = $Command.Replace("'", "''")
+    $windowCommand = "Set-Location '$escapedRepoRoot'; `$Host.UI.RawUI.WindowTitle = '$escapedTitle'; Write-Host '$escapedTitle' -ForegroundColor Cyan; Write-Host 'Repo: $escapedRepoRoot' -ForegroundColor Gray; Write-Host 'Command: $escapedCommand' -ForegroundColor Gray; $Command"
+    Start-Process -FilePath $psExe -WorkingDirectory $repoRoot -ArgumentList @('-NoExit', '-Command', $windowCommand) | Out-Null
+}
 
 Write-Host "🏈 NFL Lab v2 dashboard" -ForegroundColor Cyan
 Write-Host "   Repo: $repoRoot" -ForegroundColor Gray
-Write-Host "   Command: npm $($npmArgs -join ' ')" -ForegroundColor Gray
+Write-Host "   Command: $dashboardCommand" -ForegroundColor Gray
 Write-Host "   URL: http://localhost:$displayPort" -ForegroundColor Gray
+
+if ($WithMcp) {
+    Write-Host "   MCP debug windows: enabled" -ForegroundColor Yellow
+    foreach ($mcpServer in $mcpServers) {
+        Write-Host "     - $($mcpServer.Name): $($mcpServer.Command)" -ForegroundColor Gray
+    }
+    Write-Host "   Note: MCP clients still self-start stdio servers from .copilot\mcp-config.json or .mcp.json." -ForegroundColor DarkGray
+}
 
 if ($CommandOnly) {
     return
@@ -41,6 +93,17 @@ if ($CommandOnly) {
 
 Push-Location $repoRoot
 try {
+    if ($WithMcp) {
+        Write-Host ""
+        Write-Host "🔌 Opening MCP debug windows..." -ForegroundColor Cyan
+        foreach ($mcpServer in $mcpServers) {
+            Start-RepoWindow -Title $mcpServer.Name -Command $mcpServer.Command
+            Write-Host "   Opened: $($mcpServer.Name)" -ForegroundColor Green
+        }
+        Write-Host "   Close those windows when you are done inspecting MCP startup." -ForegroundColor Gray
+        Write-Host ""
+    }
+
     & $npm.Source @npmArgs
     exit $LASTEXITCODE
 } finally {

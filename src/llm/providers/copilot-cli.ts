@@ -5,7 +5,7 @@
  * Safe by default:
  * - tool access is fully disabled unless explicitly enabled
  * - repo MCP access is limited to the checked-in allowlist config
- * - session reuse is opt-in and falls back to one-shot execution on failure
+ * - session reuse falls back to one-shot execution on failure
  */
 
 import { execFile, spawn, type ExecFileException } from 'node:child_process';
@@ -56,7 +56,7 @@ const CLI_MODEL_ALIASES: Record<string, string> = {
 };
 
 const DEFAULT_TIMEOUT = 600_000;
-const DEFAULT_MODEL = 'claude-sonnet-4';
+const DEFAULT_MODEL = 'claude-sonnet-4.6';
 const EXEC_FILE_CHAR_LIMIT = 30_000;
 const STDOUT_LIMIT_BYTES = 10 * 1024 * 1024;
 const ARTICLE_STAGE_REUSE = new Set([4, 5, 6, 7]);
@@ -83,6 +83,12 @@ interface ExecutionPlan {
   sessionId: string | null;
   requestEnvelope: Record<string, unknown>;
 }
+
+type CopilotCliExecutionError = Error & {
+  exitCode?: number | null;
+  stdout?: string | null;
+  stderr?: string | null;
+};
 
 export interface CopilotCLIProviderOptions {
   copilotPath?: string;
@@ -173,7 +179,10 @@ export class CopilotCLIProvider implements LLMProvider {
       return await this.executePlan(initialPlan, prompt, model);
     } catch (error) {
       if (!this.shouldFallbackToOneShot(initialPlan, error)) {
-        throw this.attachProviderMetadata(error, this.buildErrorMetadata(initialPlan, prompt));
+        throw this.attachProviderMetadata(
+          error,
+          this.buildErrorMetadata(initialPlan, prompt, this.buildCliErrorEnvelope(error)),
+        );
       }
 
       const fallbackPlan = this.buildExecutionPlan(request, model, flags, true);
@@ -198,6 +207,7 @@ export class CopilotCLIProvider implements LLMProvider {
             fallbackPlan,
             prompt,
             {
+              ...this.buildCliErrorEnvelope(fallbackError),
               fallbackFromResumedSession: true,
               resumedSessionId: initialPlan.sessionId,
             },
@@ -415,6 +425,16 @@ export class CopilotCLIProvider implements LLMProvider {
     });
   }
 
+  private buildCliErrorEnvelope(error: unknown): Record<string, unknown> | undefined {
+    if (!(error instanceof Error)) return undefined;
+    const execError = error as CopilotCliExecutionError;
+    return {
+      exitCode: execError.exitCode ?? null,
+      stdout: execError.stdout ?? null,
+      stderr: execError.stderr ?? null,
+    };
+  }
+
   private resolveExecutionCwd(): string {
     if (this.toolAccessMode === 'article-tools') {
       return this.workingDirectory ?? this.repoRoot ?? process.cwd();
@@ -461,6 +481,10 @@ export class CopilotCLIProvider implements LLMProvider {
     return copy;
   }
 
+  private normalizeExitCode(code: string | number | null | undefined): number | null {
+    return typeof code === 'number' ? code : null;
+  }
+
   private execFileArgs(args: string[], cwd: string): Promise<string> {
     return new Promise((resolve, reject) => {
       execFile(
@@ -479,12 +503,20 @@ export class CopilotCLIProvider implements LLMProvider {
         (error: ExecFileException | null, stdout: string, stderr: string) => {
           if (error) {
             if (error.killed) {
-              reject(new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`));
+              const wrapped = new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`) as CopilotCliExecutionError;
+              wrapped.exitCode = this.normalizeExitCode(error.code);
+              wrapped.stdout = stdout?.trim() || null;
+              wrapped.stderr = stderr?.trim() || null;
+              reject(wrapped);
               return;
             }
 
             const message = stderr?.trim() || error.message;
-            reject(new Error(`Copilot CLI error (exit ${error.code}): ${message}`));
+            const wrapped = new Error(`Copilot CLI error (exit ${error.code}): ${message}`) as CopilotCliExecutionError;
+            wrapped.exitCode = this.normalizeExitCode(error.code);
+            wrapped.stdout = stdout?.trim() || null;
+            wrapped.stderr = stderr?.trim() || null;
+            reject(wrapped);
             return;
           }
 
@@ -546,11 +578,19 @@ export class CopilotCLIProvider implements LLMProvider {
         settled = true;
         clearTimeout(timeout);
         if (timedOut) {
-          reject(new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`));
+          const wrapped = new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`) as CopilotCliExecutionError;
+          wrapped.exitCode = code ?? null;
+          wrapped.stdout = stdout.trim() || null;
+          wrapped.stderr = stderr.trim() || null;
+          reject(wrapped);
           return;
         }
         if (code !== 0) {
-          reject(new Error(`Copilot CLI error (exit ${code}): ${stderr.trim() || 'unknown error'}`));
+          const wrapped = new Error(`Copilot CLI error (exit ${code}): ${stderr.trim() || 'unknown error'}`) as CopilotCliExecutionError;
+          wrapped.exitCode = code ?? null;
+          wrapped.stdout = stdout.trim() || null;
+          wrapped.stderr = stderr.trim() || null;
+          reject(wrapped);
           return;
         }
         resolve(stdout);

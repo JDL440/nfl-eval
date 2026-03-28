@@ -183,7 +183,7 @@ See `docs/substack-notes-feature-design.md` §11 for the full rollout plan and `
 | Image file missing | Re-run `generate_article_images` for that image type |
 | Broken image path | Fix path in article markdown — check `./images/{slug}/` directory |
 | Title too long for email | Shorten to ~60 characters for email subject preview |
-| `publish_to_substack` returns auth error | `SUBSTACK_TOKEN` expired — see `.env.example` for refresh instructions |
+| `publish_to_substack` returns auth error | `SUBSTACK_TOKEN` expired — see `.env.sample` for refresh instructions |
 | Article body contains raw HTML | Convert to markdown equivalent |
 | Table formatting broken | Verify pipe-separated format with `---` separator row |
 

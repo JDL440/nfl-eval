@@ -411,7 +411,8 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Prompt output');
       expect(html).toContain('ideaGeneration');
       expect(html).toContain('generatePrompt');
-      expect(html).toContain('Provider Prompt Delta');
+      expect(html).toContain('Provider-Wrapped Prompt');
+      expect(html).not.toContain('Provider Prompt Delta');
       expect(html).toContain('Provider Request Envelope');
       expect(html).toContain('CWD: C:\\github\\worktrees\\copilot-session-reuse');
     });

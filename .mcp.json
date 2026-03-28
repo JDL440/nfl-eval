@@ -1,18 +1,26 @@
 {
   "mcpServers": {
     "nfl-eval-pipeline": {
+      "type": "local",
       "command": "npx",
       "args": [
         "tsx",
         "src/cli.ts",
         "mcp"
       ],
+      "tools": [
+        "*"
+      ],
       "cwd": "${workspaceFolder}"
     },
     "nfl-eval-local": {
+      "type": "local",
       "command": "node",
       "args": [
         "mcp/server.mjs"
+      ],
+      "tools": [
+        "*"
       ],
       "cwd": "${workspaceFolder}"
     }

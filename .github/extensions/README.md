@@ -77,32 +77,50 @@ Creates Substack Notes (short-form posts) for engagement and article promotion.
 
 ### Repo-Level Config (Already Done)
 
-This repo includes `.copilot/mcp-config.json` that automatically configures the MCP server for GitHub Copilot CLI when you open the workspace:
+This repo keeps two checked-in MCP config files:
+
+- `.copilot/mcp-config.json` — repo-local Copilot CLI config used by this app/runtime via `COPILOT_CLI_MCP_CONFIG` or `--additional-mcp-config`
+- `.mcp.json` — matching generic repo MCP config kept in sync for other local tooling
+
+The Copilot-facing repo config uses the modern `mcpServers` shape:
 
 ```json
 {
   "mcpServers": {
+    "nfl-eval-pipeline": {
+      "type": "local",
+      "command": "npx",
+      "args": ["tsx", "src/cli.ts", "mcp"],
+      "tools": ["*"],
+      "cwd": "${workspaceFolder}"
+    },
     "nfl-eval-local": {
+      "type": "local",
       "command": "node",
       "args": ["mcp/server.mjs"],
+      "tools": ["*"],
       "cwd": "${workspaceFolder}"
     }
   }
 }
 ```
 
-**No manual setup needed** - just open the repo in VS Code with Copilot CLI installed.
+`nfl-eval-local` is the canonical repo-local MCP server. `nfl-eval-pipeline` exposes the pipeline-focused MCP surface.
+
+> Repo caveat: standalone Copilot CLI stores user-managed MCP config in `~/.copilot/mcp-config.json`. This repo-local `.copilot/mcp-config.json` is only picked up when the runtime points Copilot at it explicitly (for example with `--additional-mcp-config=@.copilot/mcp-config.json` or `COPILOT_CLI_MCP_CONFIG`).
 
 ### User-Level Config (Optional)
 
-For persistent access across all sessions (not just this repo), add to `~/.config/github-copilot/cli/config.json`:
+For persistent access across all sessions (not just this repo), add to `~/.copilot/mcp-config.json`:
 
 ```json
 {
   "mcpServers": {
     "nfl-eval-local": {
+      "type": "local",
       "command": "node",
       "args": ["C:\\github\\nfl-eval\\mcp\\server.mjs"],
+      "tools": ["*"],
       "cwd": "C:\\github\\nfl-eval"
     }
   }
