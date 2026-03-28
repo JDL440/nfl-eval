@@ -96,9 +96,35 @@ Enforce the policy in the app runtime, above providers:
 
 ---
 
-# MERGED INBOX ENTRIES (2026-03-28T06-44-01Z)
+---
 
-## Lead: v3 LLM Trace Plan
+## UX: v3 LLM Tracing Surfaces
+
+**Date:** 2026-03-28  
+**Owner:** UX  
+**Status:** Proposed
+
+Implement four interconnected surfaces for first-class LLM I/O tracing: (1) global `/runs` page with lean request envelope, (2) article detail with stage-run attribution inline, (3) Advanced panel with detailed per-stage tracing, (4) Usage telemetry sidebar with token/cost flow.
+
+**Key surfaces:**
+- **Runs page:** Add columns for Provider, Input Tokens, Output Tokens, Finish Reason
+- **Article detail action panel:** Show current model/provider attribution
+- **Advanced panel → Audit Log:** Per-stage-run rows with token bar, duration, finish reason
+- **Usage sidebar:** Token-by-stage breakdown, cost-by-provider, finish-reason distribution
+
+**Phased rollout (4 weeks):**
+1. Runs page + inline attribution (Week 1)
+2. Advanced panel Audit Log (Week 2)
+3. Usage telemetry breakdown (Week 3)
+4. Mobile & optimization (Week 4)
+
+**Schema changes (minimal):** Add `finish_reason TEXT` to `usage_events` (or parse from `metadata_json`)
+
+**Files affected:** `src/dashboard/views/{runs,article}.ts`, `src/dashboard/server.ts`, `src/db/schema.sql`, tests
+
+**Rationale:** Aligns with existing SSE/HTMX contracts, reuses `usage_events` + `stage_runs` (no migration risk), progressive disclosure pattern respects mobile + cognitive load
+
+# MERGED INBOX ENTRIES (2026-03-28T01:02:59Z)
 
 **Date:** 2026-03-28  
 **Owner:** Lead  
