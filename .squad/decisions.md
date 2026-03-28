@@ -751,3 +751,32 @@ Keep `.env.sample` as the single canonical environment template and remove `.env
 - `sessionReuseRequested: true` with `sessionReuseEligible: false` is expected on `GeneratePrompt`: reuse is only eligible for article stages 4-7 in `src/llm/providers/copilot-cli.ts`, while `generatePrompt` runs at stage 1 in `src/pipeline/actions.ts`.
 - `GeneratePrompt` failure points are most likely missing `idea.md` / article lookup (`src/pipeline/actions.ts`), model-policy or provider invocation from `runAgent` (`src/agents/runner.ts`), or Copilot CLI process/runtime errors surfaced by `execFile`/`spawn` in `src/llm/providers/copilot-cli.ts`. No clear repo-local bug was found in this pass.
 
+------
+
+## DevOps & Code Decision — v4 Merge Safety + LM Studio Tool Capability Assessment
+
+### v4 Branch Merge Readiness
+**Status:** Clean, low-risk merge expected
+
+- v4 branch (e1b3821): Clean state, ready for assessment
+- local main (311e061, d063f30): Ahead with recent changes
+- Overlapping file changes: README.md, src/dashboard/server.ts
+- **Risk assessment:** Low; merge conflict unlikely if server.ts tooling edits are compatible
+- **Next step:** Backend to approve v4 merge timing based on server.ts compatibility verification
+
+### LM Studio vs. Copilot CLI Tool Support
+
+**LM Studio provider (chat-only):**
+- No tool support (chat completions API only)
+- No MCP support
+- No web search support
+- **Use case:** Chat-only articles, lightweight workflows
+
+**Copilot CLI provider (full tooling):**
+- Full tool support (explicit tool plumbing)
+- MCP support (explicit server plumbing)
+- Web search support (via tool infrastructure)
+- **Use case:** Tool-intensive workflows, articles requiring factual lookup or code integration
+
+**Recommendation:** Use LM Studio for chat-only; fall back to Copilot CLI for tool-dependent work. No code changes needed; both are correctly configured per their API contracts.
+
