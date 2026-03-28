@@ -10,6 +10,35 @@
 
 ## Learnings
 
+- 2026-03-28 — **In-App Agent Tool-Wiring Architecture Audit Complete (Read-Only):**
+  
+  Current state: **Agents (via `AgentRunner`) do NOT have tool-calling capability.** Tools exist only in the MCP layer (`mcp/tool-registry.mjs`) for external clients (GitHub Copilot CLI, Claude Code, etc.). Agents only call the LLM Gateway for text generation.
+  
+  **Tool inventory (25 tools across 4 categories):**
+  - Help (1): `local_tool_catalog` — discovery tool
+  - Media (2): image generation, table rendering
+  - Publishing (3): Substack articles, Notes, tweets
+  - Data (11): nflverse wrappers + 1 market query = 12 total
+  
+  **To enable agent tool-calling, code needs:**
+  1. LLM Gateway: add `tools` parameter + `toolCalls` response field
+  2. AgentRunner: add tool invocation loop + allowlist filtering
+  3. Tool adapter: bridge MCP registry to LLM tool definitions
+  4. Agent policy: stage-specific allowlists (read-only for stage 4–6, publishing for stage 8)
+  5. Tool dispatcher: execute handlers, catch errors, format results
+  
+  **Safety mechanisms (to implement):**
+  - Hardcoded agent/stage allowlists (no dynamic discovery)
+  - Max tool calls per run + timeout
+  - Tool result sanitization (no credential leaks)
+  - Audit logging for compliance
+  
+  **File paths:** Tool registry = `mcp/tool-registry.mjs` (~800 LOC, 25 entries). Agent runner = `src/agents/runner.ts` (no tool support yet). LLM gateway = `src/llm/gateway.ts` (text-only). Pipeline actions = `src/pipeline/actions.ts` (where agent calls happen).
+  
+  **Non-changes:** MCP entrypoint OK, tool registry structure OK, LLM gateway provider abstraction OK, pipeline stage guards can be extended safely.
+  
+  Decision document written to `.squad/decisions/inbox/devops-agent-tool-wiring-review.md`.
+
 - 2026-03-28 — **MCP Rollout Decision Merged:** Three independent audits (DevOps-MCP-Audit, Research-MCP-Docs, Code-Provider-Rollout) converged on unified local MCP entrypoint strategy. Decision merged to decisions.md: canonical operator path is `mcp/server.mjs`, source-of-truth seam is `src/mcp/server.ts` + helpers. Compatibility wrappers: `src/cli.ts mcp` delegates to shared bootstrap, `npm run v2:mcp` aliased to `npm run mcp:server`, `npm run mcp:pipeline` explicit fallback. Implementation scope: Code refactors bootstrap helpers + multi-provider wiring, DevOps converges scripts/configs/docs, Research expands tool inventory docs. Validation: `npm run v2:build`, `npx vitest run tests/mcp/server.test.ts tests/cli.test.ts`, `npm run mcp:smoke`.
 - Team initialized 2025-07-18
 - GitHub Actions used for CI, triage, label sync

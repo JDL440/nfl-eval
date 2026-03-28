@@ -1,3 +1,27 @@
+## Learnings
+
+### Agent-to-Tool Wiring Architecture (2026-03-28)
+
+**Status:** INSPECTION COMPLETE — Ready for implementation
+
+**Key Finding:** Agent system (runners, charters, skills) and MCP tool system (tool-registry) are completely decoupled. Agents have no tool discovery or execution capability. The gap is a system-design issue, not a bug: agents were built to be pure LLM oracles, but operational readiness now requires safe tool access (data queries, fact-checking, publishing).
+
+**Architecture Pattern Identified:**
+- Agent system: stateless LLM orchestrator with skills/memories + provider abstraction
+- Tool system: standalone MCP server with catalog + safe read-only NFL data
+- **Gap:** No bridge. Tools live in `mcp/tool-registry.mjs` (JS); agents in `src/agents/runner.ts` (TS); no cross-file reference
+- **Solution:** Extract tool catalog to shared TypeScript module; inject into agent system prompts; allow agents to invoke via tool_use XML tags (provider-supported). Start with read-only tools (9 NFL data + 1 discovery).
+
+**Decision Points:**
+1. **Tool allowlist is role-based, not per-run:** Writer gets data-query tools; editor gets data but no publishing; publisher gets publishing. Simplifies security model.
+2. **Inject full tool catalog into system prompt:** Agents see descriptions, side effects, input schemas. Allows autonomy but with clear boundaries.
+3. **Start with Phases 1–3 (invocation interface + catalog extraction + system prompt injection):** Phase 4 (actual execution handler) deferred until agents reliably format tool_use tags.
+4. **No breaking changes:** Existing articles continue to work; tool access is opt-in via tool_use XML.
+
+**Detailed Plan:** See `.squad/decisions/inbox/lead-agent-tool-wiring-review.md` — includes current architecture diagram, exact file changes (4 phases), test plan, risks + mitigations, integration checklist.
+
+---
+
 ## Core Context
 
 ### V3 Workflow Architecture Work (2026-03-22 to 2026-03-27)
@@ -121,6 +145,12 @@ Research, Code, and UX agents completed V3 workflow simplification pass under Le
 ---
 
 ## Learnings
+
+### 2026-03-28 — In-app agent tooling: keep tool authority in the app runtime, not the provider
+
+- `src\agents\runner.ts` → `src\llm\gateway.ts` is still a prompt-only seam; there is no provider-agnostic tool request/result loop yet, so “wire tools into agents” cannot be done safely by prompt edits alone.
+- `mcp\tool-registry.mjs` is already the strongest source of truth for local tool discoverability because it carries names, categories, schemas, side-effect notes, and examples in one place. Reuse that metadata for any in-app allowlist rather than copying tool docs into charters.
+- `src\llm\providers\copilot-cli.ts` intentionally forbids tool use today. That means the first safe rollout is an app-owned structured tool loop with bounded in-process execution, not a provider-native MCP/function-calling rollout.
 
 ### 2026-03-28 — Canonical local MCP closeout: config parity is part of the contract
 
