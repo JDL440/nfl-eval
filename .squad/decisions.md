@@ -739,3 +739,15 @@ Keep `.env.sample` as the single canonical environment template and remove `.env
 - keep docs and runtime-facing references pointed at `.env.sample`
 
 ---
+
+
+---
+
+## Code Decision — Copilot CLI observability findings
+
+## Copilot CLI issue triage
+
+- Repo source of truth already defaults Copilot CLI to `claude-sonnet-4.6` (`src/config/index.ts`, `src/llm/providers/copilot-cli.ts`, `src/dashboard/server.ts`), so seeing `claude-sonnet-4` at runtime most likely means a stale running server process, an explicit `COPILOT_MODEL` env override, or older historical trace data rather than a current repo bug.
+- `sessionReuseRequested: true` with `sessionReuseEligible: false` is expected on `GeneratePrompt`: reuse is only eligible for article stages 4-7 in `src/llm/providers/copilot-cli.ts`, while `generatePrompt` runs at stage 1 in `src/pipeline/actions.ts`.
+- `GeneratePrompt` failure points are most likely missing `idea.md` / article lookup (`src/pipeline/actions.ts`), model-policy or provider invocation from `runAgent` (`src/agents/runner.ts`), or Copilot CLI process/runtime errors surfaced by `execFile`/`spawn` in `src/llm/providers/copilot-cli.ts`. No clear repo-local bug was found in this pass.
+
