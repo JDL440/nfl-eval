@@ -31,7 +31,21 @@ Treat in-app MCP enablement as an **app-owned bounded loop**:
    - bound the number of tool calls
    - execute handlers in process
 
+For LM Studio or other OpenAI-compatible local providers, keep the loop app-owned and request structured output with a JSON schema response format. Do not rely on provider-native MCP support or `json_object` shortcuts when the local runtime expects `json_schema`.
+
 This keeps the policy provider-agnostic even if the MCP server itself exposes more tools.
+
+## Implementation in V4
+
+The v4 branch implements this pattern in production:
+
+- **Tool system:** `src/tools/catalog-types.ts` defines `ToolDefinition` + `ToolSafetyPolicy` (structured, not advisory).
+- **Tool loop:** `src/agents/runner.ts` runs the iterative loop: compose prompt → send request → parse JSON response → execute tool → loop or finalize.
+- **Pipeline tools:** `src/tools/pipeline-tools.ts` implements read-only article/pipeline operations under the same safety envelope as local extensions.
+- **Safety model:** `ToolSafetyPolicy` enforces `readOnly: true`, surface/agent allowlists, and max iterations.
+- **Registry:** Both `mcp/local-tool-registry.mjs` (extensions) and pipeline tools are discoverable at runtime.
+
+**Difference from advisory hints:** Tools are not blocked by human-readable hints (readOnlyHint) — they're blocked by a structured enum (readOnly: boolean). This makes permissions testable.
 
 ## Safe default for this repo
 
@@ -51,6 +65,13 @@ Do **not** expose:
 
 - `npm run v2:build`
 - `npx vitest run tests\agents\runner.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\local-tool-registry.test.ts`
+- For LM Studio validation, use a live dashboard run plus the trace page to confirm tool-loop metadata and actual tool calls.
+- Positive live signature:
+  - provider request envelope includes `toolLoop.enabled: true`, `toolLoop.maxToolCalls`, and the allowed `toolNames`
+  - provider response envelope includes `toolLoop.calls` with concrete tool names, sources, and `isError` flags
+- Negative/fallback signature:
+  - LM Studio trace completes with no provider envelopes or no `toolLoop` block at all
+  - treat that as chat-only unless another persisted trace surface independently shows executed tool calls
 
 ## Anti-patterns
 

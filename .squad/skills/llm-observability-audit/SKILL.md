@@ -38,3 +38,12 @@ When a trace envelope contains both a feature "requested" flag and an "eligible"
 2. Treat `eligible` as the per-request gate after stage, surface, article-id, or safety constraints are applied.
 3. If `requested: true` and `eligible: false`, inspect the exact gate in provider code before calling it a bug.
 4. Also verify repo-root `.env` or startup env overrides before trusting source defaults; effective runtime config may still be older than the checked-in code until the server restarts.
+
+## Requested-vs-used session reuse check
+
+When Copilot CLI traces mention session reuse, separate configuration intent from proof of an actual resumed CLI session.
+
+1. Check the request envelope and CLI plan together: `sessionReuseRequested`, `sessionMode`, traced args, `attemptedSessionId`, and any returned `providerSessionId` / `sessionReused` fields should tell one coherent story.
+2. If execution is still prompt-mode or one-shot, treat "requested" as observability only; it does not prove `--resume` ran successfully.
+3. Keep the startup contract in view: explicit mode flags such as `toolAccessMode` should stay fail-closed, so unset env should not silently enable tools, repo MCP, or session reuse.
+4. Call it a bug only when traced args or provider code show an unsafe default or an unexpected resume attempt, not merely because a trace records reuse intent.
