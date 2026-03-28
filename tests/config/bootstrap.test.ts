@@ -10,8 +10,8 @@ import {
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import Module from 'node:module';
-import { initDataDir, seedKnowledge } from '../../src/config/index.js';
-import { AgentMemory } from '../../src/agents/memory.js';
+import { initDataDir, seedKnowledge, refreshCorePromptDefaults } from '../../src/config/index.ts';
+import { AgentMemory } from '../../src/agents/memory.ts';
 
 // seedKnowledge uses a dynamic CJS `require('../agents/memory.js')` which
 // fails in vitest because the .js file doesn't exist (source is .ts) and the
@@ -209,4 +209,58 @@ describe('Bootstrap init', () => {
       expect(result.memory).toBe(bootstrapMemoryCount());
     });
   });
+
+  describe('refreshCorePromptDefaults', () => {
+    beforeEach(() => {
+      initDataDir(dataDir, 'nfl');
+    });
+
+    it('overwrites only the allowlisted core runtime prompts', () => {
+      seedKnowledge(dataDir, 'nfl');
+
+      const leadPath = join(dataDir, 'agents', 'charters', 'nfl', 'lead.md');
+      const writerPath = join(dataDir, 'agents', 'charters', 'nfl', 'writer.md');
+      const nonCoreCharterPath = join(dataDir, 'agents', 'charters', 'nfl', 'cap.md');
+      const substackSkillPath = join(dataDir, 'agents', 'skills', 'substack-article.md');
+      const nonCoreSkillPath = join(dataDir, 'agents', 'skills', 'editor-review.md');
+
+      writeFileSync(leadPath, '# Legacy lead prompt');
+      writeFileSync(writerPath, '# Legacy writer prompt');
+      writeFileSync(nonCoreCharterPath, '# Custom cap charter');
+      writeFileSync(substackSkillPath, '# Legacy substack skill');
+      writeFileSync(nonCoreSkillPath, '# Custom editor-review skill');
+
+      const result = refreshCorePromptDefaults(dataDir, 'nfl');
+
+      expect(result.charters).toBe(4);
+      expect(result.skills).toBe(4);
+      expect(result.updated).toEqual([
+        'charter:lead',
+        'charter:writer',
+        'charter:editor',
+        'charter:scribe',
+        'skill:article-discussion',
+        'skill:article-lifecycle',
+        'skill:idea-generation',
+        'skill:substack-article',
+      ]);
+      expect(readFileSync(leadPath, 'utf-8')).not.toBe('# Legacy lead prompt');
+      expect(readFileSync(writerPath, 'utf-8')).not.toBe('# Legacy writer prompt');
+      expect(readFileSync(substackSkillPath, 'utf-8')).not.toBe('# Legacy substack skill');
+      expect(readFileSync(nonCoreCharterPath, 'utf-8')).toBe('# Custom cap charter');
+      expect(readFileSync(nonCoreSkillPath, 'utf-8')).toBe('# Custom editor-review skill');
+    });
+
+    it('adds article-lifecycle to existing installs from defaults', () => {
+      seedKnowledge(dataDir, 'nfl');
+      rmSync(join(dataDir, 'agents', 'skills', 'article-lifecycle.md'), { force: true });
+
+      const result = refreshCorePromptDefaults(dataDir, 'nfl');
+
+      expect(result.updated).toContain('skill:article-lifecycle');
+      expect(existsSync(join(dataDir, 'agents', 'skills', 'article-lifecycle.md'))).toBe(true);
+    });
+  });
 });
+
+

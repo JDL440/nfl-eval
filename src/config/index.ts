@@ -196,6 +196,44 @@ export function seedKnowledge(dataDir: string, league: string = DEFAULT_LEAGUE):
   return result;
 }
 
+export const CORE_RUNTIME_PROMPT_DEFAULTS = Object.freeze({
+  charters: ['lead', 'writer', 'editor', 'scribe'] as const,
+  skills: ['article-discussion', 'article-lifecycle', 'idea-generation', 'substack-article'] as const,
+});
+
+export function refreshCorePromptDefaults(
+  dataDir: string,
+  league: string = DEFAULT_LEAGUE,
+): { charters: number; skills: number; updated: string[] } {
+  const seedDir = join(__dirname, 'defaults');
+  const result = { charters: 0, skills: 0, updated: [] as string[] };
+  if (!existsSync(seedDir)) return result;
+
+  const charterSeedDir = join(seedDir, 'charters', league);
+  const charterDestDir = join(dataDir, 'agents', 'charters', league);
+  mkdirSync(charterDestDir, { recursive: true });
+  for (const name of CORE_RUNTIME_PROMPT_DEFAULTS.charters) {
+    const source = join(charterSeedDir, `${name}.md`);
+    if (!existsSync(source)) continue;
+    cpSync(source, join(charterDestDir, `${name}.md`));
+    result.charters += 1;
+    result.updated.push(`charter:${name}`);
+  }
+
+  const skillSeedDir = join(seedDir, 'skills');
+  const skillDestDir = join(dataDir, 'agents', 'skills');
+  mkdirSync(skillDestDir, { recursive: true });
+  for (const name of CORE_RUNTIME_PROMPT_DEFAULTS.skills) {
+    const source = join(skillSeedDir, `${name}.md`);
+    if (!existsSync(source)) continue;
+    cpSync(source, join(skillDestDir, `${name}.md`));
+    result.skills += 1;
+    result.updated.push(`skill:${name}`);
+  }
+
+  return result;
+}
+
 /**
  * Load application configuration from environment and data directory.
  */
@@ -238,9 +276,7 @@ export function resolveDashboardAuthConfig(
 export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
   const dataDir = resolve(overrides?.dataDir ?? process.env.NFL_DATA_DIR ?? DEFAULT_DATA_DIR);
 
-  // Load .env from data dir config
   loadDotEnv(join(dataDir, 'config'));
-  // Also try repo root .env
   loadDotEnv(process.cwd());
 
   const league = overrides?.league ?? process.env.NFL_LEAGUE ?? DEFAULT_LEAGUE;
