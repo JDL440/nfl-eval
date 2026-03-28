@@ -2,42 +2,30 @@
  * Copilot CLI LLM provider — routes requests through the standalone
  * GitHub Copilot CLI agent (`copilot -p "..." -s --no-ask-user`).
  *
- * This leverages a Copilot Pro+ subscription without needing the
- * GitHub Models API. The CLI handles its own auth (OAuth keychain,
- * COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN).
- *
- * Trade-offs vs the Models API provider (copilot.ts):
- *   + Uses Pro+ subscription directly (no separate API quota)
- *   + Access to all Copilot-supported models via --model flag
- *   + Built-in tool use, context, and safety features
- *   - Higher latency (~5-10s overhead per call for CLI startup)
- *   - No streaming, no token usage stats
- *   - No structured output (response_format: json is best-effort)
- *   - Output is plain text (may include markdown formatting)
+ * Safe by default:
+ * - tool access is fully disabled unless explicitly enabled
+ * - repo MCP access is limited to the checked-in allowlist config
+ * - session reuse is opt-in and falls back to one-shot execution on failure
  */
 
-import { exec, execFile, type ExecFileException } from 'node:child_process';
+import { execFile, spawn, type ExecFileException } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
-import { writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { randomBytes } from 'node:crypto';
-import type { LLMProvider, ChatRequest, ChatResponse } from '../gateway.js';
-
-// ---------------------------------------------------------------------------
-// Supported models — the Copilot CLI supports any model the user's plan
-// allows. This list reflects common models available via `copilot --model`.
-// ---------------------------------------------------------------------------
+import type {
+  ChatRequest,
+  ChatResponse,
+  LLMProvider,
+  ProviderMetadata,
+} from '../gateway.js';
 
 const CLI_MODELS = [
-  // Claude family
   'claude-sonnet-4.6',
   'claude-sonnet-4.5',
   'claude-sonnet-4',
   'claude-haiku-4.5',
   'claude-opus-4.6',
   'claude-opus-4.5',
-  // GPT family
   'gpt-5.4',
   'gpt-5.4-mini',
   'gpt-5.3-codex',
@@ -49,59 +37,67 @@ const CLI_MODELS = [
   'gpt-5.1',
   'gpt-5-mini',
   'gpt-4.1',
-  // Gemini
   'gemini-3-pro-preview',
 ] as const;
 
-// ---------------------------------------------------------------------------
-// Model aliases — maps canonical/API-style names to CLI equivalents so the
-// pipeline can use provider-agnostic model names in models.json and switch
-// between Copilot CLI ↔ API ↔ LMStudio without config changes.
-// ---------------------------------------------------------------------------
-
 const CLI_MODEL_ALIASES: Record<string, string> = {
-  // GPT-5 family: API uses unversioned names, CLI needs versioned
-  'gpt-5':            'gpt-5.4',
-  'gpt-5-chat':       'gpt-5.4',
-  'gpt-5-nano':       'gpt-5.4-mini',   // nano doesn't exist on CLI → use mini
-  // GPT-4 family
-  'gpt-4o':           'gpt-4.1',
-  'gpt-4o-mini':      'gpt-4.1',
-  'gpt-4.1-mini':     'gpt-4.1',        // CLI only has gpt-4.1
-  'gpt-4.1-nano':     'gpt-4.1',
-  // Reasoning models → nearest CLI equivalents
-  'o4-mini':          'gpt-5.4-mini',
-  'o3':               'gpt-5.4',
-  'o3-mini':          'gpt-5.4-mini',
-  'o1':               'gpt-5.4',
-  'o1-mini':          'gpt-5.4-mini',
+  'gpt-5': 'gpt-5.4',
+  'gpt-5-chat': 'gpt-5.4',
+  'gpt-5-nano': 'gpt-5.4-mini',
+  'gpt-4o': 'gpt-4.1',
+  'gpt-4o-mini': 'gpt-4.1',
+  'gpt-4.1-mini': 'gpt-4.1',
+  'gpt-4.1-nano': 'gpt-4.1',
+  'o4-mini': 'gpt-5.4-mini',
+  'o3': 'gpt-5.4',
+  'o3-mini': 'gpt-5.4-mini',
+  'o1': 'gpt-5.4',
+  'o1-mini': 'gpt-5.4-mini',
 };
 
-// ---------------------------------------------------------------------------
-// Options
-// ---------------------------------------------------------------------------
+const DEFAULT_TIMEOUT = 600_000;
+const DEFAULT_MODEL = 'claude-sonnet-4';
+const EXEC_FILE_CHAR_LIMIT = 30_000;
+const STDOUT_LIMIT_BYTES = 10 * 1024 * 1024;
+const ARTICLE_STAGE_REUSE = new Set([4, 5, 6, 7]);
+const APPROVED_MCP_SERVERS = ['nfl-eval-pipeline', 'nfl-eval-local'] as const;
 
-export interface CopilotCLIProviderOptions {
-  /** Path to the copilot executable (default: 'copilot' on PATH). */
-  copilotPath?: string;
-  /** Default model when none specified in the request. */
-  defaultModel?: string;
-  /** Timeout in ms for a single CLI invocation (default: 120_000). */
-  timeoutMs?: number;
-  /** Extra CLI flags appended to every invocation. */
-  extraFlags?: string[];
+type ToolAccessMode = 'none' | 'article-tools';
+
+interface SessionRecord {
+  sessionId: string;
+  lastUsedAt: number;
 }
 
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
+interface RuntimeFlags {
+  webSearchEnabled: boolean;
+  repoMcpEnabled: boolean;
+  mcpServerNames: string[];
+  allowedTools: string[];
+}
 
-const DEFAULT_TIMEOUT = 600_000; // 10 minutes — draft writing with Opus + full context is slow
-const DEFAULT_MODEL = 'claude-sonnet-4';
+interface ExecutionPlan {
+  args: string[];
+  cwd: string;
+  mode: 'one-shot' | 'resumed';
+  sessionId: string | null;
+  requestEnvelope: Record<string, unknown>;
+}
 
-// Node's execFile on Windows uses CreateProcessW (32K char limit), not cmd.exe
-// (8K limit). We only fall back to file-based approach for truly huge prompts.
-const EXEC_FILE_CHAR_LIMIT = 30_000;
+export interface CopilotCLIProviderOptions {
+  copilotPath?: string;
+  defaultModel?: string;
+  timeoutMs?: number;
+  extraFlags?: string[];
+  repoRoot?: string;
+  workingDirectory?: string;
+  toolAccessMode?: ToolAccessMode;
+  enableTools?: boolean;
+  enableWebFetch?: boolean;
+  enableRepoMcp?: boolean;
+  mcpConfigPath?: string;
+  enableSessionReuse?: boolean;
+}
 
 export class CopilotCLIProvider implements LLMProvider {
   readonly id = 'copilot-cli';
@@ -111,34 +107,47 @@ export class CopilotCLIProvider implements LLMProvider {
   private readonly defaultModel: string;
   private readonly timeoutMs: number;
   private readonly extraFlags: string[];
+  private readonly repoRoot?: string;
+  private readonly workingDirectory?: string;
+  private readonly toolAccessMode: ToolAccessMode;
+  private readonly enableWebFetch: boolean;
+  private readonly enableRepoMcp: boolean;
+  private readonly enableSessionReuse: boolean;
+  private readonly mcpConfigPath?: string;
   private readonly sandboxDir: string;
+  private readonly sessions = new Map<string, SessionRecord>();
 
   constructor(options?: CopilotCLIProviderOptions) {
     this.copilotPath = options?.copilotPath ?? 'copilot';
     this.defaultModel = options?.defaultModel ?? DEFAULT_MODEL;
     this.timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT;
     this.extraFlags = options?.extraFlags ?? [];
+    this.repoRoot = options?.repoRoot;
+    this.workingDirectory = options?.workingDirectory ?? options?.repoRoot;
+    this.toolAccessMode =
+      options?.toolAccessMode
+      ?? (options?.enableTools ? 'article-tools' : 'none');
+    this.enableWebFetch = options?.enableWebFetch ?? false;
+    this.enableRepoMcp = options?.enableRepoMcp ?? false;
+    this.enableSessionReuse = options?.enableSessionReuse ?? false;
+    this.mcpConfigPath =
+      options?.mcpConfigPath
+      ?? (this.repoRoot ? join(this.repoRoot, '.copilot', 'mcp-config.json') : undefined);
 
-    // Run CLI from an empty sandbox dir so it has no repo context to browse.
-    // This prevents the agent from wasting minutes reading/writing repo files.
-    this.sandboxDir = join(tmpdir(), 'nfl-lab-copilot-sandbox');
+    this.sandboxDir = join(this.repoRoot ?? process.cwd(), '.copilot', 'cli-sandbox');
     if (!existsSync(this.sandboxDir)) {
       mkdirSync(this.sandboxDir, { recursive: true });
     }
   }
 
-  // -- Preflight -----------------------------------------------------------
-
-  /**
-   * Verify the copilot CLI is installed and responsive.
-   * Throws if the binary isn't found or returns a non-zero exit code.
-   */
-  async verify(): Promise<string> {
-    const version = await this.exec(['--version']);
-    return version.trim();
+  get configuredDefaultModel(): string {
+    return this.defaultModel;
   }
 
-  // -- LLMProvider interface -----------------------------------------------
+  async verify(): Promise<string> {
+    const version = await this.execFileArgs(['--version'], this.sandboxDir);
+    return version.trim();
+  }
 
   listModels(): string[] {
     return [...CLI_MODELS, ...Object.keys(CLI_MODEL_ALIASES)];
@@ -146,206 +155,414 @@ export class CopilotCLIProvider implements LLMProvider {
 
   supportsModel(model: string): boolean {
     return (
-      CLI_MODELS.includes(model as (typeof CLI_MODELS)[number]) ||
-      model in CLI_MODEL_ALIASES ||
-      model.startsWith('claude-') ||
-      model.startsWith('gpt-') ||
-      model.startsWith('gemini-')
+      CLI_MODELS.includes(model as (typeof CLI_MODELS)[number])
+      || model in CLI_MODEL_ALIASES
+      || model.startsWith('claude-')
+      || model.startsWith('gpt-')
+      || model.startsWith('gemini-')
     );
-  }
-
-  /** Translate canonical/API model names to CLI-compatible names. */
-  private resolveModel(model: string): string {
-    return CLI_MODEL_ALIASES[model] ?? model;
   }
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const model = this.resolveModel(request.model ?? this.defaultModel);
+    const flags = this.resolveRuntimeFlags();
+    const prompt = this.buildPrompt(request, flags);
+    const initialPlan = this.buildExecutionPlan(request, model, flags, false);
 
-    // ── Build the prompt string ──────────────────────────────────────────
-    // The CLI takes a single prompt (-p) or stdin. We combine the
-    // system prompt and user messages into one coherent prompt string.
-    const prompt = this.buildPrompt(request);
+    try {
+      return await this.executePlan(initialPlan, prompt, model);
+    } catch (error) {
+      if (!this.shouldFallbackToOneShot(initialPlan, error)) {
+        throw this.attachProviderMetadata(error, this.buildErrorMetadata(initialPlan, prompt));
+      }
 
-    // ── Decide delivery method ───────────────────────────────────────────
-    // Node's execFile uses CreateProcessW on Windows (~32K char limit),
-    // NOT cmd.exe (~8K limit). Use -p flag for most prompts. Only fall
-    // back to file-based approach for truly massive prompts.
-    const useFile = prompt.length > EXEC_FILE_CHAR_LIMIT;
-
-    let output: string;
-    if (useFile) {
-      output = await this.execViaFile(prompt, model);
-    } else {
-      output = await this.execViaFlag(prompt, model);
+      const fallbackPlan = this.buildExecutionPlan(request, model, flags, true);
+      try {
+        return await this.executePlan(
+          fallbackPlan,
+          prompt,
+          model,
+          {
+            fallbackFromResumedSession: true,
+            resumedSessionId: initialPlan.sessionId,
+            resumedSessionError:
+              error instanceof Error
+                ? error.message
+                : String(error),
+          },
+        );
+      } catch (fallbackError) {
+        throw this.attachProviderMetadata(
+          fallbackError,
+          this.buildErrorMetadata(
+            fallbackPlan,
+            prompt,
+            {
+              fallbackFromResumedSession: true,
+              resumedSessionId: initialPlan.sessionId,
+            },
+          ),
+        );
+      }
     }
+  }
 
-    // ── Parse response ───────────────────────────────────────────────────
-    const content = output.trim();
+  private resolveModel(model: string): string {
+    return CLI_MODEL_ALIASES[model] ?? model;
+  }
 
-    if (!content) {
-      throw new Error('Copilot CLI returned empty response');
-    }
+  private resolveRuntimeFlags(): RuntimeFlags {
+    const webSearchEnabled = this.toolAccessMode === 'article-tools' && this.enableWebFetch;
+    const mcpConfigPath = this.mcpConfigPath;
+    const repoMcpConfigured =
+      this.toolAccessMode === 'article-tools'
+      && this.enableRepoMcp
+      && typeof mcpConfigPath === 'string'
+      && existsSync(mcpConfigPath);
+
+    const mcpServerNames = repoMcpConfigured ? [...APPROVED_MCP_SERVERS] : [];
+    const allowedTools = [
+      ...(webSearchEnabled ? ['url'] : []),
+      ...mcpServerNames,
+    ];
 
     return {
-      content,
-      model,
-      provider: this.id,
-      // CLI doesn't expose token usage — estimate from character counts.
-      // ~4 characters per token is a standard approximation.
-      usage: {
-        promptTokens: Math.ceil(prompt.length / 4),
-        completionTokens: Math.ceil(content.length / 4),
-        totalTokens: Math.ceil(prompt.length / 4) + Math.ceil(content.length / 4),
-      },
-      finishReason: 'stop',
+      webSearchEnabled,
+      repoMcpEnabled: repoMcpConfigured,
+      mcpServerNames,
+      allowedTools,
     };
   }
 
-  // -- Prompt composition --------------------------------------------------
-
-  /**
-   * Compose a single prompt string from ChatRequest messages.
-   *
-   * Strategy: if there's a system message, place it first as instructions.
-   * Then append user/assistant messages in order. This mirrors how the
-   * CLI would process a conversation.
-   */
-  private buildPrompt(request: ChatRequest): string {
+  private buildPrompt(request: ChatRequest, flags: RuntimeFlags): string {
     const parts: string[] = [];
 
-    // Prevent the CLI agent from using tools (file read/write/apply_patch).
-    // Without this, the CLI acts as a full agent and spends minutes browsing
-    // the repo instead of returning generated text directly.
-    parts.push(
-      '<constraint>Output the requested content directly as text. ' +
-      'Do NOT read files, create files, run commands, or use any tools. ' +
-      'Just generate and output the text.</constraint>',
-    );
-
-    const systemMsgs = request.messages.filter((m) => m.role === 'system');
-    const conversationMsgs = request.messages.filter((m) => m.role !== 'system');
-
-    // System prompt becomes "Instructions" block
-    if (systemMsgs.length > 0) {
-      const systemContent = systemMsgs.map((m) => m.content).join('\n\n');
-      parts.push(`<instructions>\n${systemContent}\n</instructions>`);
-    }
-
-    // Add JSON format hint if requested
-    if (request.responseFormat === 'json') {
+    if (this.toolAccessMode === 'article-tools') {
+      const allowances: string[] = [];
+      if (flags.webSearchEnabled) allowances.push('web fetch via the url tool');
+      if (flags.repoMcpEnabled) allowances.push(`approved MCP servers only (${flags.mcpServerNames.join(', ')})`);
+      const allowanceText = allowances.length > 0 ? allowances.join('; ') : 'no tools';
       parts.push(
-        '<output_format>Respond with valid JSON only. No markdown fences, no explanation outside the JSON.</output_format>',
+        '<tool_policy>Use tools only when necessary. Stay within the explicitly allowed tool list. '
+        + `Allowed capabilities: ${allowanceText}. Prefer answering directly when tools are unnecessary.</tool_policy>`,
+      );
+    } else {
+      parts.push(
+        '<constraint>Output the requested content directly as text. '
+        + 'Do NOT read files, create files, run commands, or use any tools.</constraint>',
       );
     }
 
-    // Conversation messages
-    for (const msg of conversationMsgs) {
-      if (msg.role === 'user') {
-        parts.push(msg.content);
-      } else if (msg.role === 'assistant') {
-        parts.push(`[Previous assistant response]\n${msg.content}`);
+    const systemMessages = request.messages.filter((message) => message.role === 'system');
+    if (systemMessages.length > 0) {
+      parts.push(
+        `<instructions>\n${systemMessages.map((message) => message.content).join('\n\n')}\n</instructions>`,
+      );
+    }
+
+    if (request.responseFormat === 'json') {
+      parts.push(
+        '<output_format>Respond with valid JSON only. No markdown fences and no explanation outside the JSON.</output_format>',
+      );
+    }
+
+    for (const message of request.messages) {
+      if (message.role === 'system') continue;
+      if (message.role === 'user') {
+        parts.push(message.content);
+      } else {
+        parts.push(`[Previous assistant response]\n${message.content}`);
       }
     }
 
     return parts.join('\n\n');
   }
 
-  // -- Execution helpers ---------------------------------------------------
+  private buildExecutionPlan(
+    request: ChatRequest,
+    model: string,
+    flags: RuntimeFlags,
+    forceOneShot: boolean,
+  ): ExecutionPlan {
+    const cwd = this.resolveExecutionCwd();
+    const sessionReuseRequested = this.enableSessionReuse && this.toolAccessMode === 'article-tools';
+    const sessionReuseBaseEligible =
+      sessionReuseRequested
+      && Boolean(request.providerContext?.articleId)
+      && ARTICLE_STAGE_REUSE.has(request.providerContext?.stage ?? -1);
+    const shouldResumeSession = sessionReuseBaseEligible && !forceOneShot;
+    const sessionReuseEligible = sessionReuseBaseEligible && !forceOneShot;
+    const sessionId =
+      shouldResumeSession && request.providerContext?.articleId
+        ? this.getOrCreateSessionId(request.providerContext.articleId, cwd)
+        : null;
 
-  /** Run copilot with prompt via -p flag (for shorter prompts). */
-  private async execViaFlag(prompt: string, model: string): Promise<string> {
-    const args = ['-p', prompt, '-s', '--no-ask-user', '--model', model, ...this.extraFlags];
-    return this.exec(args);
+    const args = [
+      '-p',
+      '',
+      '-s',
+      '--no-ask-user',
+      '--no-custom-instructions',
+      '--no-auto-update',
+      '--disallow-temp-dir',
+      '--model',
+      model,
+      ...(sessionId ? [`--resume=${sessionId}`] : []),
+      ...(flags.webSearchEnabled ? ['--allow-tool=url', '--allow-all-urls'] : []),
+      ...(this.toolAccessMode === 'article-tools' && this.enableRepoMcp ? ['--disable-builtin-mcps'] : []),
+      ...(flags.repoMcpEnabled && this.mcpConfigPath ? [`--additional-mcp-config=@${this.mcpConfigPath}`] : []),
+      ...flags.mcpServerNames.map((name) => `--allow-tool=${name}`),
+      ...this.extraFlags,
+    ];
+
+    return {
+      args,
+      cwd,
+      mode: sessionId ? 'resumed' : 'one-shot',
+      sessionId,
+      requestEnvelope: {
+        provider: this.id,
+        model,
+        toolAccessMode: this.toolAccessMode,
+        toolAccessConfigured: this.toolAccessMode === 'article-tools',
+        toolsEnabled: flags.allowedTools.length > 0,
+        allowedTools: flags.allowedTools,
+        webSearchEnabled: flags.webSearchEnabled,
+        repoMcpEnabled: flags.repoMcpEnabled,
+        mcpServerNames: flags.mcpServerNames,
+        mcpConfigPath: flags.repoMcpEnabled ? this.mcpConfigPath ?? null : null,
+        sessionReuseRequested,
+        sessionReuseEligible,
+        sessionReuseFallback: forceOneShot,
+        stage: request.providerContext?.stage ?? null,
+        surface: request.providerContext?.surface ?? null,
+        articleId: request.providerContext?.articleId ?? null,
+        traceId: request.providerContext?.traceId ?? null,
+      },
+    };
   }
 
-  /** Run copilot with prompt via temp file (for very long prompts). */
-  private async execViaFile(prompt: string, model: string): Promise<string> {
-    const tmpDir = join(tmpdir(), 'nfl-lab-copilot');
-    if (!existsSync(tmpDir)) {
-      await mkdir(tmpDir, { recursive: true });
-    }
-    const tmpFile = join(tmpDir, `prompt-${randomBytes(8).toString('hex')}.txt`);
+  private async executePlan(
+    plan: ExecutionPlan,
+    prompt: string,
+    model: string,
+    responseExtras?: Record<string, unknown>,
+  ): Promise<ChatResponse> {
+    const args = [...plan.args];
+    args[1] = prompt;
 
-    try {
-      await writeFile(tmpFile, prompt, 'utf-8');
+    const output =
+      prompt.length > EXEC_FILE_CHAR_LIMIT
+        ? await this.execViaStdin(args.slice(2), prompt, plan.cwd)
+        : await this.execFileArgs(args, plan.cwd);
 
-      // Use shell to read the file into -p: copilot -p @file or via
-      // Get-Content pipe. The safest cross-platform approach is to use
-      // the shell to pass the file contents.
-      return await this.execShell(
-        `"${this.copilotPath}" -s --no-ask-user --model "${model}" ${this.extraFlags.map(f => `"${f}"`).join(' ')} < "${tmpFile}"`,
+    const content = output.trim();
+    if (!content) {
+      throw this.attachProviderMetadata(
+        new Error('Copilot CLI returned empty response'),
+        this.buildMetadata(plan, prompt, {
+          stdout: output,
+          fallbackFromResumedSession: responseExtras?.['fallbackFromResumedSession'] ?? false,
+          ...responseExtras,
+        }),
       );
-    } finally {
-      try {
-        await unlink(tmpFile);
-      } catch {
-        // Ignore cleanup errors
+    }
+
+    return {
+      content,
+      model,
+      provider: this.id,
+      usage: {
+        promptTokens: Math.ceil(prompt.length / 4),
+        completionTokens: Math.ceil(content.length / 4),
+        totalTokens: Math.ceil(prompt.length / 4) + Math.ceil(content.length / 4),
+      },
+      finishReason: 'stop',
+      providerMetadata: this.buildMetadata(plan, prompt, {
+        stdout: content,
+        fallbackFromResumedSession: responseExtras?.['fallbackFromResumedSession'] ?? false,
+        ...responseExtras,
+      }),
+    };
+  }
+
+  private buildMetadata(
+    plan: ExecutionPlan,
+    prompt: string,
+    responseEnvelope?: Record<string, unknown>,
+  ): ProviderMetadata {
+    return {
+      providerMode: plan.mode,
+      providerSessionId: plan.sessionId,
+      workingDirectory: this.workingDirectory ?? plan.cwd,
+      incrementalPrompt: prompt,
+      requestEnvelope: {
+        ...plan.requestEnvelope,
+        args: this.sanitizeArgs(plan.args),
+      },
+      responseEnvelope: responseEnvelope ?? null,
+    };
+  }
+
+  private buildErrorMetadata(
+    plan: ExecutionPlan,
+    prompt: string,
+    responseEnvelope?: Record<string, unknown>,
+  ): ProviderMetadata {
+    return this.buildMetadata(plan, prompt, {
+      stdout: null,
+      ...responseEnvelope,
+    });
+  }
+
+  private resolveExecutionCwd(): string {
+    if (this.toolAccessMode === 'article-tools') {
+      return this.workingDirectory ?? this.repoRoot ?? process.cwd();
+    }
+    return this.sandboxDir;
+  }
+
+  private getOrCreateSessionId(articleId: string, cwd: string): string {
+    this.cleanupSessions();
+    const key = `${cwd}:${articleId}`;
+    const existing = this.sessions.get(key);
+    if (existing) {
+      existing.lastUsedAt = Date.now();
+      return existing.sessionId;
+    }
+
+    const created: SessionRecord = {
+      sessionId: `copilot-session-${randomUUID()}`,
+      lastUsedAt: Date.now(),
+    };
+    this.sessions.set(key, created);
+    return created.sessionId;
+  }
+
+  private cleanupSessions(): void {
+    const cutoff = Date.now() - 60 * 60 * 1000;
+    for (const [key, record] of this.sessions.entries()) {
+      if (record.lastUsedAt < cutoff) {
+        this.sessions.delete(key);
       }
     }
   }
 
-  /** Execute copilot CLI and return stdout. */
-  private exec(args: string[]): Promise<string> {
+  private shouldFallbackToOneShot(plan: ExecutionPlan, error: unknown): boolean {
+    return plan.mode === 'resumed' && error instanceof Error;
+  }
+
+  private sanitizeArgs(args: string[]): string[] {
+    const copy = [...args];
+    const promptIndex = copy.indexOf('-p');
+    if (promptIndex >= 0 && copy[promptIndex + 1] !== undefined) {
+      copy[promptIndex + 1] = '[prompt omitted]';
+    }
+    return copy;
+  }
+
+  private execFileArgs(args: string[], cwd: string): Promise<string> {
     return new Promise((resolve, reject) => {
       execFile(
         this.copilotPath,
         args,
         {
-          cwd: this.sandboxDir,
+          cwd,
           timeout: this.timeoutMs,
-          maxBuffer: 10 * 1024 * 1024, // 10MB
+          maxBuffer: STDOUT_LIMIT_BYTES,
           encoding: 'utf-8',
           env: {
             ...process.env,
-            // Don't let the CLI try to auto-update during our calls
             COPILOT_AUTO_UPDATE: 'false',
           },
         },
         (error: ExecFileException | null, stdout: string, stderr: string) => {
           if (error) {
-            const msg = stderr?.trim() || error.message;
             if (error.killed) {
               reject(new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`));
-            } else {
-              reject(new Error(`Copilot CLI error (exit ${error.code}): ${msg}`));
+              return;
             }
+
+            const message = stderr?.trim() || error.message;
+            reject(new Error(`Copilot CLI error (exit ${error.code}): ${message}`));
             return;
           }
+
           resolve(stdout);
         },
       );
     });
   }
 
-  /** Execute a shell command string (for file-based stdin redirection). */
-  private execShell(command: string): Promise<string> {
+  private execViaStdin(args: string[], prompt: string, cwd: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      exec(
-        command,
-        {
-          cwd: this.sandboxDir,
-          timeout: this.timeoutMs,
-          maxBuffer: 10 * 1024 * 1024,
-          encoding: 'utf-8',
-          env: {
-            ...process.env,
-            COPILOT_AUTO_UPDATE: 'false',
-          },
+      const child = spawn(this.copilotPath, args, {
+        cwd,
+        env: {
+          ...process.env,
+          COPILOT_AUTO_UPDATE: 'false',
         },
-        (error: ExecFileException | null, stdout: string, stderr: string) => {
-          if (error) {
-            const msg = stderr?.trim() || error.message;
-            if (error.killed) {
-              reject(new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`));
-            } else {
-              reject(new Error(`Copilot CLI error (exit ${error.code}): ${msg}`));
-            }
-            return;
-          }
-          resolve(stdout);
-        },
-      );
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        child.kill();
+      }, this.timeoutMs);
+
+      child.stdout.setEncoding('utf-8');
+      child.stderr.setEncoding('utf-8');
+
+      child.stdout.on('data', (chunk: string) => {
+        if (settled) return;
+        stdout += chunk;
+        if (stdout.length > STDOUT_LIMIT_BYTES) {
+          settled = true;
+          clearTimeout(timeout);
+          child.kill();
+          reject(new Error('Copilot CLI output exceeded buffer limit'));
+        }
+      });
+
+      child.stderr.on('data', (chunk: string) => {
+        if (settled) return;
+        stderr += chunk;
+      });
+
+      child.on('error', (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        reject(error);
+      });
+
+      child.on('close', (code) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (timedOut) {
+          reject(new Error(`Copilot CLI timed out after ${this.timeoutMs}ms`));
+          return;
+        }
+        if (code !== 0) {
+          reject(new Error(`Copilot CLI error (exit ${code}): ${stderr.trim() || 'unknown error'}`));
+          return;
+        }
+        resolve(stdout);
+      });
+
+      child.stdin.end(prompt);
     });
+  }
+
+  private attachProviderMetadata(error: unknown, providerMetadata: ProviderMetadata): Error {
+    const wrapped = error instanceof Error ? error : new Error(String(error));
+    (wrapped as Error & { providerMetadata?: ProviderMetadata }).providerMetadata = providerMetadata;
+    return wrapped;
   }
 }

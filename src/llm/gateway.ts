@@ -17,8 +17,27 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ProviderContext {
+  articleId?: string | null;
+  runId?: string | null;
+  stageRunId?: string | null;
+  stage?: number | null;
+  surface?: string | null;
+  traceId?: string | null;
+}
+
+export interface ProviderMetadata {
+  providerMode?: string | null;
+  providerSessionId?: string | null;
+  workingDirectory?: string | null;
+  incrementalPrompt?: string | null;
+  requestEnvelope?: unknown;
+  responseEnvelope?: unknown;
+}
+
 export interface ChatRequest {
   messages: ChatMessage[];
+  provider?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -27,6 +46,7 @@ export interface ChatRequest {
   taskFamily?: string;
   responseFormat?: 'text' | 'json';
   disallowedProviderIds?: string[];
+  providerContext?: ProviderContext;
 }
 
 export interface ChatResponse {
@@ -39,6 +59,7 @@ export interface ChatResponse {
     totalTokens: number;
   };
   finishReason?: string;
+  providerMetadata?: ProviderMetadata;
 }
 
 export interface LLMProvider {
@@ -108,9 +129,24 @@ export class LLMGateway {
     return this.providers.get(id);
   }
 
+  listProviders(): Array<{ id: string; name: string }> {
+    return [...this.providers.values()].map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+    }));
+  }
+
   // -- Chat ----------------------------------------------------------------
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
+    if (request.provider) {
+      const provider = this.getProvider(request.provider);
+      if (!provider) {
+        throw new GatewayError(`Requested provider not available: ${request.provider}`);
+      }
+      return provider.chat(request);
+    }
+
     const candidates = this.resolveCandidates(request);
 
     const errors: { model: string; error: Error }[] = [];
@@ -138,6 +174,8 @@ export class LLMGateway {
       const summary = errors.map(e => `${e.model}: ${e.error.message.slice(0, 100)}`).join(' | ');
       const combined = new Error(`All ${errors.length} model candidate(s) failed: ${summary}`);
       (combined as any).cause = errors[0].error;
+      (combined as Error & { providerMetadata?: ProviderMetadata }).providerMetadata =
+        (errors[0].error as Error & { providerMetadata?: ProviderMetadata }).providerMetadata;
       throw combined;
     }
     throw new NoProviderError(candidates[0] ?? request.model ?? 'unknown');

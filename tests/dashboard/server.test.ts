@@ -332,6 +332,11 @@ describe('Dashboard Server', () => {
         model: 'gpt-5.4',
         outputText: 'Trace output preview',
         totalTokens: 200,
+        providerMode: 'one-shot',
+        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
+        incrementalPrompt: 'Actual provider prompt',
+        providerRequest: { sessionReuseRequested: true },
+        providerResponse: { stdout: 'Trace output preview' },
       });
 
       const res = await app.request('/articles/detail-traces');
@@ -382,12 +387,20 @@ describe('Dashboard Server', () => {
         model: 'gpt-5.4',
         outputText: 'Idea output',
         totalTokens: 111,
+        providerMode: 'one-shot',
+        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
+        incrementalPrompt: 'Idea provider prompt',
+        providerRequest: { allowedTools: ['url'] },
       });
       repo.completeLlmTrace(traceTwo, {
         provider: 'copilot-cli',
         model: 'gpt-5.4',
         outputText: 'Prompt output',
         totalTokens: 222,
+        providerMode: 'one-shot',
+        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
+        incrementalPrompt: 'Prompt provider prompt',
+        providerRequest: { allowedTools: ['url', 'nfl-eval-pipeline'] },
       });
 
       const res = await app.request('/articles/detail-trace-timeline/traces');
@@ -398,6 +411,9 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Prompt output');
       expect(html).toContain('ideaGeneration');
       expect(html).toContain('generatePrompt');
+      expect(html).toContain('Provider Prompt Delta');
+      expect(html).toContain('Provider Request Envelope');
+      expect(html).toContain('CWD: C:\\github\\worktrees\\copilot-session-reuse');
     });
 
     it('article detail surfaces paused lead review state and artifact tab', async () => {

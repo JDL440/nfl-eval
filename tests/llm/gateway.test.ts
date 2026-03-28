@@ -93,6 +93,16 @@ describe('LLMGateway', () => {
       expect(gw.getProvider('stub')).toBe(stub);
     });
 
+    it('lists registered providers in insertion order', () => {
+      const stub = new StubProvider();
+      const fake = new FakeProvider('openai', 'gpt');
+      const gw = new LLMGateway({ modelPolicy: policy, providers: [stub, fake] });
+      expect(gw.listProviders()).toEqual([
+        { id: 'stub', name: 'Stub Provider' },
+        { id: 'openai', name: 'Fake openai' },
+      ]);
+    });
+
     it('returns undefined for unknown provider', () => {
       const gw = new LLMGateway({ modelPolicy: policy });
       expect(gw.getProvider('nonexistent')).toBeUndefined();
@@ -152,6 +162,22 @@ describe('LLMGateway', () => {
       });
       // balanced family should resolve to a gpt model
       expect(res.provider).toBe('openai');
+    });
+
+    it('routes to an explicitly requested provider', async () => {
+      const claudeProvider = new FakeProvider('anthropic', 'claude');
+      const gptProvider = new FakeProvider('openai', 'gpt');
+      const gw = new LLMGateway({
+        modelPolicy: policy,
+        providers: [claudeProvider, gptProvider],
+      });
+
+      const res = await gw.chat({
+        messages: [{ role: 'user', content: 'Hello' }],
+        provider: 'anthropic',
+      });
+
+      expect(res.provider).toBe('anthropic');
     });
   });
 

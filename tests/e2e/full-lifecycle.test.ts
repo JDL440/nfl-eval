@@ -60,6 +60,22 @@ function wordsOf(count: number): string {
   return Array.from({ length: count }, (_, i) => `word${i}`).join(' ');
 }
 
+function buildValidDraft(totalWords: number, title = 'Draft Article'): string {
+  const prefix = [
+    `# ${title}`,
+    '',
+    '> **📋 TLDR**',
+    '> - Fix the line first.',
+    '> - Preserve flexibility for core extensions.',
+    '> - Target Day 2 value in the secondary.',
+    '> - Turn the panel consensus into a clear offseason plan.',
+    '',
+  ].join('\n');
+  const prefixWords = prefix.split(/\s+/).filter(Boolean).length;
+  const remaining = Math.max(totalWords - prefixWords, 0);
+  return `${prefix}${remaining > 0 ? `\n${wordsOf(remaining)}` : ''}`;
+}
+
 // ── Setup / Teardown ─────────────────────────────────────────────────────────
 
 beforeAll(() => {
@@ -176,7 +192,7 @@ describe('Full lifecycle: Stage 1 → 8', () => {
   });
 
   it('advances 5→6 after writing draft.md with 800+ words', async () => {
-    writeArtifact(slug, 'draft.md', `# Draft Article\n\n${wordsOf(850)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(850));
 
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(200);
@@ -277,7 +293,7 @@ describe('Editor review variants', () => {
     repo.advanceStage(slug, 3, 4, 'test');
     writeArtifact(slug, 'discussion-summary.md', '# Summary');
     repo.advanceStage(slug, 4, 5, 'test');
-    writeArtifact(slug, 'draft.md', `# Draft\n\n${wordsOf(900)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(900, 'Draft'));
     repo.advanceStage(slug, 5, 6, 'test');
     return slug;
   }
@@ -367,7 +383,7 @@ describe('JSON API advance: full lifecycle', () => {
     expect(res.status).toBe(200);
 
     // 5→6
-    writeArtifact(slug, 'draft.md', `# Draft\n\n${wordsOf(1000)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(1000, 'Draft'));
     res = await postJson(`/api/articles/${slug}/advance`, { to_stage: 6 });
     expect(res.status).toBe(200);
 
@@ -411,7 +427,7 @@ describe('Draft word count boundary', () => {
   });
 
   it('accepts exactly 200 words', async () => {
-    writeArtifact(slug, 'draft.md', wordsOf(200));
+    writeArtifact(slug, 'draft.md', buildValidDraft(200, 'Draft'));
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('Stage 6');
@@ -433,7 +449,7 @@ describe('Publisher pass artifact guard', () => {
     repo.advanceStage(slug, 3, 4, 'test');
     writeArtifact(slug, 'discussion-summary.md', '# Summary');
     repo.advanceStage(slug, 4, 5, 'test');
-    writeArtifact(slug, 'draft.md', `# Draft\n\n${wordsOf(850)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(850, 'Draft'));
     repo.advanceStage(slug, 5, 6, 'test');
     writeArtifact(slug, 'editor-review.md', '## Verdict: APPROVED');
     repo.advanceStage(slug, 6, 7, 'test');

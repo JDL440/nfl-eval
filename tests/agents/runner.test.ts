@@ -192,6 +192,41 @@ class ToolLoopProvider implements LLMProvider {
   }
 }
 
+class TracingCopilotProvider implements LLMProvider {
+  readonly id = 'copilot-cli';
+  readonly name = 'GitHub Copilot CLI';
+
+  chat(request: ChatRequest): Promise<ChatResponse> {
+    return Promise.resolve({
+      content: 'Tracing response',
+      model: request.model ?? 'gpt-5.4',
+      provider: this.id,
+      finishReason: 'stop',
+      providerMetadata: {
+        providerMode: 'one-shot',
+        providerSessionId: null,
+        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
+        incrementalPrompt: 'Provider delta',
+        requestEnvelope: {
+          sessionReuseRequested: true,
+          providerContext: request.providerContext,
+        },
+        responseEnvelope: {
+          stdout: 'Tracing response',
+        },
+      },
+    });
+  }
+
+  listModels(): string[] {
+    return ['gpt-5.4'];
+  }
+
+  supportsModel(model: string): boolean {
+    return model.startsWith('gpt-5');
+  }
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('AgentRunner', () => {
@@ -691,6 +726,31 @@ describe('AgentRunner', () => {
       expect(request.maxTokens).toBe(2000);
     });
 
+    it('passes provider overrides to the gateway', async () => {
+      const stub = new StubProvider();
+      const chatSpy = vi.spyOn(stub, 'chat');
+
+      const spyGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [stub],
+      });
+      const spyRunner = new AgentRunner({
+        gateway: spyGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      await spyRunner.run({
+        agentName: 'writer',
+        task: 'Write with the explicit provider',
+        provider: 'stub',
+      });
+
+      const request = chatSpy.mock.calls[0][0];
+      expect(request.provider).toBe('stub');
+    });
+
     it('returns token usage when available', async () => {
       const result = await runner.run({
         agentName: 'writer',
@@ -837,6 +897,57 @@ describe('AgentRunner', () => {
         expect(trace).not.toBeNull();
         const metadata = JSON.parse(trace!.metadata_json ?? '{}') as { toolCalls?: Array<{ toolName: string }> };
         expect(metadata.toolCalls?.[0]?.toolName).toBe('article_get');
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('persists provider metadata for trace visibility', async () => {
+      const tracingGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [new TracingCopilotProvider()],
+      });
+      const tracingRunner = new AgentRunner({
+        gateway: tracingGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-provider', title: 'Trace Provider' });
+      const stageRunId = repo.startStageRun({
+        articleId: 'trace-provider',
+        stage: 5,
+        surface: 'writeDraft',
+        actor: 'writer',
+      });
+
+      try {
+        await tracingRunner.run({
+          agentName: 'writer',
+          task: 'Write a traced draft',
+          articleContext: {
+            slug: 'trace-provider',
+            title: 'Trace Provider',
+            stage: 5,
+            content: 'Context body',
+          },
+          trace: {
+            repo,
+            articleId: 'trace-provider',
+            stage: 5,
+            surface: 'writeDraft',
+            stageRunId,
+          },
+        });
+
+        const traces = repo.getStageRunLlmTraces(stageRunId);
+        expect(traces[0].provider_mode).toBe('one-shot');
+        expect(traces[0].working_directory).toBe('C:\\github\\worktrees\\copilot-session-reuse');
+        expect(traces[0].incremental_prompt).toBe('Provider delta');
+        expect(traces[0].provider_request_json).toContain('"trace-provider"');
+        expect(traces[0].provider_response_json).toContain('Tracing response');
       } finally {
         repo.close();
       }

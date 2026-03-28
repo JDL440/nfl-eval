@@ -148,6 +148,19 @@ describe('renderNewIdeaPage', () => {
     const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('value="2" selected');
   });
+
+  it('renders an LLM provider selector when providers are available', () => {
+    const html = renderNewIdeaPage({
+      labName: 'NFL Lab',
+      llmProviders: [
+        { id: 'lmstudio', name: 'LM Studio (Local)', default: true },
+        { id: 'copilot-cli', name: 'GitHub Copilot CLI' },
+      ],
+    });
+    expect(html).toContain('name="provider"');
+    expect(html).toContain('LM Studio (Local) (default)');
+    expect(html).toContain('GitHub Copilot CLI');
+  });
 });
 
 describe('Quick-action buttons', () => {
@@ -358,6 +371,7 @@ describe('New Idea Routes', () => {
 
   describe('POST /api/ideas (with actionContext / LLM)', () => {
     let llmApp: ReturnType<typeof createApp>;
+    let mockRun: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
       // Build a mock actionContext with a fake runner.run()
@@ -390,15 +404,28 @@ Writer + Analyst + Editor
 - Uniqueness: 2
 - **Total: 10/12**`;
 
+      mockRun = vi.fn(async () => ({
+        content: mockIdeaContent,
+        model: 'mock-model',
+        provider: 'mock',
+        agentName: 'lead',
+        memoriesUsed: 0,
+      }));
+
       const mockRunner = {
-        gateway: {},
-        run: async () => ({
-          content: mockIdeaContent,
-          model: 'mock-model',
-          provider: 'mock',
-          agentName: 'lead',
-          memoriesUsed: 0,
-        }),
+        gateway: {
+          listProviders: () => [
+            { id: 'lmstudio', name: 'LM Studio (Local)' },
+            { id: 'copilot-cli', name: 'GitHub Copilot CLI' },
+          ],
+          getProvider: (id: string) => (
+            id === 'lmstudio' || id === 'copilot-cli'
+              ? { id, name: id }
+              : undefined
+          ),
+        },
+        listAgents: () => [],
+        run: mockRun,
       };
       const mockActionContext = {
         repo,
@@ -413,6 +440,15 @@ Writer + Analyst + Editor
         makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
         { actionContext: mockActionContext },
       );
+    });
+
+    it('renders the provider selector when multiple providers are registered', async () => {
+      const res = await llmApp.request('/ideas/new');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('name="provider"');
+      expect(html).toContain('LM Studio (Local) (default)');
+      expect(html).toContain('GitHub Copilot CLI');
     });
 
     it('generates idea via LLM and extracts title', async () => {
@@ -453,6 +489,40 @@ Writer + Analyst + Editor
       const article = repo.getArticle(body.id);
       expect(article!.primary_team).toBe('SEA');
       expect(article!.depth_level).toBe(3);
+    });
+
+    it('passes the selected provider to the runner', async () => {
+      const res = await llmApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Use LM Studio for this idea',
+          teams: ['SEA'],
+          depthLevel: 2,
+          provider: 'lmstudio',
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({
+        agentName: 'lead',
+        provider: 'lmstudio',
+      }));
+    });
+
+    it('rejects unknown provider overrides', async () => {
+      const res = await llmApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Use an unavailable provider',
+          provider: 'nonexistent',
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('Unknown provider');
     });
 
     it('attaches idea-generation traces and stage runs to the created article', async () => {

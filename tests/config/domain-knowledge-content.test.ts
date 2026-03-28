@@ -17,7 +17,7 @@ const teamSheetFiles = ['SEA.md', 'KC.md', 'BUF.md']
 describe('domain knowledge glossary files', () => {
   it('ships the phase 1 glossary set', () => {
     for (const file of glossaryFiles) {
-      expect(existsSync(file), missing glossary: ).toBe(true);
+      expect(existsSync(file), `missing glossary: ${file}`).toBe(true);
     }
   });
 
@@ -26,7 +26,7 @@ describe('domain knowledge glossary files', () => {
       const content = readFileSync(file, 'utf-8');
 
       expect(content).toContain('schema_version: 1');
-      expect(content).toMatch(/^id:\s[\w-]+/m);
+      expect(content).toMatch(/^glossary:\s[\w-]+/m);
       expect(content).toContain('glossary:');
       expect(content).toContain('description:');
       expect(content).toContain('entry_fields:');
@@ -45,7 +45,7 @@ describe('domain knowledge glossary files', () => {
 describe('team identity sheets', () => {
   it('ships the validated phase 3 team sheets', () => {
     for (const file of teamSheetFiles) {
-      expect(existsSync(file), missing team sheet: ).toBe(true);
+      expect(existsSync(file), `missing team sheet: ${file}`).toBe(true);
     }
   });
 
@@ -53,12 +53,12 @@ describe('team identity sheets', () => {
     for (const file of teamSheetFiles) {
       const content = readFileSync(file, 'utf-8');
 
-      expect(content.startsWith('# '), ${file} should start with an H1).toBe(true);
+      expect(content.startsWith('# '), `${file} should start with an H1`).toBe(true);
       expect(content).toContain('## Snapshot');
       expect(content).toContain('## Team Identity');
       expect(content).toContain('## Offensive Identity');
       expect(content).toContain('## Defensive Identity');
-      expect(content).toContain('## Roster ConstructionSignals');
+      expect(content).toContain('## Roster Construction Signals');
       expect(content).toContain('## Writing Cues');
       expect(content).toContain('**Verified date:** 2026-03-22');
       expect(content).toContain('**Primary sources:**');

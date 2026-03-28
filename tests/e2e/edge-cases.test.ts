@@ -84,6 +84,22 @@ function longText(words: number): string {
   return Array.from({ length: words }, (_, i) => `word${i}`).join(' ');
 }
 
+function buildValidDraft(totalWords: number, title = 'Draft'): string {
+  const prefix = [
+    `# ${title}`,
+    '',
+    '> **📋 TLDR**',
+    '> - Fix the line first.',
+    '> - Preserve flexibility for core extensions.',
+    '> - Target Day 2 value in the secondary.',
+    '> - Turn the panel consensus into a clear offseason plan.',
+    '',
+  ].join('\n');
+  const prefixWords = prefix.split(/\s+/).filter(Boolean).length;
+  const remaining = Math.max(totalWords - prefixWords, 0);
+  return `${prefix}${remaining > 0 ? `\n${longText(remaining)}` : ''}`;
+}
+
 /** Advance an article directly in DB to targetStage by writing required artifacts. */
 function advanceToStage(slug: string, targetStage: Stage): void {
   const STAGE_ARTIFACTS: Record<number, { name: string; content: string }> = {
@@ -91,7 +107,7 @@ function advanceToStage(slug: string, targetStage: Stage): void {
     2: { name: 'discussion-prompt.md', content: '# Discussion Prompt\nKey analysis question.' },
     3: { name: 'panel-composition.md', content: '# Panel\n- Analyst A\n- Analyst B' },
     4: { name: 'discussion-summary.md', content: '# Summary\nThe panel concluded X.' },
-    5: { name: 'draft.md', content: `# Draft\n\n${longText(300)}` },
+    5: { name: 'draft.md', content: buildValidDraft(300) },
     6: { name: 'editor-review.md', content: '## Final Verdict: APPROVED\nGood to go.' },
   };
 
@@ -266,7 +282,7 @@ describe('Stage regression + re-advance', () => {
     writeArtifact(slug, 'discussion-prompt.md', '# Prompt');
     writeArtifact(slug, 'panel-composition.md', '# Panel');
     writeArtifact(slug, 'discussion-summary.md', '# Original Summary');
-    writeArtifact(slug, 'draft.md', `# Original Draft\n\n${longText(250)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(250, 'Original Draft'));
     writeArtifact(slug, 'editor-review.md', '## Verdict: APPROVED\n\nGood.');
     repo.advanceStage(slug, 1, 2, 'test');
     repo.advanceStage(slug, 2, 3, 'test');
@@ -345,7 +361,7 @@ describe('Editor REVISE verdict loop', () => {
 
   it('writes draft.md and advances 5→6', async () => {
     // draft.md is the prerequisite for 5→6 — write it now
-    writeArtifact(slug, 'draft.md', `# Draft Article\n\n${longText(300)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(300, 'Draft Article'));
     expect(repo.artifacts.exists(slug, 'draft.md')).toBe(true);
     expect(repo.artifacts.wordCount(slug, 'draft.md')).toBeGreaterThanOrEqual(200);
 
@@ -384,7 +400,7 @@ describe('Editor REVISE verdict loop', () => {
   });
 
   it('rewrites draft and advances back through 4→5→6', async () => {
-    writeArtifact(slug, 'draft.md', `# Revised Draft v2\n\n${longText(400)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(400, 'Revised Draft v2'));
 
     // 4→5 (discussion-summary guard passes)
     let res = await htmxPost(`/htmx/articles/${slug}/advance`);
@@ -595,7 +611,7 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
   // The critical override is at stage 4 (writeDraft) and stage 5 (runEditor).
 
   // A 300-word draft to satisfy the requireDraft guard
-  const MOCK_DRAFT = `# Test Article Draft\n\n${Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ')}`;
+  const MOCK_DRAFT = buildValidDraft(300, 'Test Article Draft');
 
   // Publisher pass content
   const MOCK_PUBLISHER = `# Publisher Pass\n\n## Pre-Publication Checklist\n- [x] Title finalized\n- [x] Content verified\n- [x] Images checked\n\nReady for publication.`;
@@ -753,7 +769,7 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     writeArtifact(slug, 'discussion-prompt.md', '# Prompt\nKey question.');
     writeArtifact(slug, 'panel-composition.md', '# Panel\n- Analyst A\n- Analyst B');
     writeArtifact(slug, 'discussion-summary.md', '# Summary\nConclusion X.');
-    writeArtifact(slug, 'draft.md', `# Draft\n\n${longText(300)}`);
+    writeArtifact(slug, 'draft.md', buildValidDraft(300));
     writeArtifact(slug, 'editor-review.md', '## Final Verdict: APPROVED\nGood to go.');
     writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nAll clear.');
 

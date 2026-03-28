@@ -860,6 +860,7 @@ export function createApp(
   app.get('/ideas/new', (c) => {
     // Build list of expert agents (non-production, non-team) for the pin selector
     let expertAgents: string[] = [];
+    let llmProviders: Array<{ id: string; name: string; default?: boolean }> = [];
     const runner = deps?.actionContext?.runner;
     if (runner) {
       const PROD = new Set(['lead', 'writer', 'editor', 'scribe', 'coordinator', 'panel-moderator', 'publisher']);
@@ -867,16 +868,24 @@ export function createApp(
         'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
         'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
         'nyj','phi','pit','sea','sf','tb','ten','wsh',
-      ]);
+        ]);
       expertAgents = runner.listAgents().filter(a => !PROD.has(a) && !TEAMS.has(a));
+      llmProviders = runner.gateway.listProviders().map((provider, index) => ({
+        ...provider,
+        default: index === 0,
+      }));
     }
-    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, expertAgents }));
+    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, expertAgents, llmProviders }));
   });
 
   app.get('/config', (c) => {
     const envVars = [
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'COPILOT_CLI_MODE',
+      'COPILOT_CLI_MCP_CONFIG',
+      'COPILOT_CLI_SESSION_REUSE',
+      'COPILOT_CLI_WEB_SEARCH',
       'GEMINI_API_KEY',
       'SUBSTACK_TOKEN',
       'SUBSTACK_PUBLICATION_URL',
@@ -893,6 +902,10 @@ export function createApp(
     const displayableVars = new Set([
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'COPILOT_CLI_MODE',
+      'COPILOT_CLI_MCP_CONFIG',
+      'COPILOT_CLI_SESSION_REUSE',
+      'COPILOT_CLI_WEB_SEARCH',
       'SUBSTACK_PUBLICATION_URL',
       'DATA_SOURCE',
       'DASHBOARD_AUTH_MODE',
@@ -902,6 +915,10 @@ export function createApp(
     ]);
     const envDefaultValues: Record<string, string> = {
       DATA_SOURCE: 'scripts',
+      COPILOT_CLI_MODE: 'none',
+      COPILOT_CLI_MCP_CONFIG: join(process.cwd(), '.copilot', 'mcp-config.json'),
+      COPILOT_CLI_SESSION_REUSE: '0',
+      COPILOT_CLI_WEB_SEARCH: '1',
       DASHBOARD_AUTH_MODE: dashboardAuth.mode,
       DASHBOARD_SESSION_COOKIE: dashboardAuth.sessionCookieName,
       DASHBOARD_SESSION_TTL_HOURS: String(dashboardAuth.sessionTtlHours),
@@ -1120,9 +1137,14 @@ export function createApp(
     try {
       const teams: string[] = Array.isArray(body.teams) ? body.teams : [];
       const depthLevel = [1, 2, 3, 4].includes(body.depthLevel) ? body.depthLevel : 2;
+      const requestedProvider = typeof body.provider === 'string' ? body.provider.trim() : '';
       const autoAdvance = body.autoAdvance === true;
       const pinnedAgents: string[] = Array.isArray(body.pinnedAgents) ? body.pinnedAgents.filter((a: unknown) => typeof a === 'string' && a.length > 0) : [];
       const actionContext = deps?.actionContext;
+
+      if (requestedProvider && actionContext && !actionContext.runner.gateway.getProvider(requestedProvider)) {
+        return c.json({ error: `Unknown provider: ${requestedProvider}` }, 400);
+      }
 
       let ideaContent: string;
       let title: string;
@@ -1165,6 +1187,7 @@ export function createApp(
 
         const result = await actionContext.runner.run({
           agentName: 'lead',
+          provider: requestedProvider || undefined,
           task,
           skills: ['idea-generation'],
           rosterContext: rosterCtx ?? undefined,
@@ -2897,14 +2920,19 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     const modelPolicy = new ModelPolicy();
     const gateway = new LLMGateway({ modelPolicy });
 
-    // Register available LLM providers
-    // Priority: MOCK_LLM > explicit LLM_PROVIDER > copilot-cli (auto) > copilot API
+    // Register available LLM providers.
+    // The first registered provider becomes the default for model-policy routing.
+    // Additional providers remain available for explicit UI overrides.
     const explicitProvider = process.env['LLM_PROVIDER'];
-    if (process.env['MOCK_LLM'] === '1') {
+    const registerMockProvider = async (): Promise<void> => {
       const mock = new MockProvider();
       gateway.registerProvider(mock);
       console.log('Mock LLM provider registered (testing mode)');
-    } else if (explicitProvider === 'lmstudio' || process.env['LMSTUDIO_URL']) {
+    };
+
+    const registerLMStudioProvider = async (): Promise<void> => {
+      if (gateway.getProvider('lmstudio')) return;
+      if (explicitProvider !== 'lmstudio' && !process.env['LMSTUDIO_URL']) return;
       const baseUrl = process.env['LMSTUDIO_URL'] ?? undefined;
       const defaultModel = process.env['LMSTUDIO_MODEL'] ?? undefined;
       const lmstudio = new LMStudioProvider({ baseUrl, defaultModel });
@@ -2918,8 +2946,10 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       } catch { /* LM Studio may not be running yet */ }
       gateway.registerProvider(lmstudio);
       console.log(`LM Studio provider registered (${lmstudio.baseUrl}, model: ${lmstudio.defaultModel})`);
-    } else if (explicitProvider === 'copilot-api') {
-      // Explicit Copilot API (GitHub Models) — skip CLI auto-detection
+    };
+
+    const registerCopilotApiProvider = async (): Promise<void> => {
+      if (gateway.getProvider('copilot-api')) return;
       try {
         const copilot = new CopilotProvider();
         copilot.resolveToken();
@@ -2928,31 +2958,66 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       } catch (err) {
         console.log(`Copilot provider not available: ${err instanceof Error ? err.message : err}`);
       }
-    } else {
-      // Default: try Copilot CLI first, fall back to API provider
-      let registered = false;
+    };
+
+    const registerCopilotCliProvider = async (): Promise<void> => {
+      if (gateway.getProvider('copilot-cli')) return;
       try {
+        const repoRoot = resolve(__dirname, '..', '..');
+        const cliMode = process.env['COPILOT_CLI_MODE'] === 'article-tools'
+          || process.env['COPILOT_CLI_ENABLE_TOOLS'] === '1'
+          || process.env['COPILOT_ENABLE_TOOLS'] === '1'
+          ? 'article-tools'
+          : 'none';
+        const extraFlags = (process.env['COPILOT_EXTRA_FLAGS'] ?? '')
+          .split(',')
+          .map((flag) => flag.trim())
+          .filter((flag) => flag.length > 0);
         const cliProvider = new CopilotCLIProvider({
           defaultModel: process.env['COPILOT_MODEL'] ?? undefined,
           copilotPath: process.env['COPILOT_PATH'] ?? undefined,
+          extraFlags,
+          repoRoot,
+          workingDirectory: process.env['COPILOT_WORKING_DIRECTORY'] ?? repoRoot,
+          toolAccessMode: cliMode,
+          enableWebFetch:
+            cliMode === 'article-tools'
+            && process.env['COPILOT_ENABLE_WEB_FETCH'] !== '0'
+            && process.env['COPILOT_CLI_WEB_SEARCH'] !== '0',
+          enableRepoMcp:
+            cliMode === 'article-tools'
+            && process.env['COPILOT_ENABLE_REPO_MCP'] !== '0',
+          mcpConfigPath:
+            process.env['COPILOT_CLI_MCP_CONFIG']
+            ?? join(repoRoot, '.copilot', 'mcp-config.json'),
+          enableSessionReuse:
+            cliMode === 'article-tools'
+            && (
+              process.env['COPILOT_CLI_SESSION_REUSE'] === '1'
+              || process.env['COPILOT_ENABLE_SESSION_REUSE'] === '1'
+            ),
         });
         const version = await cliProvider.verify();
         gateway.registerProvider(cliProvider);
         console.log(`Copilot CLI provider registered (${version}, model: ${cliProvider['defaultModel']})`);
-        registered = true;
       } catch (err) {
         console.log(`Copilot CLI not available: ${err instanceof Error ? err.message : err}`);
       }
+    };
 
-      if (!registered) {
-        try {
-          const copilot = new CopilotProvider();
-          copilot.resolveToken();
-          gateway.registerProvider(copilot);
-          console.log('Copilot Pro+ provider registered (GitHub Models API fallback)');
-        } catch (err) {
-          console.log(`Copilot API provider also not available: ${err instanceof Error ? err.message : err}`);
-        }
+    if (process.env['MOCK_LLM'] === '1') {
+      await registerMockProvider();
+    } else {
+      const registrationOrder: Array<() => Promise<void>> = explicitProvider === 'lmstudio'
+        ? [registerLMStudioProvider, registerCopilotCliProvider, registerCopilotApiProvider]
+        : explicitProvider === 'copilot-api'
+          ? [registerCopilotApiProvider, registerCopilotCliProvider, registerLMStudioProvider]
+          : explicitProvider === 'copilot-cli'
+            ? [registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider]
+            : [registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider];
+
+      for (const registerProvider of registrationOrder) {
+        await registerProvider();
       }
     }
 
