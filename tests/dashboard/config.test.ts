@@ -129,4 +129,15 @@ describe('Config Viewer Page', () => {
     expect(html).toContain('DASHBOARD_AUTH_USERNAME');
     expect(html).toContain('joe');
   });
+
+  it('shows the Copilot CLI runtime defaults when env vars are unset', async () => {
+    const res = await app.request('/config');
+    const html = await res.text();
+    expect(html).toContain('COPILOT_MODEL');
+    expect(html).toContain('claude-sonnet-4.6 (default)');
+    expect(html).toContain('COPILOT_CLI_MODE');
+    expect(html).toContain('article-tools (default)');
+    expect(html).toContain('COPILOT_CLI_SESSION_REUSE');
+    expect(html).toContain('1 (default)');
+  });
 });

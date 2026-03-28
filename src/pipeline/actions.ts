@@ -526,8 +526,10 @@ function runAgent(
   surface: string,
   params: Omit<AgentRunParams, 'trace'>,
 ): Promise<AgentRunResult> {
+  const articleProvider = ctx.repo.getArticle(articleId)?.llm_provider ?? undefined;
   return ctx.runner.run({
     ...params,
+    provider: params.provider ?? articleProvider,
     trace: buildAgentTraceContext(ctx, articleId, stage, surface),
     toolCalling: {
       enabled: true,

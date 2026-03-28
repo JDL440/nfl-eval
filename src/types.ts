@@ -32,6 +32,7 @@ export interface Article {
   id: string;
   title: string;
   subtitle: string | null;
+  llm_provider: string | null;
   primary_team: string | null;
   teams: string | null;
   league: string;

@@ -50,6 +50,10 @@ const DEFAULT_DATA_DIR = join(homedir(), '.nfl-lab');
 const DEFAULT_LEAGUE = 'nfl';
 const DEFAULT_PORT = 3456;
 const DEFAULT_DASHBOARD_SESSION_COOKIE = 'nfl_lab_dashboard_session';
+export const COPILOT_CLI_DEFAULT_MODEL = 'claude-sonnet-4.6';
+export const COPILOT_CLI_DEFAULT_MODE = 'article-tools';
+export const COPILOT_CLI_DEFAULT_WEB_SEARCH = true;
+export const COPILOT_CLI_DEFAULT_SESSION_REUSE = true;
 
 /**
  * Load .env file if it exists (simple key=value parser, no dependency needed)

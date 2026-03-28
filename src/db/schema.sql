@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS articles (
     id              TEXT PRIMARY KEY,           -- url-safe slug, e.g. witherspoon-extension-2026
     title           TEXT NOT NULL,
     subtitle        TEXT,
+    llm_provider    TEXT,                       -- preferred provider for this article's LLM stages
     primary_team    TEXT,                       -- main team (e.g. "seahawks")
     teams           TEXT,                       -- JSON array, e.g. '["seahawks"]' or '["seahawks","chiefs"]'
     league          TEXT NOT NULL DEFAULT 'nfl',-- multi-sport ready

@@ -20,3 +20,21 @@ Another recurring failure mode is summary surfaces reading only a recent slice o
 ## Recommendation
 
 For dev-only transparency, log the full normalized request/response pair together with article/stage/surface/agent metadata, but keep production telemetry limited to durable summaries and redacted diagnostics.
+
+## Prompt-vs-envelope sanity check
+
+When a trace UI shows a surprising top-of-prompt rule or capability restriction, verify whether the app itself authored that text before blaming the upstream provider.
+
+1. Check the provider prompt builder (`src/llm/providers/*`) to see whether it injects policy text into the composed prompt.
+2. Compare the stored prompt field with the structured request envelope; a full composed prompt should not be described or interpreted as a semantic "delta".
+3. If the UI label is ambiguous, treat that as an observability bug or UX confusion seam separate from the runtime provider behavior.
+4. Also compare configured-vs-effective execution fields like working directory; metadata can drift from the actual execution plan even when the request envelope is otherwise correct.
+
+## Requested-vs-eligible sanity check
+
+When a trace envelope contains both a feature "requested" flag and an "eligible" flag, do not assume the pair is contradictory.
+
+1. Treat `requested` as the broad runtime/config intent (feature enabled for this provider mode).
+2. Treat `eligible` as the per-request gate after stage, surface, article-id, or safety constraints are applied.
+3. If `requested: true` and `eligible: false`, inspect the exact gate in provider code before calling it a bug.
+4. Also verify repo-root `.env` or startup env overrides before trusting source defaults; effective runtime config may still be older than the checked-in code until the server restarts.

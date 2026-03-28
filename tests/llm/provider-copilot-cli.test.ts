@@ -56,6 +56,7 @@ describe('CopilotCLIProvider', () => {
     const provider = new CopilotCLIProvider();
     expect(provider.id).toBe('copilot-cli');
     expect(provider.name).toBe('GitHub Copilot CLI');
+    expect(provider.configuredDefaultModel).toBe('claude-sonnet-4.6');
   });
 
   it('lists supported models and aliases', () => {
@@ -110,14 +111,20 @@ describe('CopilotCLIProvider', () => {
   it('uses the configured default or requested model', async () => {
     stubExecFile('Response');
 
-    const provider = new CopilotCLIProvider({ defaultModel: 'gpt-5.4' });
+    const provider = new CopilotCLIProvider();
     await provider.chat(req());
     let args = (mockExecFile.mock.calls[0] as unknown[])[1] as string[];
+    expect(args[args.indexOf('--model') + 1]).toBe('claude-sonnet-4.6');
+
+    stubExecFile('Response');
+    const customProvider = new CopilotCLIProvider({ defaultModel: 'gpt-5.4' });
+    await customProvider.chat(req());
+    args = (mockExecFile.mock.calls[1] as unknown[])[1] as string[];
     expect(args[args.indexOf('--model') + 1]).toBe('gpt-5.4');
 
     stubExecFile('Response');
-    await provider.chat(req({ model: 'claude-opus-4.6' }));
-    args = (mockExecFile.mock.calls[1] as unknown[])[1] as string[];
+    await customProvider.chat(req({ model: 'claude-opus-4.6' }));
+    args = (mockExecFile.mock.calls[2] as unknown[])[1] as string[];
     expect(args[args.indexOf('--model') + 1]).toBe('claude-opus-4.6');
   });
 
@@ -164,7 +171,7 @@ describe('CopilotCLIProvider', () => {
     }));
   });
 
-  it('reuses article-stage sessions when enabled and traces the session envelope', async () => {
+  it('reuses stage 4 article sessions when enabled and traces the session envelope', async () => {
     stubExecFile('Trace me');
 
     const provider = new CopilotCLIProvider({
@@ -179,8 +186,8 @@ describe('CopilotCLIProvider', () => {
     const res = await provider.chat(req({
       providerContext: {
         articleId: 'trace-article',
-        stage: 5,
-        surface: 'writeDraft',
+        stage: 4,
+        surface: 'composePanel',
       },
     }));
 
@@ -193,13 +200,45 @@ describe('CopilotCLIProvider', () => {
       sessionReuseRequested: true,
       sessionReuseEligible: true,
       sessionReuseFallback: false,
-      stage: 5,
-      surface: 'writeDraft',
+      stage: 4,
+      surface: 'composePanel',
       mcpServerNames: ['nfl-eval-pipeline', 'nfl-eval-local'],
     }));
 
     const args = (mockExecFile.mock.calls[0] as unknown[])[1] as string[];
     expect(args.some((arg) => arg.startsWith('--resume=copilot-session-'))).toBe(true);
+  });
+
+  it('treats stage 4 article runs as session-reuse eligible when article-tools mode is active', async () => {
+    stubExecFile('Stage 4 trace');
+
+    const provider = new CopilotCLIProvider({
+      workingDirectory: REPO_ROOT,
+      repoRoot: REPO_ROOT,
+      mcpConfigPath: MCP_CONFIG,
+      toolAccessMode: 'article-tools',
+      enableWebFetch: true,
+      enableRepoMcp: true,
+      enableSessionReuse: true,
+    });
+    const res = await provider.chat(req({
+      providerContext: {
+        articleId: 'stage-4-article',
+        stage: 4,
+        surface: 'outline',
+      },
+    }));
+
+    const args = (mockExecFile.mock.calls[0] as unknown[])[1] as string[];
+    expect(args.some((arg) => arg.startsWith('--resume=copilot-session-'))).toBe(true);
+    expect(res.providerMetadata?.providerMode).toBe('resumed');
+    expect(res.providerMetadata?.requestEnvelope).toEqual(expect.objectContaining({
+      toolAccessMode: 'article-tools',
+      sessionReuseRequested: true,
+      sessionReuseEligible: true,
+      stage: 4,
+      surface: 'outline',
+    }));
   });
 
   it('falls back to one-shot if a resumed session fails once', async () => {
@@ -353,6 +392,37 @@ describe('CopilotCLIProvider', () => {
       providerMetadata: expect.objectContaining({
         providerMode: 'one-shot',
         workingDirectory: REPO_ROOT,
+      }),
+    });
+  });
+
+  it('captures stderr and exit code in provider metadata for CLI failures', async () => {
+    stubExecFileError(1, 'Execution failed: upstream unknown error');
+
+    const provider = new CopilotCLIProvider({
+      workingDirectory: REPO_ROOT,
+      repoRoot: REPO_ROOT,
+      toolAccessMode: 'article-tools',
+      enableWebFetch: true,
+      enableRepoMcp: true,
+      mcpConfigPath: MCP_CONFIG,
+    });
+
+    await expect(provider.chat(req({
+      providerContext: {
+        articleId: 'article-1',
+        stage: 1,
+        surface: 'generatePrompt',
+      },
+    }))).rejects.toMatchObject({
+      message: expect.stringContaining('Execution failed: upstream unknown error'),
+      providerMetadata: expect.objectContaining({
+        providerMode: 'one-shot',
+        responseEnvelope: expect.objectContaining({
+          exitCode: 1,
+          stdout: null,
+          stderr: 'Execution failed: upstream unknown error',
+        }),
       }),
     });
   });

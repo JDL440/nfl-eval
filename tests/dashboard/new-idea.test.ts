@@ -155,11 +155,16 @@ describe('renderNewIdeaPage', () => {
       llmProviders: [
         { id: 'lmstudio', name: 'LM Studio (Local)', default: true },
         { id: 'copilot-cli', name: 'GitHub Copilot CLI' },
+        { id: 'copilot', name: 'GitHub Copilot Pro+' },
       ],
     });
     expect(html).toContain('name="provider"');
     expect(html).toContain('LM Studio (Local) (default)');
     expect(html).toContain('GitHub Copilot CLI');
+    expect(html).toContain('GitHub Copilot Pro+');
+    expect(html).toContain('saved on the article and reused for later LLM stages');
+    expect(html).toContain('<strong>copilot</strong> = GitHub Copilot Pro+ via GitHub Models API');
+    expect(html).toContain('<strong>copilot-cli</strong> = GitHub Copilot CLI agent');
   });
 });
 

@@ -411,7 +411,8 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Prompt output');
       expect(html).toContain('ideaGeneration');
       expect(html).toContain('generatePrompt');
-      expect(html).toContain('Provider Prompt Delta');
+      expect(html).toContain('Provider-Wrapped Prompt');
+      expect(html).not.toContain('Provider Prompt Delta');
       expect(html).toContain('Provider Request Envelope');
       expect(html).toContain('CWD: C:\\github\\worktrees\\copilot-session-reuse');
     });
@@ -510,6 +511,25 @@ describe('Dashboard Server', () => {
         body: JSON.stringify({ id: 'no-title' }),
       });
       expect(res.status).toBe(400);
+    });
+
+    it('POST /api/ideas persists the selected provider on the article', async () => {
+      const res = await app.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Can the Chargers thrive without a star running back in 2026?',
+          teams: ['lac'],
+          depthLevel: 2,
+          provider: 'copilot',
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string };
+      const article = repo.getArticle(body.id);
+      expect(article).not.toBeNull();
+      expect(article!.llm_provider).toBe('copilot');
     });
 
     it('POST /api/articles/:id/advance advances stage', async () => {

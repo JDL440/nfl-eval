@@ -17,7 +17,7 @@ source: "designed 2026-03-15 — Gemini API docs + NFL Lab editorial standards"
 
 Generate high-quality editorial images for NFL Lab articles using Google Imagen 3 via the `generate_article_images` Copilot extension. Images are generated **after the Writer produces a draft** so they are available for the Editor to review alongside the text.
 
-**Requires:** `GEMINI_API_KEY` set in `.env` (see `.env.example`). Get a key at https://ai.google.dev/gemini-api/docs/get-api-key
+**Requires:** `GEMINI_API_KEY` set in `.env` (see `.env.sample`). Get a key at https://ai.google.dev/gemini-api/docs/get-api-key
 
 ---
 

@@ -245,8 +245,18 @@ export class Repository {
     const schemaPath = join(__dirname, 'schema.sql');
     const sql = readFileSync(schemaPath, 'utf-8');
     this.db.exec(sql);
+    this.ensureArticleColumns();
     this.ensureRevisionSummaryColumns();
     this.ensureLlmTraceColumns();
+  }
+
+  private ensureArticleColumns(): void {
+    const columns = this.db.prepare('PRAGMA table_info(articles)').all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+
+    if (!columnNames.has('llm_provider')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN llm_provider TEXT');
+    }
   }
 
   private ensureRevisionSummaryColumns(): void {
@@ -607,7 +617,7 @@ export class Repository {
 
   updateArticle(
     articleId: string,
-    updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[] },
+    updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[]; llm_provider?: string | null },
   ): Article {
     const article = this.getArticle(articleId);
     if (article == null) {
@@ -646,6 +656,12 @@ export class Repository {
       const unique = [...new Set(teams)];
       setParts.push('teams = ?');
       params.push(unique.length > 0 ? JSON.stringify(unique) : null);
+    }
+
+    if (updates.llm_provider !== undefined) {
+      const provider = updates.llm_provider == null ? null : String(updates.llm_provider).trim();
+      setParts.push('llm_provider = ?');
+      params.push(provider || null);
     }
 
     if (setParts.length === 0) return article;
@@ -1598,6 +1614,7 @@ export class Repository {
   createArticle(params: {
     id: string;
     title: string;
+    llm_provider?: string | null;
     primary_team?: string;
     league?: string;
     depth_level?: number;
@@ -1605,6 +1622,7 @@ export class Repository {
     const {
       id,
       title,
+      llm_provider = null,
       primary_team = null,
       league = 'nfl',
       depth_level = 2,
@@ -1620,11 +1638,11 @@ export class Repository {
 
     const stmt = this.db.prepare(
       `INSERT INTO articles
-       (id, title, primary_team, teams, league, status, current_stage,
+       (id, title, llm_provider, primary_team, teams, league, status, current_stage,
         created_at, updated_at, depth_level, time_sensitive)
-       VALUES (?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, 0)`,
+       VALUES (?, ?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, 0)`,
     );
-    stmt.run(id, title, primary_team, teams, league, now, now, depth_level);
+    stmt.run(id, title, llm_provider, primary_team, teams, league, now, now, depth_level);
 
     const transStmt = this.db.prepare(
       `INSERT INTO stage_transitions

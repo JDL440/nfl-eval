@@ -151,7 +151,7 @@ export function renderTraceCards(traces: LlmTrace[]): string {
             </div>
             ${renderTextBlock('System Prompt', trace.system_prompt, index === 0)}
             ${renderTextBlock('User Message', trace.user_message, index === 0)}
-            ${renderTextBlock('Provider Prompt Delta', trace.incremental_prompt)}
+            ${renderTextBlock('Provider-Wrapped Prompt', trace.incremental_prompt)}
             ${renderJsonBlock('Provider Request Envelope', trace.provider_request_json)}
             ${renderJsonBlock('Provider Response Envelope', trace.provider_response_json)}
             ${renderTextBlock('Thinking', trace.thinking_text)}

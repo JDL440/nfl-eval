@@ -15,7 +15,15 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
-import { loadConfig, prepareRuntimeDataDir, resolveDashboardAuthConfig } from '../config/index.js';
+import {
+  COPILOT_CLI_DEFAULT_MODE,
+  COPILOT_CLI_DEFAULT_MODEL,
+  COPILOT_CLI_DEFAULT_SESSION_REUSE,
+  COPILOT_CLI_DEFAULT_WEB_SEARCH,
+  loadConfig,
+  prepareRuntimeDataDir,
+  resolveDashboardAuthConfig,
+} from '../config/index.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Stage, Article } from '../types.js';
 import { PipelineEngine } from '../pipeline/engine.js';
@@ -882,6 +890,7 @@ export function createApp(
     const envVars = [
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'COPILOT_MODEL',
       'COPILOT_CLI_MODE',
       'COPILOT_CLI_MCP_CONFIG',
       'COPILOT_CLI_SESSION_REUSE',
@@ -902,6 +911,7 @@ export function createApp(
     const displayableVars = new Set([
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'COPILOT_MODEL',
       'COPILOT_CLI_MODE',
       'COPILOT_CLI_MCP_CONFIG',
       'COPILOT_CLI_SESSION_REUSE',
@@ -915,10 +925,11 @@ export function createApp(
     ]);
     const envDefaultValues: Record<string, string> = {
       DATA_SOURCE: 'scripts',
-      COPILOT_CLI_MODE: 'none',
+      COPILOT_MODEL: COPILOT_CLI_DEFAULT_MODEL,
+      COPILOT_CLI_MODE: COPILOT_CLI_DEFAULT_MODE,
       COPILOT_CLI_MCP_CONFIG: join(process.cwd(), '.copilot', 'mcp-config.json'),
-      COPILOT_CLI_SESSION_REUSE: '0',
-      COPILOT_CLI_WEB_SEARCH: '1',
+      COPILOT_CLI_SESSION_REUSE: COPILOT_CLI_DEFAULT_SESSION_REUSE ? '1' : '0',
+      COPILOT_CLI_WEB_SEARCH: COPILOT_CLI_DEFAULT_WEB_SEARCH ? '1' : '0',
       DASHBOARD_AUTH_MODE: dashboardAuth.mode,
       DASHBOARD_SESSION_COOKIE: dashboardAuth.sessionCookieName,
       DASHBOARD_SESSION_TTL_HOURS: String(dashboardAuth.sessionTtlHours),
@@ -1111,8 +1122,8 @@ export function createApp(
       return c.json({ error: 'id and title are required' }, 400);
     }
 
-    try {
-      const article = repo.createArticle({ id, title, primary_team, league, depth_level });
+      try {
+        const article = repo.createArticle({ id, title, primary_team, league, depth_level });
 
       // Store idea artifact in DB
       repo.artifacts.put(id, 'idea.md', `# ${title}\n`);
@@ -1240,6 +1251,7 @@ export function createApp(
       repo.createArticle({
         id: slug,
         title,
+        llm_provider: requestedProvider || undefined,
         primary_team: teams[0] ?? undefined,
         league: config.league,
         depth_level: depthLevel,
@@ -2968,17 +2980,23 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       if (gateway.getProvider('copilot-cli')) return;
       try {
         const repoRoot = resolve(__dirname, '..', '..');
-        const cliMode = process.env['COPILOT_CLI_MODE'] === 'article-tools'
-          || process.env['COPILOT_CLI_ENABLE_TOOLS'] === '1'
-          || process.env['COPILOT_ENABLE_TOOLS'] === '1'
-          ? 'article-tools'
-          : 'none';
+        const rawCliMode = (process.env['COPILOT_CLI_MODE'] ?? '').trim().toLowerCase();
+        const cliMode = rawCliMode === 'none'
+          ? 'none'
+          : rawCliMode === 'article-tools'
+            ? 'article-tools'
+            : process.env['COPILOT_CLI_ENABLE_TOOLS'] === '1'
+              || process.env['COPILOT_ENABLE_TOOLS'] === '1'
+              ? 'article-tools'
+              : COPILOT_CLI_DEFAULT_MODE;
+        const sessionReuseOverride = process.env['COPILOT_CLI_SESSION_REUSE']
+          ?? process.env['COPILOT_ENABLE_SESSION_REUSE'];
         const extraFlags = (process.env['COPILOT_EXTRA_FLAGS'] ?? '')
           .split(',')
           .map((flag) => flag.trim())
           .filter((flag) => flag.length > 0);
         const cliProvider = new CopilotCLIProvider({
-          defaultModel: process.env['COPILOT_MODEL'] ?? undefined,
+          defaultModel: process.env['COPILOT_MODEL'] ?? COPILOT_CLI_DEFAULT_MODEL,
           copilotPath: process.env['COPILOT_PATH'] ?? undefined,
           extraFlags,
           repoRoot,
@@ -2997,8 +3015,9 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
           enableSessionReuse:
             cliMode === 'article-tools'
             && (
-              process.env['COPILOT_CLI_SESSION_REUSE'] === '1'
-              || process.env['COPILOT_ENABLE_SESSION_REUSE'] === '1'
+              sessionReuseOverride
+                ? sessionReuseOverride === '1'
+                : COPILOT_CLI_DEFAULT_SESSION_REUSE
             ),
         });
         const version = await cliProvider.verify();
