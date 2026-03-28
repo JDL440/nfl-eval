@@ -20,7 +20,7 @@ export const WRITER_PREFLIGHT_ARTIFACT_NAME = 'writer-preflight.md';
 
 const WRITER_PREFLIGHT_HEADER = 'Before you return the draft, run this short editor-style preflight on only the top blockers:';
 const WRITER_PREFLIGHT_CHECKS = [
-  '- Names: keep every full name exactly consistent with supplied artifacts. Do not expand a last name into a full name unless that exact full name appears in the supplied material.',
+  '- Names: prefer exact names from supplied artifacts for consistency, but do not stop the draft over harmless name expansions or alternate full-name wording alone.',
   '- Precise facts: if you state a contract figure, date, draft fact, or stat, it must come from supplied artifacts or the bounded writer fact-check. Otherwise attribute it, soften it, or cut it.',
   '- No guesswork: do not add new unsupported specifics just to make the prose sound smoother.',
 ] as const;
@@ -132,14 +132,16 @@ export function runWriterPreflight(params: {
 
   const blockingIssues = dedupeIssues([
     ...findPlaceholderLeakageIssues(params.draft),
-    ...findNameConsistencyIssues(draftText, sourceText),
     ...findUnsourcedClaimIssues(draftText, sourceText),
     ...findUnsourcedDateIssues(draftText, sourceText),
   ]).slice(0, BLOCKING_ISSUE_LIMIT);
+  const warnings = dedupeIssues([
+    ...findNameConsistencyIssues(draftText, sourceText),
+  ]);
 
   return {
     blockingIssues,
-    warnings: [],
+    warnings,
   };
 }
 
@@ -189,22 +191,22 @@ function findNameConsistencyIssues(draft: string, sourceText: string): WriterPre
 
     const supportedNames = sourceLastNameMap.get(lastName);
     if (supportedNames && supportedNames.size > 0) {
-      const preferredName = [...supportedNames][0] ?? draftName;
-      issues.push({
-        severity: 'blocking',
-        code: 'name-consistency',
-        message: `Draft uses "${draftName}", but supplied artifacts support "${preferredName}". Keep exact names from supplied artifacts and do not invent unsupported expansions.`,
-      });
-      continue;
-    }
+        const preferredName = [...supportedNames][0] ?? draftName;
+        issues.push({
+          severity: 'warning',
+          code: 'name-consistency',
+          message: `Draft uses "${draftName}", but supplied artifacts support "${preferredName}". Prefer the supplied wording for consistency, but this alone should not block the draft.`,
+        });
+        continue;
+      }
 
-    if (hasStandaloneLastName(sourceText, lastName)) {
-      issues.push({
-        severity: 'blocking',
-        code: 'unsupported-name-expansion',
-        message: `Draft expands "${draftName}" even though the supplied artifacts only support the "${lastName}" reference. Keep the wording generic or use only exact names that appear in the supplied material.`,
-      });
-    }
+      if (hasStandaloneLastName(sourceText, lastName)) {
+        issues.push({
+          severity: 'warning',
+          code: 'unsupported-name-expansion',
+          message: `Draft expands "${draftName}" even though the supplied artifacts only support the "${lastName}" reference. Prefer the supplied wording or keep it generic, but do not block the draft over this alone.`,
+        });
+      }
   }
 
   return issues;

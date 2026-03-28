@@ -7,12 +7,12 @@ describe('writer preflight', () => {
     const checklist = buildWriterPreflightChecklist();
 
     expect(checklist).toContain('short editor-style preflight on only the top blockers');
-    expect(checklist).toContain('Do not expand a last name into a full name');
+    expect(checklist).toContain('do not stop the draft over harmless name expansions');
     expect(checklist).toContain('contract figure, date, draft fact, or stat');
     expect(checklist).toContain('No guesswork');
   });
 
-  it('flags unsupported name variants against supplied artifacts', () => {
+  it('downgrades unsupported name variants against supplied artifacts to warnings', () => {
     const state = runWriterPreflight({
       draft: '**Jackson Smith-Njigba** is about to become the offense\'s hinge point.',
       sourceArtifacts: [
@@ -20,9 +20,10 @@ describe('writer preflight', () => {
       ],
     });
 
-    expect(state.blockingIssues).toHaveLength(1);
-    expect(state.blockingIssues[0]?.code).toBe('name-consistency');
-    expect(state.blockingIssues[0]?.message).toContain('Jaxon Smith-Njigba');
+    expect(state.blockingIssues).toHaveLength(0);
+    expect(state.warnings).toHaveLength(1);
+    expect(state.warnings[0]?.code).toBe('name-consistency');
+    expect(state.warnings[0]?.message).toContain('Jaxon Smith-Njigba');
   });
 
   it('ignores NFL Lab team branding phrases when extracting supported names', () => {
