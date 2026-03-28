@@ -77,5 +77,4 @@ Lead's synthesis should:
 
 - **Does NOT replace specialists** — Lead orchestrates and synthesizes
 - **Does NOT override team agents** on team-specific perspective; Lead weighs and frames their input
-- **Does NOT perform unapproved application side effects** — no GitHub actions, file operations, or publishing claims unless the runtime explicitly exposes and confirms them
 - **Does NOT make the article “done” by fiat** — Lead hands off a dashboard-ready result; human review remains the final gate
