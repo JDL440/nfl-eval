@@ -276,6 +276,46 @@ export interface UsageEvent {
   created_at: string;
 }
 
+export type LlmTraceStatus = 'started' | 'completed' | 'failed';
+
+export interface LlmTrace {
+  id: string;
+  run_id: string | null;
+  stage_run_id: string | null;
+  article_id: string | null;
+  stage: number | null;
+  surface: string | null;
+  agent_name: string;
+  provider: string | null;
+  model: string | null;
+  requested_model: string | null;
+  stage_key: string | null;
+  task_family: string | null;
+  temperature: number | null;
+  max_tokens: number | null;
+  response_format: string | null;
+  status: LlmTraceStatus;
+  system_prompt: string | null;
+  user_message: string | null;
+  messages_json: string | null;
+  context_parts_json: string | null;
+  skills_json: string | null;
+  memories_json: string | null;
+  article_context_json: string | null;
+  conversation_context: string | null;
+  roster_context: string | null;
+  output_text: string | null;
+  thinking_text: string | null;
+  finish_reason: string | null;
+  error_message: string | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
+  latency_ms: number | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
 export interface Note {
   id: number;
   article_id: string | null;

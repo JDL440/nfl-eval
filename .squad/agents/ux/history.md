@@ -1,3 +1,45 @@
+## 2026-03-28T06:39:56Z — v3 LLM Tracing Dashboard Surfaces — Analysis Complete
+
+**Status:** ✓ Analysis complete; ready for Code Phase 1 completion before UI implementation
+
+**Scope:** First-class LLM inputs/outputs only (no tool-calling in v3)
+
+**UX Surface Strategy:**
+
+**Primary: Article Detail — Advanced Section (New "LLM Trace Inspector")**
+- Add new subsection in Advanced section (collapsed by default)
+- Filter by agent name, stage
+- List of traces with timestamps
+- Click trace → modal with tabs: Request | Response | Thinking | Metadata
+- Request tab: system prompt, model, temperature, budget
+- Response tab: full response text, finish reason, token usage, cost
+- Thinking tab: extracted thinking block (if present)
+- Metadata tab: provider, initiated_by, timing, notes
+- Copy button for prompt/response text
+
+**Secondary: Global Runs Page**
+- Add new "Trace Link" column (right of Error column)
+- If stage_run_id has matching llm_traces, show clickable link
+- Click → opens same modal as Advanced section
+- Adds optional filters: provider dropdown, finish-reason dropdown
+
+**Existing UI Alignment:**
+- **Usage Panel:** Remains cost/aggregate focused (token counts, cost by model/provider/stage)
+- **Stage Runs Panel:** Remains execution metadata focused (status, duration, model)
+- **Artifact Tabs:** Remains artifact-centric (idea.md, draft.md, etc.)
+- **Thinking Traces:** Continue via `.thinking.md` sidecars; UI shows 💭 trace badge
+- **No layout disruption:** All changes additive to existing sections
+
+**Implementation Phasing:**
+1. **Week 1:** Code Phase 1 (schema + gateway + repository)
+2. **Week 2:** Code Phase 2 (dashboard endpoints + basic UI)
+3. **Week 3:** UX Phase 1 (article detail trace tab + modal rendering)
+4. **Week 4:** UX Phase 2 (runs page trace link + polish)
+
+**Orchestration log:** .squad/orchestration-log/2026-03-28T06-39-56Z-ux.md
+
+---
+
 ## 2026-03-27T07:30:00Z — V3 Revision-State UX Pass & Mobile Width Fix Implementation
 
 **Orchestration log:** .squad/orchestration-log/2026-03-27T07-30-00Z-ux.md  
@@ -94,6 +136,7 @@
 
 ## Learnings
 
+- 2026-03-28 — **v3 LLM tracing surface audit.** First-class LLM input/output tracing should surface four interconnected views: (1) global `/runs` page with provider/token/finish-reason columns (reuses existing `stage_runs` and `usage_events` tables), (2) article detail action panel showing current model/provider attribution inline, (3) article detail Advanced panel with Audit Log sub-section per stage run (model + tokens + duration + finish reason), (4) usage sidebar with token-by-stage and cost-by-provider breakdown. Phase 1 prioritizes runs page + inline attribution (week 1); Phase 2 adds Advanced panel audit log (week 2); Phase 3 adds telemetry breakdown (week 3); Phase 4 hardens mobile rendering. All rendering in `src/dashboard/views/{runs,article}.ts`; no schema changes except optional `finish_reason TEXT` column in `usage_events` for structured recording. SSE refresh pattern: emit `sse:usage_recorded` from stage advance handlers, subscribe article detail via `hx-trigger="... sse:usage_recorded"`. HTMX fragment scoping: use outer-scope SSE trigger on `.article-detail` container to refresh both action panel and advanced panel. Mobile safety: tooltip fallback to `<details>` elements on <768px; token bars use percentage widths. Mitigations documented in `.squad/decisions/inbox/ux-llm-tracing-surfaces.md`.
 - 2026-03-26 — Multi-provider rollout should reuse the existing article metadata HTMX seam instead of adding a new settings surface. In `src\dashboard\views\article.ts`, the stable UX is a provider badge in the read view plus an `AI Provider` select in the inline metadata editor with `Auto (recommended)` as the null/default value; route glue in `src\dashboard\server.ts` only needs to pass provider options into `/htmx/articles/:id/edit-meta` and persist `llm_provider` alongside the existing metadata fields. The persistent contract now lives in `src\types.ts`, `src\db\schema.sql`, and `src\db\repository.ts`, with focused regression coverage in `tests\dashboard\{config,metadata-edit,server}.test.ts`.
 - 2026-03-28 — Finalized the V3 revision workspace copy around the draft-first scan path. In `worktrees\V3\src\dashboard\views\article.ts`, Stage 4 + `status='revision'` now stays consistently framed as `Revision Workspace`, the workflow line reads `Draft revision in progress · Next: Article Drafting`, revision tabs emphasize `Working Draft` and `Editor Feedback` before `Background Context`, and the lead-review send-back hint uses the same wording. Focused regression coverage lives in `worktrees\V3\tests\dashboard\server.test.ts`; `worktrees\V3\tests\dashboard\wave2.test.ts` still guards the earlier mobile-safe article gallery behavior, and `npm run v2:build` is currently blocked by an unrelated existing TypeScript error in `worktrees\V3\src\pipeline\actions.ts`.
 - 2026-03-28 — V3 revision-state simplification should stay draft-first even when the canonical stage remains 4. In `worktrees\V3\src\dashboard\views\article.ts`, treat `current_stage === 4 && status === 'revision'` as a `Revision Workspace`, alias the stage timeline/pipeline label away from `Panel Discussion`, and order artifact tabs as `draft.md` → `editor-review.md` → `discussion-summary.md` with a short hint explaining that background context is secondary. Keep the earlier mobile-width hardening in `worktrees\V3\src\dashboard\public\styles.css` intact, and protect the behavior with focused assertions in `worktrees\V3\tests\dashboard\server.test.ts` plus the mobile-safe gallery check in `worktrees\V3\tests\dashboard\wave2.test.ts`.
@@ -128,4 +171,5 @@
 - Research memo guidance
 
 **Outcome:** Concise no-edit plan preserving dirty Stage 4/Stage 6 wording changes, artifact priority, and mobile-safe CSS behavior ready for Code team implementation.
+
 

@@ -690,6 +690,61 @@ describe('Repository', () => {
       const runs = repo.getStageRuns('artifact');
       expect(runs[0].artifact_path).toBe('content/articles/artifact/draft.md');
     });
+
+    it('stores and queries llm traces by article and stage run', () => {
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const stageRunId = repo.startStageRun({
+        articleId: 'trace-article',
+        stage: 1,
+        surface: 'generatePrompt',
+        actor: 'lead',
+      });
+
+      const traceId = repo.startLlmTrace({
+        articleId: 'trace-article',
+        stageRunId,
+        stage: 1,
+        surface: 'generatePrompt',
+        agentName: 'lead',
+        requestedModel: 'gpt-5.4',
+        systemPrompt: 'System prompt',
+        userMessage: 'User task',
+        messages: [{ role: 'system', content: 'System prompt' }, { role: 'user', content: 'User task' }],
+        contextParts: [{ channel: 'system', kind: 'charter_identity', label: 'Identity', content: 'System prompt' }],
+      });
+
+      repo.completeLlmTrace(traceId, {
+        provider: 'copilot-cli',
+        model: 'gpt-5.4',
+        outputText: 'Trace output',
+        thinkingText: 'Trace thinking',
+        finishReason: 'stop',
+        promptTokens: 120,
+        completionTokens: 45,
+        totalTokens: 165,
+        latencyMs: 321,
+      });
+
+      const byArticle = repo.getArticleLlmTraces('trace-article');
+      const byStageRun = repo.getStageRunLlmTraces(stageRunId);
+      const detail = repo.getStageRunDetail(stageRunId);
+
+      expect(byArticle).toHaveLength(1);
+      expect(byStageRun).toHaveLength(1);
+      expect(byArticle[0].id).toBe(traceId);
+      expect(byArticle[0].status).toBe('completed');
+      expect(byArticle[0].output_text).toBe('Trace output');
+      expect(byArticle[0].thinking_text).toBe('Trace thinking');
+      expect(JSON.parse(byArticle[0].context_parts_json ?? '[]')).toEqual([
+        {
+          channel: 'system',
+          kind: 'charter_identity',
+          label: 'Identity',
+          content: 'System prompt',
+        },
+      ]);
+      expect(detail?.trace_count).toBe(1);
+    });
   });
 
   // ── Startup recovery ────────────────────────────────────────────────────────

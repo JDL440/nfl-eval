@@ -162,6 +162,14 @@ describe('Pipeline Runs page', () => {
       expect(html).toContain('gpt-4o');
     });
 
+    it('links each run row to its drill-down page', async () => {
+      const runId = createArticleAndRun('article-detail-link', 'Detail Link Article', 'completed');
+
+      const res = await app.request('/runs');
+      const html = await res.text();
+      expect(html).toContain(`/runs/${runId}`);
+    });
+
     it('shows most recent runs first (desc order)', async () => {
       createArticleAndRun('older-article', 'Older Article', 'completed');
       // Small delay to ensure different timestamps
@@ -273,6 +281,37 @@ describe('Pipeline Runs page', () => {
       const html = await res.text();
       expect(html).toContain('href="/runs"');
       expect(html).toContain('📊 Runs');
+    });
+  });
+
+  describe('GET /runs/:id', () => {
+    it('renders the run drill-down with llm traces', async () => {
+      const runId = createArticleAndRun('run-detail', 'Run Detail Article', 'completed');
+      const traceId = repo.startLlmTrace({
+        articleId: 'run-detail',
+        stageRunId: runId,
+        stage: 1,
+        surface: 'ideaGeneration',
+        agentName: 'lead',
+        requestedModel: 'gpt-4o',
+        systemPrompt: 'System prompt',
+        userMessage: 'User prompt',
+      });
+      repo.completeLlmTrace(traceId, {
+        provider: 'copilot-cli',
+        model: 'gpt-4o',
+        outputText: 'Trace output',
+        thinkingText: 'Trace thinking',
+        totalTokens: 321,
+      });
+
+      const res = await app.request(`/runs/${runId}`);
+      const html = await res.text();
+      expect(res.status).toBe(200);
+      expect(html).toContain('Run Detail');
+      expect(html).toContain('LLM Traces');
+      expect(html).toContain('Trace output');
+      expect(html).toContain('System Prompt');
     });
   });
 });

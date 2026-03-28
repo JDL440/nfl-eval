@@ -129,6 +129,54 @@ CREATE INDEX IF NOT EXISTS idx_usage_events_stage_run
     ON usage_events(stage_run_id, created_at DESC);
 
 -- ─────────────────────────────────────────────
+-- LLM TRACES
+-- Canonical prompt / response envelopes for in-app agent runs.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS llm_traces (
+    id                  TEXT PRIMARY KEY,
+    run_id              TEXT REFERENCES article_runs(id),
+    stage_run_id        TEXT REFERENCES stage_runs(id),
+    article_id          TEXT REFERENCES articles(id),
+    stage               INTEGER,
+    surface             TEXT,
+    agent_name          TEXT NOT NULL,
+    provider            TEXT,
+    model               TEXT,
+    requested_model     TEXT,
+    stage_key           TEXT,
+    task_family         TEXT,
+    temperature         REAL,
+    max_tokens          INTEGER,
+    response_format     TEXT,
+    status              TEXT NOT NULL DEFAULT 'started',
+    system_prompt       TEXT,
+    user_message        TEXT,
+    messages_json       TEXT,
+    context_parts_json  TEXT,
+    skills_json         TEXT,
+    memories_json       TEXT,
+    article_context_json TEXT,
+    conversation_context TEXT,
+    roster_context      TEXT,
+    output_text         TEXT,
+    thinking_text       TEXT,
+    finish_reason       TEXT,
+    error_message       TEXT,
+    prompt_tokens       INTEGER,
+    completion_tokens   INTEGER,
+    total_tokens        INTEGER,
+    latency_ms          INTEGER,
+    started_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at        TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_llm_traces_article
+    ON llm_traces(article_id, started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_llm_traces_stage_run
+    ON llm_traces(stage_run_id, started_at DESC);
+
+-- ─────────────────────────────────────────────
 -- ARTICLE PANELS
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS article_panels (

@@ -96,6 +96,124 @@ Enforce the policy in the app runtime, above providers:
 
 ---
 
+---
+
+## UX: v3 LLM Tracing Surfaces
+
+**Date:** 2026-03-28  
+**Owner:** UX  
+**Status:** Proposed
+
+Implement four interconnected surfaces for first-class LLM I/O tracing: (1) global `/runs` page with lean request envelope, (2) article detail with stage-run attribution inline, (3) Advanced panel with detailed per-stage tracing, (4) Usage telemetry sidebar with token/cost flow.
+
+**Key surfaces:**
+- **Runs page:** Add columns for Provider, Input Tokens, Output Tokens, Finish Reason
+- **Article detail action panel:** Show current model/provider attribution
+- **Advanced panel → Audit Log:** Per-stage-run rows with token bar, duration, finish reason
+- **Usage sidebar:** Token-by-stage breakdown, cost-by-provider, finish-reason distribution
+
+**Phased rollout (4 weeks):**
+1. Runs page + inline attribution (Week 1)
+2. Advanced panel Audit Log (Week 2)
+3. Usage telemetry breakdown (Week 3)
+4. Mobile & optimization (Week 4)
+
+**Schema changes (minimal):** Add `finish_reason TEXT` to `usage_events` (or parse from `metadata_json`)
+
+**Files affected:** `src/dashboard/views/{runs,article}.ts`, `src/dashboard/server.ts`, `src/db/schema.sql`, tests
+
+**Rationale:** Aligns with existing SSE/HTMX contracts, reuses `usage_events` + `stage_runs` (no migration risk), progressive disclosure pattern respects mobile + cognitive load
+
+# MERGED INBOX ENTRIES (2026-03-28T01:02:59Z)
+
+**Date:** 2026-03-28  
+**Owner:** Lead  
+**Status:** Proposed
+
+Implement tracing as a new first-class trace store linked to existing stage runs, not as an expansion of usage events or artifacts. Persist one trace row per provider attempt with normalized request/response envelopes. Scope explicitly excludes tool-calling transcripts in v3.
+
+**Rollout order:**
+1. Trace contract and types
+2. Schema and repository helpers
+3. Context threading from actions/dashboard entry points
+4. Gateway/provider capture
+5. Article detail UI (Advanced area)
+6. Article detail trace viewer
+7. Global `/runs` page with lightweight summary
+
+**Likely affected files:** `src/types.ts`, `src/db/schema.sql`, `src/db/repository.ts`, `src/agents/runner.ts`, `src/llm/gateway.ts`, `src/llm/providers/*`, `src/pipeline/actions.ts`, `src/dashboard/server.ts`, `src/dashboard/views/article.ts`, `src/dashboard/views/runs.ts`, tests
+
+Full decision in Lead Charter / v3 LLM Trace Plan.
+
+---
+
+## Code: v3 LLM Trace Capture Plan
+
+**Date:** 2026-03-28  
+**Owner:** Code  
+**Status:** Proposed
+
+Implement v3 first-class LLM tracing as a dedicated `llm_traces` table (separate from `usage_events`, `stage_runs`, and artifacts). Capture one row per LLM invocation with normalized, provider-agnostic envelopes.
+
+**Recommended contract:**
+- Link each trace to article, stage, surface, agent
+- Persist `request_envelope_json` (canonical ChatRequest after runner composition)
+- Persist `response_envelope_json` (canonical assistant response)
+- Include response_text, thinking_text (nullable), provider, model, tokens, finish_reason
+- Track sequence in stage run
+
+**Capture seam:** `src\agents\runner.ts` around `this._gateway.chat(...)`, before `separateThinking()` mutates response.
+
+**Affected files:** runner.ts, schema.sql, repository.ts, types.ts, pipeline/actions.ts, dashboard/server.ts, article.ts, runs.ts, tests
+
+---
+
+## Code: LLM Input/Output Tracing Audit
+
+**Date:** 2026-03-28  
+**Owner:** Code  
+**Status:** Proposed
+
+For first-class LLM I/O tracing only (no tool-call transcript support), implement a dedicated durable trace store linked to stage_runs and usage_events rather than overloading artifacts or conversations.
+
+**Key facts:**
+- Prompt assembly in `src\agents\runner.ts`
+- Provider routing in `src\llm\gateway.ts` returns normalized content, model, provider, usage
+- Stage execution in `src\pipeline\actions.ts` + `src\db\repository.ts`
+- Usage totals in `recordAgentUsage()` (tokens/cost/provider only)
+- Full outputs in `article_conversations` (post-processed, not canonical)
+- Thinking already in `*.thinking.md` sidecars
+
+**Recommendation:** Add dedicated trace table, capture at runner/gateway seam, reuse stage_runs/usage_events for linkage, defer tool-call transcript shape.
+
+**Implementation order:** Schema → repository methods → gateway/runner capture → dashboard article detail → runs page → tests
+
+---
+
+## Research: v3 LLM Trace Plan
+
+**Date:** 2026-03-28  
+**Owner:** Research  
+**Status:** Proposed
+
+Implement v3 first-class LLM tracing with dedicated `llm_traces` persistence seam capturing full request/response envelopes for app-owned agent calls. Forward-fill only for v3; no backfill of old traces.
+
+**Recommended fields:**
+- Linkage: id, article_id, run_id, stage_run_id, stage, surface, agent_name
+- Request: system_prompt, user_message, requested_model, provider_requested, temperature, max_tokens, message_count, input_hash
+- Response: response_content, thinking_content, actual_model, provider, finish_reason, output_hash
+- Runtime: prompt_tokens, output_tokens, cached_tokens, cost_estimate, duration_ms, status, error_message
+
+**Indexes:** `(article_id, completed_at DESC)`, `(stage_run_id)`, `(article_id, stage, surface, completed_at DESC)`
+
+**UX surfaces:** Article Advanced area summary + trace viewer, `/runs` page with trace drill-down drawer
+
+**Privacy:** Treat full traces as operator-sensitive; add redaction before persistence; track `is_redacted` and `redaction_version`
+
+**Validation:** Repository, runner, article detail, runs page tests; explicit exclusion of tool-call transcript support in this slice
+
+---
+
 # ORIGINAL DECISIONS
 
 ---

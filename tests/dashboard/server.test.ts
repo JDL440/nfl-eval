@@ -309,6 +309,97 @@ describe('Dashboard Server', () => {
       expect(html).toContain('ids=stale-stat');
     });
 
+    it('article detail advanced section surfaces llm trace summaries', async () => {
+      repo.createArticle({ id: 'detail-traces', title: 'Detail Traces' });
+      const stageRunId = repo.startStageRun({
+        articleId: 'detail-traces',
+        stage: 1,
+        surface: 'generatePrompt',
+        actor: 'lead',
+      });
+      const traceId = repo.startLlmTrace({
+        articleId: 'detail-traces',
+        stageRunId,
+        stage: 1,
+        surface: 'generatePrompt',
+        agentName: 'lead',
+        requestedModel: 'gpt-5.4',
+        systemPrompt: 'Trace system prompt',
+        userMessage: 'Trace user prompt',
+      });
+      repo.completeLlmTrace(traceId, {
+        provider: 'copilot-cli',
+        model: 'gpt-5.4',
+        outputText: 'Trace output preview',
+        totalTokens: 200,
+      });
+
+      const res = await app.request('/articles/detail-traces');
+      const html = await res.text();
+      expect(res.status).toBe(200);
+      expect(html).toContain('LLM Traces');
+      expect(html).toContain('Trace output preview');
+      expect(html).toContain(`/runs/${stageRunId}#trace-${traceId}`);
+      expect(html).toContain('/articles/detail-traces/traces');
+    });
+
+    it('article trace timeline page renders all traces for the article', async () => {
+      repo.createArticle({ id: 'detail-trace-timeline', title: 'Detail Trace Timeline' });
+      const stageRunOne = repo.startStageRun({
+        articleId: 'detail-trace-timeline',
+        stage: 1,
+        surface: 'ideaGeneration',
+        actor: 'lead',
+      });
+      const stageRunTwo = repo.startStageRun({
+        articleId: 'detail-trace-timeline',
+        stage: 2,
+        surface: 'generatePrompt',
+        actor: 'lead',
+      });
+      const traceOne = repo.startLlmTrace({
+        articleId: 'detail-trace-timeline',
+        stageRunId: stageRunOne,
+        stage: 1,
+        surface: 'ideaGeneration',
+        agentName: 'lead',
+        requestedModel: 'gpt-5.4',
+        systemPrompt: 'Idea prompt',
+        userMessage: 'Idea task',
+      });
+      const traceTwo = repo.startLlmTrace({
+        articleId: 'detail-trace-timeline',
+        stageRunId: stageRunTwo,
+        stage: 2,
+        surface: 'generatePrompt',
+        agentName: 'lead',
+        requestedModel: 'gpt-5.4',
+        systemPrompt: 'Prompt prompt',
+        userMessage: 'Prompt task',
+      });
+      repo.completeLlmTrace(traceOne, {
+        provider: 'copilot-cli',
+        model: 'gpt-5.4',
+        outputText: 'Idea output',
+        totalTokens: 111,
+      });
+      repo.completeLlmTrace(traceTwo, {
+        provider: 'copilot-cli',
+        model: 'gpt-5.4',
+        outputText: 'Prompt output',
+        totalTokens: 222,
+      });
+
+      const res = await app.request('/articles/detail-trace-timeline/traces');
+      const html = await res.text();
+      expect(res.status).toBe(200);
+      expect(html).toContain('LLM Trace Timeline');
+      expect(html).toContain('Idea output');
+      expect(html).toContain('Prompt output');
+      expect(html).toContain('ideaGeneration');
+      expect(html).toContain('generatePrompt');
+    });
+
     it('article detail surfaces paused lead review state and artifact tab', async () => {
       repo.createArticle({ id: 'detail-lead-review', title: 'Lead Review Detail' });
       for (let s = 2; s <= 5; s++) {

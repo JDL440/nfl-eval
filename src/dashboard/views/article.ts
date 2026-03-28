@@ -7,11 +7,12 @@
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
 import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
-import type { Article, Stage, StageTransition, StageRun, EditorReview, UsageEvent } from '../../types.js';
+import type { Article, Stage, StageTransition, StageRun, EditorReview, UsageEvent, LlmTrace } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { parseRevisionBlockerMetadata, type RevisionHistoryEntry } from '../../pipeline/conversation.js';
 import { markdownToHtml } from '../../services/markdown.js';
+import { renderTraceSummaryPanel } from './traces.js';
 
 const DEPTH_LABELS: Record<number, string> = {
   1: 'Quick Take',
@@ -45,6 +46,7 @@ export interface ArticleDetailData {
   advanceCheck?: AdvanceCheck;
   usageEvents?: UsageEvent[];
   stageRuns?: StageRun[];
+  llmTraces?: LlmTrace[];
   artifactNames?: string[];
   flashMessage?: string;
   errorMessage?: string;
@@ -161,7 +163,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, revisionHistory, advanceCheck, usageEvents, stageRuns, artifactNames, flashMessage, errorMessage, autoAdvanceActive, pinnedAgents } = data;
+  const { config, article, transitions, reviews, revisionHistory, advanceCheck, usageEvents, stageRuns, llmTraces, artifactNames, flashMessage, errorMessage, autoAdvanceActive, pinnedAgents } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -211,7 +213,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           hx-indicator="#pipeline-activity">
           ${renderUsagePanel(usageEvents ?? [])}
           ${renderStageRunsPanel(stageRuns ?? [])}
-          ${renderAdvancedSection(article, transitions, pinnedAgents)}
+          ${renderAdvancedSection(article, transitions, llmTraces ?? [], pinnedAgents)}
         </div>
       </div>
     </div>`;
@@ -299,10 +301,17 @@ export function renderLiveArtifacts(article: Article, artifactNames?: string[]):
   return renderArtifactTabs(article, artifactNames);
 }
 
-export function renderLiveSidebar(article: Article, usageEvents: UsageEvent[], stageRuns: StageRun[], transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
+export function renderLiveSidebar(
+  article: Article,
+  usageEvents: UsageEvent[],
+  stageRuns: StageRun[],
+  transitions: StageTransition[],
+  llmTraces: LlmTrace[],
+  pinnedAgents?: Array<{ agent_name: string; role: string | null }>,
+): string {
   return renderUsagePanel(usageEvents)
     + renderStageRunsPanel(stageRuns)
-    + renderAdvancedSection(article, transitions, pinnedAgents);
+    + renderAdvancedSection(article, transitions, llmTraces, pinnedAgents);
 }
 
 // ── Stage timeline ───────────────────────────────────────────────────────────
@@ -544,6 +553,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
   const previewLink = article.current_stage >= 5
     ? `<a href="/articles/${escapeHtml(article.id)}/preview" class="btn btn-secondary">👁 Preview</a>`
     : '';
+  const traceTimelineLink = `<a href="/articles/${escapeHtml(article.id)}/traces" class="btn btn-secondary">🧠 Full Trace Timeline</a>`;
 
   // Find the most recent stage_run failure for inline display
   const lastRun = stageRuns && stageRuns.length > 0 ? stageRuns[0] : undefined;
@@ -562,6 +572,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             ? `<a href="${escapeHtml(article.substack_url)}" target="_blank" class="btn btn-secondary">View on Substack ↗</a>`
             : ''}
           ${previewLink}
+          ${traceTimelineLink}
         </div>
         ${renderDangerZone(article)}
       </section>`;
@@ -597,6 +608,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
         <div class="action-bar">
           <span class="badge badge-status badge-status-needs_lead_review">⏸ Needs Lead review</span>
           ${previewLink}
+          ${traceTimelineLink}
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
             <form class="send-back-form"
@@ -647,6 +659,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
             : ''}
           <a href="/articles/${escapeHtml(article.id)}/publish" class="btn btn-primary">Open Publish Page</a>
           ${previewLink}
+          ${traceTimelineLink}
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
             <form class="send-back-form"
@@ -692,6 +705,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Preview Draft ↗</a>`
           : ''}
         ${previewLink}
+        ${traceTimelineLink}
         <button class="btn btn-primary"
           hx-post="/htmx/articles/${escapeHtml(article.id)}/auto-advance"
           hx-target="#advance-result-${escapeHtml(article.id)}"
@@ -875,12 +889,18 @@ function renderEditorReviews(reviews: EditorReview[]): string {
 
 // ── Advanced collapsible section ─────────────────────────────────────────────
 
-function renderAdvancedSection(article: Article, transitions: StageTransition[], pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
+function renderAdvancedSection(
+  article: Article,
+  transitions: StageTransition[],
+  llmTraces: LlmTrace[],
+  pinnedAgents?: Array<{ agent_name: string; role: string | null }>,
+): string {
   return `
     <section class="detail-section">
       <details class="advanced-section">
         <summary>⚙️ Advanced</summary>
         <div class="advanced-content">
+          ${renderTraceSummaryPanel(article.id, llmTraces)}
           ${renderRosterPanel(article)}
           ${renderAuditLog(transitions)}
           ${renderArticleMetadata(article, pinnedAgents)}
@@ -1222,7 +1242,7 @@ export function renderStageRunsPanel(runs: StageRun[]): string {
           <div class="stage-run stage-run-${r.status}">
             <div class="stage-run-header">
               <span class="stage-run-icon">${statusIcon}</span>
-              <span class="badge badge-stage badge-stage-${targetStage}">Stage ${targetStage} — ${escapeHtml(targetName)}</span>
+                <a href="/runs/${escapeHtml(r.id)}" class="badge badge-stage badge-stage-${targetStage}">Stage ${targetStage} — ${escapeHtml(targetName)}</a>
             </div>
             <div class="stage-run-meta">
               ${duration ? `<span class="stage-run-duration">⏱ ${duration}</span>` : ''}
