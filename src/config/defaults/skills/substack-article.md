@@ -31,11 +31,12 @@ Drafts that miss this TLDR contract should be repaired before Editor approval. S
 
 ## Runtime Contract
 
-The in-app article runtime is prompt-only.
+The in-app article runtime may expose limited research tools depending on provider and configuration.
 
-- Agents do **not** read arbitrary files, call image or publishing tools directly, commit content, or browse for instructions from inside the prompt.
-- The application runtime handles model routing, artifact persistence, image generation, publishing integrations, and dashboard actions outside this skill.
-- This skill should describe structure, reasoning, and handoff intent — not pretend to execute operator steps.
+- Agents may use approved web research when the runtime exposes it and the added context materially improves freshness or verification.
+- Agents should not assume arbitrary file access, direct image or publishing tools, commits, or other side effects unless the runtime explicitly exposes those actions.
+- The application runtime still handles model routing, artifact persistence, image generation, publishing integrations, and dashboard actions outside the tools explicitly available to the model.
+- This skill should describe structure, reasoning, and handoff intent without pretending to execute unavailable operator steps.
 
 ## When to Use
 

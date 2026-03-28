@@ -81,7 +81,7 @@ Every discussion prompt must have all five:
 
 ### Data Anchor Guidance
 
-Use the runtime-supplied evidence as anchors:
+Use the runtime-supplied evidence as anchors first. When the runtime exposes approved web research, use it to fill freshness gaps that the supplied context does not resolve cleanly:
 
 - player efficiency context
 - positional market comps
@@ -132,7 +132,7 @@ If the prompt lacks an anchor the article clearly needs, name the gap instead of
 
 ### Execution Protocol
 
-The application runtime handles spawning, persistence, and model routing. Prompt text should describe the desired outputs, not pretend to run tools.
+The application runtime handles spawning, persistence, and model routing. Prompt text should describe the desired outputs, and may use approved research tools when the runtime exposes them, but should not pretend to use unavailable tools or side-effecting infrastructure.
 
 Each panelist prompt should include:
 

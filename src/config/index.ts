@@ -235,6 +235,21 @@ export function refreshCorePromptDefaults(
 }
 
 /**
+ * Prepare the runtime data directory for normal app startup.
+ * This intentionally overwrites the curated core prompts so the live runtime
+ * stays aligned with the repo-managed defaults.
+ */
+export function prepareRuntimeDataDir(
+  dataDir: string,
+  league: string = DEFAULT_LEAGUE,
+): { refreshed: { charters: number; skills: number; updated: string[] } } {
+  initDataDir(dataDir, league);
+  return {
+    refreshed: refreshCorePromptDefaults(dataDir, league),
+  };
+}
+
+/**
  * Load application configuration from environment and data directory.
  */
 export function resolveDashboardAuthConfig(

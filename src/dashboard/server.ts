@@ -15,7 +15,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
-import { initDataDir, loadConfig, resolveDashboardAuthConfig } from '../config/index.js';
+import { loadConfig, prepareRuntimeDataDir, resolveDashboardAuthConfig } from '../config/index.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Stage, Article } from '../types.js';
 import { PipelineEngine } from '../pipeline/engine.js';
@@ -2884,7 +2884,11 @@ export function createTwitterServiceFromEnv(
 
 export async function startServer(overrides?: Partial<AppConfig>): Promise<void> {
   const config = loadConfig(overrides);
-  initDataDir(config.dataDir, config.league);
+  const startupPrep = prepareRuntimeDataDir(config.dataDir, config.league);
+  const refreshedPromptCount = startupPrep.refreshed.charters + startupPrep.refreshed.skills;
+  if (refreshedPromptCount > 0) {
+    console.log(`[startup] Refreshed ${refreshedPromptCount} core runtime prompt files`);
+  }
 
   // Initialize query cache (file-based, survives restarts)
   const cacheProvider = new FileCacheProvider(config.cacheDir);

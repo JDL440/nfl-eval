@@ -3,7 +3,7 @@ name: "article-lifecycle"
 description: "Canonical 8-stage process for producing articles from idea to dashboard review and live publish"
 domain: "content-production"
 confidence: "medium"
-source: "runtime-cleaned reference aligned to the current prompt-only app flow"
+source: "runtime-cleaned reference aligned to the current app flow"
 ---
 
 # Article Lifecycle — Skill
@@ -20,11 +20,12 @@ Use this skill to keep Lead, Writer, Editor, and Publisher aligned on:
 
 ## Runtime Contract
 
-The in-app runtime is prompt-only.
+The in-app runtime may expose limited research tools depending on provider and configuration.
 
-- Agents do **not** browse the web, read arbitrary files, run shell commands, post GitHub comments, update labels, or publish directly from inside the prompt.
-- The application runtime handles model routing, stage persistence, artifact storage, and dashboard publishing workflows.
-- Prompt text should describe decisions, outputs, and stage intent — not pretend to execute infrastructure steps.
+- Agents may use approved web research when the runtime exposes it and the added context materially improves freshness or verification.
+- Agents should not assume arbitrary file access, shell commands, GitHub side effects, or direct publishing unless the runtime explicitly exposes those actions.
+- The application runtime still handles model routing, stage persistence, artifact storage, and dashboard publishing workflows outside the tools explicitly available to the model.
+- Prompt text should describe decisions, outputs, and stage intent without pretending to execute unavailable infrastructure steps.
 
 ## Lifecycle Overview
 
@@ -44,7 +45,7 @@ The in-app runtime is prompt-only.
 ### Stage 1 — Idea Generation
 
 - produce one sharp, current-season angle
-- use supplied context only
+- use supplied context first, and approved web research when available to close freshness gaps
 - call out uncertainty if the prompt lacks enough current detail
 
 ### Stage 2 — Discussion Prompt
@@ -90,4 +91,4 @@ The in-app runtime is prompt-only.
 ## Notes
 
 - Keep stage descriptions aligned with the current runtime, not older `.squad` operator flows.
-- If a prompt mentions tool use, direct file writes, GitHub side effects, or autonomous publishing, that instruction is stale and should be ignored in favor of the runtime contract above.
+- If a prompt mentions tool use or side effects that the runtime does not actually expose, that instruction is stale and should be ignored in favor of the runtime contract above.
