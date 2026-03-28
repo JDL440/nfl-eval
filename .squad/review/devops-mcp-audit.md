@@ -140,7 +140,7 @@ Tools read credentials at call-time from `.env` via `shared-env.mjs`:
 ### 🟢 Low Risk / Positive
 | Item | Detail |
 |---|---|
-| **Secrets not in code** | All secrets loaded from `.env` at runtime; `.env.example` has placeholders only. |
+| **Secrets not in code** | All secrets loaded from `.env` at runtime; `.env.sample` has placeholders only. |
 | **Smoke test blanks creds** | `smoke-test.mjs` sets `EXTENSION_ENV_DISABLED=1` and blanks API keys. |
 | **Read-only annotations** | Tools declare `readOnlyHint`, `destructiveHint`, `idempotentHint` per MCP spec — clients *can* use these for safety checks. |
 | **Stage guard** | `publish_to_substack` refuses to operate on Stage 8 (already-published) articles. |

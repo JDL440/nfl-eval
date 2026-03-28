@@ -27,7 +27,7 @@ tools: [view, rg, vitest]
    - compare against a working optional service such as `imageService`
 4. Confirm env-loading expectations:
    - `src/config/index.ts` for `.env` load order
-   - `.env.example` / `README.md` for required vars
+   - `.env.sample` / `README.md` for required vars
 5. Only after that decide whether the bug is:
    - true local misconfiguration
    - startup DI gap
@@ -45,7 +45,7 @@ Ask these questions in order:
 
 - `src/dashboard/server.ts` accepts optional runtime deps in `createApp(...)`.
 - `src/config/index.ts` loads `.env` from repo root and `~/.nfl-lab/config/.env`.
-- `.env.example` is the source of truth for publishing credentials.
+- `.env.sample` is the source of truth for publishing credentials.
 - `src/services/substack.ts` validates token/url shape once instantiated, so route handlers should not pretend to diagnose env if startup never built the service.
 
 ## Recommendation
