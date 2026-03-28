@@ -10,6 +10,34 @@
 
 ## Learnings
 
+- 2026-03-28T00:54:15Z — **In-App Agent Tool-Wiring Architecture Audit MERGED TO DECISIONS:**
+  
+  Comprehensive audit of agent-to-tool seam found:
+  
+  ✅ **Core implementation exists:** App-owned bounded local tool loop in `src/agents/runner.ts` + `src/agents/local-tools.ts` with registry-backed metadata
+  ✅ **Allowlist enforced:** Only approved read-only tools (12 nflverse data + discovery) accessible  
+  ✅ **Validation strict:** Zod schemas guard all tool arguments  
+  ✅ **Safe execution:** In-process only, no subprocess spawning  
+  
+  ⚠️ **Build blockers found (HIGH priority):**
+  - `src/llm/providers/copilot-cli.ts` — `verify()` calls `exec()` with 2 args; signature expects 1
+  - `tests/agents/runner.test.ts` — imports removed file `src/llm/in-app-tools.js`
+  
+  ⚠️ **Missing implementation pieces:**
+  1. Duplicate-identical-call suppression in tool loop
+  2. Negative tests proving blocked tools (publish_to_substack, render_table_image, refresh_nflverse_cache) throw "not allowed"
+  
+  **Recommendations:**
+  1. Fix build failures (HIGH)
+  2. Add negative allowlist tests
+  3. Implement duplicate-call detection
+  4. Document in-app tool seam contract per agent role
+  5. Update system prompt to direct agents to `local_tool_catalog` for discovery
+  
+  **Orchestration log:** `.squad/orchestration-log/2026-03-28T00-54-15-devops.md`  
+  **Session log:** `.squad/log/2026-03-28T00-54-15-in-app-readonly-seam-audit.md`  
+  **Decision document merged to** `.squad/decisions.md` (MERGED INBOX ENTRIES section)
+
 - 2026-03-28 — **In-App Agent Tool-Wiring Architecture Audit Complete (Read-Only):**
   
   Current state: **Agents (via `AgentRunner`) do NOT have tool-calling capability.** Tools exist only in the MCP layer (`mcp/tool-registry.mjs`) for external clients (GitHub Copilot CLI, Claude Code, etc.). Agents only call the LLM Gateway for text generation.

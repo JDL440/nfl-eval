@@ -1,4 +1,39 @@
+## 2026-03-28T00:54:15Z — In-App Agent Tool-Wiring Architecture DECISION MERGED
+
+**Status:** DECISION MERGED TO `.squad/decisions.md` — Ready for Code implementation
+
+**Orchestration log:** `.squad/orchestration-log/2026-03-28T00-54-15-devops.md`
+
+**Key Finding:** Agent system and MCP tool system are completely decoupled. Lead has approved a 4-phase implementation plan.
+
+**Architecture Pattern:**
+- Agent system: stateless LLM orchestrator with skills/memories + provider abstraction
+- Tool system: standalone MCP server with catalog + safe read-only NFL data
+- Gap: No bridge between TS agents and JS tool registry
+- Approved Solution: Extract tool catalog to shared TypeScript module; inject into system prompts; allow agents to invoke via tool_use XML
+
+**Lead-Approved 4-Phase Implementation:**
+1. **Phase 1 (Foundation):** Extend ChatRequest with tool capability; extend AgentRunParams; inject tool catalog into system prompt
+2. **Phase 2 (Catalog Extraction):** Export tool registry as TypeScript module; define safe-list of read-only tools
+3. **Phase 3 (Agent Access):** Determine allowlist per agent role; pass tools to gateway; update ChatRequest call
+4. **Phase 4 (Execution):** Tool execution handler + multi-turn tool refinement (deferred)
+
+**Decision Points:**
+1. Tool allowlist is role-based: Writer→data-query; Editor→data only; Publisher→all safe + publishing
+2. Inject full tool catalog into system prompt
+3. Start with Phases 1–3; Phase 4 deferred until agents reliably format tool_use tags
+4. No breaking changes; tool access is opt-in
+
+**Build Blockers (HIGH priority):**
+- `src/llm/providers/copilot-cli.ts` — `verify()` calls `exec()` with 2 args; signature expects 1
+- `tests/agents/runner.test.ts` — imports removed file `src/llm/in-app-tools.js`
+
+**Detailed Plan:** See `.squad/decisions.md` (MERGED INBOX ENTRIES section) — multiple reviews document exact file changes, test plan, risks + mitigations
+
+---
+
 ## 2026-03-28T08:41:23Z — MCP Rollout Decision Merged
+
 
 **Orchestration logs:** 
 - .squad/orchestration-log/2026-03-26T08-41-23Z-devops-mcp-audit.md
@@ -183,6 +218,8 @@
 
 
 ## Learnings
+
+- 2026-03-28 in-app MCP tool wiring: for Copilot CLI, `--available-tools` controls tool visibility while `--allow-tool` controls non-interactive approval. Safe repo-local MCP enablement should expose only the explicit read-only subset and keep tool-enabled runs on the workspace root so `.copilot\mcp-config.json` can load.
 
 ### 2026-03-28 Agent Tool-Wiring Inspection
 - **Current tool exposure architecture:** Three-layer system: (1) MCP tools exposed via stdio in `src/mcp/server.ts`, (2) Agent charters/skills loaded from markdown at runtime in `src/agents/runner.ts`, (3) prompt-injected instructions. Agents receive tool documentation as text in system prompt, NOT as structured manifests or through native MCP client.

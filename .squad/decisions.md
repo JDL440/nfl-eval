@@ -10877,3 +10877,1638 @@ Treat mcp/server.mjs as the single canonical local MCP entrypoint for repo clien
 
 - Keep mcp-pipeline documented as a compatibility/debug surface only.
 - Future review risk is config drift, not canonical-entrypoint ambiguity.
+
+
+---
+
+# MERGED INBOX ENTRIES (2026-03-28)
+
+
+---
+
+# Decision Inbox — Code Agent MCP Tooling
+
+**Date:** 2026-03-28  
+**Owner:** Code  
+**Status:** Proposed
+
+## Decision
+
+Enable repo-local MCP access for in-app agents only through an explicit safe subset:
+
+- `local_tool_catalog`
+- `query_player_stats`
+- `query_team_efficiency`
+- `query_positional_rankings`
+- `query_snap_counts`
+- `query_draft_history`
+- `query_ngs_passing`
+- `query_combine_profile`
+- `query_pfr_defense`
+- `query_historical_comps`
+- `query_rosters`
+- `query_prediction_markets`
+
+Do **not** expose publishing, media-generation, or cache-refresh tools to the in-app agent runtime.
+
+## Implementation seam
+
+Enforce the policy in two places:
+
+1. **Runtime visibility/permissions** — pass the exact tool subset to the Copilot CLI provider with tool filters, so non-allowlisted tools never appear to the model.
+2. **Prompt contract** — inject the same allowlist into the runner system prompt and tell agents to start with `local_tool_catalog` when they need argument help.
+
+Tool-enabled Copilot CLI runs should execute from the workspace root so repo-local MCP config loads correctly; no-tool runs can stay in the sandboxed cwd.
+
+## Why
+
+- The MCP server already exposes both safe read-only tools and mutating tools.
+- The in-app runtime previously blocked all tool usage entirely.
+- A provider-side allowlist is the narrowest change that enables factual lookup work without opening publishing or file-edit paths.
+
+## Validation
+
+- `npm run v2:build`
+- `npx vitest run tests\agents\runner.test.ts tests\llm\gateway.test.ts tests\llm\provider-copilot-cli.test.ts tests\mcp\local-tool-registry.test.ts`
+
+---
+
+# Decision Inbox: In-App Agent Tool Wiring Review
+
+**Date:** 2026-03-28  
+**Status:** ✓ Inspection Complete — Ready for Architecture Review  
+**Owner:** Code (Core Dev)  
+**Requested by:** Backend (Squad Agent)  
+
+---
+
+## Summary
+
+Completed a full inspection of the current agent-to-tool wiring architecture. **Current state:** Agents receive tool documentation as markdown text in their system prompt; there is no structured discovery mechanism, explicit allowlists, or safety classification.
+
+**Proposed wiring:** Extend agent charters with optional `## Tools` section (allowlist), build centralized `ToolCatalog` service, inject tool manifest into system prompt, add MCP `tools_list` discovery tool, and test enforcement. Backward-compatible; all changes additive.
+
+---
+
+## Current State (Inspection Findings)
+
+### Tool Exposure Layers
+
+1. **MCP Server (`src/mcp/server.ts`)** — Stdio boundary
+   - Exposes pipeline operations only (`article_advance`, `article_list`, etc.)
+   - Hardcoded `TOOLS` array; no dynamic registry
+   - No nflverse, image gen, or publishing tools exposed here
+
+2. **Agent Runner (`src/agents/runner.ts`)** — In-app coordination
+   - Loads charters (markdown `##` sections) + skills (markdown w/ YAML frontmatter)
+   - Composes system prompt from charter + skills + memories
+   - **Agents receive tool documentation as text** (e.g., "MCP Tool: `query_player_stats`...")
+   - No native MCP client; no discovery API
+   - No allowlisting; access implicit through skill loading
+
+3. **LLM Gateway (`src/llm/gateway.ts`)** — Provider abstraction
+   - Routes across Copilot CLI, LM Studio, Mock
+   - No tool handling (delegated to LLM's native tool use)
+
+### Example: Analytics Agent Today
+
+```
+Charter says: "Run nflverse queries for data anchors"
+Skill: nflverse-data.md (markdown table + CLI examples)
+System prompt includes: [charter] + [skill content as text] + [memories]
+LLM receives: "You have access to these tools: query_player_stats, query_team_efficiency, ..."
+LLM can: Try to call the tool (if Copilot CLI invokes it) or ignore the documentation
+```
+
+### Gap: No Allowlists
+
+- Writer agent loads `substack-article.md` skill but could theoretically call `query_draft_history` if coached
+- No charter-level or agent-level permission matrix
+- No way to say "Writer: query_player_stats only; Analytics: all nflverse tools"
+- No safety classification (read-only vs. mutating)
+
+---
+
+## Proposed Wiring (Detailed)
+
+### 1. Create `ToolCatalog` Service
+
+**File:** `src/services/tool-catalog.ts`
+
+```typescript
+export interface ToolDefinition {
+  id: string;
+  name: string;
+  category: 'pipeline' | 'nflverse' | 'image' | 'publishing';
+  safety: 'read-only' | 'side-effect';
+  description: string;
+  schema: ZodSchema;
+  examples?: Array<{ input: unknown; output: string }>;
+}
+
+export interface ToolCatalog {
+  tools: ToolDefinition[];
+  listTools(filter?: { category?: string; safety?: string }): ToolDefinition[];
+  getTool(id: string): ToolDefinition | null;
+}
+
+export function buildLocalToolCatalog(): ToolCatalog {
+  return {
+    tools: [
+      {
+        id: 'query_player_stats',
+        category: 'nflverse',
+        safety: 'read-only',
+        // ...
+      },
+      // 9 more nflverse tools
+      // pipeline tools (read-only)
+      // image/publishing tools (side-effect)
+    ],
+    // ...
+  };
+}
+```
+
+**Benefits:**
+- Single source of truth for all local tools
+- Structured metadata (safety, category, schema)
+- Enables dynamic discovery at runtime
+- Testable independently from agents
+
+### 2. Extend Agent Charters with Tool Allowlists
+
+**Example: `src/config/defaults/charters/nfl/analytics.md`**
+
+```markdown
+# Analytics
+
+## Identity
+The Numbers engine. Every narrative gets a stat check.
+
+## Tools
+
+- query_player_stats
+- query_team_efficiency
+- query_positional_rankings
+- query_snap_counts
+- query_draft_history
+- query_ngs_passing
+- query_combine_profile
+- query_pfr_defense
+- query_historical_comps
+- refresh_nflverse_cache
+```
+
+**Example: `src/config/defaults/charters/nfl/writer.md`**
+
+```markdown
+# Writer
+
+## Identity
+Creates compelling analytical articles about the NFL.
+
+## Tools
+
+- query_player_stats
+```
+
+**Benefits:**
+- Allowlist visible in code review
+- Easy to audit and update
+- Human-readable list of what each agent can do
+- Optional (agents without `## Tools` use current behavior)
+
+### 3. Parse Tools in Agent Charter
+
+**File:** `src/agents/runner.ts`
+
+```typescript
+export interface AgentCharter {
+  name: string;
+  identity: string;
+  responsibilities: string[];
+  knowledge: string[];
+  boundaries: string[];
+  tools?: string[];  // ← NEW
+  model?: string;
+}
+
+function parseCharter(raw: string, fileName: string): AgentCharter {
+  // ... existing parsing ...
+  
+  switch (heading) {
+    case 'tools': {
+      charter.tools = parseBulletList(body);
+      break;
+    }
+  }
+  
+  return charter;
+}
+```
+
+### 4. Inject Tool Manifest into System Prompt
+
+**File:** `src/agents/runner.ts` — `composeSystemPrompt()`
+
+```typescript
+composeSystemPrompt(
+  charter: AgentCharter,
+  skills: AgentSkill[],
+  memories: MemoryEntry[],
+  rosterContext?: string,
+  toolCatalog?: ToolCatalog,  // ← NEW
+): string {
+  const parts: string[] = [];
+  
+  // ... identity, responsibilities, skills, memories ...
+  
+  // NEW: Tool allowlist
+  if (charter.tools && toolCatalog) {
+    const allowedTools = charter.tools
+      .map(id => toolCatalog.getTool(id))
+      .filter((t): t is ToolDefinition => t != null);
+    
+    if (allowedTools.length > 0) {
+      parts.push('## Available Tools\n\n' + 
+        'You have access to the following tools. Call them by name with the specified parameters.\n\n' +
+        allowedTools.map(t => `### ${t.name} (\`${t.id}\`)\n${t.description}`).join('\n\n')
+      );
+    }
+  }
+  
+  // ... boundaries ...
+  
+  return parts.join('\n\n');
+}
+```
+
+### 5. Wire Catalog into Agent Invocations
+
+**File:** `src/pipeline/actions.ts`
+
+```typescript
+import { buildLocalToolCatalog } from '../services/tool-catalog.js';
+
+// Before invoking agents:
+const toolCatalog = buildLocalToolCatalog();
+
+const response = await runner.run({
+  agentName: 'analytics',
+  task: buildAnalyticsTask(/* ... */),
+  skills: ['nflverse-data'],
+  toolCatalog,  // ← NEW
+  rosterContext,
+  // ...
+});
+```
+
+### 6. Add MCP Tool Discovery Endpoint (Optional)
+
+**File:** `src/mcp/server.ts` — extend `TOOLS` array
+
+```typescript
+{
+  name: 'tools_list',
+  description: 'Discover available local tools by category (nflverse, pipeline, etc.)',
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      category: {
+        type: 'string',
+        description: 'Filter by category: nflverse, pipeline, image, publishing',
+      },
+      safety: {
+        type: 'string',
+        description: 'Filter by safety: read-only, side-effect',
+      },
+    },
+    required: [],
+  },
+}
+
+// In call_tool handler:
+case 'tools_list': {
+  const catalog = buildLocalToolCatalog();
+  const filtered = catalog.listTools({
+    category: args.category as string,
+    safety: args.safety as string,
+  });
+  return textResult({ count: filtered.length, tools: filtered });
+}
+```
+
+---
+
+## Test Plan
+
+### 1. Tool Catalog Unit Tests
+**File:** `tests/services/tool-catalog.test.ts`
+- List all tools by category
+- Filter by safety level
+- Validate schema parity with MCP definitions
+- Ensure no duplicate IDs
+
+### 2. Agent Charter Tool Parsing
+**File:** `tests/agents/runner.test.ts` (extend)
+- Parse `## Tools` section from charter
+- Handle missing tools section gracefully
+- Compose system prompt with tool allowlist
+
+### 3. Tool Injection in System Prompt
+**File:** `tests/agents/runner.test.ts` (extend)
+- System prompt includes "Available Tools" section
+- Only allowed tools appear in prompt
+- Tool descriptions match catalog
+
+### 4. MCP Discovery Tool
+**File:** `tests/mcp/server.test.ts` (extend)
+- `tools_list` returns all tools by default
+- Category filter works
+- Safety filter works
+
+### 5. Integration: Agent + Catalog
+**File:** `tests/pipeline/actions.test.ts` (extend)
+- Analytics agent receives all nflverse tools
+- Writer agent receives minimal tools
+- Catalog provided to runner.run()
+
+---
+
+## Implementation Checklist
+
+- [ ] Create `src/services/tool-catalog.ts` (build catalog from tool definitions)
+- [ ] Parse `## Tools` section in `src/agents/runner.ts`
+- [ ] Inject tool manifest into system prompt in `composeSystemPrompt()`
+- [ ] Update `src/pipeline/actions.ts` to pass catalog to `runner.run()`
+- [ ] Add `## Tools` sections to agent charters (start with Analytics, Writer, Editor)
+- [ ] Add `tools_list` MCP tool to `src/mcp/server.ts`
+- [ ] Write unit tests for tool catalog
+- [ ] Write integration tests for agent + catalog
+- [ ] Update `README.md` with tool discovery workflow (optional but recommended)
+
+**Effort:** ~6–8 focused edits across 5 files + 4 test files  
+**Risk:** Low (purely additive, no breaking changes)  
+**Rollback:** Simple (remove `## Tools` from charters, don't pass catalog to runner)
+
+---
+
+## Architecture Decisions Needed
+
+1. **Should we build catalog from MCP schema definitions or manually define it?**
+   - **Recommendation:** Auto-generate from MCP tool registry to prevent drift; manually add category + safety + examples
+
+2. **Should tool allowlist be per-agent (in charter) or per-role (global defaults)?**
+   - **Recommendation:** Per-agent (most flexible), with optional role-based defaults in docs for consistency
+
+3. **Should agents be able to query the catalog at runtime (MCP `tools_list`), or just receive static list in prompt?**
+   - **Recommendation:** Both—inject static list in system prompt for primary use, expose `tools_list` MCP tool for dynamic discovery if needed
+
+4. **Should we validate tool calls at the MCP server level to prevent unauthorized use?**
+   - **Recommendation:** Yes, add caller identity validation in `src/mcp/server.ts` `call_tool` handler (future work, not in initial wiring)
+
+5. **Should pipeline tools (article_advance, etc.) be in the same catalog as nflverse tools?**
+   - **Recommendation:** Yes, unified catalog split by category + safety level. Makes it easy to understand what's available system-wide.
+
+---
+
+## Blockers / Open Questions
+
+- **None identified.** Proposed changes are backward-compatible and isolated. Can proceed immediately.
+
+---
+
+## References
+
+- **Full inspection report:** `.squad/agents/code/inspection-agent-tool-wiring.md`
+- **Decision:** Unified Local MCP Entrypoint (already merged to `.squad/decisions.md`)
+- **Related:** Code-provider-rollout decision (multi-provider wiring)
+
+---
+
+## Sign-Off
+
+- **Code (inspector):** ✓ Architecture sound; ready for review + implementation
+- **Backend (requestor):** ⏳ Awaiting approval
+- **Lead (final decision):** ⏳ Awaiting approval
+
+---
+
+## Next Steps (If Approved)
+
+1. Code implements changes in order of checklist
+2. Tests added and validated (`npm run test`)
+3. Build passes (`npm run v2:build`)
+4. Optional: Share updated charter examples in team doc for consistency
+5. Optional: Add "Tool Discovery Workflow" section to `README.md`
+
+---
+
+# Decision: Preserve canonical MCP names, improve discoverability additively
+
+**Date:** 2026-03-28  
+**Owner:** Code  
+**Status:** Proposed
+
+## Decision
+
+For the unified local MCP rollout, keep the existing canonical tool names and the `mcp/server.mjs` entrypoint stable, and improve model-facing clarity through additive contract cleanup:
+
+1. sharpen tool descriptions and parameter help
+2. publish a complete canonical inventory in docs
+3. add canonical-local inventory/schema coverage
+4. reduce schema/dispatch drift behind the scenes
+
+Do **not** rename or remove existing tools as the first clarity pass.
+
+## Why
+
+- Existing local clients already point at `mcp/server.mjs` through repo config and CLI wrappers.
+- The main discoverability problem is not naming breakage; it is contract drift across `mcp/server.mjs`, extension docs, smoke coverage, and `src/services/data.ts`.
+- Renaming tools now would break working clients while leaving the underlying clarity gaps unresolved.
+
+## Guardrails
+
+- Treat `src/mcp/server.ts` as pipeline-only compatibility/debug MCP unless and until the product intentionally unifies inventories.
+- Keep old tool names as the stable contract; any friendlier aliases should be additive.
+- Prefer one shared source for descriptions/required args/default behavior so docs, smoke tests, and runtime stay aligned.
+- If app-side data helpers stay separate from MCP handlers, explicitly document and test any intentional differences.
+
+## Likely Follow-Up Files
+
+- `mcp/server.mjs`
+- `.github/extensions/nflverse-query/tool.mjs`
+- `.github/extensions/prediction-market-query/tool.mjs`
+- `src/services/data.ts`
+- `mcp/smoke-test.mjs`
+- `README.md`
+- `.github/extensions/README.md`
+
+## Validation
+
+- `npm run v2:build`
+- `npx vitest run tests\mcp\server.test.ts tests\services\data.test.ts --silent`
+
+---
+
+# Code — Unified Local MCP Rollout Recommendation
+
+## Status
+
+Proposed handoff from Code after a DevOps-only audit. No runtime implementation was performed here.
+
+## Recommendation
+
+Adopt `mcp\server.mjs` as the single canonical repo-local MCP entrypoint for all local client configs and operator docs.
+
+Keep `src\cli.ts` command `mcp` as a compatibility wrapper that launches that file. Keep `src\mcp\server.ts` explicitly documented as the pipeline-only compatibility surface until Code decides whether those pipeline tools should be folded into the canonical local server.
+
+## Why this is the safest default
+
+- `package.json`, `README.md`, `.github\extensions\README.md`, `.mcp.json`, and `.copilot\mcp-config.json` already converge on `mcp\server.mjs`.
+- `src\cli.ts` already wraps `mcp\server.mjs` for `mcp`.
+- `src\mcp\server.ts` exposes a different server identity and tool inventory (`nfl-eval-pipeline`), so it should not become the repo-local client default by accident.
+
+## Files that should move together
+
+1. `mcp\server.mjs`
+   - Remain the canonical stdio tool server for repo-local clients.
+   - If inventories are unified later, this should own or import the shared registration contract.
+
+2. `src\cli.ts`
+   - Keep `mcp` delegating to `mcp\server.mjs`.
+   - Keep `mcp-pipeline` clearly labeled as compatibility/debug-only unless retired.
+
+3. `package.json`
+   - Keep `mcp:server` and `v2:mcp` mapped to the canonical local entrypoint.
+   - Keep `mcp:pipeline` separate and clearly named as legacy/pipeline-only.
+
+4. `.mcp.json`
+   - Generic repo-local MCP config; point only at `node mcp/server.mjs`.
+
+5. `.copilot\mcp-config.json`
+   - Copilot workspace config; mirror `.mcp.json` contract and naming.
+
+6. `README.md`
+   - State one canonical local server, one compatibility path, and one validation sequence.
+
+7. `.github\extensions\README.md`
+   - Match the same entrypoint contract and tighten smoke-test language to match script behavior.
+
+8. `mcp\smoke-test.mjs`
+   - Validate the canonical entrypoint only.
+   - Separate safe registration checks from credentialed or artifact-writing integration checks if needed.
+
+## Risks / open questions
+
+- Docs currently call `npm run mcp:smoke` safe/no-side-effects, but the script writes a rendered table image and invokes image/publishing tools.
+- `.copilot\mcp-config.json` and `.mcp.json` duplicate the same contract; rollout discipline must keep them synchronized.
+- If pipeline-only tools remain separate, docs must prevent operators from assuming `v2:mcp` includes pipeline actions.
+
+## Code handoff seam
+
+If Code takes runtime-contract work, the key decision is whether `src\mcp\server.ts` stays as a pipeline-only compatibility shim or whether its pipeline tools are registered into `mcp\server.mjs` through a shared registry/module. DevOps should not decide that implementation alone, but all configs/docs should assume one canonical local client entrypoint regardless.
+
+---
+
+# DevOps Decision — In-App Agent Tool Wiring Architecture Audit
+
+**Status:** Complete (read-only audit, no changes made)  
+**Date:** 2026-03-28  
+**Scope:** Agent tool wiring, registration, allowlists, safety, operational risks
+
+---
+
+## Executive Summary
+
+In-app agents (via `AgentRunner`) **do not currently have tool-calling capability**. Agents only call the LLM Gateway for text generation—there is no mechanism for agents to invoke `local_tool_catalog`, nflverse data tools, or publishing tools at runtime.
+
+**Current tool exposure is MCP-only**: Tools live in `mcp/tool-registry.mjs` and are registered via the canonical MCP server (`mcp/server.mjs`). These tools are available to external MCP clients (GitHub Copilot CLI, Claude Code, etc.) but are **not callable from within the pipeline's AgentRunner**.
+
+**To enable agent tool-calling**, code will need to add:
+1. Tool invocation wiring in LLM responses (function_calls in chat protocol)
+2. Tool registry connection in `AgentRunner`
+3. Safety/allowlist filtering for agent-initiated tool calls
+4. Handler dispatch mechanism
+
+---
+
+## Current Architecture
+
+### Tool Registry & Registration
+
+**Location:** `mcp/tool-registry.mjs`
+
+- Defines **25+ tools** across 4 categories:
+  - **Help** (1): `local_tool_catalog`
+  - **Media** (2): `generate_article_images`, `render_table_image`
+  - **Publishing** (3): `publish_to_substack`, `publish_note_to_substack`, `publish_tweet`
+  - **Data** (11): nflverse wrappers (`query_player_stats`, `query_team_efficiency`, `query_snap_counts`, `query_draft_history`, `query_ngs_passing`, `query_combine_profile`, `query_pfr_defense`, `query_historical_comps`, `query_rosters`, `refresh_nflverse_cache`, `query_positional_rankings`)
+  - **Markets** (1): `query_prediction_markets`
+
+- Each tool entry contains:
+  - `name`: tool ID (snake_case)
+  - `title`: human-readable title
+  - `category`: grouping for discovery
+  - `description`: LLM-facing purpose statement
+  - `inputSchema`: Zod schema (tool parameters)
+  - `handler`: async function implementation
+  - `sideEffects`: operational impact label
+  - `examples`: example argument payloads
+  - `annotations`: metadata hints (read-only, idempotent, etc.)
+
+**Handlers are registered via `registerLocalTools(server)`:**
+```javascript
+export function registerLocalTools(server) {
+    for (const entry of localToolEntries) {
+        server.registerTool(entry.name, {
+            title: entry.title,
+            description: entry.description,
+            inputSchema: entry.inputSchema,
+            annotations: entry.annotations,
+        }, async (args) => runWithNormalization(entry.handler, args));
+    }
+}
+```
+
+---
+
+### MCP Server Setup
+
+**Location:** `mcp/server.mjs`
+
+```javascript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerLocalTools } from "./tool-registry.mjs";
+
+const server = new McpServer({ name: "nfl-eval-local-tools", version: "1.1.0" });
+registerLocalTools(server);
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+**Execution:**
+- `npm run mcp:server` → starts MCP server on stdio
+- `npm run v2:mcp` → alias for same startup
+- `.copilot/mcp-config.json` auto-configures this for GitHub Copilot CLI
+
+**Tool inventory discovered via MCP `ListTools`** when client connects.
+
+---
+
+### Agent Runner Architecture
+
+**Location:** `src/agents/runner.ts`
+
+`AgentRunner` is a **pure text-generation client**:
+
+```typescript
+export class AgentRunner {
+  async run(params: AgentRunParams): Promise<AgentRunResult> {
+    // 1. Load charter
+    // 2. Load skills
+    // 3. Recall memories
+    // 4. Compose system prompt (no tools mentioned)
+    // 5. Build user message
+    // 6. Call LLM Gateway with text messages only
+    const response = await this._gateway.chat({
+      messages,
+      model,
+      temperature,
+      maxTokens,
+      responseFormat,  // ← only 'text' or 'json', no tool_calls
+      stageKey,
+      taskFamily,
+      // NO tools parameter
+    });
+  }
+}
+```
+
+**System prompt composition:** Charter identity + responsibilities + skills + memories + roster context + boundaries. **No tool definitions in system prompt**.
+
+**Result handling:** Separates thinking tags from output; stores learning memories; returns `AgentRunResult` with `content`, `thinking`, `model`, `provider`, etc. **No tool invocation loop**.
+
+---
+
+### LLM Gateway
+
+**Location:** `src/llm/gateway.ts`
+
+```typescript
+export interface ChatRequest {
+  messages: ChatMessage[];
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  responseFormat?: 'text' | 'json';  // ← No tools parameter
+  stageKey?: string;
+  taskFamily?: string;
+  preferredProvider?: string;
+  providerStrategy?: 'auto' | 'prefer' | 'require';
+  allowedProviders?: string[];
+}
+
+export interface ChatResponse {
+  content: string;        // ← Text only
+  model: string;
+  provider: string;
+  usage?: { promptTokens; completionTokens; totalTokens };
+  finishReason?: string;
+}
+```
+
+**Routing logic:**
+- Model policy resolution (stage key → model list)
+- Provider filtering (allowed/preferred)
+- Attempt ordering (preferred provider first, then fallback providers)
+- No tool calling; function calls in responses are not captured or dispatched
+
+**Providers implemented:** Copilot CLI, LM Studio, Mock
+
+---
+
+### Tool Discovery Mechanism
+
+**`local_tool_catalog` tool** (in registry):
+
+- Lists tools by category with descriptions, required/optional arguments, side effects, examples
+- Used by external MCP clients to understand what's available before making a call
+- Invoked manually by user/model when tool-calling capability exists elsewhere
+- **Not used** within the pipeline (agents never discover tools this way)
+
+---
+
+## Safety & Allowlists
+
+### Current Allowlist Approach
+
+**No agent-specific allowlists exist** because agents cannot call tools.
+
+**MCP-level safety:**
+- Tool registry is static and code-reviewed
+- All 25 tools are discoverable by any MCP client
+- Client restricts which tools it exposes to users (e.g., GitHub Copilot CLI can hide tools)
+
+**Tool-level safety:**
+- Read-only tools (nflverse, markets) return data only; no mutations
+- Publishing tools check credentials at handler time; graceful failure if missing
+- Image generation tools write to `content/images/` only (scoped output)
+- Each tool validates input schema via Zod before handler runs
+
+### Pipeline-Specific Constraints
+
+**Agents never access tools**, so:
+- No agent-initiated file system mutations
+- No agent-initiated API calls (publish, media gen) without operator approval
+- Pipeline safety controlled by stage guards (`articleAdvance` validators)
+
+---
+
+## Key Architectural Decisions (From .squad/)
+
+1. **MCP-first pattern** (`2026-03-28`):
+   - `mcp/server.mjs` is the canonical operator-facing local tool entrypoint
+   - `src/mcp/server.ts` is pipeline-only compatibility surface (not for clients)
+   - Wraps extensions from `.github/extensions/` + nflverse data wrappers
+   - Single tool inventory, consistent across all MCP clients
+
+2. **Unified local MCP rollout** (`2026-03-27`):
+   - Consolidate pipeline tools and extension tools into one registry
+   - Single place where tool inventory is defined and validated
+   - Docs and tests should validate full canonical inventory before promoting
+
+3. **Safe seam pattern**:
+   - Shared registration/bootstrap (`mcp/tool-registry.mjs` + extension helpers)
+   - Keep `src/agents/runner.ts` generic (no tool specialization)
+   - Pipeline seams (stage actions) specialize tool use if needed later
+
+---
+
+## Exact Changes Needed for In-App Agent Tool-Calling
+
+### 1. LLM Gateway Enhancement
+
+**File:** `src/llm/gateway.ts`
+
+Add tool definitions to `ChatRequest`:
+
+```typescript
+export interface ChatRequest {
+  messages: ChatMessage[];
+  model?: string;
+  tools?: ToolDefinition[];          // NEW
+  toolChoice?: 'auto' | 'required' | 'none';  // NEW
+  // ... existing fields
+}
+
+export interface ChatResponse {
+  content: string;
+  toolCalls?: Array<{
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+  }>;  // NEW
+  // ... existing fields
+}
+```
+
+Providers must support structured tool calling (e.g., OpenAI `tool_calls`, Anthropic `tool_use`).
+
+### 2. AgentRunner Tool Integration
+
+**File:** `src/agents/runner.ts`
+
+Add optional `toolRegistry` parameter:
+
+```typescript
+constructor(options: {
+  gateway: LLMGateway;
+  memory: AgentMemory;
+  chartersDir: string;
+  skillsDir: string;
+  toolRegistry?: ToolRegistry;  // NEW
+}) { ... }
+
+async run(params: AgentRunParams): Promise<AgentRunResult> {
+  // ... existing setup
+  
+  // NEW: Optionally inject tool definitions into gateway call
+  const toolsForAgent = this.filterToolsByAllowlist(params.allowedTools);
+  
+  const response = await this._gateway.chat({
+    messages,
+    tools: toolsForAgent,  // NEW
+    toolChoice: params.toolChoice,  // NEW
+    // ... existing params
+  });
+  
+  // NEW: Handle tool calls in a loop until agent returns final_text
+  let finalContent = response.content;
+  while (response.toolCalls && response.toolCalls.length > 0) {
+    for (const call of response.toolCalls) {
+      const result = await this.dispatchTool(call.name, call.arguments);
+      messages.push({ role: 'tool', content: result });  // Add to conversation
+    }
+    const nextResponse = await this._gateway.chat({ messages, tools: toolsForAgent });
+    finalContent = nextResponse.content;
+  }
+  
+  return { content: finalContent, ... };
+}
+```
+
+### 3. Tool Registry Adapter
+
+**New file:** `src/agents/tool-adapter.ts`
+
+Bridge between MCP tool registry and LLM tool definitions:
+
+```typescript
+export class ToolRegistry {
+  constructor(entries: ToolRegistryEntry[]) { ... }
+  
+  getTool(name: string): ToolHandler | null { ... }
+  
+  getDefinitionsForLlm(): ToolDefinition[] {
+    // Convert mcp/tool-registry.mjs entries to OpenAI/Anthropic ToolDefinition format
+  }
+  
+  filterByAllowlist(names: string[]): ToolDefinition[] { ... }
+}
+```
+
+### 4. Agent Allowlist & Stage Safety
+
+**File:** `src/pipeline/actions.ts` (or new `agent-tool-policy.ts`)
+
+Define which agents can call which tools at which stages:
+
+```typescript
+const AGENT_TOOL_POLICY: Record<string, { [stage: number]: string[] }> = {
+  'writer': {
+    [5]: ['query_player_stats', 'query_team_efficiency', 'local_tool_catalog'],
+    [4]: ['query_rosters'],  // preflight stage
+  },
+  'editor': {
+    [6]: ['query_player_stats', 'query_team_efficiency', 'query_rosters'],
+  },
+  'lead': {
+    [7]: ['query_player_stats', 'query_prediction_markets'],
+  },
+  'publisher': {
+    [8]: ['publish_to_substack', 'publish_note_to_substack', 'publish_tweet', 'local_tool_catalog'],
+  },
+};
+```
+
+### 5. Tool Call Dispatcher
+
+**File:** `src/agents/tool-dispatcher.ts`
+
+Execute tool handlers and format results for LLM:
+
+```typescript
+export async function dispatchToolCall(
+  toolName: string,
+  args: Record<string, unknown>,
+  allowedTools: string[],
+  context: ActionContext,
+): Promise<string> {
+  if (!allowedTools.includes(toolName)) {
+    return JSON.stringify({ error: 'Tool not allowed for this agent/stage' });
+  }
+  
+  const handler = toolRegistry.getTool(toolName);
+  if (!handler) {
+    return JSON.stringify({ error: `Unknown tool: ${toolName}` });
+  }
+  
+  try {
+    const result = await handler(args);
+    return formatToolResult(result);
+  } catch (err) {
+    return JSON.stringify({ error: err.message });
+  }
+}
+```
+
+---
+
+## Operational Risks
+
+### Runtime Risks
+
+1. **Tool handler errors crash agent loop**
+   - **Mitigation:** Wrap all handler calls in try-catch; return structured error responses to LLM for retry
+   - **Test:** Agent tool-call test suite with mock failures
+
+2. **Agent enters infinite tool-call loop**
+   - **Mitigation:** Set `max_tool_calls` per agent run (e.g., 10 calls, timeout after 2 minutes)
+   - **Test:** Tool-call loop detector, max-depth guards
+
+3. **Tool side effects at wrong stage**
+   - **Mitigation:** Enforce stage-based allowlists (no publishing before stage 8, no mutations before stage 6)
+   - **Test:** Policy validation tests; dry-run publish before allowing real calls
+
+### Security Risks
+
+1. **Agent calls unapproved tools**
+   - **Mitigation:** Hardcoded allowlist per agent/stage; no dynamic tool discovery by agent
+   - **Test:** Policy enforcement tests; audit logging of all tool calls
+
+2. **Credentials leaked in tool error messages**
+   - **Mitigation:** Sanitize handler errors; log full errors server-side, return generic errors to LLM
+   - **Test:** Error handling tests with mock credentials
+
+3. **Malformed tool arguments bypass validation**
+   - **Mitigation:** Zod schemas already validate; dispatcher re-validates before dispatch
+   - **Test:** Schema violation tests; fuzz tool arguments
+
+### Operational Risks
+
+1. **Tool discovery breaks MCP clients**
+   - **Mitigation:** Keep `mcp/tool-registry.mjs` as source of truth; test tool registration on MCP startup
+   - **Test:** `npm run mcp:smoke` passes; canonical MCP server lists all tools
+
+2. **Agent tool calls slow down pipeline**
+   - **Mitigation:** Monitor tool latency; set per-tool timeout (e.g., 30s for queries, 60s for image gen)
+   - **Test:** Performance benchmarks for critical tools (roster, player stats)
+
+3. **Tool registry drift between MCP and agent allowlist**
+   - **Mitigation:** Single source of truth (`mcp/tool-registry.mjs`); generate allowlist from registry metadata
+   - **Test:** Registry consistency tests; generated vs. hand-coded allowlist diffs
+
+---
+
+## Validation Approach
+
+### Pre-Implementation
+
+- [ ] MCP server (`npm run mcp:server`) lists all 25 tools without error
+- [ ] Tool registry entries have valid Zod schemas
+- [ ] All handler imports resolve (no circular deps)
+- [ ] Smoke test (`npm run mcp:smoke`) validates canonical tool surface
+
+### During Implementation
+
+- [ ] LLM Gateway tests cover tool_calls in responses
+- [ ] AgentRunner tests cover tool invocation loop (success, error, timeout)
+- [ ] Tool dispatcher tests cover allowlist enforcement
+- [ ] Policy tests cover agent/stage constraints
+- [ ] Integration tests: single tool call, multi-turn tool calls, tool error handling
+
+### Post-Implementation
+
+- [ ] Pipeline tests pass with tool-enabled agents
+- [ ] Agent tool-call audit logs capture: agent name, stage, tool name, arguments, result
+- [ ] Local run: `npm run v2:init && npm run v2:serve` then run an article through pipeline with tool calls
+- [ ] MCP client compatibility: GitHub Copilot CLI still discovers all tools
+- [ ] Performance: median agent run time < 90s (tool calls included)
+
+---
+
+## Files to Review
+
+**Tool inventory:**
+- `mcp/tool-registry.mjs` (25 tool entries, ~800 LOC)
+- `.github/extensions/*/tool.mjs` (handlers)
+
+**Agent wiring:**
+- `src/agents/runner.ts` (current runner, no tool support)
+- `src/llm/gateway.ts` (text-only chat)
+- `src/llm/providers/*.ts` (provider implementations)
+
+**Pipeline:**
+- `src/pipeline/actions.ts` (agent calls, stage guards)
+- `.squad/decisions.md` (MCP rollout decision)
+
+**Safety:**
+- `.github/extensions/README.md` (tool documentation, safety notes)
+- None: no allowlist currently exists
+
+---
+
+## Recommendations
+
+1. **Keep `mcp/tool-registry.mjs` as single source of truth** for all tool definitions—agents and MCP clients both consume from it.
+
+2. **Implement tool allowlist as metadata** in registry entries (`allowedAgents`, `allowedStages`) so it's code-reviewable and versioned with tool definitions.
+
+3. **Start with read-only nflverse tools** (safest subset: query_player_stats, query_team_efficiency, query_rosters). Graduate to publishing tools after agent tool-call loop is stable.
+
+4. **Audit log all tool calls** (agent name, stage, tool name, arguments, result, latency) to Substack publishing audit table for compliance and debugging.
+
+5. **Test agent tool-calling in isolation first** (unit tests, mock tools) before integrating with pipeline stages.
+
+6. **Document agent tool-calling contract** in `src/agents/README.md`: which agents can call which tools, at which stages, with what expected outcomes.
+
+---
+
+## Non-Changes (Architecture OK as-is)
+
+- ✅ MCP server entrypoint (`mcp/server.mjs`) is correct; no change needed
+- ✅ Tool registry structure and handler exports are ready for agent use
+- ✅ LLM Gateway provider abstraction is sound for adding tool support
+- ✅ AgentRunner memory/skill/charter injection is orthogonal to tool-calling
+- ✅ Pipeline stage guards can be extended to tool policy without refactoring
+
+---
+
+# Decision: DevOps Local MCP Rollout Audit
+
+**Date:** 2026-03-28  
+**Owner:** DevOps  
+**Status:** Proposed
+
+## Recommendation
+
+Keep `mcp/server.mjs` as the canonical repo-local MCP stdio entrypoint.
+
+## Evidence
+
+- Repo-local MCP configs already point to `mcp/server.mjs`: `.copilot/mcp-config.json`, `.mcp.json`
+- Operator docs already describe that path as canonical: `README.md`, `.github/extensions/README.md`
+- `src/cli.ts` now has the right wrapper seam: `mcp` launches the canonical server while `mcp-pipeline` remains explicit
+- `mcp/smoke-test.mjs` validates the canonical path directly
+
+## Rollout Shape
+
+1. `mcp/server.mjs` stays the only server that repo-local MCP clients should launch.
+2. `src/cli.ts` keeps `mcp` as a spawn wrapper to `mcp/server.mjs`.
+3. `src/mcp/server.ts` remains a pipeline-only compatibility/debug surface behind `mcp-pipeline` unless Code intentionally mounts that tool set into the canonical server.
+4. `package.json`, `README.md`, and `.github/extensions/README.md` should keep `mcp:server` / `v2:mcp` aligned to the canonical path and label pipeline-only commands as fallback/debug.
+
+## Code Handoff
+
+- If one unified tool surface is required, Code should extract pipeline registration into a reusable helper and mount it from the canonical bootstrap rather than preserving two first-class entrypoints.
+- Resolve the telemetry drift in `.github/extensions/pipeline-telemetry.mjs`, which still shells to missing legacy `content/pipeline_state.py`; otherwise smoke remains noisy even when the MCP server is healthy.
+
+## Validation
+
+- `npm run v2:build`
+- `npx vitest run tests\cli.test.ts tests\mcp\server.test.ts --reporter=verbose`
+- `npm run mcp:smoke`
+
+---
+
+# DevOps Decision — Local MCP Compatibility Contract
+
+Date: 2026-03-27
+Owner: DevOps
+
+## Decision
+
+Keep `mcp/server.mjs` as the canonical repo-local MCP server entrypoint for operators and client config.
+
+Treat `src/mcp/server.ts` and the `mcp-pipeline` CLI/scripts as pipeline-only compatibility surfaces for debugging and tests, not as the primary local tool rollout target.
+
+## Why
+
+- `.copilot/mcp-config.json`, README setup flows, and the smoke test already center `mcp/server.mjs`.
+- The canonical server exposes the broader local tool inventory, while the TypeScript MCP server remains a narrower pipeline-only surface.
+- The lowest-risk rollout path is to improve discoverability and smoke coverage without renaming tool IDs or breaking existing client config.
+
+## Operational implications
+
+- Local clients should continue pointing at `mcp/server.mjs`.
+- Docs should keep one authoritative tool inventory for the canonical server.
+- Smoke validation should assert the full exported wrapper surface, including dry-run publishing tools and newer data wrappers.
+- Wrapper docs must call out repo-root `cwd` and Python requirements where applicable.
+
+## Known blocker to track
+
+Legacy telemetry plumbing in `.github/extensions/pipeline-telemetry.mjs` still references `content/pipeline_state.py`, which can surface warnings during smoke tests. This is a compatibility gap to retire separately; it does not change the canonical entrypoint decision.
+
+---
+
+# DevOps Decision — MCP Rollout Audit
+
+## Summary
+For the unified local MCP rollout, treat the canonical local tool server as an operator contract. Document and validate the `mcp/server.mjs` tool catalog first, keep the pipeline-only MCP server as an explicit compatibility/debug surface, and avoid renaming tools or moving client entrypoints until docs and tests cover the canonical catalog.
+
+## Why
+The audited repo surface exposes most model-facing tool meaning only through source code and runtime `listTools`, not through operator docs. Main README guidance is high-level, `.github/extensions/README.md` documents only part of the canonical catalog, `tests/mcp/server.test.ts` covers a different server, and `mcp/smoke-test.mjs` misses `query_rosters`, `query_prediction_markets`, and `publish_tweet`.
+
+## Safe rollout implications
+1. Keep existing tool names and schemas additive; do not break current MCP clients.
+2. Publish one human-readable catalog for the canonical local server, including purpose, required vs optional inputs, and example calls.
+3. Add canonical-server validation that checks the registered tool inventory and smoke coverage before changing local config/docs aliases.
+4. Label the pipeline MCP surface as compatibility/debug-only anywhere it remains user-visible.
+
+## Likely update targets
+- `README.md`
+- `.github/extensions/README.md`
+- `mcp/smoke-test.mjs`
+- new canonical MCP registration/inventory test near `mcp/server.mjs`
+- existing pipeline MCP tests/docs only for clarification, not as the primary rollout proof
+
+---
+
+# Lead Decision — In-app agent local MCP tooling
+
+- **Date:** 2026-03-28
+- **Owner:** Lead
+- **Status:** Approved seam / implementation guardrails
+
+## Request
+
+Decide the safest way to give the in-app agent runtime access to the local tool catalog plus the read-only local data query tools.
+
+## Current seam review
+
+The current in-app runtime is still a **text-only seam**:
+
+- `src\agents\runner.ts` builds a system prompt and one user message, then calls `LLMGateway.chat(...)`.
+- `src\llm\gateway.ts` resolves model/provider routing only; it has no tool definition, tool result, or tool loop contract.
+- `src\llm\providers\copilot-cli.ts` explicitly tells the provider not to read files, run commands, or use tools, so provider-native tool use is intentionally disabled today.
+- `mcp\tool-registry.mjs` already contains the best local source of truth for tool names, categories, schemas, side-effect posture, and examples.
+
+So the safe conclusion is: **do not try to “turn on MCP” at the provider layer first.** There is no stable provider-agnostic tool contract yet, and one provider is explicitly constrained against autonomous tool use.
+
+## Approved implementation seam
+
+Approve an **application-owned tool loop** at the agent runtime seam, not provider-owned tool execution.
+
+### Seam
+
+1. Keep `AgentRunner` as the orchestration entrypoint.
+2. Add a small runtime-local tool executor module under `src\agents\` or `src\mcp\` that:
+   - exposes a curated in-process tool registry for agent use
+   - validates requested arguments against the existing schemas
+   - executes handlers directly in-process
+   - returns normalized tool results back into the agent conversation
+3. Extend the `AgentRunner` ↔ `LLMGateway` interaction with a provider-agnostic structured tool-request loop:
+   - model proposes a tool call in a bounded JSON shape
+   - runtime validates and executes it
+   - runtime appends the tool result into the next turn
+   - runtime repeats for a small bounded number of steps, then requires a final text answer
+4. Use the local catalog metadata as the **single source of truth** for tool discoverability. Do not duplicate tool descriptions or argument help inside charters or ad hoc prompt strings.
+
+### Why this seam is approved
+
+- Works across all providers, including providers that do not support native function calling.
+- Keeps authorization and allowlisting inside repo code instead of outsourcing it to model/provider behavior.
+- Avoids spawning a local stdio MCP server from inside the app just to call tools that already live in-process.
+- Preserves the existing Copilot CLI safety posture until the repo-owned runtime loop exists.
+
+## Explicit allowlist for in-app agents
+
+Approve these tools for the in-app runtime:
+
+1. `local_tool_catalog`
+2. `query_player_stats`
+3. `query_team_efficiency`
+4. `query_positional_rankings`
+5. `query_snap_counts`
+6. `query_draft_history`
+7. `query_ngs_passing`
+8. `query_combine_profile`
+9. `query_pfr_defense`
+10. `query_historical_comps`
+11. `query_rosters`
+12. `query_prediction_markets`
+
+These are approved because they are discoverability-only or read-only data lookups.
+
+## Explicit denylist for in-app agents
+
+Do **not** expose these tools through the in-app runtime:
+
+- `generate_article_images`
+- `render_table_image`
+- `publish_to_substack`
+- `publish_note_to_substack`
+- `publish_tweet`
+- `refresh_nflverse_cache`
+
+Also deny any future local tool whose contract is not clearly read-only. Default posture is **deny by default** unless Lead explicitly approves it.
+
+## Guardrails
+
+1. **Single source of truth**
+   - Runtime allowlist must be derived from the same tool registry metadata used by the local MCP server.
+   - Do not hand-maintain a second list in prompts or tests without a registry-backed assertion.
+
+2. **Provider-agnostic tool loop**
+   - Do not depend on provider-native function calling for first rollout.
+   - Do not relax the Copilot CLI “no tools” instruction until the repo-owned executor is landing and bounded.
+
+3. **In-process execution only**
+   - Do not start `mcp/server.mjs` as a subprocess from the in-app runtime.
+   - Import shared handlers/metadata and execute them directly.
+
+4. **Bounded execution**
+   - Cap tool-call hops per agent run.
+   - Deduplicate repeated identical calls in the same run.
+   - Fail closed on invalid arguments or non-allowlisted tool names.
+
+5. **Prompt contract**
+   - Tell agents that `local_tool_catalog` is the first-choice discovery tool when unsure.
+   - Tell agents to prefer direct data queries over guessing, but to stop once they have enough evidence.
+
+6. **Observability**
+   - Record which tool was requested, which tool actually ran, and whether it succeeded.
+   - Preserve separation between model usage telemetry and tool-usage telemetry.
+
+7. **Future-proofing**
+   - If a tool’s `readOnlyHint` or side-effect posture changes, the in-app allowlist review must be revisited.
+   - Any mutating tool exposure requires separate approval.
+
+## Review of current code changes on disk
+
+I do **not** approve the current on-disk runtime changes as a solution to this request.
+
+### Clear blocker
+
+The `AgentRunner` / `LLMGateway` changes on disk only add provider preference routing. They do **not** add an agent tool contract, tool execution loop, or shared allowlisted registry seam. On top of that, `src\llm\providers\copilot-cli.ts` still explicitly disables tool use, so the current runtime cannot honestly be described as “wired” for local tool catalog or data query access.
+
+### Revision direction for Code
+
+- Build the tool seam above providers, not inside provider routing.
+- Reuse registry metadata from the local tool registry.
+- Land allowlist tests that prove only the approved read-only tools are reachable from in-app agents.
+
+
+---
+
+# Lead Review: In-App Agent Tool Wiring Architecture
+
+**Date:** 2026-03-28  
+**Status:** ANALYSIS COMPLETE — READY FOR IMPLEMENTATION  
+**Scope:** Wiring agents to discover and call local_tool_catalog + safe read-only NFL data query tools
+
+---
+
+## Executive Summary
+
+The codebase has **two separate, non-integrated systems**:
+
+1. **Agent System** (`src/agents/runner.ts`, `src/pipeline/actions.ts`)  
+   - Agents load charters (markdown files in `.squad/agents/{name}/charter.md`)
+   - Agents load skills (markdown with YAML frontmatter in `.squad/skills/`)
+   - **No tool discovery or execution** — agents are stateless LLM oracles
+
+2. **MCP Tool System** (`mcp/server.mjs`, `mcp/tool-registry.mjs`)  
+   - Exposes 15+ tools (data queries, publishing, media generation)
+   - Has `local_tool_catalog` tool for discovery
+   - **MCP server runs independently** — standalone stdio process, NOT connected to agents
+   - All NFL data tools are read-only (safe) and use nflverse datasets
+
+**The Gap:** Agents cannot discover or invoke tools at all. They receive prompts and return text only.
+
+---
+
+## Current Architecture Diagram
+
+```
+┌─────────────────────────┐
+│  Agent System (src/)    │
+├─────────────────────────┤
+│ • Agent Charter (MD)    │
+│ • Agent Skills (MD)     │
+│ • Agent Memory (LLM)    │
+│ • LLM Gateway           │
+│   ├─ ModelPolicy        │
+│   └─ Providers (8)      │
+│       ├─ Copilot        │
+│       ├─ Claude         │
+│       ├─ Gemini         │
+│       └─ LM Studio      │
+│                         │
+│ Status: NO tool access  │
+└─────────────────────────┘
+         │ (prompts only)
+         ▼
+    LLM Response
+  (text output)
+
+
+┌─────────────────────────┐
+│  MCP Tool System (mcp/) │
+├─────────────────────────┤
+│ • Server (stdio)        │
+│ • Tool Registry (15+)   │
+│   ├─ local_tool_catalog│
+│   ├─ Publishing (3)     │
+│   ├─ Media Gen (2)      │
+│   └─ NFL Data (9)       │
+│       ├─ Query players  │
+│       ├─ Query teams    │
+│       ├─ Query stats    │
+│       └─ ... (6 more)   │
+│                         │
+│ Status: Standalone,     │
+│ only callable from CLI  │
+└─────────────────────────┘
+  (not integrated w/ agents)
+```
+
+---
+
+## Where Tool Configuration Lives
+
+### 1. Tool Registry & Allowlists
+- **File:** `mcp/tool-registry.mjs` (550+ lines)
+- **What's there:**
+  - `localToolEntries` array (line 144): Full catalog with schemas, descriptions, examples, handlers
+  - `TOOL_CATEGORIES` enum (line 62): `["all", "help", "media", "publishing", "data"]`
+  - Tool metadata: `sideEffects`, `readOnlyHint`, `idempotentHint`, `openWorldHint`
+  - **Allowlist pattern:** No runtime allowlist yet. Tools are selectively exposed via category filters in `local_tool_catalog` handler
+
+### 2. Agent Charter & Skill Injection
+- **File:** `src/agents/runner.ts`
+  - `AgentCharter` interface (line 19): includes `name`, `identity`, `responsibilities`, `knowledge`, `boundaries`, `model`
+  - Agent skills loaded from YAML frontmatter with `tools` field (line 33)
+  - Skills are injected into system prompt (line 314-320)
+  - **Current state:** Skills have a `tools: string[]` field but it's never used or validated
+
+### 3. System Prompt Assembly
+- **File:** `src/agents/runner.ts` → `composeSystemPrompt()` (line 292-341)
+- **Current sections:**
+  1. Identity
+  2. Responsibilities
+  3. Skills (full content from YAML body)
+  4. Memories (recent context)
+  5. Roster context (optional NFL player data)
+  6. Boundaries
+- **Missing:** Tool catalog, tool access instructions, tool invocation examples
+
+### 4. Prompts & Handoff Isolation
+- **File:** `src/pipeline/actions.ts` → `runner.run()` calls (multiple)
+- **Pattern:** Each action calls `runner.run()` with:
+  - `agentName` (e.g., `"writer"`, `"editor"`, `"lead"`)
+  - `task` (the actual instruction)
+  - `articleContext` (slug, title, stage, content)
+  - Optional `rosterContext` (pre-generated roster string)
+  - Optional `conversationContext` (revision history)
+- **No tool exposure:** Task always assumes LLM-only inference
+
+---
+
+## Exact Code Changes Needed
+
+### Phase 1: Tool Invocation Interface (Foundation)
+
+**1.1 Extend `ChatRequest` with tool capability**
+- **File:** `src/llm/gateway.ts` (line 20-32)
+- **Add:**
+  ```typescript
+  tools?: Array<{
+    name: string;
+    description: string;
+    inputSchema: unknown; // JSON Schema
+  }>;
+  toolChoice?: 'auto' | 'required' | 'none';
+  ```
+- **Rationale:** Some LLM providers (Claude, OpenAI) support tool_use via structured output; this signals support
+
+**1.2 Extend `AgentRunParams` with tool access**
+- **File:** `src/agents/runner.ts` (line 37-60)
+- **Add:**
+  ```typescript
+  /** Optional tool allowlist for this run. Format: "category:*" or "tool:name1,name2". */
+  toolAllowlist?: string;
+  /** Optional tool execution handler if LLM returns tool calls. */
+  toolExecutor?: (toolName: string, args: unknown) => Promise<unknown>;
+  ```
+- **Rationale:** Allows actions to gate which tools are available per agent/stage
+
+**1.3 Inject tool catalog into system prompt**
+- **File:** `src/agents/runner.ts` → `composeSystemPrompt()` (line 292-341)
+- **Add section before Boundaries:**
+  ```typescript
+  // Tools
+  if (toolCatalog && toolCatalog.length > 0) {
+    const toolLines = toolCatalog.map(t => 
+      `- ${t.name}: ${t.description} (side effects: ${t.sideEffects})`
+    );
+    parts.push('## Available Tools\n' + toolLines.join('\n'));
+    parts.push('### Tool Usage\nWhen a tool call would improve the task outcome, invoke it using tool_use XML tags: <tool_use name="tool_name">{ json args }</tool_use>');
+  }
+  ```
+
+### Phase 2: Tool Catalog Discovery (MCP Extraction)
+
+**2.1 Export tool registry as a TypeScript module**
+- **File:** Create `src/mcp/tool-catalog.ts`
+- **Export:**
+  ```typescript
+  export interface ToolEntry {
+    name: string;
+    title: string;
+    category: 'help' | 'media' | 'publishing' | 'data';
+    description: string;
+    sideEffects: string;
+    inputSchema: unknown;
+  }
+  
+  export function getToolCatalog(filter?: {
+    category?: string;
+    readOnly?: boolean;
+  }): ToolEntry[];
+  
+  export const NFL_DATA_TOOLS = [
+    'query_player_stats',
+    'query_team_efficiency',
+    // ... (9 tools)
+  ];
+  ```
+- **Rationale:** Bridge MCP server (JS) to TypeScript agents; avoid code duplication
+
+**2.2 Safe-list read-only tools for agents**
+- **File:** `src/mcp/tool-catalog.ts`
+- **Define:**
+  ```typescript
+  export const SAFE_READ_ONLY_TOOLS = [
+    // NFL Data
+    'query_player_stats',
+    'query_team_efficiency',
+    'query_positional_rankings',
+    'query_snap_counts',
+    'query_draft_history',
+    'query_ngs_passing',
+    'query_combine_profile',
+    'query_pfr_defense',
+    'query_historical_comps',
+    'query_rosters',
+    // Discovery
+    'local_tool_catalog',
+  ];
+  ```
+- **Metadata:**
+  ```typescript
+  export const TOOL_READ_ONLY = new Set(SAFE_READ_ONLY_TOOLS);
+  export const TOOL_NO_SIDE_EFFECTS = new Set([
+    'local_tool_catalog',
+    ...SAFE_READ_ONLY_TOOLS,
+  ]);
+  ```
+
+### Phase 3: Agent Tool Access (Runtime)
+
+**3.1 Determine which tools an agent can access**
+- **File:** `src/agents/runner.ts` → new method `getAllowedTools(agentName: string): ToolEntry[]`
+- **Logic:**
+  ```typescript
+  // Safe defaults: only safe read-only tools + agent-specific skills
+  const base = SAFE_READ_ONLY_TOOLS;
+  
+  // Editor can fact-check without publishing
+  if (agentName === 'editor') {
+    return base.filter(t => !t.name.includes('publish'));
+  }
+  
+  // Writer can query data, but not publish
+  if (agentName === 'writer') {
+    return base;
+  }
+  
+  // Publisher gets publishing tools
+  if (agentName === 'publisher') {
+    return [...base, 'publish_to_substack', 'publish_note_to_substack', 'publish_tweet'];
+  }
+  
+  // Default: read-only only
+  return base;
+  ```
+- **Design principle:** Allowlist is agent-role-based, not per-run configurable (for now)
+
+**3.2 Pass tool catalog to system prompt**
+- **File:** `src/agents/runner.ts` → `run()` method (line 345-451)
+- **Add before `composeSystemPrompt()` call:**
+  ```typescript
+  const allowedTools = this.getAllowedTools(agentName);
+  const systemPrompt = this.composeSystemPrompt(charter, skills, memories, 
+    params.rosterContext, allowedTools);
+  ```
+
+**3.3 Update `ChatRequest` call to include tools**
+- **File:** `src/agents/runner.ts` → `run()` method, at gateway.chat() call (line 404-415)
+- **Add:**
+  ```typescript
+  tools: allowedTools.map(t => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+  })),
+  toolChoice: 'auto',
+  ```
+
+### Phase 4: Tool Execution (Conditional)
+
+**4.1 Add tool execution handler to AgentRunner**
+- **File:** `src/agents/runner.ts`
+- **New method:**
+  ```typescript
+  async executeToolCall(toolName: string, args: unknown): Promise<unknown> {
+    const handler = this.toolHandlers.get(toolName);
+    if (!handler) throw new Error(`Unknown tool: ${toolName}`);
+    return handler(args);
+  }
+  ```
+
+**4.2 Integrate tool handlers at runner instantiation**
+- **File:** `src/agents/runner.ts` → constructor
+- **Accept:**
+  ```typescript
+  constructor(options: {
+    ...existing...
+    toolHandlers?: Map<string, (args: unknown) => Promise<unknown>>;
+  }) {
+    this.toolHandlers = options.toolHandlers ?? new Map();
+  }
+  ```
+
+**4.3 Post-process LLM response for tool calls**
+- **File:** `src/agents/runner.ts` → `run()` method, after `separateThinking()` (line 418)
+- **Add:**
+  ```typescript
+  // Check if response contains tool_use tags and execute if present
+  let finalContent = cleanContent;
+  const toolMatches = cleanContent.match(/<tool_use name="([^"]+)">(\{[^}]+\})<\/tool_use>/g);
+  
+  if (toolMatches && this.toolHandlers.size > 0) {
+    const results: Array<{ tool: string; result: unknown }> = [];
+    for (const match of toolMatches) {
+      const [, name, argsStr] = match.match(/<tool_use name="([^"]+)">(.+)<\/tool_use>/)!;
+      const args = JSON.parse(argsStr);
+      try {
+        const result = await this.executeToolCall(name, args);
+        results.push({ tool: name, result });
+      } catch (err) {
+        results.push({ tool: name, result: { error: String(err) } });
+      }
+    }
+    // Optionally inject tool results back into context for multi-turn (future work)
+  }
+  ```
+- **Note:** Full multi-turn tool refinement deferred; agents get one tool call per response
+
+---
+
+## Tests to Update/Add
+
+### Existing Tests (Update)
+
+1. **`tests/agents/runner.test.ts`**
+   - Add `getAllowedTools()` test for each agent role
+   - Verify tool names are correctly injected in system prompt
+   - Test tool_use tag parsing (when implemented)
+
+2. **`tests/llm/gateway.test.ts`**
+   - No changes needed (gateway is provider-agnostic; tools passed as request metadata)
+
+3. **`tests/pipeline/actions.test.ts`**
+   - Agents with `toolAllowlist` param should include tool catalog in system prompt
+   - Agents without should NOT include tools (backward compat)
+
+### New Tests
+
+4. **`tests/agents/tool-catalog.test.ts`** (new)
+   ```typescript
+   - SAFE_READ_ONLY_TOOLS covers all 9 NFL data + 1 discovery tool
+   - TOOL_READ_ONLY and TOOL_NO_SIDE_EFFECTS sets are disjoint/consistent
+   - getAllowedTools('writer') excludes publish_* tools
+   - getAllowedTools('editor') excludes publish_* and media_* tools
+   - getAllowedTools('publisher') includes all safe tools
+   ```
+
+5. **`tests/agents/runner-tools.test.ts`** (new)
+   ```typescript
+   - System prompt includes "## Available Tools" section when tools provided
+   - System prompt includes tool usage examples
+   - Tool invocation instructions are present in system prompt
+   - Agent name → allowed tools mapping is correct per role
+   ```
+
+---
+
+## Risks & Mitigations
+
+| Risk | Severity | Mitigation |
+|------|----------|-----------|
+| Agents hallucinate tool names | HIGH | Hard-code allowlist per agent role; validate before execution; test tool_use parsing |
+| Tool execution errors block article flow | MEDIUM | Catch execution errors; inject error into response; let agent retry or skip |
+| Publishing tools accidentally exposed to writer | HIGH | Unit test allowlist logic; readOnlyHint enforced at MCP layer, not agent layer |
+| NFL data tools return stale data | MEDIUM | Existing (not new) — tools already cache nflverse data; document cache refresh policy in catalog |
+| System prompt bloat (too many tools listed) | LOW | Lazy-load tool catalog; limit to 3-5 most relevant tools per agent if needed |
+| Agent ignores tools and prefers text-only | LOW | Expected behavior; tools are opt-in via tool_use XML, not required |
+
+---
+
+## Integration Checklist
+
+### Before Merge
+- [ ] Phase 1 code in place (ChatRequest, AgentRunParams, system prompt extension)
+- [ ] Phase 2 code in place (tool catalog extraction, safe-list definition)
+- [ ] Phase 3 code in place (agent allowlist logic, tool injection)
+- [ ] Phase 4 code in place (tool execution handler, if pursuing multi-turn)
+- [ ] All Phase 1-3 tests passing
+- [ ] No breaking changes to existing agent invocations
+- [ ] Tool catalog discoverable via `local_tool_catalog` from agent prompt
+
+### Post-Merge Validation
+- [ ] Run 5+ articles through writer → capture system prompts → verify tool catalog injected
+- [ ] Manual test: ask writer to query player stats → verify query_player_stats in catalog → LLM calls tool
+- [ ] Manual test: ask editor to query data → verify publish_* tools NOT in catalog
+- [ ] Manual test: ask publisher → verify publish_* tools ARE available
+- [ ] Monitor agent token usage for bloat from tool catalog in system prompt
+
+---
+
+## Decision: Start with Phases 1–3
+
+**Rationale:**
+- Tool invocation (tool_use XML) is optional; if agent chooses not to call tools, article flow unchanged
+- System prompt injection is non-breaking; backward compatible with existing charters
+- Phase 4 (tool execution) can be added after validation that agents correctly name/format tool calls
+- Reduces first implementation scope; simpler testing story
+
+**Next Steps:**
+1. Code team: Implement Phases 1–3
+2. Tests: Add runner-tools and tool-catalog test files
+3. Validate: Run articles; capture one system prompt; inspect tool catalog output
+4. Iterate: If agents reliably invoke tool_use tags → add Phase 4
+

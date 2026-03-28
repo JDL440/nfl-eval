@@ -1,8 +1,47 @@
+## 2026-03-28T00:54:15Z — In-App Agent Tool-Wiring Architecture DECISION MERGED
+
+**Status:** ✅ DECISION MERGED TO `.squad/decisions.md` — Approved for Code implementation
+
+**Session logs:**
+- Orchestration: `.squad/orchestration-log/2026-03-28T00-54-15-devops.md`
+- Session: `.squad/log/2026-03-28T00-54-15-in-app-readonly-seam-audit.md`
+
+**Decision Summary (Lead-Approved):**
+
+The in-app agent tool-wiring architecture has been fully designed and approved. Four phases define the implementation:
+
+1. **Phase 1 (Foundation):** Extend ChatRequest with tool capability; extend AgentRunParams; inject tool catalog into system prompt
+2. **Phase 2 (Catalog Extraction):** Export tool registry as TypeScript module; define safe-list of 12 read-only tools
+3. **Phase 3 (Agent Access):** Determine role-based allowlist (Writer→data; Editor→data only; Publisher→all safe + publishing); pass tools to gateway
+4. **Phase 4 (Execution):** Tool execution handler + multi-turn tool refinement (deferred pending Phase 1-3 validation)
+
+**Approved Tool Allowlist (12 tools — read-only + discovery only):**
+- `local_tool_catalog` (discovery)
+- `query_player_stats`, `query_team_efficiency`, `query_positional_rankings`, `query_snap_counts`, `query_draft_history`, `query_ngs_passing`, `query_combine_profile`, `query_pfr_defense`, `query_historical_comps`, `query_rosters`, `query_prediction_markets`
+
+**Explicitly Denied Tools (not accessible to in-app agents):**
+- `generate_article_images`, `render_table_image` (media)
+- `publish_to_substack`, `publish_note_to_substack`, `publish_tweet` (publishing)
+- `refresh_nflverse_cache` (cache operations)
+
+**Key Guardrails:**
+- Single source of truth: Runtime allowlist must derive from `mcp/tool-registry.mjs` metadata
+- Provider-agnostic tool loop: Do not depend on provider-native function calling for first rollout
+- In-process execution only: Do not spawn `mcp/server.mjs` as subprocess; import handlers directly
+- Bounded execution: Cap tool-call hops per agent run; deduplicate repeated identical calls
+- Fail closed: Invalid arguments or non-allowlisted tool names throw "not allowed"
+
+**Current Status Issues (DevOps audit found):**
+- ✅ Core implementation exists in `src/agents/runner.ts` + `src/agents/local-tools.ts`
+- ✅ Allowlist enforced; only approved tools accessible
+- ⚠️ Build blockers: `verify()` signature mismatch in Copilot CLI provider; stale import in runner tests
+- ⚠️ Missing: duplicate-call suppression; negative tests proving denylist enforcement
+
+**Next:** Code team implements Phases 1-3. Build blockers must be fixed before validation.
+
+---
+
 ## Learnings
-
-### Agent-to-Tool Wiring Architecture (2026-03-28)
-
-**Status:** INSPECTION COMPLETE — Ready for implementation
 
 **Key Finding:** Agent system (runners, charters, skills) and MCP tool system (tool-registry) are completely decoupled. Agents have no tool discovery or execution capability. The gap is a system-design issue, not a bug: agents were built to be pure LLM oracles, but operational readiness now requires safe tool access (data queries, fact-checking, publishing).
 
