@@ -1,3 +1,48 @@
+# MERGED INBOX ENTRIES (2026-03-29T02-04-22Z)
+
+## lead runner trace metadata (APPROVED):
+
+# Lead Decision — Runner Trace Metadata Review
+
+**Date:** 2026-03-29
+**Owner:** Lead
+**Status:** APPROVED
+
+## Verdict
+
+Approve only a **runner-trace metadata plumbing** fix. Reject any broader patch that changes Copilot CLI provider shaping, dashboard rendering, or unrelated tool-loop behavior.
+
+## Evidence
+
+1. In v4 `src\agents\runner.ts`, trace start records tool availability:
+   - `startLlmTrace(... metadata: { availableTools: ... })` at the start of the run.
+2. In the same v4 file, trace completion writes only:
+   - `metadata: toolCalls.length > 0 ? { toolCalls } : null`
+   - because `src\db\repository.ts` stores `metadata_json = COALESCE(?, metadata_json)`, any non-null completion object replaces the earlier start metadata rather than merging it.
+3. The focused Copilot CLI regression follows from that seam:
+   - Copilot CLI bypasses the app-owned tool loop guard in runner.
+   - So traces can legitimately have configured/available tools but no runner-owned `toolCalls`.
+   - The missing behavior is preservation/merge of `availableTools` at completion, not a provider contract change.
+4. Integration runner already moves in the correct direction:
+   - it rebuilds completion metadata with `availableTools` plus `toolCalls`
+   - and can also project provider-native `toolLoop.calls` from `response.providerMetadata.responseEnvelope`.
+5. `src\llm\providers\copilot-cli.ts` is not the seam under review:
+   - the provider file is materially unchanged across the compared worktrees for request/response metadata shaping.
+   - existing provider responsibility remains CLI-native tool/session behavior, consistent with team decisions.
+
+## Smallest Correct Fix Scope
+
+- **Required:** localized runner trace metadata preservation/merge only.
+- **Companion tests:** yes, focused runner tests are appropriate because the bug is an overwrite/merge contract at trace completion.
+- **Not required:** Copilot CLI provider changes.
+- **Reject:** any broader patch that teaches the provider about runner metadata merging, alters dashboard trace rendering, or widens tool-loop semantics beyond this observability seam.
+
+## Review Note
+
+The architectural rule remains: provider owns native tool behavior; runner owns trace persistence semantics. This bug sits at that runner boundary.
+
+---
+
 # MERGED INBOX ENTRIES (2026-03-29T01-23-41Z)
 
 ## devops devps1 startup (APPROVED):
