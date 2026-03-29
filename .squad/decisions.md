@@ -1,3 +1,93 @@
+# MERGED INBOX ENTRIES (2026-03-29T01-23-41Z)
+
+## devops devps1 startup (APPROVED):
+
+# DevOps Decision — dev.ps1 startup mode should be source-first with explicit built preflight
+
+**Date:** 2026-03-29  
+**Owner:** DevOps  
+**Status:** APPROVED
+
+### Context
+
+- `package.json` in both `C:\github\nfl-eval` and `C:\github\worktrees\llminputs\worktrees\v4` exposes both `v2:serve` (source via `tsx`) and `v2:start` (built via `dist\cli.js`).
+- Operators move between the main repo and the v4 worktree and asked whether `.\dev.ps1` requires a rebuild first.
+- The current successful path is source-first; only the built path needs `dist` freshness.
+
+### Decision
+
+- Keep `.\dev.ps1` defaulting to `npm run v2:serve`.
+- Add an explicit `-Built` switch that runs `npm run v2:build` immediately before `npm run v2:start`.
+- Apply the same behavior to both `C:\github\nfl-eval\dev.ps1` and `C:\github\worktrees\llminputs\worktrees\v4\dev.ps1`.
+
+### Why
+
+- This preserves the existing fast path that already works without requiring rebuilds.
+- It removes the stale-build footgun for the built startup path.
+- Mirroring behavior across both locations lowers operator error when switching worktrees.
+
+### Validation
+
+- Spot-checked both scripts with `-CommandOnly` in default and `-Built` modes.
+- `npm run v2:build` passed in both locations.
+- Full `npm test` still fails in both locations on pre-existing e2e/database issues unrelated to `dev.ps1`.
+
+---
+
+## code lmstudio envelope fix (APPROVED):
+
+# Code Decision Inbox — LM Studio trace envelope visibility
+
+**Date:** 2026-03-29  
+**Owner:** Code  
+**Status:** APPROVED
+
+### Context
+
+- The trace timeline page already renders `provider_request_json` and `provider_response_json` from `src\dashboard\views\traces.ts`.
+- `src\agents\runner.ts` only persists those fields when a provider returns `response.providerMetadata.requestEnvelope` / `responseEnvelope`.
+- `src\llm\providers\lmstudio.ts` returned content/usage only, so successful LM Studio traces stored NULL envelopes and the dashboard showed empty sections.
+
+### Decision
+
+- Fix the problem at the LM Studio provider seam by emitting `providerMetadata` with the actual LM Studio request envelope and raw response envelope.
+- Preserve runner, repository, and dashboard behavior for every other provider.
+- Cover the seam with focused provider, runner, and dashboard tests instead of broad trace refactors.
+
+### Why
+
+- The trace page was not broken; the persistence chain never received LM Studio envelope data.
+- Provider-local metadata keeps the fix small and avoids changing shared trace plumbing that already works for Copilot CLI.
+- Capturing envelopes on success and relevant error paths makes LM Studio traces debuggable without widening scope into unrelated provider behavior.
+
+---
+
+## code recurring schema error (APPROVED):
+
+### 2025-07: Tool-loop final envelope must appear in task text for every route with toolCalling enabled
+
+**By:** Code (via investigation) / Joe Robinson  
+**Date:** 2025-07  
+**Status:** APPROVED
+
+### Decision
+
+Every server route that calls `runner.run()` with `toolCalling: { enabled: true }` MUST include the JSON final envelope instruction in the task string itself — not just in the system prompt. System prompt injection via `buildToolCatalogPrompt()` alone is insufficient for smaller models (Qwen via LM Studio) which follow the task-level instruction over the system prompt when both conflict.
+
+### Why
+
+Two separate fixes confirmed this pattern:
+1. `/api/ideas` — fixed in prior session (idea-generation task text updated)
+2. `/api/agents/:name/refresh-knowledge` and `/api/agents/refresh-all` — fixed in separate session (`knowledgePromptFor()` refactored to always append `KNOWLEDGE_REFRESH_ENVELOPE_FOOTER`)
+
+The exact error these missing envelopes produce: "LLM response does not match schema: invalid option expected one of final|tool_call" — from `TOOL_LOOP_RESPONSE_SCHEMA` in `v4/src/agents/runner.ts:144`.
+
+### Enforcement
+
+Regression tests in `tests/dashboard/agents.test.ts` and `tests/dashboard/new-idea.test.ts` now verify the envelope phrases are present in all affected task strings. Any future route adding `toolCalling: { enabled: true }` must follow the same pattern.
+
+---
+
 # MERGED INBOX ENTRIES (2026-03-29T173307Z)
 
 ## code idea json (TO REVIEW):
@@ -993,6 +1083,70 @@ Treat `.squad/**/history.md` as local-only artifacts. Keep them on disk for each
 
 
 # MERGED INBOX ENTRIES (2026-03-28T17:54:23Z)
+
+---
+
+# MERGED INBOX ENTRIES (2026-03-28T18:23:20Z)
+
+## DevOps Decision — dev.ps1 startup mode should be source-first with explicit built preflight
+
+### Context
+- `package.json` in both `C:\github\nfl-eval` and `C:\github\worktrees\llminputs\worktrees\v4` exposes both `v2:serve` (source via `tsx`) and `v2:start` (built via `dist\cli.js`).
+- Operators move between the main repo and the v4 worktree and asked whether `.\dev.ps1` requires a rebuild first.
+- The current successful path is source-first; only the built path needs `dist` freshness.
+
+### Decision
+- Keep `.\dev.ps1` defaulting to `npm run v2:serve`.
+- Add an explicit `-Built` switch that runs `npm run v2:build` immediately before `npm run v2:start`.
+- Apply the same behavior to both `C:\github\nfl-eval\dev.ps1` and `C:\github\worktrees\llminputs\worktrees\v4\dev.ps1`.
+
+### Why
+- This preserves the existing fast path that already works without requiring rebuilds.
+- It removes the stale-build footgun for the built startup path.
+- Mirroring behavior across both locations lowers operator error when switching worktrees.
+
+### Validation
+- Spot-checked both scripts with `-CommandOnly` in default and `-Built` modes.
+- `npm run v2:build` passed in both locations.
+- Full `npm test` still fails in both locations on pre-existing e2e/database issues unrelated to `dev.ps1`.
+
+---
+
+## Code Decision — LM Studio trace envelope visibility
+
+### Context
+- The trace timeline page already renders `provider_request_json` and `provider_response_json` from `src\dashboard\views\traces.ts`.
+- `src\agents\runner.ts` only persists those fields when a provider returns `response.providerMetadata.requestEnvelope` / `responseEnvelope`.
+- `src\llm\providers\lmstudio.ts` returned content/usage only, so successful LM Studio traces stored NULL envelopes and the dashboard showed empty sections.
+
+### Decision
+- Fix the problem at the LM Studio provider seam by emitting `providerMetadata` with the actual LM Studio request envelope and raw response envelope.
+- Preserve runner, repository, and dashboard behavior for every other provider.
+- Cover the seam with focused provider, runner, and dashboard tests instead of broad trace refactors.
+
+### Why
+- The trace page was not broken; the persistence chain never received LM Studio envelope data.
+- Provider-local metadata keeps the fix small and avoids changing shared trace plumbing that already works for Copilot CLI.
+- Capturing envelopes on success and relevant error paths makes LM Studio traces debuggable without widening scope into unrelated provider behavior.
+
+---
+
+## Code Decision — Recurring tool-loop schema error
+
+### Context
+- Joe reported the old error string `LLM response does not match schema: invalid option expected one of final|tool_call` again after the earlier v4 idea-generation fix.
+- The fixed v4 code lives in `C:\github\worktrees\llminputs\worktrees\v4\src\dashboard\server.ts` and explicitly tells `/api/ideas` runs to end with `{"type":"final","content":"..."}`.
+- The currently running dashboard process on port 3456 is not serving that v4 worktree; another checkout is still active on the machine.
+
+### Decision
+- Treat this recurrence primarily as runtime/worktree drift, not a fresh regression in the validated v4 fix.
+- Keep the same prompt hardening in `C:\github\nfl-eval\src\dashboard\server.ts` so this repo does not reintroduce the idea-page failure when it is the served checkout.
+- During triage, identify the live dashboard worktree before widening schema parsing or altering the tool-loop contract.
+
+### Why
+- The exact error string belongs to the app-managed tool-loop schema path, but operators can still be hitting an older checkout whose `/api/ideas` task text never picked up the explicit final-envelope reminder.
+- Restarting the correct worktree is safer than weakening the contract.
+- Mirroring the prompt fix into the team root keeps `C:\github\nfl-eval` aligned with the already-validated v4 behavior.
 
 
 

@@ -31,11 +31,17 @@ Keep provider-specific session and tool semantics coherent across runtime wiring
 5. Verify dashboard trace views render those fields in human terms instead of only raw JSON.
 6. Run focused tests across provider, runner, repository, and dashboard together so the seam is validated as one contract.
 
+## Failure Pattern
+
+- If a provider returns a valid `ChatResponse` but omits `providerMetadata`, `src\agents\runner.ts` will persist `provider_request_json` and `provider_response_json` as `NULL`, and `src\dashboard\views\traces.ts` will render empty envelope sections even though the page already supports them.
+- For plain HTTP providers (for example LM Studio), the minimal fix is usually provider-local: capture the actual request body before `fetch`, attach the raw parsed response after `fetch`, and add that pair under `providerMetadata.requestEnvelope` / `responseEnvelope` on both success and relevant error paths.
+
 ## Examples
 
 - `src\dashboard\server.ts` derives `cliMode` from env compatibility flags, then passes explicit options into `src\llm\providers\copilot-cli.ts`.
 - `src\agents\runner.ts` forwards `providerContext` and stores `providerMode`, `providerSessionId`, `incrementalPrompt`, and envelopes via `repo.completeLlmTrace()` / `repo.failLlmTrace()`.
 - `src\db\repository.ts` persists `provider_mode`, `provider_session_id`, `incremental_prompt`, `provider_request_json`, and `provider_response_json`, and `src\dashboard\views\traces.ts` renders the same fields.
+- `src\llm\providers\lmstudio.ts` should emit `providerMetadata` containing the endpoint/body request envelope and raw LM Studio response so traces stay debuggable without changing the runner or dashboard.
 - `tests\llm\provider-copilot-cli.test.ts`, `tests\agents\runner.test.ts`, `tests\db\repository.test.ts`, and `tests\dashboard\server.test.ts` together define the end-to-end contract.
 
 ## Boundaries

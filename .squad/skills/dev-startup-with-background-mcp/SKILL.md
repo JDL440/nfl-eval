@@ -13,6 +13,12 @@ Use this skill when:
 ### 1. Optional flag, not always-on
 Add an explicit switch parameter to the dev startup script (e.g., -WithMcp). Never auto-launch MCP servers during default dev startup.
 
+### 1b. Source-first default, explicit built mode
+When a repo has both source-served and built-start scripts, keep the default on the already-working source path. Add an explicit switch (for example, -Built) that runs the build step immediately before the built startup command so operators never have to remember a separate rebuild.
+
+### 1c. Keep script output PowerShell-safe
+If operators may invoke powershell.exe as well as pwsh, prefer plain ASCII banner text in checked-in .ps1 files. Emoji-rich output can parse differently on older Windows PowerShell hosts even when the script is UTF-8 encoded.
+
 ### 2. Use Start-Process for background launch
 Prefer Start-Process over call operator or PowerShell jobs for background process management.
 
@@ -29,7 +35,7 @@ After launching, check if process exited immediately (indicates startup failure)
 Ensure background process stops when script exits.
 
 ### 5. Document with examples
-Update README to show default usage, usage with -WithMcp flag, log file location, and cleanup behavior.
+Update README to show default usage, usage with `-Built` when a fresh dist run is needed, usage with `-WithMcp`, log file location, and cleanup behavior.
 
 ### 6. Update .gitignore
 Add patterns to avoid accidental log file commits.
@@ -50,6 +56,7 @@ Test these scenarios:
 4. Process failure - startup errors detected with informative message
 5. Port override - flags like -Port work with MCP enabled
 6. Integration - Copilot CLI discovers running MCP server
+7. Built mode - auto-build runs before the built startup path
 
 ## Related files
 
@@ -58,3 +65,5 @@ Test these scenarios:
 - mcp/server.mjs - canonical local MCP server
 - README.md - user-facing dev docs
 - .gitignore - excludes log files
+
+
