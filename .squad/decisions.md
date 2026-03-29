@@ -1,3 +1,14 @@
+# MERGED INBOX ENTRIES (2026-03-29T02-06-31Z)
+
+## devops devops-test-integration (APPROVED):
+
+### 2026-03-29T19:06:00Z: User directive
+**By:** DevOps engineer (via Copilot)
+**What:** Forward-port `f31a5ec1205edf11a86e648c8079869dde8f2518` into a clean main-based worktree, validate only with existing package scripts, and never use the dirty root checkout as the integration target.
+**Why:** User request — captured for team memory
+
+---
+
 # MERGED INBOX ENTRIES (2026-03-29T02-04-22Z)
 
 ## lead runner trace metadata (APPROVED):

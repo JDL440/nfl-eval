@@ -40,6 +40,9 @@ Having a clean commit SHA is necessary but not sufficient. Before recommending a
 
 If both checks fail, the job changes from “cherry-pick” to “forward-port in a clean branch/worktree.”
 
+### 7. Make the worktree testable without contaminating commit scope
+On Windows, clean worktrees often do not have a local `node_modules` tree. If validation must run from the isolated worktree, create a temporary junction to the root checkout's `node_modules`, run the existing package scripts, then remove the junction before the final `git status` so the integration commit stays source-only.
+
 ## Validation
 
 Recommended checks:
@@ -48,6 +51,7 @@ Recommended checks:
 3. `git diff --name-status HEAD <feature-sha>`
 4. overlap between root dirty files and incoming files
 5. conflict estimate before any real cherry-pick
+6. if package scripts depend on local modules, temporarily wire `node_modules` into the clean worktree, validate, then remove that helper before commit
 
 ## Related files
 

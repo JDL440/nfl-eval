@@ -36,6 +36,7 @@ Keep provider-specific session and tool semantics coherent across runtime wiring
 - If a provider returns a valid `ChatResponse` but omits `providerMetadata`, `src\agents\runner.ts` will persist `provider_request_json` and `provider_response_json` as `NULL`, and `src\dashboard\views\traces.ts` will render empty envelope sections even though the page already supports them.
 - If the app-owned tool loop exists in `src\agents\runner.ts` but the runtime constructs `AgentRunner` without `toolLoop.enabledProviders`, every non-native provider stays chat-only. Prompts can mention tools and safe local tools can exist, but traces will still show no `toolLoop` calls because `shouldUseToolLoop()` fail-closes before any tool schema is offered.
 - For plain HTTP providers (for example LM Studio), the minimal fix is usually provider-local: capture the actual request body before `fetch`, attach the raw parsed response after `fetch`, and add that pair under `providerMetadata.requestEnvelope` / `responseEnvelope` on both success and relevant error paths.
+- If runner seeds trace metadata at `startLlmTrace()` and later calls `completeLlmTrace()` with a non-null replacement object, do not assume repository persistence merges the JSON fields. In this repo, completion metadata replaces start metadata, so runner must explicitly re-include start-only facts such as `availableTools` when the provider or native loop path does not produce runner-owned `toolCalls`.
 
 ## Examples
 
