@@ -27,3 +27,13 @@
 - 2026-03-29 — New spawn batch queued DevOps for branch sync in `C:\github\nfl-eval\worktrees\agenteval`; this sync is the prerequisite handoff before plan split and app implementation kickoff proceed.
 
 
+
+## 2026-03-29T23:35:51Z: Stage 4 article-contract E2E fixture narrowing
+
+- Requested by Backend (Squad Agent): Narrow e2e fixture updates so Stage 4+ flows include rticle-contract.md before 4→5 or later advances.
+- Modified 4 test files: ux-happy-path.test.ts, edge-cases.test.ts, pipeline.test.ts, full-lifecycle.test.ts.
+- Fixture pattern: After writing discussion-summary.md, immediately write rticle-contract.md before advancing to stage 5.
+- Enhanced dvanceToStage() helper in edge-cases.test.ts to automatically write rticle-contract.md when advancing through or to stage 4.
+- Fixture-only changes per decision inbox; no product code (src/) files modified.
+- E2E test results: 91/93 tests passed. 2 pre-existing failures in pipeline.test.ts (memory storage, unrelated to fixture changes).
+- Article contract fixture template: '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n{N} words' where N matches the draft word count for that test scenario.
