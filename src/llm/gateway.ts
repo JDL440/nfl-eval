@@ -198,6 +198,11 @@ export interface GatewayOptions {
   providers?: LLMProvider[];
 }
 
+export interface GatewayRoutePreview {
+  providerId: string;
+  model: string;
+}
+
 export class LLMGateway {
   private readonly modelPolicy: ModelPolicy;
   private readonly providers = new Map<string, LLMProvider>();
@@ -228,6 +233,31 @@ export class LLMGateway {
       id: provider.id,
       name: provider.name,
     }));
+  }
+
+  previewRoute(request: ChatRequest): GatewayRoutePreview {
+    if (request.provider) {
+      const provider = this.getProvider(request.provider);
+      if (!provider) {
+        throw new GatewayError(`Requested provider not available: ${request.provider}`);
+      }
+      return {
+        providerId: provider.id,
+        model: request.model ?? provider.listModels()[0] ?? 'unknown',
+      };
+    }
+
+    const candidates = this.resolveCandidates(request);
+    for (const model of candidates) {
+      const provider = this.findProviderForModel(model);
+      if (!provider) continue;
+      return {
+        providerId: provider.id,
+        model,
+      };
+    }
+
+    throw new NoProviderError(candidates[0] ?? request.model ?? 'unknown');
   }
 
   // -- Chat ----------------------------------------------------------------

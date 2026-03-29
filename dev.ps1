@@ -104,6 +104,7 @@ if ($WithMcp) {
         Write-Host "     - $($mcpServer.Name): $($mcpServer.Command)" -ForegroundColor Gray
     }
     Write-Host "   Note: MCP clients still self-start stdio servers from .copilot\mcp-config.json or .mcp.json." -ForegroundColor DarkGray
+    Write-Host "   LM Studio note: current LM Studio runs stay chat-only; use /config plus these windows for manual wiring checks." -ForegroundColor DarkGray
 }
 
 if ($CommandOnly) {

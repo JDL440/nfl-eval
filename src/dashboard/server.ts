@@ -136,6 +136,21 @@ import { renderRunsPage, renderRunsTable, renderRunDetailPage, type RunsFilters 
 import { renderArticleTraceTimelinePage } from './views/traces.js';
 import { renderLoginPage } from './views/login.js';
 
+export const APP_TOOL_LOOP_PROVIDER_IDS = [
+  'anthropic',
+  'copilot',
+  'gemini',
+  'lmstudio',
+  'local',
+  'openai',
+] as const;
+
+export function buildDashboardToolLoopOptions(): ConstructorParameters<typeof AgentRunner>[0]['toolLoop'] {
+  return {
+    enabledProviders: [...APP_TOOL_LOOP_PROVIDER_IDS],
+  };
+}
+
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
 /**
@@ -3068,6 +3083,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       memory,
       chartersDir: config.chartersDir,
       skillsDir: config.skillsDir,
+      toolLoop: buildDashboardToolLoopOptions(),
     });
     const engine = new PipelineEngine(repo);
     const auditor = new PipelineAuditor(repo, config.logsDir);

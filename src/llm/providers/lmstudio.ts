@@ -6,7 +6,7 @@
  * Default endpoint: http://localhost:1234/v1/chat/completions
  */
 
-import type { LLMProvider, ChatRequest, ChatResponse } from '../gateway.js';
+import type { LLMProvider, ChatRequest, ChatResponse, ProviderMetadata } from '../gateway.js';
 
 // ---------------------------------------------------------------------------
 // Response types (OpenAI-compatible)
@@ -144,6 +144,13 @@ export class LMStudioProvider implements LLMProvider {
       body['response_format'] = LMSTUDIO_JSON_RESPONSE_FORMAT;
     }
 
+    const providerMetadata: ProviderMetadata = {
+      requestEnvelope: {
+        endpoint: `${this.baseUrl}/chat/completions`,
+        body,
+      },
+    };
+
     let res: Response;
     try {
       res = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -153,17 +160,35 @@ export class LMStudioProvider implements LLMProvider {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`LM Studio not running at ${this.baseUrl} — ${msg}`);
+      throw this.attachProviderMetadata(
+        new Error(`LM Studio not running at ${this.baseUrl} — ${msg}`),
+        providerMetadata,
+      );
     }
 
     if (!res.ok) {
       const errorBody = await res.text();
-      throw new Error(`LM Studio API error (${res.status}): ${errorBody}`);
+      throw this.attachProviderMetadata(
+        new Error(`LM Studio API error (${res.status}): ${errorBody}`),
+        {
+          ...providerMetadata,
+          responseEnvelope: {
+            status: res.status,
+            body: errorBody,
+          },
+        },
+      );
     }
 
     const data = (await res.json()) as LMStudioResponse;
     if (!data.choices || data.choices.length === 0) {
-      throw new Error(`LM Studio returned no choices: ${JSON.stringify(data).slice(0, 300)}`);
+      throw this.attachProviderMetadata(
+        new Error(`LM Studio returned no choices: ${JSON.stringify(data).slice(0, 300)}`),
+        {
+          ...providerMetadata,
+          responseEnvelope: data,
+        },
+      );
     }
     const choice = data.choices[0];
 
@@ -179,6 +204,16 @@ export class LMStudioProvider implements LLMProvider {
           }
         : undefined,
       finishReason: choice?.finish_reason ?? undefined,
+      providerMetadata: {
+        ...providerMetadata,
+        responseEnvelope: data,
+      },
     };
+  }
+
+  private attachProviderMetadata(error: unknown, providerMetadata: ProviderMetadata): Error {
+    const wrapped = error instanceof Error ? error : new Error(String(error));
+    (wrapped as Error & { providerMetadata?: ProviderMetadata }).providerMetadata = providerMetadata;
+    return wrapped;
   }
 }

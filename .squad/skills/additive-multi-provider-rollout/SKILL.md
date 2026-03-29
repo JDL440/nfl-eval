@@ -47,6 +47,7 @@ Treat the rollout as **wiring completion**, not a new architecture.
 - Keep requested provider distinct from actual provider/model returned by execution.
 - Review JSON and HTMX metadata paths together; partial acceptance is a common regression.
 - If a provider can satisfy explicit preference routing without literally supporting the resolved canonical model, expose that as a separate capability (for example `supportsPreferredRouting`) instead of weakening model-based auto-routing.
+- If a local/default-model provider can match broad policy aliases for routing, separate **route selection** from **upstream model forwarding**: policy aliases may choose the provider, but only discovered/default local model ids should be sent to the backend unless the caller explicitly requested a real local model.
 
 ## Lockout Heuristics
 
@@ -61,3 +62,4 @@ Treat the rollout as **wiring completion**, not a new architecture.
 - `articles.llm_provider` can land before runtime wiring is complete, so review for partial-rollout drift.
 - `usage_events.provider` shows actual execution; `stage_runs` may still need requested-provider intent to explain fallback behavior cleanly.
 - `src/llm/providers/lmstudio.ts` is the boundary case: allow article-level preferred routing into LM Studio, but do not let LM Studio auto-route requests for policy models it only proxies via its own local default.
+- In `worktrees\v4`, `gpt-5-mini` can still be the gateway-selected route hint for `src\llm\providers\lmstudio.ts`, but the provider should send `qwen/qwen3.5-35b-a3b` (or another discovered/default local id) unless `request.model` already matches an LM Studio-loaded model.

@@ -275,6 +275,56 @@ describe('LMStudioProvider', () => {
       });
     });
 
+    it('returns provider metadata envelopes for trace persistence', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        chatResponse({
+          content: 'Test response',
+          model: 'qwen-35',
+          finishReason: 'stop',
+          usage: { prompt_tokens: 20, completion_tokens: 30, total_tokens: 50 },
+        }),
+      );
+
+      const res = await provider.chat(req({
+        temperature: 0.2,
+        maxTokens: 500,
+        responseFormat: 'json',
+      }));
+
+      expect(res.providerMetadata?.requestEnvelope).toEqual({
+        endpoint: 'http://localhost:1234/v1/chat/completions',
+        body: {
+          model: 'qwen-35',
+          messages: [{ role: 'user', content: 'Hello' }],
+          temperature: 0.2,
+          max_tokens: 500,
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'structured_output',
+              schema: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+      });
+      expect(res.providerMetadata?.responseEnvelope).toEqual({
+        id: 'chatcmpl-test',
+        object: 'chat.completion',
+        model: 'qwen-35',
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: 'Test response' },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: { prompt_tokens: 20, completion_tokens: 30, total_tokens: 50 },
+      });
+    });
+
     it('handles missing usage gracefully', async () => {
       fetchSpy.mockResolvedValueOnce(
         okResponse({
