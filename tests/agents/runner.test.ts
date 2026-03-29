@@ -145,17 +145,24 @@ class ToolLoopProvider implements LLMProvider {
   readonly requests: ChatRequest[] = [];
   private callCount = 0;
 
+  constructor(
+    private readonly formatResponse?: (content: string, callCount: number) => string,
+  ) {}
+
   async chat(request: ChatRequest): Promise<ChatResponse> {
     this.requests.push(request);
     this.callCount += 1;
     if (request.responseFormat === 'json') {
+      const wrap = (content: string): string => this.formatResponse
+        ? this.formatResponse(content, this.callCount)
+        : content;
       if (this.callCount === 1) {
         return {
-          content: JSON.stringify({
+          content: wrap(JSON.stringify({
             type: 'tool_call',
             toolName: 'article_get',
             args: { article_id: 'trace-article' },
-          }),
+          })),
           model: request.model ?? 'gpt-5.4',
           provider: this.id,
           usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
@@ -163,10 +170,10 @@ class ToolLoopProvider implements LLMProvider {
         };
       }
       return {
-        content: JSON.stringify({
+        content: wrap(JSON.stringify({
           type: 'final',
           content: 'Tool-assisted final answer',
-        }),
+        })),
         model: request.model ?? 'gpt-5.4',
         provider: this.id,
         usage: { promptTokens: 7, completionTokens: 3, totalTokens: 10 },
@@ -896,6 +903,76 @@ describe('AgentRunner', () => {
         expect(trace).not.toBeNull();
         const metadata = JSON.parse(trace!.metadata_json ?? '{}') as { toolCalls?: Array<{ toolName: string }> };
         expect(metadata.toolCalls?.[0]?.toolName).toBe('article_get');
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('parses qwen-style wrapped JSON during tool loops', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new ToolLoopProvider((content, callCount) => callCount === 1
+        ? `<think>Need article context.</think>\n\`\`\`json\n${content}\n\`\`\``
+        : `Working through the result.\n</think>\n${content}\nDone.`);
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('Tool-assisted final answer');
+        expect(provider.requests).toHaveLength(2);
       } finally {
         repo.close();
       }

@@ -95,6 +95,100 @@ export class StructuredOutputError extends GatewayError {
   }
 }
 
+function stripStructuredJsonDecorators(raw: string): string {
+  let normalized = raw.trim().replace(/^\uFEFF/, '').trim();
+  normalized = normalized.replace(/<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi, '').trim();
+
+  const orphanedThinkClose = normalized.indexOf('</think>');
+  if (orphanedThinkClose >= 0) {
+    normalized = normalized.slice(orphanedThinkClose + '</think>'.length).trim();
+  }
+
+  const fenced = normalized.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) {
+    return fenced[1].trim();
+  }
+
+  return normalized;
+}
+
+function extractBalancedJsonCandidate(text: string): string | null {
+  const start = text.search(/[\[{]/);
+  if (start < 0) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === '{' || char === '[') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}' || char === ']') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseStructuredJson(raw: string): unknown {
+  const candidates: string[] = [];
+  const addCandidate = (candidate: string | null | undefined): void => {
+    const value = candidate?.trim();
+    if (value && !candidates.includes(value)) {
+      candidates.push(value);
+    }
+  };
+
+  const stripped = stripStructuredJsonDecorators(raw);
+  addCandidate(raw);
+  addCandidate(stripped);
+  addCandidate(extractBalancedJsonCandidate(stripped));
+  addCandidate(extractBalancedJsonCandidate(raw));
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new StructuredOutputError(
+    `LLM response is not valid JSON: ${raw.slice(0, 200)}`,
+    raw,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Gateway
 // ---------------------------------------------------------------------------
@@ -194,16 +288,7 @@ export class LLMGateway {
   ): Promise<{ data: T; response: ChatResponse }> {
     const response = await this.chat({ ...request, responseFormat: 'json' });
     const raw = response.content;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      throw new StructuredOutputError(
-        `LLM response is not valid JSON: ${raw.slice(0, 200)}`,
-        raw,
-      );
-    }
+    const parsed = parseStructuredJson(raw);
 
     const result = schema.safeParse(parsed);
     if (!result.success) {

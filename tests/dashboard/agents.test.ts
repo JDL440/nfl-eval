@@ -2,7 +2,7 @@
  * agents.test.ts — Tests for the agent charter and skill viewer pages.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -274,6 +274,120 @@ describe('Agent Charter & Skill Viewer', () => {
 
     it('returns empty for heading-only content', () => {
       expect(extractIdentity('# Title\n')).toBe('');
+    });
+  });
+});
+
+// ── Knowledge Refresh Routes ─────────────────────────────────────────────────
+//
+// Regression coverage for the recurring "LLM response does not match schema:
+// invalid option expected one of final|tool_call" error.  Both refresh routes
+// call runner.run() with toolCalling enabled, so every task string MUST
+// include the {"type":"final","content":"..."} envelope instruction — otherwise
+// TOOL_LOOP_RESPONSE_SCHEMA validation in the runner fails with the schema
+// error the moment the model returns raw markdown instead of the envelope.
+
+describe('Knowledge Refresh Routes — tool-loop final envelope contract', () => {
+  let repo: Repository;
+  let tempDir: string;
+  let chartersDir: string;
+  let skillsDir: string;
+  let mockRun: ReturnType<typeof vi.fn>;
+  let refreshApp: ReturnType<typeof createApp>;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'nfl-refresh-test-'));
+    const dbPath = join(tempDir, 'test.db');
+    const articlesDir = join(tempDir, 'articles');
+    chartersDir = join(tempDir, 'charters');
+    skillsDir = join(tempDir, 'skills');
+    mkdirSync(articlesDir, { recursive: true });
+    mkdirSync(chartersDir, { recursive: true });
+    mkdirSync(skillsDir, { recursive: true });
+
+    // Minimal charter so the runner list-agents call works
+    writeFileSync(
+      join(chartersDir, 'analytics.md'),
+      '# Analytics Expert\n\n## Responsibilities\n- Own advanced metrics\n',
+    );
+    writeFileSync(
+      join(chartersDir, 'sea.md'),
+      '# Seattle Seahawks Expert\n\n## Responsibilities\n- Track roster\n',
+    );
+
+    repo = new Repository(dbPath);
+
+    mockRun = vi.fn(async () => ({
+      content: 'Knowledge brief content.',
+      model: 'mock-model',
+      provider: 'mock',
+      agentName: 'analytics',
+      memoriesUsed: 0,
+    }));
+
+    const mockMemory = {
+      store: vi.fn(),
+      recall: vi.fn(() => []),
+    };
+
+    const mockRunner = {
+      gateway: {
+        listProviders: () => [],
+        getProvider: () => undefined,
+      },
+      listAgents: () => ['analytics'],
+      run: mockRun,
+    };
+
+    const mockActionContext = {
+      repo,
+      engine: {} as any,
+      runner: mockRunner as any,
+      auditor: {} as any,
+      config: makeTestConfig({ dbPath, articlesDir, dataDir: tempDir }),
+    };
+
+    refreshApp = createApp(
+      repo,
+      makeTestConfig({ dbPath, articlesDir, chartersDir, skillsDir, dataDir: tempDir }),
+      { actionContext: mockActionContext, memory: mockMemory as any },
+    );
+  });
+
+  afterEach(() => {
+    repo.close();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  describe('POST /api/agents/:name/refresh-knowledge', () => {
+    it('includes the tool-loop final envelope in the task text for specialist agents', async () => {
+      const res = await refreshApp.request('/api/agents/analytics/refresh-knowledge', {
+        method: 'POST',
+      });
+      // Route is fire-and-forget — returns 200 immediately
+      expect(res.status).toBe(200);
+
+      // Wait briefly for the background promise to resolve
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockRun).toHaveBeenCalled();
+      const callArgs = mockRun.mock.calls[0]?.[0] as { task: string };
+      expect(callArgs.task).toContain('return {"type":"final","content":"..."}');
+      expect(callArgs.task).toContain('Do not emit any other JSON schema or raw markdown outside that final envelope.');
+    });
+
+    it('includes the tool-loop final envelope in the task text for team abbreviation agents', async () => {
+      mockRun.mockClear();
+      const res = await refreshApp.request('/api/agents/sea/refresh-knowledge', {
+        method: 'POST',
+      });
+      expect(res.status).toBe(200);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockRun).toHaveBeenCalled();
+      const callArgs = mockRun.mock.calls[0]?.[0] as { task: string };
+      expect(callArgs.task).toContain('return {"type":"final","content":"..."}');
+      expect(callArgs.task).toContain('Do not emit any other JSON schema or raw markdown outside that final envelope.');
     });
   });
 });

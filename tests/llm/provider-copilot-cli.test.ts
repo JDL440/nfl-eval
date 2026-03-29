@@ -391,7 +391,7 @@ describe('CopilotCLIProvider', () => {
       message: expect.stringContaining('timed out after 5000ms'),
       providerMetadata: expect.objectContaining({
         providerMode: 'one-shot',
-        workingDirectory: REPO_ROOT,
+        workingDirectory: expect.stringContaining('.copilot\\cli-sandbox'),
       }),
     });
   });
@@ -444,5 +444,21 @@ describe('CopilotCLIProvider', () => {
     const args = (mockExecFile.mock.calls[1] as unknown[])[1] as string[];
     expect(args).toContain('--add-dir=.');
     expect(args).toContain('--allow-tool=read');
+  });
+
+  it('reports actual sandbox cwd in metadata when toolAccessMode is none, not configured workingDirectory', async () => {
+    stubExecFile('Safe response');
+
+    const provider = new CopilotCLIProvider({
+      workingDirectory: REPO_ROOT,
+      repoRoot: REPO_ROOT,
+      toolAccessMode: 'none',
+    });
+    const res = await provider.chat(req());
+
+    const actualCwd = (mockExecFile.mock.calls[0] as unknown[])[2] as { cwd: string };
+    expect(res.providerMetadata?.workingDirectory).toBe(actualCwd.cwd);
+    expect(res.providerMetadata?.workingDirectory).toContain('.copilot\\cli-sandbox');
+    expect(res.providerMetadata?.workingDirectory).not.toBe(REPO_ROOT);
   });
 });

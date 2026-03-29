@@ -515,6 +515,26 @@ Writer + Analyst + Editor
       }));
     });
 
+    it('tells the lead task to return the tool-loop final envelope', async () => {
+      const res = await llmApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Use tools if needed, then give me the final idea',
+          teams: ['SEA'],
+          depthLevel: 2,
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({
+        task: expect.stringContaining('return {"type":"final","content":"..."}'),
+      }));
+      expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({
+        task: expect.stringContaining('Do not emit any other JSON schema or raw markdown outside that final envelope.'),
+      }));
+    });
+
     it('rejects unknown provider overrides', async () => {
       const res = await llmApp.request('/api/ideas', {
         method: 'POST',
