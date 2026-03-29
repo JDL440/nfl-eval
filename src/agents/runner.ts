@@ -7,9 +7,16 @@
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
+import { z } from 'zod';
 import { LLMGateway, type ChatMessage } from '../llm/gateway.js';
 import { AgentMemory, type MemoryEntry } from './memory.js';
 import type { Repository } from '../db/repository.js';
+import {
+  executeToolCall,
+  getSafeLocalToolCatalog,
+  stableToolCallKey,
+  type ToolExecutionResult,
+} from './local-tools.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,6 +113,12 @@ export interface AgentRunResult {
   traceId?: string;
 }
 
+export interface AgentToolLoopOptions {
+  enabledProviders?: string[];
+  maxToolCalls?: number;
+  enableWebSearch?: boolean;
+}
+
 interface PromptTracePart {
   channel: 'system' | 'user';
   kind: string;
@@ -113,6 +126,18 @@ interface PromptTracePart {
   content: string;
   metadata?: Record<string, unknown>;
 }
+
+const ToolLoopTurnSchema = z.union([
+  z.object({
+    type: z.literal('final'),
+    content: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('tool_call'),
+    toolName: z.string().min(1),
+    args: z.record(z.string(), z.unknown()).default({}),
+  }),
+]);
 
 // ── Parsing helpers ──────────────────────────────────────────────────────────
 
@@ -223,17 +248,24 @@ export class AgentRunner {
   private readonly memory: AgentMemory;
   private readonly chartersDir: string;
   private readonly skillsDir: string;
+  private readonly toolLoopProviders: Set<string>;
+  private readonly maxToolCalls: number;
+  private readonly toolLoopWebSearchEnabled: boolean;
 
   constructor(options: {
     gateway: LLMGateway;
     memory: AgentMemory;
     chartersDir: string;
     skillsDir: string;
+    toolLoop?: AgentToolLoopOptions;
   }) {
     this._gateway = options.gateway;
     this.memory = options.memory;
     this.chartersDir = options.chartersDir;
     this.skillsDir = options.skillsDir;
+    this.toolLoopProviders = new Set(options.toolLoop?.enabledProviders ?? []);
+    this.maxToolCalls = Math.max(1, options.toolLoop?.maxToolCalls ?? 3);
+    this.toolLoopWebSearchEnabled = options.toolLoop?.enableWebSearch ?? false;
   }
 
   get gateway(): LLMGateway {
@@ -462,6 +494,194 @@ export class AgentRunner {
     return { userMessage: baseUserMessage, traceParts };
   }
 
+  private async buildToolLoopPromptPart(): Promise<PromptTracePart | null> {
+    const tools = await getSafeLocalToolCatalog({ includeWebSearch: this.toolLoopWebSearchEnabled });
+    if (tools.length === 0) return null;
+
+    const toolBlocks = tools.map((tool) => {
+      const required = tool.inputSchema.required ?? [];
+      const requiredText = required.length > 0 ? `\nRequired args: ${required.join(', ')}` : '';
+      const example = tool.examples?.[0] ? `\nExample args: ${JSON.stringify(tool.examples[0])}` : '';
+      return `### ${tool.name}\n${tool.description}\nSide effects: ${tool.sideEffects}${requiredText}${example}`;
+    });
+
+    return {
+      channel: 'system',
+      kind: 'tool_loop',
+      label: 'Tool Loop',
+      content: [
+        '## Tool Use Contract',
+        `You may ask for up to ${this.maxToolCalls} tool calls.`,
+        'If you need a tool, respond with valid JSON only in this shape:',
+        '{"type":"tool_call","toolName":"<allowed tool>","args":{}}',
+        'When you are ready to answer, respond with valid JSON only in this shape:',
+        '{"type":"final","content":"<your final answer>"}',
+        'Use only the listed tools. If you need argument help, call local_tool_catalog first.',
+        '',
+        '## Available Tools',
+        ...toolBlocks,
+      ].join('\n\n'),
+      metadata: {
+        maxToolCalls: this.maxToolCalls,
+        webSearchEnabled: this.toolLoopWebSearchEnabled,
+        tools: tools.map((tool) => tool.name),
+      },
+    };
+  }
+
+  private shouldUseToolLoop(providerId: string, responseFormat?: 'text' | 'json'): boolean {
+    if (responseFormat === 'json') return false;
+    return this.toolLoopProviders.has(providerId);
+  }
+
+  private mergeToolLoopMetadata(
+    providerMetadata: import('../llm/gateway.js').ProviderMetadata | undefined,
+    toolEvents: ToolExecutionResult[],
+    route: { providerId: string; model: string } | null,
+  ): import('../llm/gateway.js').ProviderMetadata | undefined {
+    if (toolEvents.length === 0 && !providerMetadata) {
+      return undefined;
+    }
+
+    const existingRequest = providerMetadata?.requestEnvelope;
+    const existingResponse = providerMetadata?.responseEnvelope;
+
+    return {
+      ...providerMetadata,
+      requestEnvelope: {
+        ...(existingRequest && typeof existingRequest === 'object' ? existingRequest as Record<string, unknown> : {}),
+        toolLoop: {
+          enabled: true,
+          provider: route?.providerId ?? null,
+          model: route?.model ?? null,
+          maxToolCalls: this.maxToolCalls,
+          toolNames: toolEvents.map((event) => event.tool.name),
+        },
+      },
+      responseEnvelope: {
+        ...(existingResponse && typeof existingResponse === 'object' ? existingResponse as Record<string, unknown> : {}),
+        toolLoop: {
+          calls: toolEvents.map((event) => ({
+            toolName: event.tool.name,
+            source: event.source,
+            isError: event.isError,
+          })),
+        },
+      },
+    };
+  }
+
+  private async runWithToolLoop(params: {
+    messages: ChatMessage[];
+    provider?: string;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    stageKey?: string;
+    taskFamily?: string;
+    providerContext?: import('../llm/gateway.js').ProviderContext;
+    route: { providerId: string; model: string };
+  }): Promise<import('../llm/gateway.js').ChatResponse> {
+    const messages = [...params.messages];
+    const toolEvents: ToolExecutionResult[] = [];
+    const toolResultCache = new Map<string, ToolExecutionResult>();
+    let aggregatedUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    let finalResponse: import('../llm/gateway.js').ChatResponse | null = null;
+
+    for (let attempt = 0; attempt <= this.maxToolCalls; attempt += 1) {
+      const response = await this._gateway.chat({
+        messages,
+        model: params.model,
+        provider: params.provider,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
+        responseFormat: 'json',
+        stageKey: params.stageKey,
+        taskFamily: params.taskFamily,
+        providerContext: params.providerContext,
+      });
+
+      aggregatedUsage = {
+        promptTokens: aggregatedUsage.promptTokens + (response.usage?.promptTokens ?? 0),
+        completionTokens: aggregatedUsage.completionTokens + (response.usage?.completionTokens ?? 0),
+        totalTokens: aggregatedUsage.totalTokens + (response.usage?.totalTokens ?? 0),
+      };
+
+      let raw: unknown;
+      try {
+        raw = JSON.parse(response.content);
+      } catch {
+        throw new Error(`Tool loop response was not valid JSON: ${response.content.slice(0, 200)}`);
+      }
+      const parsed = ToolLoopTurnSchema.safeParse(raw);
+      if (!parsed.success) {
+        throw new Error(`Tool loop response did not match the required JSON contract: ${parsed.error.message}`);
+      }
+
+      if (parsed.data.type === 'final') {
+        finalResponse = {
+          ...response,
+          content: parsed.data.content,
+        };
+        break;
+      }
+
+      if (attempt >= this.maxToolCalls) {
+        throw new Error(`Tool loop exceeded the max of ${this.maxToolCalls} tool calls without a final answer.`);
+      }
+
+      const toolCall = parsed.data;
+      const cacheKey = stableToolCallKey(toolCall.toolName, toolCall.args);
+      const toolResult = toolResultCache.has(cacheKey)
+        ? toolResultCache.get(cacheKey)!
+        : await (async () => {
+          try {
+            return await executeToolCall(toolCall.toolName, toolCall.args, {
+              includeWebSearch: this.toolLoopWebSearchEnabled,
+            });
+          } catch (error) {
+            return {
+              tool: {
+                name: toolCall.toolName,
+                description: 'Tool execution failed.',
+                category: 'error',
+                sideEffects: 'none',
+                readOnlyHint: true,
+                inputSchema: { type: 'object' },
+              },
+              args: toolCall.args,
+              output: `Tool error: ${error instanceof Error ? error.message : String(error)}`,
+              isError: true,
+              source: 'local' as const,
+            };
+          }
+        })();
+      toolResultCache.set(cacheKey, toolResult);
+      toolEvents.push(toolResult);
+
+      messages.push({ role: 'assistant', content: response.content });
+      messages.push({
+        role: 'user',
+        content: [
+          `Tool result for ${toolResult.tool.name}:`,
+          toolResult.output,
+          'If you need another tool, respond with {"type":"tool_call","toolName":"...","args":{}}.',
+          'Otherwise respond with {"type":"final","content":"..."} only.',
+        ].join('\n\n'),
+      });
+    }
+
+    if (!finalResponse) {
+      throw new Error('Tool loop ended without a final response.');
+    }
+
+    return {
+      ...finalResponse,
+      usage: aggregatedUsage.totalTokens > 0 ? aggregatedUsage : undefined,
+      providerMetadata: this.mergeToolLoopMetadata(finalResponse.providerMetadata, toolEvents, params.route),
+    };
+  }
+
   /** Main execution method — orchestrates charter, skills, memory, and LLM call. */
   async run(params: AgentRunParams): Promise<AgentRunResult> {
     const {
@@ -493,8 +713,26 @@ export class AgentRunner {
     // 3. Recall relevant memories
     const memories = this.memory.recall(agentName, { limit: 10 });
 
+    const model = charter.model && charter.model !== 'auto' ? charter.model : undefined;
+    const stageKey = AGENT_STAGE_KEY[agentName];
+    const taskFamily = model || stageKey ? undefined : 'deep_reasoning';
+    const route = this._gateway.previewRoute({
+      messages: [],
+      model,
+      provider,
+      stageKey: model ? undefined : stageKey,
+      taskFamily,
+    });
+    const toolLoopEnabled = this.shouldUseToolLoop(route.providerId, responseFormat);
+
     // 4. Compose system prompt
     const systemParts = this.buildSystemPromptParts(charter, skills, memories, params.rosterContext);
+    if (toolLoopEnabled) {
+      const toolLoopPart = await this.buildToolLoopPromptPart();
+      if (toolLoopPart) {
+        systemParts.push(toolLoopPart);
+      }
+    }
     const systemPrompt = systemParts.map((part) => part.content).join('\n\n');
 
     // 5. Build user message
@@ -508,9 +746,6 @@ export class AgentRunner {
     ];
 
     // 7. Call LLM Gateway
-    const model = charter.model && charter.model !== 'auto' ? charter.model : undefined;
-    const stageKey = AGENT_STAGE_KEY[agentName];
-    const taskFamily = model || stageKey ? undefined : 'deep_reasoning';
     const traceParts = [...systemParts, ...userPrompt.traceParts];
     const traceId = params.trace?.repo.startLlmTrace({
       runId: params.trace?.runId ?? null,
@@ -549,24 +784,37 @@ export class AgentRunner {
     const requestStartedAt = Date.now();
     let response;
     try {
-      response = await this._gateway.chat({
-        messages,
-        model,
-        provider,
-        temperature,
-        maxTokens,
-        responseFormat,
-        stageKey: model ? undefined : stageKey,
-        taskFamily,
-        providerContext: {
-          articleId: params.trace?.articleId ?? articleContext?.slug ?? null,
-          runId: params.trace?.runId ?? null,
-          stageRunId: params.trace?.stageRunId ?? null,
-          stage: params.trace?.stage ?? articleContext?.stage ?? null,
-          surface: params.trace?.surface ?? null,
-          traceId: traceId ?? null,
-        },
-      });
+      const providerContext = {
+        articleId: params.trace?.articleId ?? articleContext?.slug ?? null,
+        runId: params.trace?.runId ?? null,
+        stageRunId: params.trace?.stageRunId ?? null,
+        stage: params.trace?.stage ?? articleContext?.stage ?? null,
+        surface: params.trace?.surface ?? null,
+        traceId: traceId ?? null,
+      };
+      response = toolLoopEnabled
+        ? await this.runWithToolLoop({
+          messages,
+          model,
+          provider,
+          temperature,
+          maxTokens,
+          stageKey: model ? undefined : stageKey,
+          taskFamily,
+          providerContext,
+          route,
+        })
+        : await this._gateway.chat({
+          messages,
+          model,
+          provider,
+          temperature,
+          maxTokens,
+          responseFormat,
+          stageKey: model ? undefined : stageKey,
+          taskFamily,
+          providerContext,
+        });
     } catch (error) {
       if (traceId) {
         const message = error instanceof Error ? error.message : String(error);

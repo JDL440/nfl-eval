@@ -78,6 +78,7 @@ Write-Host "🏈 NFL Lab v2 dashboard" -ForegroundColor Cyan
 Write-Host "   Repo: $repoRoot" -ForegroundColor Gray
 Write-Host "   Command: $dashboardCommand" -ForegroundColor Gray
 Write-Host "   URL: http://localhost:$displayPort" -ForegroundColor Gray
+Write-Host "   Config: http://localhost:$displayPort/config" -ForegroundColor Gray
 
 if ($WithMcp) {
     Write-Host "   MCP debug windows: enabled" -ForegroundColor Yellow
@@ -85,6 +86,7 @@ if ($WithMcp) {
         Write-Host "     - $($mcpServer.Name): $($mcpServer.Command)" -ForegroundColor Gray
     }
     Write-Host "   Note: MCP clients still self-start stdio servers from .copilot\mcp-config.json or .mcp.json." -ForegroundColor DarkGray
+    Write-Host "   LM Studio note: current LM Studio runs stay chat-only; use /config plus these windows for manual wiring checks." -ForegroundColor DarkGray
 }
 
 if ($CommandOnly) {
