@@ -39,6 +39,7 @@ tools: [view, rg, vitest]
 - `preview.ts` includes a manual `preview-mobile` toggle, but that is a preview mode, not a substitute for real responsive behavior.
 - `new-idea.ts` now uses `.idea-agent-grid` for expert-agent pinning, which is the right isolation move. Treat that as the preferred pattern when a selector grid and a content-card grid would otherwise share a class name.
 - `layout.ts` now ships the mobile shell contract directly: nav toggle + `.shared-mobile-nav` + active nav state. Reuse that shell before creating page-local nav affordances.
+- Mobile shell fixes should preserve a two-step contract: the header controls row must allow the nav to span its own row on phones (grid is safer than nowrap flex here), and the shell should opt into `viewport-fit=cover` with safe-area-aware padding so sticky chrome does not collide with notches or home indicators.
 - Shared data tables should prefer `.responsive-table`; `config.ts` is now the reference implementation for table-to-card behavior on narrow screens.
 - `article.ts`, `publish.ts`, and `preview.ts` all rely on toolbar/detail-shell patterns (`.detail-grid`, `.preview-toolbar`, `.usage-summary`) that can still behave like desktop rows even after the main column stacks.
 - HTMX/SSE amplifies layout drift here: `renderRunsTable()`, `renderMemoryTable()`, `renderPublishWorkflow()`, and the live article partials all swap independently, so mobile structure must live in shared fragment markup/classes rather than only in full-page wrappers.
@@ -61,5 +62,6 @@ Treat mobile dashboard work in this repo as a system task: extend the shared she
 - Use `.mobile-detail-layout` with `.mobile-primary-column` / `.mobile-secondary-column` for phone-only reordering instead of duplicating article/publish markup.
 - Use `.responsive-table` plus `data-label` cells to turn operational tables into stacked mobile cards.
 - Keep selector namespaces distinct when a chip-picker grid and a content-card grid need different responsive behavior; for example, `.idea-agent-grid` and `.agents-directory-grid`.
+- When the mobile hamburger/nav is part of the shared shell, regression coverage should protect both markup and behavior: unit tests should assert the layout script toggles `aria-expanded`/`.is-open`, stylesheet tests should assert the nav spans the full mobile row, and viewport review scripts should verify the opened nav sits below the control row and stays inside the viewport.
 
 

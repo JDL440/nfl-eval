@@ -20,8 +20,15 @@
 - 2026-03-29 — Settings copy has to describe deprecation plainly: say legacy memory storage still exists, prompt injection is disabled, the old Memory dashboard stays retired, and refresh-all now lives on `/config`.
 - 2026-03-29T18:42:53Z — Dashboard cleanup audit/fix completed in background; repo files updated and filesystem verified; UX exposure audit confirmed simplified dashboard.
 - 2026-03-29 — Mobile-first dashboard modernization now rides on shared seams instead of page-only patches: `layout.ts` owns `.shared-mobile-header` / `.shared-mobile-nav`, `article.ts` + `publish.ts` share `.mobile-detail-layout`, and `config.ts` uses `.responsive-table` so narrow-screen structure is backed by real CSS and regression tests.
+- 2026-03-29 — Shared mobile shell fixes should land in `src\dashboard\public\styles.css` + `src\dashboard\views\layout.ts` first: add `viewport-fit=cover`, safe-area CSS variables, and make the mobile nav drop below the control row with grid spanning instead of relying on nowrap flex behavior.
+- 2026-03-29 — High-value mobile regression coverage is route-plus-system focused: assert shared shell hooks on `/`, `/articles/:id`, `/articles/:id/publish`, `/articles/:id/traces`, and `/config`, while `tests\dashboard\wave2.test.ts` protects safe-area/nav CSS contracts and `tests\ux-playwright-review.ts` checks the hamburger can open without overlap.
 
 ## Cross-Agent Context Updates (2026-03-29T20-08-26Z)
 
 ### From Orchestration (Scribe)
 **Mobile shell restyle handoff:** Implement the system-level mobile shell fix first, then layer premium dashboard polish on top. Eliminate hamburger overlap and overflow before page-specific decoration.
+
+## Cross-Agent Context Updates (2026-03-29T20-15-11Z)
+
+### UX Agent Coordination
+**Mobile dashboard shared-shell restyle:** UX agent is running parallel background+sync follow-up task to eliminate hamburger/menu overlap, horizontal overflow, and restyle toward premium design. Shared shell contracts: (1) `viewport-fit=cover` in HTML heads, (2) safe-area-aware spacing in `src\dashboard\public\styles.css`, (3) mobile header grid layout for `.shared-mobile-nav`. Both UX and Code agents verify outcomes via filesystem and test suite. Mobile restyle decision baseline is now recorded in decisions.md.
