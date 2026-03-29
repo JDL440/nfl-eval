@@ -42,6 +42,7 @@ tools: [view, rg, vitest]
 - Mobile shell fixes should preserve a two-step contract: the header controls row must allow the nav to span its own row on phones (grid is safer than nowrap flex here), and the shell should opt into `viewport-fit=cover` with safe-area-aware padding so sticky chrome does not collide with notches or home indicators.
 - Shared data tables should prefer `.responsive-table`; `config.ts` is now the reference implementation for table-to-card behavior on narrow screens.
 - `article.ts`, `publish.ts`, and `preview.ts` all rely on toolbar/detail-shell patterns (`.detail-grid`, `.preview-toolbar`, `.usage-summary`) that can still behave like desktop rows even after the main column stacks.
+- Real browser review can show two different classes of width behavior at once: the page body may be locked to the viewport while local components like `.tab-bar` still require horizontal swipe. Treat those as separate findings instead of declaring mobile width “fixed” too early.
 - HTMX/SSE amplifies layout drift here: `renderRunsTable()`, `renderMemoryTable()`, `renderPublishWorkflow()`, and the live article partials all swap independently, so mobile structure must live in shared fragment markup/classes rather than only in full-page wrappers.
 - Dashboard tests may assert mobile hook classes without any stylesheet selector for those hooks. In that case the suite is only protecting structural intent; pair hook assertions with `styles.css` checks on the selectors that actually drive the breakpoint behavior.
 - Inline layout styles in shared dashboard views are another warning sign. If `home.ts`, `publish.ts`, `login.ts`, or `article.ts` need repeated `style="..."` layout tweaks, the system is missing a reusable shell/action primitive and mobile work should extract that first.
@@ -63,6 +64,10 @@ Treat mobile dashboard work in this repo as a system task: extend the shared she
 - Use `.responsive-table` plus `data-label` cells to turn operational tables into stacked mobile cards.
 - Keep selector namespaces distinct when a chip-picker grid and a content-card grid need different responsive behavior; for example, `.idea-agent-grid` and `.agents-directory-grid`.
 - When the mobile hamburger/nav is part of the shared shell, regression coverage should protect both markup and behavior: unit tests should assert the layout script toggles `aria-expanded`/`.is-open`, stylesheet tests should assert the nav spans the full mobile row, and viewport review scripts should verify the opened nav sits below the control row and stays inside the viewport.
+- When article/detail surfaces still blow out the viewport after the layout stacks, patch the shared primitives before touching page markup: add `min-width: 0` to shell/card/detail wrappers, add `overflow-wrap: anywhere` to long-text containers, and make markdown tables inside `.artifact-rendered` scroll inside the pane instead of widening the page.
+- If a component avoids page overflow only by turning into a wide horizontal scroller (for example, article artifact pills in `.tab-bar`), treat that as a separate mobile UX debt item. The premium fix is usually a stronger information hierarchy (top 1–2 tabs visible, “More”/disclosure, segmented control, or stacked section nav), not just more overflow suppression.
+- When dashboard auth is enabled, browser review scripts must authenticate before auditing protected routes. Otherwise the run mostly validates `/login` redirects and misses the actual dashboard, article, publish, and trace surfaces.
+- In this repo, a premium mobile nav should own its own row or sheet on phones. If `.shared-mobile-nav` is still constrained by `.header-controls`, expect a cramped right-aligned menu even if it technically stays inside the viewport.
 
 ## Mobile UX Maturity (as of 2026-03-30)
 
@@ -79,6 +84,6 @@ Treat mobile dashboard work in this repo as a system task: extend the shared she
 2. **Hamburger/nav interaction polish:** Nav toggle uses text glyph "☰" instead of proper icon; opened nav lacks visual drawer affordance (no backdrop, no elevation, no animation); nav link sizing is too compact for mobile editorial use.
 3. **Premium editorial restyle:** Dashboard reads as "AI app template" instead of "premium editorial product" — needs editorial typography (serif headlines), editorial color system (NFL brand colors), confident visual hierarchy (bold CTAs, larger headlines, breathing room).
 
-**Code-based mobile audits:** When local server setup is not immediately available, prioritize code-based review of `layout.ts`, view modules, and `styles.css` mobile breakpoints. Existing Playwright test infrastructure at `tests/ux-playwright-review.ts` can validate overflow + layout issues without manual browser testing.
+**Code-based mobile audits:** Code review is useful for spotting likely failure points, but browser review remains necessary for final confidence. Existing Playwright infrastructure at `tests/ux-playwright-review.ts` is only trustworthy after it authenticates (or the app starts with auth disabled), otherwise protected-route audits collapse into `/login` validation.
 
 

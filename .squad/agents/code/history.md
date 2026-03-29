@@ -9,6 +9,8 @@
 - Fast-forward-only advancement of checked-out `main` is the safe integration policy.
 
 ## Learnings
+- 2026-03-31 — Dashboard cleanup simplified UI to match actual operator priorities: trace previews now default to rendered markdown/JSON instead of raw text, "calmer" copy removed as overpromising, high-level hero stats removed to surface actual work sections faster, Settings page simplified by removing stage routing table/runtime paths/prompt inventory sections that felt too engineering-focused.
+- 2026-03-31 — Dashboard section ordering now follows operator workflow: Intake (recent ideas) moved to top of home grid, immediately after hero, so new pitches are more visible before diving into search/filters or ready-to-publish queue.
 - 2026-03-29 — Dashboard regression tests for the approved cleanup should assert operator-visible states only: `/config` always renders the maintenance target, refresh-all form visibility depends on runner+memory initialization, and article tests should verify the current metadata/detail shape while excluding legacy `/context-config` and inline edit-form copy.
 - 2026-03-29 — Dashboard surface cleanup validated: deprecated `/agents`, `/memory`, and `/runs` UI was removed; trace pages and `POST /api/agents/refresh-all` stayed intact; article detail now focuses on metadata, artifacts, revisions, reviews, actions, and usage.
 - 2026-03-29 — The clean integration lane for v4 forward-port validation is `C:\github\worktrees\nfl-eval-v4-integration-f31a5ec` on branch `devops/v4-integration-f31a5ec`; use it for focused validation instead of the dirty root checkout when possible.
@@ -22,6 +24,13 @@
 - 2026-03-29 — Mobile-first dashboard modernization now rides on shared seams instead of page-only patches: `layout.ts` owns `.shared-mobile-header` / `.shared-mobile-nav`, `article.ts` + `publish.ts` share `.mobile-detail-layout`, and `config.ts` uses `.responsive-table` so narrow-screen structure is backed by real CSS and regression tests.
 - 2026-03-29 — Shared mobile shell fixes should land in `src\dashboard\public\styles.css` + `src\dashboard\views\layout.ts` first: add `viewport-fit=cover`, safe-area CSS variables, and make the mobile nav drop below the control row with grid spanning instead of relying on nowrap flex behavior.
 - 2026-03-29 — High-value mobile regression coverage is route-plus-system focused: assert shared shell hooks on `/`, `/articles/:id`, `/articles/:id/publish`, `/articles/:id/traces`, and `/config`, while `tests\dashboard\wave2.test.ts` protects safe-area/nav CSS contracts and `tests\ux-playwright-review.ts` checks the hamburger can open without overlap.
+
+## Cross-Agent Context Updates (2026-03-29T23:21:31Z)
+
+### Dashboard Cleanup Completion
+- **Final orchestration:** UX + Code agents completed background sync tasks. All tests passing (`tests/dashboard/{server,config,publish,wave2}.test.ts` + `npm run v2:build`).
+- **Decisions merged:** `code-dashboard-followup.md` and `ux-dashboard-followup.md` merged to `.squad/decisions/decisions.md` with deduplication. Mobile-restyle decision also captured.
+- **Scope verified:** No further UX changes needed. Code ready for team integration.
 
 ## Cross-Agent Context Updates (2026-03-29T20:19:14Z)
 
