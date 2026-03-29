@@ -64,15 +64,15 @@ function renderRoutingTable(rows: Array<{ stageKey: string; model: string }>): s
   }
 
   return `
-    <table class="artifact-table settings-table">
+    <table class="artifact-table settings-table responsive-table">
       <thead>
         <tr><th>Stage Key</th><th>Model</th></tr>
       </thead>
       <tbody>
         ${rows.map((row) => `
           <tr>
-            <td><code>${escapeHtml(row.stageKey)}</code></td>
-            <td><code>${escapeHtml(row.model)}</code></td>
+            <td data-label="Stage Key"><code>${escapeHtml(row.stageKey)}</code></td>
+            <td data-label="Model"><code>${escapeHtml(row.model)}</code></td>
           </tr>
         `).join('')}
       </tbody>
@@ -81,7 +81,7 @@ function renderRoutingTable(rows: Array<{ stageKey: string; model: string }>): s
 
 function renderEnvStatusTable(envStatus: EnvVarStatus[]): string {
   return `
-    <table class="artifact-table settings-table">
+    <table class="artifact-table settings-table responsive-table">
       <thead>
         <tr><th>Environment Variable</th><th>Status</th><th>Value</th></tr>
       </thead>
@@ -94,9 +94,9 @@ function renderEnvStatusTable(envStatus: EnvVarStatus[]): string {
             : '<span class="muted">—</span>';
           return `
             <tr>
-              <td><code>${escapeHtml(value.key)}</code></td>
-              <td><span class="badge ${badgeClass}">${label}</span></td>
-              <td>${displayValue}</td>
+              <td data-label="Environment Variable"><code>${escapeHtml(value.key)}</code></td>
+              <td data-label="Status"><span class="badge ${badgeClass}">${label}</span></td>
+              <td data-label="Value">${displayValue}</td>
             </tr>`;
         }).join('')}
       </tbody>

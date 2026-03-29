@@ -19,23 +19,26 @@ export function renderLoginPage(data: {
   <title>Login — ${escapeHtml(labName)} Dashboard</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
-<body>
-  <main class="content">
-    <section class="detail-section" style="max-width: 28rem; margin: 4rem auto;">
-      <h1>🔐 Dashboard Login</h1>
-      <p class="subtitle">Sign in to access the editorial dashboard.</p>
-      ${error ? `<div class="advance-result error" style="margin-bottom: 1rem;">${escapeHtml(error)}</div>` : ''}
-      <form method="post" action="/login" class="publisher-form" style="display: grid; gap: 1rem;">
+<body class="login-shell">
+  <main class="content login-content">
+    <section class="detail-section login-card">
+      <div class="login-header">
+        <span class="login-icon">🔐</span>
+        <h1>Dashboard Login</h1>
+      </div>
+      <p class="login-subtitle">Sign in to access the editorial dashboard.</p>
+      ${error ? `<div class="login-error">${escapeHtml(error)}</div>` : ''}
+      <form method="post" action="/login" class="login-form">
         ${hiddenReturnTo}
-        <label>
-          <span>Username</span>
-          <input type="text" name="username" value="${escapeHtml(username ?? '')}" autocomplete="username" required>
-        </label>
-        <label>
-          <span>Password</span>
-          <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button type="submit" class="btn btn-primary">Log in</button>
+        <div class="login-field">
+          <label for="login-username">Username</label>
+          <input id="login-username" type="text" name="username" value="${escapeHtml(username ?? '')}" autocomplete="username" placeholder="Enter your username" required>
+        </div>
+        <div class="login-field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" name="password" autocomplete="current-password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary login-btn">Log in</button>
       </form>
     </section>
   </main>

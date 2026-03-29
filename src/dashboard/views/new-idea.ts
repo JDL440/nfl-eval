@@ -168,77 +168,88 @@ export function renderNewIdeaPage(config: {
     : '';
 
   return renderLayout('New Idea', `
-    <div class="idea-form-container">
-      <h1>New Article Idea</h1>
+    <div class="idea-page-shell">
+      <section class="detail-section idea-page-hero">
+        <p class="section-kicker">Story intake</p>
+        <h1>New Article Idea</h1>
+        <p class="page-subtitle">Shape the prompt, choose the right depth, and pin any must-have experts before the pipeline begins.</p>
+        <div class="idea-page-highlights">
+          <span class="badge badge-stage badge-stage-1">Prompt → Lead → idea.md</span>
+          <span class="badge badge-team">Mobile-first intake</span>
+          <span class="badge badge-depth">Optional expert pinning</span>
+        </div>
+      </section>
 
-      <div class="quick-actions">
-        <button type="button" class="quick-action-btn" id="surprise-btn"
-          onclick="surpriseMe()">🎲 Surprise Me</button>
-        <button type="button" class="quick-action-btn quick-action-btn--disabled" id="breaking-btn"
-          onclick="breakingNews()">📰 Breaking News</button>
-      </div>
-      <div id="breaking-msg" class="quick-action-msg" style="display:none">
-        Coming soon — automated news detection is not yet available
-      </div>
-
-      <form id="idea-form" class="idea-form">
-        <div class="form-group">
-          <label for="prompt">What's the idea?</label>
-          <textarea id="prompt" name="prompt" rows="5" required
-            placeholder="Analyze the Seahawks' defensive secondary heading into 2025, focusing on Devon Witherspoon's development and the safety room depth..."></textarea>
+      <section class="detail-section idea-form-shell">
+        <div class="quick-actions">
+          <button type="button" class="quick-action-btn" id="surprise-btn"
+            onclick="surpriseMe()">🎲 Surprise Me</button>
+          <button type="button" class="quick-action-btn quick-action-btn--disabled" id="breaking-btn"
+            onclick="breakingNews()">📰 Breaking News</button>
+        </div>
+        <div id="breaking-msg" class="quick-action-msg" style="display:none">
+          Coming soon — automated news detection is not yet available
         </div>
 
-        <div class="form-group">
-          <label>Teams <span class="form-hint">(click to select)</span></label>
-          <div id="selected-teams" class="team-chips"></div>
-          <div class="team-grid">
-            ${NFL_TEAMS.map(t => `
-              <button type="button" class="team-badge" data-team="${t.abbr}"
-                onclick="toggleTeam(this, '${t.abbr}')">
-                ${t.abbr}
-              </button>
-            `).join('')}
+        <form id="idea-form" class="idea-form">
+          <div class="form-group">
+            <label for="prompt">What's the idea?</label>
+            <textarea id="prompt" name="prompt" rows="5" required
+              placeholder="Analyze the Seahawks' defensive secondary heading into 2025, focusing on Devon Witherspoon's development and the safety room depth..."></textarea>
           </div>
-          <input type="hidden" id="teams" name="teams" value="">
-        </div>
 
-        <div class="form-group">
-          <label for="depth-level">Depth Level</label>
-          <select id="depth-level" name="depthLevel" class="input input-full select">
-            <option value="1">1 — Casual Fan</option>
-            <option value="2" selected>2 — The Beat</option>
-            <option value="3">3 — Deep Dive</option>
-          </select>
-        </div>
-
-        ${providerField}
-
-        <div class="form-group">
-          <label>Pin Expert Agents <span class="form-hint">(optional — these agents will always be included on the panel)</span></label>
-          <div id="selected-agents" class="team-chips"></div>
-          <div class="agent-grid">
-            ${agentChips}
+          <div class="form-group">
+            <label>Teams <span class="form-hint">(click to select)</span></label>
+            <div id="selected-teams" class="team-chips"></div>
+            <div class="team-grid">
+              ${NFL_TEAMS.map(t => `
+                <button type="button" class="team-badge" data-team="${t.abbr}"
+                  onclick="toggleTeam(this, '${t.abbr}')">
+                  ${t.abbr}
+                </button>
+              `).join('')}
+            </div>
+            <input type="hidden" id="teams" name="teams" value="">
           </div>
-          <input type="hidden" id="pinned-agents" name="pinnedAgents" value="">
-        </div>
 
-        <div id="form-status" class="form-status" style="display:none"></div>
+          <div class="form-group">
+            <label for="depth-level">Depth Level</label>
+            <select id="depth-level" name="depthLevel" class="input input-full select">
+              <option value="1">1 — Casual Fan</option>
+              <option value="2" selected>2 — The Beat</option>
+              <option value="3">3 — Deep Dive</option>
+            </select>
+          </div>
 
-        <div class="form-group form-checkbox">
-          <label>
-            <input type="checkbox" id="auto-advance" name="autoAdvance">
-            Auto-advance through pipeline
-            <span class="form-hint">(stops at Stage 7 for review)</span>
-          </label>
-        </div>
+          ${providerField}
 
-        <div class="form-actions">
-          <a href="/" class="btn btn-secondary">Cancel</a>
-          <button type="submit" class="btn btn-primary" id="submit-btn">
-            Create Article
-          </button>
-        </div>
-      </form>
+          <div class="form-group">
+            <label>Pin Expert Agents <span class="form-hint">(optional — these agents will always be included on the panel)</span></label>
+            <div id="selected-agents" class="team-chips"></div>
+            <div class="idea-agent-grid">
+              ${agentChips}
+            </div>
+            <input type="hidden" id="pinned-agents" name="pinnedAgents" value="">
+          </div>
+
+          <div id="form-status" class="form-status" style="display:none"></div>
+
+          <div class="form-group form-checkbox">
+            <label>
+              <input type="checkbox" id="auto-advance" name="autoAdvance">
+              Auto-advance through pipeline
+              <span class="form-hint">(stops at Stage 7 for review)</span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <a href="/" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary" id="submit-btn">
+              Create Article
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
 
     <script>
@@ -262,6 +273,15 @@ export function renderNewIdeaPage(config: {
       function breakingNews() {
         const msg = document.getElementById('breaking-msg');
         msg.style.display = msg.style.display === 'none' ? 'block' : 'none';
+      }
+
+      function escapeHtmlClient(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
       }
 
       const selectedTeams = new Set();
@@ -373,7 +393,10 @@ export function renderNewIdeaPage(config: {
             }
           } else {
             status.className = 'form-status error';
-            status.textContent = data.error || 'Failed to create article';
+            const traceLink = data.traceUrl
+              ? ' <a href="' + escapeHtmlClient(data.traceUrl) + '">View trace →</a>'
+              : '';
+            status.innerHTML = escapeHtmlClient(data.error || 'Failed to create article') + traceLink;
             btn.disabled = false;
             btn.textContent = 'Create Article';
           }

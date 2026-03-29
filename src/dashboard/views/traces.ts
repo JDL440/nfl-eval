@@ -283,7 +283,7 @@ export function renderArticleTraceTimelinePage(data: {
 }): string {
   const { config, article, traces } = data;
   const content = `
-    <div class="page-header">
+    <div class="page-header trace-page-header">
       <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article detail</a>
       <h1>LLM Trace Timeline</h1>
       <p class="page-subtitle">${escapeHtml(article.title)} · ${traces.length} trace${traces.length === 1 ? '' : 's'}</p>
@@ -308,7 +308,7 @@ export function renderStandaloneTracePage(data: {
     ? `<a href="/articles/${escapeHtml(trace.article_id)}/traces" class="back-link">← Article trace timeline</a>`
     : '<a href="/ideas/new" class="back-link">← New Idea</a>';
   const content = `
-    <div class="page-header">
+    <div class="page-header trace-page-header">
       ${backLink}
       <h1>LLM Trace</h1>
       <p class="page-subtitle">${escapeHtml(title)}</p>

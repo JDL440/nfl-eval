@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Repository } from '../../src/db/repository.js';
@@ -18,6 +18,7 @@ import {
   renderArtifactContent,
   renderUsagePanel,
 } from '../../src/dashboard/views/article.js';
+import { renderLayout } from '../../src/dashboard/views/layout.js';
 import type { UsageEvent } from '../../src/types.js';
 
 function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
@@ -225,6 +226,29 @@ describe('renderArtifactContent', () => {
     expect(html).toContain('Extracted Thinking Trace');
     expect(html).toContain('inline trace');
     expect(html).toContain('<h1>Draft</h1>');
+  });
+});
+
+describe('shared mobile dashboard shell', () => {
+  it('renders mobile navigation hooks and active state in the shared layout', () => {
+    const html = renderLayout('Settings', '<div>content</div>', 'NFL Lab');
+    expect(html).toContain('shared-mobile-header');
+    expect(html).toContain('shared-mobile-nav');
+    expect(html).toContain('id="nav-toggle"');
+    expect(html).toContain('aria-controls="primary-nav"');
+    expect(html).toContain('header-nav-link is-active');
+    expect(html).toContain('page-settings');
+  });
+
+  it('styles the mobile shell hooks and responsive tables in the shared stylesheet', () => {
+    const cssPath = join(process.cwd(), 'src', 'dashboard', 'public', 'styles.css');
+    const css = readFileSync(cssPath, 'utf8');
+    expect(css).toContain('.shared-mobile-header');
+    expect(css).toContain('.shared-mobile-nav');
+    expect(css).toContain('.responsive-table');
+    expect(css).toContain('.mobile-detail-layout');
+    expect(css).toContain('.mobile-primary-column');
+    expect(css).toContain('.mobile-secondary-column');
   });
 });
 

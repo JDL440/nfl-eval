@@ -958,7 +958,9 @@ describe('Dashboard Server', () => {
       repo.startStageRun({
         articleId: 'no-runs-ui',
         stage: 2,
-        status: 'running',
+        surface: 'dashboard',
+        actor: 'tester',
+        status: 'started',
         startedBy: 'tester',
       });
 

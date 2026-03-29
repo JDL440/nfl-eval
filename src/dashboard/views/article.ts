@@ -67,7 +67,7 @@ export function renderArticleMetaDisplay(article: Article): string {
     : '';
 
   return `
-    <div id="article-meta">
+    <div id="article-meta" class="article-meta-card">
       <div class="meta-title-row">
         <h1>${escapeHtml(article.title)}</h1>
         <button
@@ -182,8 +182,8 @@ export function renderArticleDetail(data: ArticleDetailData): string {
         </div>
       </div>
 
-      <div class="detail-grid">
-        <div class="detail-main">
+      <div class="detail-grid mobile-detail-layout">
+        <div class="detail-main mobile-primary-column">
           ${renderActionPanel(article, advanceCheck)}
           ${(revisionHistory?.length ?? 0) > 0 ? renderRevisionHistory(revisionHistory ?? []) : ''}
           ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
@@ -428,7 +428,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
     return `
       <section class="detail-section action-panel">
         <h2>Actions</h2>
-        <div class="action-bar">
+        <div class="action-bar action-group">
           <span class="badge badge-published-lg">✅ Published</span>
           ${article.substack_url
             ? `<a href="${escapeHtml(article.substack_url)}" target="_blank" class="btn btn-secondary">View on Substack ↗</a>`
@@ -463,7 +463,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
         hx-target="this"
         hx-swap="outerHTML">
         <h2>Actions</h2>
-        <div class="action-bar">
+        <div class="action-bar action-group">
           <span class="badge badge-status badge-status-needs_lead_review">⏸ Needs Lead review</span>
           ${previewLink}
           ${traceTimelineLink}
@@ -510,7 +510,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
         hx-target="this"
         hx-swap="outerHTML">
         <h2>Actions</h2>
-        <div class="action-bar">
+        <div class="action-bar action-group">
           ${article.substack_draft_url
             ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Open Draft ↗</a>`
             : ''}
@@ -556,7 +556,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
       hx-target="this"
       hx-swap="outerHTML">
       <h2>Actions</h2>
-      <div class="action-bar">
+      <div class="action-bar action-group">
         ${article.substack_draft_url
           ? `<a href="${escapeHtml(article.substack_draft_url)}" target="_blank" class="btn btn-secondary">Preview Draft ↗</a>`
           : ''}
@@ -633,8 +633,8 @@ function renderDangerZone(article: Article): string {
       hx-confirm="Permanently delete this article and all its data? This cannot be undone.">🗑</button>`;
 
   return `
-    <div style="display:flex;align-items:center;gap:6px;margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid #333;">
-      <span style="font-size:0.65rem;color:#555;letter-spacing:0.03em;">article:</span>
+    <div class="danger-zone">
+      <span class="danger-zone-label">article:</span>
       ${archiveBtn}
       ${unarchiveBtn}
       ${deleteBtn}
@@ -650,7 +650,7 @@ function renderImageSection(article: Article, artifactNames?: string[]): string 
   return `
     <section class="detail-section image-section">
       <h2>Article Images</h2>
-      <div class="action-bar" style="margin-bottom: 0.75rem;">
+      <div class="action-bar action-group image-section-actions">
         <button class="btn btn-secondary"
           hx-post="/htmx/articles/${escapeHtml(article.id)}/generate-images"
           hx-target="#image-result-${escapeHtml(article.id)}"

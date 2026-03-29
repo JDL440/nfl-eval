@@ -30,6 +30,19 @@ export function formatDate(iso: string | null): string {
 }
 
 export function renderLayout(title: string, content: string, labName: string): string {
+  const pageKey = title === 'Dashboard'
+    ? 'dashboard'
+    : title === 'New Idea'
+      ? 'new-idea'
+      : title === 'Settings'
+        ? 'settings'
+        : title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dashboard';
+  const activeNav = title === 'New Idea'
+    ? 'new-idea'
+    : title === 'Settings'
+      ? 'settings'
+      : 'dashboard';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,18 +53,26 @@ export function renderLayout(title: string, content: string, labName: string): s
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
 </head>
-<body hx-ext="sse" sse-connect="/events">
-  <header class="site-header">
+<body class="app-shell page-${escapeHtml(pageKey)}" hx-ext="sse" sse-connect="/events">
+  <header class="site-header shared-mobile-header">
     <div class="header-inner">
       <div class="header-brand">
         <a href="/" class="logo">${escapeHtml(labName)}</a>
         <span class="header-tagline">Editorial workstation</span>
       </div>
       <div class="header-controls">
-      <nav class="header-nav" aria-label="Primary">
-          <a href="/" class="btn btn-header header-nav-link">Dashboard</a>
-          <a href="/ideas/new" class="btn btn-header header-nav-link">New Idea</a>
-          <a href="/config" class="btn btn-header header-nav-link">Settings</a>
+        <button
+          id="nav-toggle"
+          class="btn btn-header btn-icon nav-toggle"
+          type="button"
+          aria-label="Toggle navigation"
+          aria-expanded="false"
+          aria-controls="primary-nav"
+        >☰</button>
+        <nav id="primary-nav" class="header-nav shared-mobile-nav" aria-label="Primary">
+          <a href="/" class="btn btn-header header-nav-link${activeNav === 'dashboard' ? ' is-active' : ''}">Dashboard</a>
+          <a href="/ideas/new" class="btn btn-header header-nav-link${activeNav === 'new-idea' ? ' is-active' : ''}">New Idea</a>
+          <a href="/config" class="btn btn-header header-nav-link${activeNav === 'settings' ? ' is-active' : ''}">Settings</a>
         </nav>
         <div class="header-meta">
           <span class="env-badge header-env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
@@ -61,10 +82,13 @@ export function renderLayout(title: string, content: string, labName: string): s
     </div>
   </header>
   <main class="content">
-    ${content}
+    <div class="content-shell">
+      ${content}
+    </div>
   </main>
   <footer class="site-footer">
     <p>${escapeHtml(labName)} Editorial Workstation</p>
+    <p class="site-footer-meta">Mobile-first editorial control across intake, review, traces, preview, and publishing.</p>
   </footer>
   <script>
     function toggleTheme() {
@@ -82,6 +106,28 @@ export function renderLayout(title: string, content: string, labName: string): s
         var btn = document.getElementById('theme-toggle');
         if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌓';
       }
+    })();
+    (function() {
+      var navToggle = document.getElementById('nav-toggle');
+      var nav = document.getElementById('primary-nav');
+      if (!navToggle || !nav) return;
+      function closeNav() {
+        nav.classList.remove('is-open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      }
+      navToggle.addEventListener('click', function() {
+        var nextOpen = !nav.classList.contains('is-open');
+        nav.classList.toggle('is-open', nextOpen);
+        navToggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      });
+      nav.querySelectorAll('a').forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth < 768) closeNav();
+        });
+      });
+      window.addEventListener('resize', function() {
+        if (window.innerWidth >= 768) closeNav();
+      });
     })();
   </script>
 </body>

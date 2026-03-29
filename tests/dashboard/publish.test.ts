@@ -310,7 +310,7 @@ describe('Publish Workflow', () => {
       expect(html).toContain('SUBSTACK_TOKEN');
       expect(html).toContain('/config');
       expect(html).toContain('aria-disabled="true"');
-      expect(html).toContain('Configure Substack on the <a href="/config">Config</a> page before using Publish All.');
+      expect(html).toContain('Configure Substack on the <a href="/config">Settings</a> page before using Publish All.');
       expect(html).not.toContain('hx-post="/api/articles/no-substack-config/draft"');
       expect(html).not.toContain('hx-post="/api/articles/no-substack-config/publish"');
     });

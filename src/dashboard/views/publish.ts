@@ -138,25 +138,28 @@ export function renderPublishPreview(data: PublishPreviewData): string {
   } = data;
 
   const content = `
-    <div class="article-detail">
-      <div class="detail-header">
+    <div class="article-detail publish-page">
+      <section class="detail-section publish-hero">
         <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article Detail</a>
-        <h1>Publish Page: ${escapeHtml(article.title)}</h1>
-        ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
-        <div class="detail-meta">
-          ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
-          <span class="badge badge-stage badge-stage-${article.current_stage}">
-            Stage ${article.current_stage}
-          </span>
+        <div class="publish-detail-header">
+          <p class="section-kicker">Publish workflow</p>
+          <h1>Publish Page: ${escapeHtml(article.title)}</h1>
+          ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
+          <div class="detail-meta">
+            ${article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
+            <span class="badge badge-stage badge-stage-${article.current_stage}">
+              Stage ${article.current_stage}
+            </span>
+          </div>
+          <p class="hint">Save a Substack draft for review, then publish that linked draft live when ready.</p>
         </div>
-        <p class="hint">Save a Substack draft for review, then publish that linked draft live when ready.</p>
-      </div>
+      </section>
 
-      <div class="detail-grid">
-        <div class="detail-main">
+      <div class="detail-grid mobile-detail-layout publish-layout">
+        <div class="detail-main mobile-primary-column">
           <section class="detail-section">
-            <div class="action-bar" style="justify-content:space-between; margin-bottom:0.75rem;">
-              <h2 style="margin:0;">Published Layout Preview</h2>
+            <div class="action-bar action-group preview-section-header">
+              <h2>Published Layout Preview</h2>
               <button id="viewport-toggle" class="btn btn-secondary btn-sm" onclick="toggleViewport()">
                 📱 Mobile
               </button>
@@ -168,7 +171,7 @@ export function renderPublishPreview(data: PublishPreviewData): string {
           </section>
         </div>
 
-        <div class="detail-sidebar">
+        <div class="detail-sidebar mobile-secondary-column publish-sidebar-stack">
           ${renderPublishWorkflow({ article, substackConfigured })}
 
           ${renderNoteComposer(article)}
@@ -278,7 +281,7 @@ export function renderPublishWorkflow(data: PublishResultData): string {
       ${article.substack_draft_url
         ? `<p class="status-info">Current draft: <a href="${escapeHtml(article.substack_draft_url)}" target="_blank">Open in Substack ↗</a></p>`
         : ''}
-      <div class="action-bar" style="flex-direction:column;align-items:stretch;">
+      <div class="action-bar action-group publish-workflow-actions">
         <button class="btn btn-secondary"${draftActionAttrs}>
           ${hasDraft ? 'Update Draft on Substack' : 'Save Draft to Substack'}
         </button>
@@ -352,10 +355,10 @@ export function renderNoteComposer(article: Article): string {
             Attach article card
           </label>
         </div>
-        <div class="composer-actions">
-          <button class="btn btn-secondary"
-            hx-post="/api/articles/${articleId}/note"
-            hx-target="#note-result"
+      <div class="composer-actions">
+        <button class="btn btn-secondary"
+          hx-post="/api/articles/${articleId}/note"
+          hx-target="#note-result"
             hx-swap="innerHTML"
             hx-include="#note-content, #note-attach">
             Post Note
@@ -385,10 +388,10 @@ export function renderTweetComposer(article: Article): string {
             Dry run (don&#39;t actually post)
           </label>
         </div>
-        <div class="composer-actions">
-          <button class="btn btn-secondary"
-            hx-post="/api/articles/${articleId}/tweet"
-            hx-target="#tweet-result"
+      <div class="composer-actions">
+        <button class="btn btn-secondary"
+          hx-post="/api/articles/${articleId}/tweet"
+          hx-target="#tweet-result"
             hx-swap="innerHTML"
             hx-include="#tweet-content, #tweet-dry-run">
             Post Tweet

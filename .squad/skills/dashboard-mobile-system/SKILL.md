@@ -35,11 +35,11 @@ tools: [view, rg, vitest]
 ## Current repo heuristics
 
 - `layout.ts` is the single shell for most dashboard pages, so header/nav problems are cross-system by default.
-- `styles.css` currently has a thin global mobile layer; many components still rely on desktop flex rows or tables.
+- `styles.css` now carries the real shared mobile layer: `.shared-mobile-header`, `.shared-mobile-nav`, `.mobile-detail-layout`, and `.responsive-table` are the main responsive seams for dashboard work.
 - `preview.ts` includes a manual `preview-mobile` toggle, but that is a preview mode, not a substitute for real responsive behavior.
 - `new-idea.ts` now uses `.idea-agent-grid` for expert-agent pinning, which is the right isolation move. Treat that as the preferred pattern when a selector grid and a content-card grid would otherwise share a class name.
-- `layout.ts` renders `.header-nav`, but the shared stylesheet currently has no dedicated `.header-nav` rule or mobile-nav fallback. Treat header behavior as an unresolved system seam, not a finished component.
-- Shared data tables are inconsistent on mobile: `runs.ts` uses `.runs-table-wrap`, while `config.ts` (`.artifact-table`) and `memory.ts` (`.memory-table`) do not share a common responsive wrapper/card strategy.
+- `layout.ts` now ships the mobile shell contract directly: nav toggle + `.shared-mobile-nav` + active nav state. Reuse that shell before creating page-local nav affordances.
+- Shared data tables should prefer `.responsive-table`; `config.ts` is now the reference implementation for table-to-card behavior on narrow screens.
 - `article.ts`, `publish.ts`, and `preview.ts` all rely on toolbar/detail-shell patterns (`.detail-grid`, `.preview-toolbar`, `.usage-summary`) that can still behave like desktop rows even after the main column stacks.
 - HTMX/SSE amplifies layout drift here: `renderRunsTable()`, `renderMemoryTable()`, `renderPublishWorkflow()`, and the live article partials all swap independently, so mobile structure must live in shared fragment markup/classes rather than only in full-page wrappers.
 - Dashboard tests may assert mobile hook classes without any stylesheet selector for those hooks. In that case the suite is only protecting structural intent; pair hook assertions with `styles.css` checks on the selectors that actually drive the breakpoint behavior.
@@ -47,7 +47,7 @@ tools: [view, rg, vitest]
 
 ## Recommendation
 
-Treat mobile dashboard work in this repo as a system task: fix shell, data surfaces, and HTMX fragment contracts together. Ship in this order: shell/navigation, shared mobile primitives, fragment contracts, then page-specific follow-through. If the same class or markup pattern appears on more than one page, establish a shared responsive component instead of patching one route at a time.
+Treat mobile dashboard work in this repo as a system task: extend the shared shell, shared action/data primitives, and HTMX fragment contracts together. Ship in this order: shell/navigation, shared mobile primitives, fragment contracts, then page-specific follow-through. If the same class or markup pattern appears on more than one page, establish a shared responsive component instead of patching one route at a time.
 
 ## Current examples
 
