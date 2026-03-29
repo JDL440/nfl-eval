@@ -24,6 +24,7 @@ Audit changes where a shared gateway or runner asks for machine-readable output,
 1. Start at the caller contract and write down the exact machine-readable shape it expects (`tool_call` vs `final`, required keys, schema rules).
 2. Trace the shared gateway seam that turns a normal request into a structured one; confirm it still parses and validates strictly rather than silently degrading to text.
 3. Inspect the provider adapter and compare its outbound request body to what the actual backend honors in live use; do not assume OpenAI-compatible fields are interchangeable.
+   - For local OpenAI-compatible runtimes, confirm whether `json_object` actually works; some LM Studio + Qwen combinations only honor `json_schema` or plain text.
 4. Verify request/response envelope capture so reviewers can see the structured mode requested, the exact payload sent, and the raw provider response returned.
 5. Demand tests at three levels:
    - provider request-shaping assertions
@@ -47,7 +48,7 @@ Audit changes where a shared gateway or runner asks for machine-readable output,
 
 - `worktrees\v4\src\llm\gateway.ts` uses `chatStructuredWithResponse()` to force `responseFormat: 'json'`.
 - `worktrees\v4\src\agents\runner.ts` expects `TOOL_LOOP_RESPONSE_SCHEMA` with `type: 'tool_call' | 'final'`.
-- `worktrees\v4\src\llm\providers\lmstudio.ts` is the adapter seam where LM Studio request shaping must match what Qwen actually honors.
+- `worktrees\v4\src\llm\providers\lmstudio.ts` is the adapter seam where LM Studio request shaping must match what Qwen actually honors; for the idea-page failure, that means `response_format: { type: 'json_schema', ... }` rather than assuming `json_object` is accepted.
 - `worktrees\v4\src\llm\gateway.ts` can safely recover JSON when Qwen wraps the object in `<think>...</think>`, code fences, or surrounding prose, but must still fail if no balanced JSON object remains.
 - `worktrees\v4\tests\llm\provider-lmstudio.test.ts`, `worktrees\v4\tests\llm\gateway.test.ts`, and `worktrees\v4\tests\agents\runner.test.ts` together should prove or disprove a real fix.
 

@@ -1,3 +1,59 @@
+# MERGED INBOX ENTRIES (2026-03-29T173307Z)
+
+## code idea json (TO REVIEW):
+# Code Decision Inbox — Idea JSON Failure
+
+## Context
+- The v4 idea page uses `src\dashboard\server.ts` POST `/api/ideas`, which calls `AgentRunner.run()` with tool calling enabled for stage 1.
+- For LM Studio, that path reaches `src\agents\runner.ts` → `LLMGateway.chatStructuredWithResponse()` and requires machine-readable JSON decisions.
+- The reported user error surfaced the raw model prose instead of a route mismatch or prompt-path issue.
+
+## Decision
+- Keep the existing stage-1 dashboard/request path and tool-loop contract.
+- Fix LM Studio at the provider seam by sending backend-compatible structured-output mode (`response_format.type = "json_schema"`) instead of relying on plain text.
+- Preserve strict gateway/schema validation, but tolerate Qwen-style wrappers (`<think>`, fenced JSON, leading/trailing prose) when extracting the actual JSON payload.
+
+## Why
+- The failure mode is provider request shaping plus local-model wrapper noise, not the wrong route or a broken prompt file.
+- Changing the dashboard flow would not address the actual contract mismatch and would risk bypassing the existing safe tool loop.
+- This keeps the fix localized to LM Studio structured output while leaving other providers and callers unchanged.
+
+## lead idea json review (APPROVED):
+# Lead Decision — idea-generation JSON fix review
+
+**Date:** 2026-03-29  
+**Owner:** Lead  
+**Status:** APPROVED
+
+## Decision
+
+Approve this patch for merge as a **localized fix** for the idea-generation JSON failure.
+
+## Why
+
+- The patch corrects the two seams directly implicated in the failure:
+  1. `src\llm\providers\lmstudio.ts` now sends `response_format.type = "json_schema"` instead of the rejected `json_object` shape.
+  2. `src\llm\gateway.ts` now recovers valid JSON when Qwen-style output wraps the payload in `<think>` tags, code fences, or surrounding prose, while still failing closed if no parseable JSON remains.
+- The added tests cover:
+  - provider request shaping (`tests\llm\provider-lmstudio.test.ts`)
+  - gateway structured parsing and LM Studio integration (`tests\llm\gateway.test.ts`)
+  - runner/tool-loop behavior with wrapped JSON (`tests\agents\runner.test.ts`)
+  - the dashboard idea flow (`tests\dashboard\new-idea.test.ts`)
+- Validation passed:
+  - `npm run v2:build`
+  - `npx vitest run tests/llm/gateway.test.ts tests/llm/provider-lmstudio.test.ts tests/agents/runner.test.ts tests/dashboard/new-idea.test.ts`
+
+## Scope guard
+
+This approval is limited to fixing the **idea-generation JSON failure**. It does **not** close the broader LM Studio follow-up around requested-vs-effective model traceability or provider envelope visibility.
+
+## Follow-up not required for this fix
+
+1. Add LM Studio `providerMetadata.requestEnvelope` / `responseEnvelope` so traces show the exact structured request and raw response.
+2. Refine LM Studio model forwarding so policy aliases remain route hints while real LM Studio model ids can still be honored explicitly and traced.
+
+---
+
 # MERGED INBOX ENTRIES (2026-03-28T22:10:19Z)
 
 ## devops lmstudio v4 revision (APPROVED):
@@ -1786,3 +1842,4 @@ pm run v2:build\
   - \
 pm run v2:test -- tests/llm/provider-lmstudio.test.ts tests/llm/gateway.test.ts tests/agents/runner.test.ts\
 - Live smoke against local LM Studio succeeded with \qwen/qwen3.5-35b-a3b\, showing \equestedModel: "gpt-5-mini"\ and \ffectiveModel: "qwen/qwen3.5-35b-a3b"\ in provider metadata.
+
