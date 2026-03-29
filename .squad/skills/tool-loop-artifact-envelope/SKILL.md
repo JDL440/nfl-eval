@@ -1,67 +1,44 @@
-# Skill: Tool-Loop Artifact Envelope
+---
+name: tool-loop-artifact-envelope
+description: Keep artifact-producing prompts aligned with the app-managed tool-loop envelope when the runner expects `{ type, ... }` JSON turns.
+domain: llm-runtime
+confidence: high
+source: manual
+tools: [view, rg, vitest]
+---
 
-**Confidence:** high
-**Domain:** v4 server routes, runner.ts, gateway.ts
-**First observed:** session investigating "invalid option expected one of final|tool_call" error
-**Confirmed by:** two separate fixes across two route groups (ideas + knowledge refresh)
+# Tool-Loop Artifact Envelope
+
+## Purpose
+
+Use this pattern when a surface wants a model to produce a rich artifact (markdown, plan, brief, idea, etc.) **and** the runtime is driving an app-managed tool loop that requires structured control messages such as `{ "type": "tool_call" }` and `{ "type": "final" }`.
+
+## When to Use
+
+- `AgentRunner` or an equivalent loop is calling `chatStructured()` / `chatStructuredWithResponse()` with a strict control schema.
+- The user-facing task also includes an output template for the final artifact body.
+- A provider/model starts returning the artifact directly instead of wrapping it in the loop envelope.
 
 ## Pattern
 
-Every route in `v4/src/dashboard/server.ts` that calls `runner.run()` with
-`toolCalling: { enabled: true }` MUST include the final envelope instruction in the
-**task string itself**, not only in the system prompt.
+1. Trace the caller contract first.
+   - Confirm the exact structured control shape required by the runner (`tool_call`, `final`, required keys).
+2. Check the surface task/prompt, not just the skill.
+   - Artifact templates often teach the model the body format but omit how that body must be packaged for the runtime.
+3. Keep the tool loop if the surface genuinely benefits from read-only research tools.
+   - Do not remove the loop just because the final answer formatting drifted.
+4. Add explicit final-envelope instructions in the caller task.
+   - Example: `return {"type":"final","content":"..."} and put the completed artifact in content`.
+   - Also forbid raw markdown or alternate JSON schemas outside the final envelope.
+5. Add a focused route/caller test.
+   - Assert the task text handed to the runner includes the final-envelope requirement.
 
-Required phrases (both must appear):
-```
-When you are ready to answer, return {"type":"final","content":"..."} and put your completed [result] inside content.
-Do not emit any other JSON schema or raw markdown outside that final envelope.
-```
+## NFL Lab Example
 
-## Why
+- `src\dashboard\server.ts` POST `/api/ideas` enables read-only tool calling for idea generation.
+- `src\agents\runner.ts` validates structured turns with `TOOL_LOOP_RESPONSE_SCHEMA`.
+- The idea template in `src\dashboard\views\new-idea.ts` describes the markdown body, so the route task must also say that the markdown belongs inside `{"type":"final","content":"..."}`.
 
-`TOOL_LOOP_RESPONSE_SCHEMA` in `v4/src/agents/runner.ts:144` validates each LLM turn as:
-```typescript
-z.object({ type: z.enum(['final', 'tool_call']), ... })
-```
-When the model returns raw markdown instead of `{"type":"final","content":"..."}`, the schema
-parse fails with: "invalid option expected one of final|tool_call". The error is reported at
-`v4/src/llm/gateway.ts:296` as "LLM response does not match schema: ...".
+## Anti-Pattern
 
-`buildToolCatalogPrompt()` (`v4/src/agents/local-tools.ts:178`) injects the envelope into the
-**system prompt**, but smaller models (Qwen via LM Studio) follow task-level instructions over
-system prompts when both are present. Task-level reinforcement is required.
-
-## Implementation Pattern
-
-Use a named constant for the footer:
-```typescript
-const KNOWLEDGE_REFRESH_ENVELOPE_FOOTER = [
-  'If runtime tools are available, follow the tool-loop JSON protocol from the system instructions exactly.',
-  'When you are ready to answer, return {"type":"final","content":"..."} and put your completed knowledge brief inside content.',
-  'Do not emit any other JSON schema or raw markdown outside that final envelope.',
-].join('\n');
-
-function knowledgePromptFor(agentName: string): string {
-  let base: string;
-  // ... set base per branch ...
-  return `${base}\n\n${KNOWLEDGE_REFRESH_ENVELOPE_FOOTER}`;
-}
-```
-
-## Test Enforcement
-
-Write a test that:
-1. Mocks `runner.run()` with `vi.fn()`
-2. POSTs to the route
-3. Waits `await new Promise((r) => setTimeout(r, 50))` for fire-and-forget to settle
-4. Asserts `mockRun.mock.calls[0][0].task` contains both required envelope phrases
-
-See: `tests/dashboard/agents.test.ts` — "Knowledge Refresh Routes — tool-loop final envelope contract"
-See: `tests/dashboard/new-idea.test.ts` — "tells the lead task to return the tool-loop final envelope"
-
-## Checklist for new routes
-
-- [ ] Does the route call `runner.run()` with `toolCalling: { enabled: true }`?
-- [ ] Does the task string include `return {"type":"final","content":"..."}`?
-- [ ] Does the task string include `Do not emit any other JSON schema or raw markdown outside that final envelope.`?
-- [ ] Is there a regression test asserting both phrases?
+Do **not** relax the runner schema to accept raw artifact payloads when the runtime is intentionally app-managing tool decisions. That hides the contract drift and makes multi-turn tool execution less reliable.

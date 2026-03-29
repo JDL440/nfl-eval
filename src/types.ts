@@ -305,6 +305,7 @@ export interface LlmTrace {
   article_context_json: string | null;
   conversation_context: string | null;
   roster_context: string | null;
+  metadata_json: string | null;
   provider_mode: string | null;
   provider_session_id: string | null;
   working_directory: string | null;

@@ -52,6 +52,16 @@ export interface LMStudioProviderOptions {
 
 const DEFAULT_BASE_URL = 'http://localhost:1234/v1';
 const DEFAULT_MODEL = 'qwen-35';
+const LMSTUDIO_JSON_RESPONSE_FORMAT = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'structured_output',
+    schema: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
 
 export class LMStudioProvider implements LLMProvider {
   readonly id = 'lmstudio';
@@ -131,7 +141,7 @@ export class LMStudioProvider implements LLMProvider {
     }
 
     if (request.responseFormat === 'json') {
-      body['response_format'] = { type: 'json_object' };
+      body['response_format'] = LMSTUDIO_JSON_RESPONSE_FORMAT;
     }
 
     const providerMetadata: ProviderMetadata = {

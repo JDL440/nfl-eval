@@ -235,13 +235,22 @@ describe('LMStudioProvider', () => {
       expect(body.max_tokens).toBe(500);
     });
 
-    it('passes responseFormat as json_object', async () => {
+    it('uses LM Studio json_schema mode for json responses', async () => {
       fetchSpy.mockResolvedValueOnce(chatResponse());
 
       await provider.chat(req({ responseFormat: 'json' }));
 
       const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
-      expect(body.response_format).toEqual({ type: 'json_object' });
+      expect(body.response_format).toEqual({
+        type: 'json_schema',
+        json_schema: {
+          name: 'structured_output',
+          schema: {
+            type: 'object',
+            additionalProperties: true,
+          },
+        },
+      });
     });
 
     it('returns parsed ChatResponse', async () => {
@@ -289,7 +298,16 @@ describe('LMStudioProvider', () => {
           messages: [{ role: 'user', content: 'Hello' }],
           temperature: 0.2,
           max_tokens: 500,
-          response_format: { type: 'json_object' },
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'structured_output',
+              schema: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
         },
       });
       expect(res.providerMetadata?.responseEnvelope).toEqual({

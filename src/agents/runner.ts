@@ -12,11 +12,15 @@ import { LLMGateway, type ChatMessage } from '../llm/gateway.js';
 import { AgentMemory, type MemoryEntry } from './memory.js';
 import type { Repository } from '../db/repository.js';
 import {
+  buildToolCatalogPrompt,
   executeToolCall,
   getSafeLocalToolCatalog,
+  listAvailableTools,
   stableToolCallKey,
-  type ToolExecutionResult,
+  type ToolCallingConfig,
+  type ToolExecutionResult as LegacyToolExecutionResult,
 } from './local-tools.js';
+import type { ToolExecutionResult as StructuredToolExecutionResult } from '../tools/catalog-types.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +69,7 @@ export interface AgentRunParams {
     stageRunId?: string | null;
     runId?: string | null;
   };
+  toolCalling?: ToolCallingConfig;
 }
 
 // Map agent names to model-policy stage keys so the correct model tier is used
@@ -102,6 +107,16 @@ export function separateThinking(content: string): { thinking: string | null; ou
   };
 }
 
+function appendToolResultMessage(toolName: string, result: StructuredToolExecutionResult): string {
+  return [
+    `Tool result for ${toolName}:`,
+    result.text,
+    '',
+    'If you need another tool, respond with JSON only using {"type":"tool_call","toolName":"...","args":{...}}.',
+    'Otherwise respond with JSON only using {"type":"final","content":"..."}',
+  ].join('\n');
+}
+
 export interface AgentRunResult {
   content: string;
   thinking: string | null;
@@ -127,6 +142,14 @@ interface PromptTracePart {
   metadata?: Record<string, unknown>;
 }
 
+interface ToolCallTrace {
+  toolName: string;
+  args: Record<string, unknown>;
+  source: string;
+  isError: boolean;
+  resultText: string;
+}
+
 const ToolLoopTurnSchema = z.union([
   z.object({
     type: z.literal('final'),
@@ -138,6 +161,65 @@ const ToolLoopTurnSchema = z.union([
     args: z.record(z.string(), z.unknown()).default({}),
   }),
 ]);
+
+const TOOL_LOOP_RESPONSE_SCHEMA = z.object({
+  type: z.enum(['final', 'tool_call']),
+  content: z.string().optional(),
+  toolName: z.string().optional(),
+  args: z.record(z.string(), z.unknown()).optional(),
+}).superRefine((value, ctx) => {
+  if (value.type === 'final' && (!value.content || value.content.trim().length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['content'],
+      message: 'final responses must include non-empty content',
+    });
+  }
+  if (value.type === 'tool_call') {
+    if (!value.toolName || value.toolName.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['toolName'],
+        message: 'tool_call responses must include toolName',
+      });
+    }
+    if (!value.args || typeof value.args !== 'object' || Array.isArray(value.args)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['args'],
+        message: 'tool_call responses must include an args object',
+      });
+    }
+  }
+});
+
+function extractProviderToolCalls(providerMetadata: import('../llm/gateway.js').ProviderMetadata | undefined): ToolCallTrace[] {
+  const responseEnvelope = providerMetadata?.responseEnvelope;
+  if (!responseEnvelope || typeof responseEnvelope !== 'object') {
+    return [];
+  }
+  const toolLoop = (responseEnvelope as Record<string, unknown>)['toolLoop'];
+  if (!toolLoop || typeof toolLoop !== 'object') {
+    return [];
+  }
+  const calls = (toolLoop as Record<string, unknown>)['calls'];
+  if (!Array.isArray(calls)) {
+    return [];
+  }
+  return calls.flatMap((call) => {
+    if (!call || typeof call !== 'object') return [];
+    const record = call as Record<string, unknown>;
+    const toolName = typeof record['toolName'] === 'string' ? record['toolName'] : null;
+    if (!toolName) return [];
+    return [{
+      toolName,
+      args: {},
+      source: typeof record['source'] === 'string' ? record['source'] : 'provider',
+      isError: record['isError'] === true,
+      resultText: '',
+    }];
+  });
+}
 
 // ── Parsing helpers ──────────────────────────────────────────────────────────
 
@@ -536,7 +618,7 @@ export class AgentRunner {
 
   private mergeToolLoopMetadata(
     providerMetadata: import('../llm/gateway.js').ProviderMetadata | undefined,
-    toolEvents: ToolExecutionResult[],
+    toolEvents: LegacyToolExecutionResult[],
     route: { providerId: string; model: string } | null,
   ): import('../llm/gateway.js').ProviderMetadata | undefined {
     if (toolEvents.length === 0 && !providerMetadata) {
@@ -583,8 +665,8 @@ export class AgentRunner {
     route: { providerId: string; model: string };
   }): Promise<import('../llm/gateway.js').ChatResponse> {
     const messages = [...params.messages];
-    const toolEvents: ToolExecutionResult[] = [];
-    const toolResultCache = new Map<string, ToolExecutionResult>();
+    const toolEvents: LegacyToolExecutionResult[] = [];
+    const toolResultCache = new Map<string, LegacyToolExecutionResult>();
     let aggregatedUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let finalResponse: import('../llm/gateway.js').ChatResponse | null = null;
 
@@ -724,6 +806,22 @@ export class AgentRunner {
       taskFamily,
     });
     const toolLoopEnabled = this.shouldUseToolLoop(route.providerId, responseFormat);
+    const requestedTools = Array.from(new Set([
+      ...(params.toolCalling?.requestedTools ?? []),
+      ...skills.flatMap((skill) => skill.tools),
+    ]));
+    const toolContext = {
+      ...(params.toolCalling?.context ?? {}),
+      articleId: params.toolCalling?.context?.articleId ?? params.trace?.articleId ?? articleContext?.slug ?? null,
+      stage: params.toolCalling?.context?.stage ?? params.trace?.stage ?? articleContext?.stage ?? null,
+      surface: params.toolCalling?.context?.surface ?? params.trace?.surface ?? null,
+      agentName: params.toolCalling?.context?.agentName ?? agentName,
+    };
+    const availableTools = await listAvailableTools({
+      ...params.toolCalling,
+      requestedTools,
+      context: toolContext,
+    });
 
     // 4. Compose system prompt
     const systemParts = this.buildSystemPromptParts(charter, skills, memories, params.rosterContext);
@@ -732,6 +830,16 @@ export class AgentRunner {
       if (toolLoopPart) {
         systemParts.push(toolLoopPart);
       }
+    }
+    if (availableTools.length > 0) {
+      const toolPrompt = buildToolCatalogPrompt(availableTools);
+      systemParts.push({
+        channel: 'system',
+        kind: 'available_tools',
+        label: 'Available Tools',
+        content: toolPrompt,
+        metadata: { names: availableTools.map((tool) => tool.manifest.name) },
+      });
     }
     const systemPrompt = systemParts.map((part) => part.content).join('\n\n');
 
@@ -780,9 +888,13 @@ export class AgentRunner {
       articleContext: articleContext ?? null,
       conversationContext: params.conversationContext ?? null,
       rosterContext: params.rosterContext ?? null,
+      metadata: availableTools.length > 0
+        ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
+        : null,
     });
     const requestStartedAt = Date.now();
     let response;
+    const toolCalls: ToolCallTrace[] = [];
     try {
       const providerContext = {
         articleId: params.trace?.articleId ?? articleContext?.slug ?? null,
@@ -792,29 +904,121 @@ export class AgentRunner {
         surface: params.trace?.surface ?? null,
         traceId: traceId ?? null,
       };
-      response = toolLoopEnabled
-        ? await this.runWithToolLoop({
-          messages,
-          model,
-          provider,
-          temperature,
-          maxTokens,
-          stageKey: model ? undefined : stageKey,
-          taskFamily,
-          providerContext,
-          route,
-        })
-        : await this._gateway.chat({
-          messages,
-          model,
-          provider,
-          temperature,
-          maxTokens,
-          responseFormat,
-          stageKey: model ? undefined : stageKey,
-          taskFamily,
-          providerContext,
-        });
+      if (availableTools.length > 0 && responseFormat !== 'json' && route.providerId !== 'copilot-cli') {
+        const toolConversation: ChatMessage[] = [...messages];
+        const seenCalls = new Set<string>();
+        const maxToolCalls = Math.max(1, params.toolCalling?.maxToolCalls ?? 4);
+        let aggregatedUsage: {
+          promptTokens: number;
+          completionTokens: number;
+          totalTokens: number;
+        } | undefined;
+        let finalResponse: import('../llm/gateway.js').ChatResponse | undefined;
+
+        for (let attempt = 0; attempt < maxToolCalls; attempt += 1) {
+          const structured = await this._gateway.chatStructuredWithResponse(
+            {
+              messages: toolConversation,
+              provider,
+              model,
+              temperature,
+              maxTokens,
+              stageKey: model ? undefined : stageKey,
+              taskFamily,
+              disallowedProviderIds: ['copilot-cli'],
+              providerContext,
+            },
+            TOOL_LOOP_RESPONSE_SCHEMA,
+          );
+
+          if (structured.response.usage) {
+            aggregatedUsage = aggregatedUsage ?? {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            };
+            aggregatedUsage.promptTokens += structured.response.usage.promptTokens;
+            aggregatedUsage.completionTokens += structured.response.usage.completionTokens;
+            aggregatedUsage.totalTokens += structured.response.usage.totalTokens;
+          }
+
+          if (structured.data.type === 'final') {
+            finalResponse = {
+              ...structured.response,
+              content: structured.data.content ?? '',
+              usage: aggregatedUsage ?? structured.response.usage,
+            };
+            break;
+          }
+
+          const toolName = structured.data.toolName ?? '';
+          const args = structured.data.args ?? {};
+          const key = `${toolName}:${JSON.stringify(args)}`;
+          const tool = availableTools.find((candidate) => candidate.manifest.name === toolName);
+
+          let toolResult: StructuredToolExecutionResult;
+          if (!tool) {
+            toolResult = {
+              text: JSON.stringify({ error: `Unknown or disallowed tool '${toolName}'` }, null, 2),
+              isError: true,
+            };
+          } else if (seenCalls.has(key)) {
+            toolResult = {
+              text: JSON.stringify({ error: `Duplicate tool call blocked for '${toolName}'` }, null, 2),
+              isError: true,
+            };
+          } else {
+            seenCalls.add(key);
+            toolResult = await executeToolCall(tool, args, toolContext);
+          }
+
+          toolCalls.push({
+            toolName,
+            args,
+            source: tool?.source ?? 'unknown',
+            isError: toolResult.isError === true,
+            resultText: toolResult.text,
+          });
+
+          toolConversation.push({
+            role: 'assistant',
+            content: JSON.stringify({ type: 'tool_call', toolName, args }),
+          });
+          toolConversation.push({
+            role: 'user',
+            content: appendToolResultMessage(toolName, toolResult),
+          });
+        }
+
+        if (!finalResponse) {
+          throw new Error(`Tool calling exhausted its ${maxToolCalls} call budget without producing a final answer.`);
+        }
+        response = finalResponse;
+      } else {
+        response = toolLoopEnabled
+          ? await this.runWithToolLoop({
+            messages,
+            model,
+            provider,
+            temperature,
+            maxTokens,
+            stageKey: model ? undefined : stageKey,
+            taskFamily,
+            providerContext,
+            route,
+          })
+          : await this._gateway.chat({
+            messages,
+            model,
+            provider,
+            temperature,
+            maxTokens,
+            responseFormat,
+            stageKey: model ? undefined : stageKey,
+            taskFamily,
+            providerContext,
+          });
+      }
     } catch (error) {
       if (traceId) {
         const message = error instanceof Error ? error.message : String(error);
@@ -839,6 +1043,17 @@ export class AgentRunner {
     // 8. Separate thinking tokens from output (Qwen, DeepSeek, etc.)
     const { thinking, output: cleanContent } = separateThinking(response.content);
     if (traceId) {
+      const providerToolCalls = extractProviderToolCalls(response.providerMetadata);
+      const metadata = availableTools.length > 0 || toolCalls.length > 0 || providerToolCalls.length > 0
+        ? {
+          ...(availableTools.length > 0
+            ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
+            : {}),
+          ...((toolCalls.length > 0 || providerToolCalls.length > 0)
+            ? { toolCalls: [...toolCalls, ...providerToolCalls] }
+            : {}),
+        }
+        : null;
       params.trace?.repo.completeLlmTrace(traceId, {
         provider: response.provider,
         model: response.model,
@@ -849,6 +1064,7 @@ export class AgentRunner {
         completionTokens: response.usage?.completionTokens ?? null,
         totalTokens: response.usage?.totalTokens ?? null,
         latencyMs: Date.now() - requestStartedAt,
+        metadata,
         providerMode: response.providerMetadata?.providerMode ?? null,
         providerSessionId: response.providerMetadata?.providerSessionId ?? null,
         workingDirectory: response.providerMetadata?.workingDirectory ?? null,

@@ -531,6 +531,22 @@ function runAgent(
     ...params,
     provider: params.provider ?? articleProvider,
     trace: buildAgentTraceContext(ctx, articleId, stage, surface),
+    toolCalling: {
+      enabled: true,
+      includeLocalExtensions: true,
+      includePipelineTools: true,
+      allowWriteTools: true,
+      context: {
+        repo: ctx.repo,
+        engine: ctx.engine,
+        config: ctx.config,
+        actionContext: ctx,
+        articleId,
+        stage,
+        surface,
+        agentName: params.agentName,
+      },
+    },
   });
 }
 

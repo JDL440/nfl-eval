@@ -151,6 +151,7 @@ interface CreateLlmTraceParams {
   articleContext?: unknown;
   conversationContext?: string | null;
   rosterContext?: string | null;
+  metadata?: unknown;
   providerMode?: string | null;
   providerSessionId?: string | null;
   workingDirectory?: string | null;
@@ -169,6 +170,7 @@ interface CompleteLlmTraceParams {
   completionTokens?: number | null;
   totalTokens?: number | null;
   latencyMs?: number | null;
+  metadata?: unknown;
   providerMode?: string | null;
   providerSessionId?: string | null;
   workingDirectory?: string | null;
@@ -274,6 +276,9 @@ export class Repository {
     const columns = this.db.prepare('PRAGMA table_info(llm_traces)').all() as Array<{ name: string }>;
     const columnNames = new Set(columns.map((column) => column.name));
 
+    if (!columnNames.has('metadata_json')) {
+      this.db.exec('ALTER TABLE llm_traces ADD COLUMN metadata_json TEXT');
+    }
     if (!columnNames.has('provider_mode')) {
       this.db.exec('ALTER TABLE llm_traces ADD COLUMN provider_mode TEXT');
     }
@@ -918,10 +923,10 @@ export class Repository {
         (id, run_id, stage_run_id, article_id, stage, surface, agent_name, requested_model,
          stage_key, task_family, temperature, max_tokens, response_format, status,
          system_prompt, user_message, messages_json, context_parts_json, skills_json,
-         memories_json, article_context_json, conversation_context, roster_context, provider_mode,
+         memories_json, article_context_json, conversation_context, roster_context, metadata_json, provider_mode,
          provider_session_id, working_directory, incremental_prompt, provider_request_json,
          provider_response_json, started_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     );
     stmt.run(
       id,
@@ -947,6 +952,7 @@ export class Repository {
       normalizeMetadataJson(params.articleContext),
       params.conversationContext ?? null,
       params.rosterContext ?? null,
+      normalizeMetadataJson(params.metadata),
       params.providerMode ?? null,
       params.providerSessionId ?? null,
       params.workingDirectory ?? null,
@@ -962,22 +968,23 @@ export class Repository {
     const stmt = this.db.prepare(
       `UPDATE llm_traces
        SET provider = ?,
-            model = ?,
-            output_text = ?,
-            thinking_text = ?,
-            finish_reason = ?,
-            prompt_tokens = ?,
-            completion_tokens = ?,
-            total_tokens = ?,
-            provider_mode = COALESCE(?, provider_mode),
-            provider_session_id = COALESCE(?, provider_session_id),
-            working_directory = COALESCE(?, working_directory),
-            incremental_prompt = COALESCE(?, incremental_prompt),
-            provider_request_json = COALESCE(?, provider_request_json),
-            provider_response_json = COALESCE(?, provider_response_json),
-            latency_ms = ?,
-            status = 'completed',
-            completed_at = ?
+           model = ?,
+           output_text = ?,
+           thinking_text = ?,
+           finish_reason = ?,
+           prompt_tokens = ?,
+           completion_tokens = ?,
+           total_tokens = ?,
+           metadata_json = COALESCE(?, metadata_json),
+           provider_mode = COALESCE(?, provider_mode),
+           provider_session_id = COALESCE(?, provider_session_id),
+           working_directory = COALESCE(?, working_directory),
+           incremental_prompt = COALESCE(?, incremental_prompt),
+           provider_request_json = COALESCE(?, provider_request_json),
+           provider_response_json = COALESCE(?, provider_response_json),
+           latency_ms = ?,
+           status = 'completed',
+           completed_at = ?
         WHERE id = ?`,
     );
     stmt.run(
@@ -989,6 +996,7 @@ export class Repository {
       params.promptTokens ?? null,
       params.completionTokens ?? null,
       params.totalTokens ?? null,
+      normalizeMetadataJson(params.metadata),
       params.providerMode ?? null,
       params.providerSessionId ?? null,
       params.workingDirectory ?? null,

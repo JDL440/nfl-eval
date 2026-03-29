@@ -1220,6 +1220,21 @@ export function createApp(
           task,
           skills: ['idea-generation'],
           rosterContext: rosterCtx ?? undefined,
+          toolCalling: {
+            enabled: true,
+            includeLocalExtensions: true,
+            allowWriteTools: false,
+            requestedTools: ['nflverse-data', 'prediction-markets'],
+            context: {
+              repo,
+              engine: actionContext.engine,
+              config,
+              actionContext,
+              stage: 1,
+              surface: 'ideaGeneration',
+              agentName: 'lead',
+            },
+          },
           trace: {
             repo,
             stage: 1,
@@ -2639,21 +2654,36 @@ export function createApp(
     }
   }
 
+  // Appended to every knowledge-refresh task so the tool-loop schema validation
+  // (`TOOL_LOOP_RESPONSE_SCHEMA` with `type: z.enum(['final','tool_call'])`) is
+  // satisfied even when the model would otherwise return raw prose.
+  const KNOWLEDGE_REFRESH_ENVELOPE_FOOTER = [
+    'If runtime tools are available, follow the tool-loop JSON protocol from the system instructions exactly.',
+    'When you are ready to answer, return {"type":"final","content":"..."} and put your completed knowledge brief inside content.',
+    'Do not emit any other JSON schema or raw markdown outside that final envelope.',
+  ].join('\n');
+
   function knowledgePromptFor(agentName: string): string {
+    let base: string;
     if (TEAM_ABBRS_SET.has(agentName)) {
-      return `Review and update your domain knowledge for the ${agentName.toUpperCase()} team. Summarize the most important current facts, figures, and developments you need to track. Focus on verifiable data: cap numbers, roster moves, coaching changes, key statistics, and recent transactions. Format as a structured knowledge brief with dates and sources where possible.`;
+      base = `Review and update your domain knowledge for the ${agentName.toUpperCase()} team. Summarize the most important current facts, figures, and developments you need to track. Focus on verifiable data: cap numbers, roster moves, coaching changes, key statistics, and recent transactions. Format as a structured knowledge brief with dates and sources where possible.`;
+    } else {
+      switch (agentName) {
+        case 'analytics':
+        case 'cap-analyst':
+          base = 'Review and update your domain knowledge on team efficiency metrics and salary cap data across the league. Summarize key figures, trends, and notable changes. Format as a structured knowledge brief.';
+          break;
+        case 'draft-analyst':
+          base = 'Review and update your domain knowledge on draft prospects, combine results, and draft pick value. Summarize key figures, trends, and notable developments. Format as a structured knowledge brief.';
+          break;
+        case 'defense-analyst':
+          base = 'Review and update your domain knowledge on defensive performance across the league. Summarize key figures, rankings, and notable developments. Format as a structured knowledge brief.';
+          break;
+        default:
+          base = 'Review and update your domain knowledge. Summarize the most important current facts, figures, and developments you need to track. Format as a structured knowledge brief.';
+      }
     }
-    switch (agentName) {
-      case 'analytics':
-      case 'cap-analyst':
-        return 'Review and update your domain knowledge on team efficiency metrics and salary cap data across the league. Summarize key figures, trends, and notable changes. Format as a structured knowledge brief.';
-      case 'draft-analyst':
-        return 'Review and update your domain knowledge on draft prospects, combine results, and draft pick value. Summarize key figures, trends, and notable developments. Format as a structured knowledge brief.';
-      case 'defense-analyst':
-        return 'Review and update your domain knowledge on defensive performance across the league. Summarize key figures, rankings, and notable developments. Format as a structured knowledge brief.';
-      default:
-        return 'Review and update your domain knowledge. Summarize the most important current facts, figures, and developments you need to track. Format as a structured knowledge brief.';
-    }
+    return `${base}\n\n${KNOWLEDGE_REFRESH_ENVELOPE_FOOTER}`;
   }
 
   // Active background refreshes
@@ -2693,6 +2723,20 @@ export function createApp(
       agentName: name,
       task: knowledgePromptFor(name),
       skills,
+      toolCalling: {
+        enabled: true,
+        includeLocalExtensions: true,
+        allowWriteTools: false,
+        requestedTools: skills,
+        context: {
+          repo,
+          engine: deps?.actionContext?.engine,
+          config,
+          actionContext: deps?.actionContext,
+          surface: 'knowledgeRefresh',
+          agentName: name,
+        },
+      },
     }).then((result) => {
       const structured = JSON.stringify({
         type: 'knowledge_refresh',
@@ -2753,6 +2797,20 @@ export function createApp(
             agentName: name,
             task: knowledgePromptFor(name),
             skills,
+            toolCalling: {
+              enabled: true,
+              includeLocalExtensions: true,
+              allowWriteTools: false,
+              requestedTools: skills,
+              context: {
+                repo,
+                engine: deps?.actionContext?.engine,
+                config,
+                actionContext: deps?.actionContext,
+                surface: 'knowledgeRefresh',
+                agentName: name,
+              },
+            },
           });
           memory.store({
             agentName: name,

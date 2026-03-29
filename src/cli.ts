@@ -646,7 +646,7 @@ export async function handleMcp(): Promise<void> {
 
   const repo = new Repository(config.dbPath);
   const engine = new PipelineEngine(repo);
-  await startMCPServer(config, repo, engine);
+  await startMCPServer({ config, repo, engine });
 }
 
 // ── Main dispatcher ─────────────────────────────────────────────────────────

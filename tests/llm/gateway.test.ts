@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { join } from 'node:path';
 import { z } from 'zod';
 import {
@@ -10,6 +10,7 @@ import {
   type ChatRequest,
   type ChatResponse,
 } from '../../src/llm/gateway.js';
+import { LMStudioProvider } from '../../src/llm/providers/lmstudio.js';
 import { StubProvider } from '../../src/llm/providers/stub.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 
@@ -68,6 +69,10 @@ describe('LLMGateway', () => {
 
   beforeEach(() => {
     policy = loadPolicy();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   // -- Provider management -------------------------------------------------
@@ -259,6 +264,36 @@ describe('LLMGateway', () => {
       ).rejects.toThrow(StructuredOutputError);
     });
 
+    it('parses JSON wrapped in qwen think tags and code fences', async () => {
+      const schema = z.object({ type: z.literal('tool_call'), toolName: z.string() });
+      const stub = new StubProvider({
+        'wrapped json': '<think>Need the article id first.</think>\n```json\n{"type":"tool_call","toolName":"article_get"}\n```',
+      });
+      const gw = new LLMGateway({ modelPolicy: policy, providers: [stub] });
+
+      const result = await gw.chatStructured(
+        { messages: [{ role: 'user', content: 'wrapped json' }], model: 'stub-model' },
+        schema,
+      );
+
+      expect(result).toEqual({ type: 'tool_call', toolName: 'article_get' });
+    });
+
+    it('parses the first balanced JSON object from mixed-content responses', async () => {
+      const schema = z.object({ type: z.literal('final'), content: z.string() });
+      const stub = new StubProvider({
+        'mixed json': 'Sure — use this.\n{"type":"final","content":"done"}\nThanks!',
+      });
+      const gw = new LLMGateway({ modelPolicy: policy, providers: [stub] });
+
+      const result = await gw.chatStructured(
+        { messages: [{ role: 'user', content: 'mixed json' }], model: 'stub-model' },
+        schema,
+      );
+
+      expect(result).toEqual({ type: 'final', content: 'done' });
+    });
+
     it('throws StructuredOutputError on schema mismatch', async () => {
       const schema = z.object({ name: z.string(), age: z.number() });
       const stub = new StubProvider({
@@ -299,6 +334,51 @@ describe('LLMGateway', () => {
       expect(chatSpy).toHaveBeenCalledWith(
         expect.objectContaining({ responseFormat: 'json' }),
       );
+    });
+
+    it('keeps LM Studio structured calls in json_schema mode', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          id: 'chatcmpl-test',
+          object: 'chat.completion',
+          model: 'qwen/qwen3.5-35b-a3b',
+          choices: [
+            {
+              index: 0,
+              message: { role: 'assistant', content: '```json\n{"ok":true}\n```' },
+              finish_reason: 'stop',
+            },
+          ],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+      const gw = new LLMGateway({
+        modelPolicy: policy,
+        providers: [new LMStudioProvider({ defaultModel: 'qwen/qwen3.5-35b-a3b' })],
+      });
+
+      const result = await gw.chatStructured(
+        {
+          messages: [{ role: 'user', content: 'Return {"ok": true}' }],
+          provider: 'lmstudio',
+        },
+        z.object({ ok: z.boolean() }),
+      );
+
+      const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
+      expect(body.response_format).toEqual({
+        type: 'json_schema',
+        json_schema: {
+          name: 'structured_output',
+          schema: {
+            type: 'object',
+            additionalProperties: true,
+          },
+        },
+      });
+      expect(result).toEqual({ ok: true });
     });
   });
 

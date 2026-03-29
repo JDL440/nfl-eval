@@ -45,6 +45,7 @@ export interface ChatRequest {
   depthLevel?: number;
   taskFamily?: string;
   responseFormat?: 'text' | 'json';
+  disallowedProviderIds?: string[];
   providerContext?: ProviderContext;
 }
 
@@ -92,6 +93,100 @@ export class StructuredOutputError extends GatewayError {
     super(message);
     this.name = 'StructuredOutputError';
   }
+}
+
+function stripStructuredJsonDecorators(raw: string): string {
+  let normalized = raw.trim().replace(/^\uFEFF/, '').trim();
+  normalized = normalized.replace(/<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi, '').trim();
+
+  const orphanedThinkClose = normalized.indexOf('</think>');
+  if (orphanedThinkClose >= 0) {
+    normalized = normalized.slice(orphanedThinkClose + '</think>'.length).trim();
+  }
+
+  const fenced = normalized.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) {
+    return fenced[1].trim();
+  }
+
+  return normalized;
+}
+
+function extractBalancedJsonCandidate(text: string): string | null {
+  const start = text.search(/[\[{]/);
+  if (start < 0) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === '{' || char === '[') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}' || char === ']') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseStructuredJson(raw: string): unknown {
+  const candidates: string[] = [];
+  const addCandidate = (candidate: string | null | undefined): void => {
+    const value = candidate?.trim();
+    if (value && !candidates.includes(value)) {
+      candidates.push(value);
+    }
+  };
+
+  const stripped = stripStructuredJsonDecorators(raw);
+  addCandidate(raw);
+  addCandidate(stripped);
+  addCandidate(extractBalancedJsonCandidate(stripped));
+  addCandidate(extractBalancedJsonCandidate(raw));
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new StructuredOutputError(
+    `LLM response is not valid JSON: ${raw.slice(0, 200)}`,
+    raw,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +275,7 @@ export class LLMGateway {
 
     const errors: { model: string; error: Error }[] = [];
     for (const model of candidates) {
-      const provider = this.findProviderForModel(model);
+      const provider = this.findProviderForModel(model, request.disallowedProviderIds);
       if (!provider) continue;
 
       try {
@@ -213,18 +308,17 @@ export class LLMGateway {
   // -- Structured output ---------------------------------------------------
 
   async chatStructured<T>(request: ChatRequest, schema: ZodType<T>): Promise<T> {
+    const result = await this.chatStructuredWithResponse(request, schema);
+    return result.data;
+  }
+
+  async chatStructuredWithResponse<T>(
+    request: ChatRequest,
+    schema: ZodType<T>,
+  ): Promise<{ data: T; response: ChatResponse }> {
     const response = await this.chat({ ...request, responseFormat: 'json' });
     const raw = response.content;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      throw new StructuredOutputError(
-        `LLM response is not valid JSON: ${raw.slice(0, 200)}`,
-        raw,
-      );
-    }
+    const parsed = parseStructuredJson(raw);
 
     const result = schema.safeParse(parsed);
     if (!result.success) {
@@ -234,7 +328,7 @@ export class LLMGateway {
       );
     }
 
-    return result.data;
+    return { data: result.data, response };
   }
 
   // -- Private helpers -----------------------------------------------------
@@ -262,8 +356,12 @@ export class LLMGateway {
     return resolved.candidates;
   }
 
-  private findProviderForModel(model: string): LLMProvider | undefined {
+  private findProviderForModel(model: string, disallowedProviderIds?: string[]): LLMProvider | undefined {
+    const disallowed = new Set(disallowedProviderIds ?? []);
     for (const provider of this.providers.values()) {
+      if (disallowed.has(provider.id)) {
+        continue;
+      }
       if (provider.supportsModel(model)) {
         return provider;
       }

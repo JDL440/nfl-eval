@@ -159,6 +159,7 @@ CREATE TABLE IF NOT EXISTS llm_traces (
     article_context_json TEXT,
     conversation_context TEXT,
     roster_context      TEXT,
+    metadata_json       TEXT,
     provider_mode       TEXT,
     provider_session_id TEXT,
     working_directory   TEXT,

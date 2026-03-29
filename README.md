@@ -134,6 +134,7 @@ Services
 - **Dashboard**: server-rendered editorial UI in `src/dashboard/`
 - **Pipeline Engine**: stage transition rules and validation in `src/pipeline/`
 - **Agent Runner**: loads charters, skills, and memory for article work
+- **Agent Runner tool loop**: app-managed JSON tool calling for in-app agents, with bounded retries and trace capture
 - **LLM Gateway**: resolves models and routes requests across providers
 - **Repository**: SQLite-backed persistence in `src/db/`
 - **Services**: outbound publishing, media generation, and data adapters in `src/services/`
@@ -161,6 +162,8 @@ Stage-aware routing lives in:
 ### Agent charters and skills
 
 Agent knowledge is loaded from the data directory at runtime. On a fresh install, `npm run v2:init` seeds default charters, skills, and bootstrap memory.
+
+Skills can also advertise tool groups in frontmatter. The runtime resolves those through a shared registry used by both the in-app `AgentRunner` and the MCP surfaces, so dashboard/pipeline agents and MCP clients see the same tool catalog.
 
 - Charters: `~/.nfl-lab/agents/charters/{league}/` — agent identity and boundaries
 - Skills: `~/.nfl-lab/agents/skills/` — workflow instructions and output formats
@@ -228,6 +231,12 @@ Key areas:
 - **Image generation** and render helpers
 - **Data services** for nflverse-backed analysis
 - **MCP tooling** via `npm run v2:mcp` and legacy tooling under `mcp/`
+
+The current tool stack uses one shared catalog:
+
+- `src/agents/local-tools.ts` — in-process executor and tool filtering for in-app agent runs
+- `src/tools/pipeline-tools.ts` — pipeline tool definitions shared with the v2 MCP server
+- `mcp/local-tool-registry.mjs` — extension-backed local tool registry shared by the legacy/local MCP server
 
 For the legacy extension-oriented MCP tooling, see [`.github/extensions/README.md`](.github/extensions/README.md).
 For the main dashboard runtime, prefer the v2 CLI commands over the archived v1 `dashboard` scripts in `package.json`.

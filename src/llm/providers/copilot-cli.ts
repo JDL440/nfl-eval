@@ -404,7 +404,7 @@ export class CopilotCLIProvider implements LLMProvider {
     return {
       providerMode: plan.mode,
       providerSessionId: plan.sessionId,
-      workingDirectory: this.workingDirectory ?? plan.cwd,
+      workingDirectory: plan.cwd,
       incrementalPrompt: prompt,
       requestEnvelope: {
         ...plan.requestEnvelope,
