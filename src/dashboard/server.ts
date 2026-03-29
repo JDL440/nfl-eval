@@ -136,6 +136,21 @@ import { renderRunsPage, renderRunsTable, renderRunDetailPage, type RunsFilters 
 import { renderArticleTraceTimelinePage } from './views/traces.js';
 import { renderLoginPage } from './views/login.js';
 
+export const APP_TOOL_LOOP_PROVIDER_IDS = [
+  'anthropic',
+  'copilot',
+  'gemini',
+  'lmstudio',
+  'local',
+  'openai',
+] as const;
+
+export function buildDashboardToolLoopOptions(): ConstructorParameters<typeof AgentRunner>[0]['toolLoop'] {
+  return {
+    enabledProviders: [...APP_TOOL_LOOP_PROVIDER_IDS],
+  };
+}
+
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
 /**
@@ -1188,6 +1203,9 @@ export function createApp(
 
         const task = [
           'Generate a structured article idea from the following prompt.',
+          'If runtime tools are available, follow the tool-loop JSON protocol from the system instructions exactly.',
+          'When you are ready to answer, return {"type":"final","content":"..."} and put the completed idea markdown inside content.',
+          'Do not emit any other JSON schema or raw markdown outside that final envelope.',
           `\nTeam context: ${teamContext}`,
           `Depth level: ${depthLabels[depthLevel] ?? depthLabels[2]}`,
           '\nUse this output template:\n',
@@ -3007,6 +3025,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       memory,
       chartersDir: config.chartersDir,
       skillsDir: config.skillsDir,
+      toolLoop: buildDashboardToolLoopOptions(),
     });
     const engine = new PipelineEngine(repo);
     const auditor = new PipelineAuditor(repo, config.logsDir);

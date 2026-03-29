@@ -37,7 +37,7 @@ Open `http://localhost:3456`.
 
 Use `npm run v2:serve` for source-mode development and `npm run v2:start` only after `npm run v2:build` has produced `dist/`.
 
-On Windows, `.\dev.ps1` wraps `npm run v2:serve`. If you want to inspect the two repo-local MCP stdio servers during local development, use:
+On Windows, `.\dev.ps1` defaults to source-mode startup (`npm run v2:serve`), so you do not need to rebuild first. If you specifically want the built path, run `.\dev.ps1 -Built`; it will run `npm run v2:build` immediately before `npm run v2:start`. If you want to inspect the two repo-local MCP stdio servers during local development, use:
 
 ```powershell
 .\dev.ps1 -WithMcp

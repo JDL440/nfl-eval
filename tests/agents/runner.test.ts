@@ -17,6 +17,7 @@ import {
   type LLMProvider,
 } from '../../src/llm/gateway.js';
 import { StubProvider } from '../../src/llm/providers/stub.js';
+import { LMStudioProvider } from '../../src/llm/providers/lmstudio.js';
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -819,6 +820,79 @@ describe('AgentRunner', () => {
         expect(traces[0].provider_request_json).toContain('"trace-provider"');
         expect(traces[0].provider_response_json).toContain('Tracing response');
       } finally {
+        repo.close();
+      }
+    });
+
+    it('persists lmstudio request and response envelopes in traces', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+        id: 'chatcmpl-lmstudio-trace',
+        object: 'chat.completion',
+        model: 'qwen-35',
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: 'LM Studio traced response' },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: {
+          prompt_tokens: 12,
+          completion_tokens: 8,
+          total_tokens: 20,
+        },
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+      const tracingGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [new LMStudioProvider()],
+      });
+      const tracingRunner = new AgentRunner({
+        gateway: tracingGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-lmstudio', title: 'Trace LM Studio' });
+      const stageRunId = repo.startStageRun({
+        articleId: 'trace-lmstudio',
+        stage: 5,
+        surface: 'writeDraft',
+        actor: 'writer',
+      });
+
+      try {
+        await tracingRunner.run({
+          agentName: 'writer',
+          task: 'Write a traced draft',
+          articleContext: {
+            slug: 'trace-lmstudio',
+            title: 'Trace LM Studio',
+            stage: 5,
+            content: 'Context body',
+          },
+          trace: {
+            repo,
+            articleId: 'trace-lmstudio',
+            stage: 5,
+            surface: 'writeDraft',
+            stageRunId,
+          },
+          provider: 'lmstudio',
+        });
+
+        const traces = repo.getStageRunLlmTraces(stageRunId);
+        expect(fetchSpy).toHaveBeenCalledOnce();
+        expect(traces[0].provider).toBe('lmstudio');
+        expect(traces[0].provider_request_json).toContain('"endpoint":"http://localhost:1234/v1/chat/completions"');
+        expect(traces[0].provider_request_json).toContain('"model":"qwen-35"');
+        expect(traces[0].provider_response_json).toContain('"id":"chatcmpl-lmstudio-trace"');
+        expect(traces[0].provider_response_json).toContain('LM Studio traced response');
+      } finally {
+        fetchSpy.mockRestore();
         repo.close();
       }
     });

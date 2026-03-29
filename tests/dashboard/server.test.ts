@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Repository } from '../../src/db/repository.js';
-import { createApp } from '../../src/dashboard/server.js';
+import {
+  APP_TOOL_LOOP_PROVIDER_IDS,
+  buildDashboardToolLoopOptions,
+  createApp,
+} from '../../src/dashboard/server.js';
 import type { AppConfig } from '../../src/config/index.js';
 import { addConversationTurn, addRevisionSummary } from '../../src/pipeline/conversation.js';
 
@@ -59,6 +63,15 @@ describe('Dashboard Server', () => {
     vi.useRealTimers();
     repo.close();
     rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('enables the app-owned tool loop for non-Copilot-CLI providers', () => {
+    expect(buildDashboardToolLoopOptions()).toEqual({
+      enabledProviders: [...APP_TOOL_LOOP_PROVIDER_IDS],
+    });
+    expect(APP_TOOL_LOOP_PROVIDER_IDS).toContain('lmstudio');
+    expect(APP_TOOL_LOOP_PROVIDER_IDS).toContain('copilot');
+    expect(APP_TOOL_LOOP_PROVIDER_IDS).not.toContain('copilot-cli');
   });
 
   function seedOlderCopilotUsage(articleId: string): void {
@@ -383,24 +396,34 @@ describe('Dashboard Server', () => {
         userMessage: 'Prompt task',
       });
       repo.completeLlmTrace(traceOne, {
-        provider: 'copilot-cli',
-        model: 'gpt-5.4',
+        provider: 'lmstudio',
+        model: 'qwen-35',
         outputText: 'Idea output',
         totalTokens: 111,
-        providerMode: 'one-shot',
-        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
         incrementalPrompt: 'Idea provider prompt',
-        providerRequest: { allowedTools: ['url'] },
+        providerRequest: {
+          endpoint: 'http://localhost:1234/v1/chat/completions',
+          body: { model: 'qwen-35' },
+        },
+        providerResponse: {
+          id: 'chatcmpl-idea',
+          choices: [{ message: { content: 'Idea output' } }],
+        },
       });
       repo.completeLlmTrace(traceTwo, {
-        provider: 'copilot-cli',
-        model: 'gpt-5.4',
+        provider: 'lmstudio',
+        model: 'qwen-35',
         outputText: 'Prompt output',
         totalTokens: 222,
-        providerMode: 'one-shot',
-        workingDirectory: 'C:\\github\\worktrees\\copilot-session-reuse',
         incrementalPrompt: 'Prompt provider prompt',
-        providerRequest: { allowedTools: ['url', 'nfl-eval-pipeline'] },
+        providerRequest: {
+          endpoint: 'http://localhost:1234/v1/chat/completions',
+          body: { model: 'qwen-35', temperature: 0.7 },
+        },
+        providerResponse: {
+          id: 'chatcmpl-prompt',
+          choices: [{ message: { content: 'Prompt output' } }],
+        },
       });
 
       const res = await app.request('/articles/detail-trace-timeline/traces');
@@ -414,7 +437,8 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Provider-Wrapped Prompt');
       expect(html).not.toContain('Provider Prompt Delta');
       expect(html).toContain('Provider Request Envelope');
-      expect(html).toContain('CWD: C:\\github\\worktrees\\copilot-session-reuse');
+      expect(html).toContain('http://localhost:1234/v1/chat/completions');
+      expect(html).toContain('chatcmpl-prompt');
     });
 
     it('article detail surfaces paused lead review state and artifact tab', async () => {

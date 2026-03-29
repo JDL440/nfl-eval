@@ -1,5 +1,6 @@
 param(
     [int]$Port,
+    [switch]$Built,
     [switch]$CommandOnly,
     [switch]$WithMcp
 )
@@ -22,15 +23,28 @@ if (-not $npm) {
     $npm = Get-Command npm -ErrorAction Stop
 }
 
-$npmArgs = @('run', 'v2:serve')
-if ($PSBoundParameters.ContainsKey('Port')) {
-    $npmArgs += '--'
-    $npmArgs += '--port'
-    $npmArgs += $Port.ToString()
+$preflightArgs = $null
+$serveArgs = if ($Built) {
+    $preflightArgs = @('run', 'v2:build')
+    @('run', 'v2:start')
+} else {
+    @('run', 'v2:serve')
 }
 
-$dashboardCommand = "npm $($npmArgs -join ' ')"
+if ($PSBoundParameters.ContainsKey('Port')) {
+    $serveArgs += '--'
+    $serveArgs += '--port'
+    $serveArgs += $Port.ToString()
+}
+
+$commandParts = @()
+if ($preflightArgs) {
+    $commandParts += "npm $($preflightArgs -join ' ')"
+}
+$commandParts += "npm $($serveArgs -join ' ')"
+$dashboardCommand = $commandParts -join ' && '
 $displayPort = if ($PSBoundParameters.ContainsKey('Port')) { $Port } else { 3456 }
+$startupMode = if ($Built) { 'built dist/cli.js (auto-build enabled)' } else { 'source tsx (no build required)' }
 $mcpServers = @(
     [pscustomobject]@{
         Name = 'nfl-eval-local'
@@ -74,8 +88,12 @@ function Start-RepoWindow {
     Start-Process -FilePath $psExe -WorkingDirectory $repoRoot -ArgumentList @('-NoExit', '-Command', $windowCommand) | Out-Null
 }
 
-Write-Host "🏈 NFL Lab v2 dashboard" -ForegroundColor Cyan
+Write-Host "NFL Lab v2 dashboard" -ForegroundColor Cyan
 Write-Host "   Repo: $repoRoot" -ForegroundColor Gray
+Write-Host "   Mode: $startupMode" -ForegroundColor Gray
+if ($preflightArgs) {
+    Write-Host "   Preflight: npm $($preflightArgs -join ' ')" -ForegroundColor Gray
+}
 Write-Host "   Command: $dashboardCommand" -ForegroundColor Gray
 Write-Host "   URL: http://localhost:$displayPort" -ForegroundColor Gray
 Write-Host "   Config: http://localhost:$displayPort/config" -ForegroundColor Gray
@@ -97,7 +115,7 @@ Push-Location $repoRoot
 try {
     if ($WithMcp) {
         Write-Host ""
-        Write-Host "🔌 Opening MCP debug windows..." -ForegroundColor Cyan
+        Write-Host "Opening MCP debug windows..." -ForegroundColor Cyan
         foreach ($mcpServer in $mcpServers) {
             Start-RepoWindow -Title $mcpServer.Name -Command $mcpServer.Command
             Write-Host "   Opened: $($mcpServer.Name)" -ForegroundColor Green
@@ -106,7 +124,14 @@ try {
         Write-Host ""
     }
 
-    & $npm.Source @npmArgs
+    if ($preflightArgs) {
+        & $npm.Source @preflightArgs
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+    }
+
+    & $npm.Source @serveArgs
     exit $LASTEXITCODE
 } finally {
     Pop-Location
