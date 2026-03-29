@@ -1,6 +1,33 @@
 # Code Agent Project History
 
+## Core Context
+
+**Tool-Use Architecture:**
+- All tool-use is app-orchestrated via `src/agents/runner.ts` (lines 649–733), not provider-native.
+- Models receive JSON response format instructions in system prompt: `{"type":"tool_call"|"final"}` decisions.
+- LMStudioProvider currently forces `this.defaultModel`, masking `request.model`; fix: use `request.model ?? this.defaultModel` (line 116).
+- Structured tool definitions are presented as text instructions + JSON examples, not function definitions.
+
+**Memory System:**
+- **Functional:** Injection, storage, and trace recording all work correctly.
+- **Inactive:** No automated memory creation in pipeline; only bootstrap (one-time) and manual dashboard UI (`/api/memory/add`, `/api/memory/refresh-agent`).
+- **Disabled:** Runtime injection in `AgentRunner.run()` step 3 disabled intentionally (single-line revert to re-enable).
+- **Pattern:** Empty constant disables retrieval; `// DEPRECATED` marks affected code; storage/schema intact for future redesign.
+
+**Dashboard Cleanup Direction:**
+- Collapse deprecated operator surfaces into `/config` as the single admin/settings page.
+- Keep trace observability at `/articles/:id/traces` and `/traces/:id` (separate, dedicated).
+- Preserve `POST /api/agents/refresh-all` unconditionally (may have external consumers).
+- Memory storage/schema retained for future redesign spike.
+
+**LM Studio / Provider Model Routing:**
+- Response format fix: Use `json_schema` or `text` fallback, not `json_object` (LM Studio rejects the latter).
+- Qwen/LM Studio wraps structured JSON in reasoning prose (`<think>...</think>` tags); gateway must recover JSON before schema validation.
+- v4 worktree at `8219c648dd72f25e168b8223e2c50c910907c5be` contains working forward-port; main-based integrations preferred.
+
 ## Learnings
+
+- 2026-03-29 — Dashboard regression tests for the approved cleanup should assert operator-visible states only: `/config` always renders the maintenance result target but shows the refresh-all form only when runner+memory are initialized, removed article Advanced/context-config routes should stay untested, and full article pages should verify the visible metadata badges + edit button rather than the inline edit-form copy.
 
 ### Dashboard Cleanup Multi-Agent Session — UX Review, Code Implementation, Finalization (2026-03-29T18:33:50Z)
 
