@@ -1,4 +1,4 @@
 # Now — NFL Lab
 
-**Focus:** Cleaning stale V3 port state and fixing article-page mobile width in `worktrees\V3`.  
-**Last updated:** 2026-03-27T14:00:00Z
+**Focus:** Simplifying the root dashboard product surface: remove legacy Runs/Agents/Memory UI, keep traces + refresh-all maintenance, and consolidate admin visibility into `/config`.  
+**Last updated:** 2026-03-29T11:31:00Z

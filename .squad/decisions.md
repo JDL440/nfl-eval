@@ -3327,6 +3327,69 @@ No runtime blockers prevent read-only tool use:
 
 ## Decisions Recorded
 
+### lead-runner-trace-forward-port-scope (2026-03-29, Lead)
+
+Port only the runner-side trace observability seam and its tightly coupled tests. Do **not** revive `metadata_json` plumbing, do **not** change `src\db\repository.ts`, and do **not** fold in the Copilot CLI `workingDirectory: plan.cwd` delta as part of this forward-port.
+
+**Why:** Current `main` stores trace observability in `provider_request_json` / `provider_response_json`, not `llm_traces.metadata_json`. `src\agents\runner.ts` is the architecture seam that persists provider metadata into traces. `src\llm\providers\copilot-cli.ts` on current `main` intentionally reports the configured working directory.
+
+**Scope guard:**
+- Include: runner-trace metadata plumbing and focused observability assertions in `tests\agents\runner.test.ts`.
+- Exclude: `tests\agents\tool-trace-copilot-cli.test.ts` revival, repository schema changes, Copilot provider refactors, dashboard changes, and broader tool-loop work.
+
+### devops-advance-main-only-on-fast-forward-target (2026-03-29, DevOps)
+
+Do not move the checked-out `main` ref unless the validated integration target is a fast-forward descendant of the current `main`. Treat a validated but divergent target SHA as a blocker that requires a new rebase or forward-port integration commit.
+
+**Why:** Moving a checked-out branch ref to a non-descendant commit is a history rewrite, not a safe advance, and can strand local commits even if file contents on disk remain untouched.
+
+### code-deprecate-memory-injection (2026-03-29, Code)
+
+Disable runtime memory injection without removing the storage layer. In `runner.ts` step 3, replace `this.memory.recall(agentName, { limit: 10 })` with `const memories: MemoryEntry[] = []`. The `AgentMemory` class, SQLite schema, DB bootstrapping, and all `AgentRunner` constructor wiring remain intact. The memories block in `buildSystemPromptParts()` and the trace recording of `memories_json` remain intact; they just receive an empty array.
+
+**Rationale:** Zero user-visible behavior change (injection was already producing `[]` in production). Full revert is a one-line change. Storage, schema, and DB path remain ready for a spike on memory design.
+
+**Rollback:** To re-enable injection, restore the one-liner in `run()` step 3: `const memories = this.memory.recall(agentName, { limit: 10 });`
+
+### code-dashboard-cleanup-surface-removal (2026-03-29, Code)
+
+Treat `/config` as the single operator/admin page for runtime visibility, auth posture, prompt inventory, paths, and maintenance actions. Remove deprecated UI routes/pages for `/agents`, `/memory`, `/runs`, and article-side advanced/context-config/stage-runs controls. Preserve trace pages at `/articles/:id/traces` and `/traces/:id` plus `POST /api/agents/refresh-all`. Preserve repository/runtime seams that are still used outside the deleted UI.
+
+**Why:** Reduces navigation and testing surface area without deleting the underlying operational capabilities that still matter. Trace pages provide a clearer observability path than embedding old admin chrome inside article detail. Keeping legacy storage intact avoids accidental schema churn while the memory redesign remains pending.
+
+**Validation:** `npm run v2:build`, tests in `tests/db/repository.test.ts`, `tests/dashboard/config.test.ts`, `tests/dashboard/server.test.ts`, `tests/dashboard/wave2.test.ts`.
+
+### code-dashboard-cleanup-follow-up (2026-03-29, Code)
+
+Keep two legacy operational seams available through Settings/Admin: (1) memory storage/status visibility stays on the Settings page while the redesign is pending, (2) `POST /api/agents/refresh-all` remains callable from Settings/Admin for maintenance flows.
+
+**Why:** The user-facing dashboard is being simplified around current article, trace, and settings workflows. The underlying storage/schema and refresh endpoint are still needed for runtime maintenance and migration safety.
+
+### lead-dashboard-cleanup-implementation-plan (2026-03-31, Lead)
+
+The dashboard cleanup implementation plan is updated to execution-ready status. Key decisions:
+
+1. **Memory subsystem:** Keep DB schema/tables; disable injection in `AgentRunner`; mark deprecated with JSDoc comments. Schema may have value in a future redesign spike.
+2. **Memory browser UI:** All `/memory` routes, partials, view files, and dashboard tests are deleted. Runtime `AgentMemory` storage helpers remain.
+3. **Config redesign:** `/config` route stays alive; the view/handlers rebuilt into an admin/settings experience. Minimum: Substack/publication config, model routing defaults.
+4. **POST /api/agents/refresh-all:** Unconditional keep, regardless of internal link status.
+5. **POST /api/agents/:name/refresh-knowledge:** Remove unless a confirmed non-UI consumer is identified at implementation time.
+6. **Trace button:** Only article-page trace surface; stage circles, Stage Runs panel, Advanced accordion all deleted; single `Trace` button links to `/articles/:id/traces`.
+
+### lead-dashboard-cleanup-plan-progress (2026-03-29, Lead)
+
+Plan.md converted from future checklist to live implementation checklist. Backend work verified COMPLETE: AgentRunner memory injection disabled, AgentMemory marked @deprecated, POST /api/agents/refresh-all working and retained. UI removal work PENDING. Plan now tracking-ready with COORDINATOR CHECKLIST slots per phase.
+
+### research-memory-injection-system-dormant (2026-03-29, Research)
+
+The agent memory injection system is architecturally sound but inactive. The mechanism correctly injects memories when available, but the `agent_memory` table is empty. No code currently creates new memories during pipeline execution.
+
+**Recommendation:** Option B is most practical: Identify 3-5 high-value moments (e.g., article completion summary, editor feedback analysis, error recovery strategy) and add explicit `memory.store()` calls there. This avoids noise from every agent run and targets meaningful learnings.
+
+---
+
+## Prior Decisions
+
 None new — all tool infrastructure decisions already merged to decisions.md:
 - Tool-loop artifact envelope (2025-07)
 - In-app read-only MCP seam (prior session)

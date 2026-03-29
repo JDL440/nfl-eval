@@ -2,6 +2,114 @@
 
 ## Learnings
 
+### Dashboard Cleanup Multi-Agent Session — UX Review, Code Implementation, Finalization (2026-03-29T18:33:50Z)
+
+**Status:** ✅ SESSION COMPLETE - ORCHESTRATION LOGGED
+
+**Summary:**
+- UX sanity review identified desired shell state: confirmed navigation simplification, validated trace UX isolation, warned of shared trace styling risk with article detail `.advanced-subsection` CSS.
+- Code agent completed three phases: (1) Removed Agents/Memory/Runs UI surfaces from primary nav and views. (2) Redesigned Settings/Admin with preserved memory deprecation messaging and refresh-all endpoint. (3) Removed leftover dead dashboard CSS from article timeline/stage-run cleanup.
+- All changes validated with updated test coverage; trace routing and admin API preserved per product direction.
+
+**What happened:**
+- Orchestration logs written for UX, Code, and Code (finalize) agents at `.squad/orchestration-log/{timestamp}-{agent}.md`
+- Session log written at `.squad/log/2026-03-29T18-33-50Z-dashboard-cleanup.md`
+- Decision inbox entries merged to `.squad/decisions.md` and deleted from inbox
+- Code history updated with implementation details
+- Trace styling risk escalated: CSS cleanup must avoid breaking traces while removing article Advanced remnants
+
+**Validation:**
+- `npm run v2:build` ✅ (post-cleanup)
+- Tests updated to reflect removed surfaces
+- `POST /api/agents/refresh-all` confirmed still callable from Settings/Admin
+- Trace UX routed independently through `/articles/:id/traces` and `/traces/:id`
+
+**Cross-Agent Notes:**
+- UX identified that trace cards still reuse `.advanced-subsection` styling (shared with article detail); article CSS cleanup must be coordinated
+- Server.ts was in compile-broken state around leftover Agents/Memory code paths; code cleanup resolved import/type issues
+- Memory deprecation messaging still visible on Settings page as planned
+
+### Dashboard Cleanup — Keep Trace Observability, Collapse Legacy Admin Surfaces (2026-03-29)
+
+**Decision:** The root dashboard now treats `/config` as the single admin/settings surface, keeps trace pages as the observability path, and removes the old Runs/Agents/Memory/browser-style UI from product navigation and tests.
+
+**What changed:**
+- `src/dashboard/views/layout.ts` now exposes only Dashboard, New Idea, and Settings in the shared shell.
+- `src/dashboard/views/config.ts` became the richer admin page for provider/runtime/auth/path visibility and includes the preserved `POST /api/agents/refresh-all` maintenance control.
+- `src/dashboard/views/article.ts` dropped the old advanced/stage-runs/audit-log surface from the article page while keeping token usage, artifact tabs, editor reviews, revision history, and a simple trace entrypoint.
+- `src/dashboard/server.ts` now serves the simplified article detail/live fragments and no longer serves the removed context-config/stage-runs style dashboard controls.
+- Trace routes remain active at `/articles/:id/traces` and `/traces/:id`.
+
+**Pattern:** When a dashboard subsystem is deprecated but still operationally relevant, collapse operator access into `/config`, keep the minimal maintenance endpoint/API, and preserve deeper observability on dedicated trace pages instead of inline product chrome.
+
+**Validation:**
+- `npm run v2:build` ✅
+- `npm run v2:test -- tests/dashboard/config.test.ts tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts` ✅
+- `npm run v2:test` ❌ still has unrelated broader e2e/auth failures outside this cleanup slice
+
+**Critical files:**
+- `src/dashboard/views/layout.ts`
+- `src/dashboard/views/config.ts`
+- `src/dashboard/views/article.ts`
+- `src/dashboard/server.ts`
+- `tests/dashboard/config.test.ts`
+- `tests/dashboard/server.test.ts`
+- `tests/dashboard/wave2.test.ts`
+
+### Memory Injection Disabled — Dormant Subsystem (2026-03-29)
+
+**Decision:** Runtime memory injection in `AgentRunner.run()` has been intentionally disabled.
+
+**What changed:**
+- `src/agents/runner.ts` step 3: replaced `this.memory.recall(agentName, { limit: 10 })` with `const memories: MemoryEntry[] = []`. This is the single on/off switch — restoring that one line re-enables injection.
+- Step 8b `touch()` loop is now a no-op (memories always empty); kept in place for rollback.
+- `buildSystemPromptParts()` memories block preserved with a `// DEPRECATED` comment.
+- Tests in `tests/agents/runner.test.ts` updated: three tests now assert `memoriesUsed === 0` and `touch()` not called; two `composeSystemPrompt` tests annotated as testing the dormant path.
+- `AgentMemory` class, SQLite schema (`memory-schema.sql`), DB bootstrapping, and all wiring in the constructor are untouched.
+
+**Pattern for dormant subsystems:** Use an empty constant to disable a retrieval path, mark every affected code site with `// DEPRECATED — <reason>`, update tests to assert the new (disabled) behavior, keep storage/schema intact. One-line revert restores the feature.
+
+**Critical files:**
+- `src/agents/runner.ts` — lines ~884 (step 3, the kill switch), ~1214 (step 8b touch loop), ~580 (memories prompt block)
+- `tests/agents/runner.test.ts` — three run() tests renamed/updated to assert disabled behavior
+
+---
+
+### Memory System Architecture (2026-03-29)
+
+**Discovery:** Agent memory system is **fully functional for injection but receives zero memories to inject** because no automated memory creation exists in the pipeline.
+
+**Memory Lifecycle:**
+1. **Storage:** `src/agents/memory.ts` + `src/agents/memory-schema.sql` — SQLite `agent_memory` table works correctly
+2. **Recall:** `src/agents/runner.ts:884` calls `memory.recall(agentName, { limit: 10 })` before every agent run ✅
+3. **Injection:** `src/agents/runner.ts:917-580` injects memories into system prompt section `## Relevant Context` ✅
+4. **Tracing:** `src/db/repository.ts:952` records the `memories` array in `llm_traces.memories_json` ✅
+5. **Creation:** ❌ **MISSING** — Only bootstrap (one-time seed on install) and manual dashboard UI (`src/dashboard/server.ts:2616,2763,2830`)
+
+**Evidence from Production Data:**
+- Query of live `pipeline.db` shows 10 recent agent traces (2026-03-29 09:10–09:21)
+- All traces have `memories_json` field populated
+- All arrays are empty: `[]`
+- This is correct behavior — injection code works, but `agent_memory` table is empty
+
+**Root Cause:**
+The article pipeline **never calls `memory.store()`** after agent completions. Memory exists as:
+- Optional bootstrap: `src/config/index.ts:186-191` (runs once if `memory.db` doesn't exist)
+- Manual user action: `/api/memory/add`, `/api/memory/refresh-agent`, `/api/memory/refresh-all` in dashboard
+- Defined but unused: `src/pipeline/roster-context.ts:507-513` `bootstrapRosterKnowledge()` (never called)
+
+**User Question Resolution:**
+If user expected memories to auto-populate during agent runs: this feature is not implemented. Memories are read-only retrieved during execution; they are not recorded after completion.
+
+**Critical Files:**
+- `src/agents/memory.ts` — Storage class (functional)
+- `src/agents/runner.ts:884,917` — Injection point (active, working)
+- `src/db/repository.ts:910-965` — Trace recording (captures injection state)
+- `src/dashboard/server.ts:2616,2763,2830` — Manual memory creation UI only
+- `src/pipeline/roster-context.ts:507-513` — Bootstrap function (dead code, never invoked)
+
+---
+
 ### LM Studio Tool-Use Architecture (2026-03-28)
 
 **Key Architecture Patterns:**
@@ -273,6 +381,7 @@ Scribe documented the Code agent's investigation outcome:
 
 ## Recent Learnings
 
+- 2026-03-29 — Dashboard cleanup removed the legacy Agents/Memory/Runs surfaces, but Settings/Admin still owns memory-status visibility and the `POST /api/agents/refresh-all` maintenance path.
 - 2026-03-28 — Stage 1 no-tools Copilot CLI behavior is expected unless `article-tools` is enabled; trace labels should reflect provider-wrapped prompts.
 - 2026-03-28 — Provider selection must be threaded beyond stage 1 to avoid silent fallback in later stages.
 - 2026-03-28 — Unified local MCP rollout converged on `mcp/server.mjs` plus shared bootstrap helpers and still needs docs/test parity.
@@ -309,3 +418,12 @@ Scribe documented the Code agent's investigation outcome:
 pm run v2:build and 
 pm run v2:test -- tests/llm/gateway.test.ts tests/llm/provider-copilot-cli.test.ts tests/llm/provider-lmstudio.test.ts tests/agents/runner.test.ts tests/agents/tool-trace-copilot-cli.test.ts tests/dashboard/agents.test.ts tests/dashboard/new-idea.test.ts from that worktree, so no additional code edit was required.
 - 2026-03-29 — Re-validating the clean integration lane at `C:\github\worktrees\nfl-eval-v4-integration-f31a5ec` showed the Copilot trace seam is already fixed on branch `devops/v4-integration-f31a5ec`: `src\agents\runner.ts` persists `availableTools` at trace completion and falls back to provider-native `responseEnvelope.toolLoop.calls` when the app-managed loop is bypassed. The requested focused proof stayed green with `npm run v2:build` and `npm run v2:test -- tests/llm/gateway.test.ts tests/llm/provider-copilot-cli.test.ts tests/llm/provider-lmstudio.test.ts tests/agents/runner.test.ts tests/agents/tool-trace-copilot-cli.test.ts tests/dashboard/agents.test.ts tests/dashboard/new-idea.test.ts`, so no new integration-lane code edit or commit was needed.
+
+## 2026-03-29T11:35:00Z — Dashboard surface cleanup validated
+
+- Removed deprecated dashboard-only `/agents`, `/memory`, and `/runs` surfaces plus their obsolete test coverage.
+- Kept trace observability on `/articles/:id/traces` and `/traces/:id`, and preserved `POST /api/agents/refresh-all` on the new settings page.
+- Simplified article detail to metadata, artifacts, revisions, reviews, actions, and usage; removed inline stage timeline, stage-runs, audit log, and advanced panels.
+- Reintroduced `Repository.getStageRunDetail()` only to preserve the repository trace contract used outside the removed Runs UI.
+- Validation: `npm run v2:build` ✅; `npx vitest run tests/db/repository.test.ts tests/dashboard/config.test.ts tests/dashboard/server.test.ts tests/dashboard/wave2.test.ts` ✅; `npm run v2:test` still fails in broader pre-existing e2e/auth flows (`tests/e2e/ux-happy-path.test.ts`).
+- 2026-03-29 — Dashboard settings and article-detail tests should follow rendered operator-visible states, not deprecated admin affordances: `tests\dashboard\config.test.ts` now treats refresh-all as conditional on runner+memory initialization while still asserting the maintenance result container, and `tests\dashboard\server.test.ts` should prefer metadata badge/icon-button assertions plus absence of `/context-config` or inline edit-form copy on full article pages.
