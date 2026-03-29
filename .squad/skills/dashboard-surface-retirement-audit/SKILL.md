@@ -1,51 +1,17 @@
----
-name: Dashboard Surface Retirement Audit
-domain: dashboard-ux
-confidence: high
-tools: [rg, view]
----
-
 # Dashboard Surface Retirement Audit
 
-## When to Use
+## When to use
+Use this when a dashboard/admin surface is being removed or collapsed into another page and you need to verify the cleanup is complete without breaking preserved operational seams.
 
-- A dashboard simplification removes whole surfaces like Runs, Agents, Memory, or advanced article controls.
-- The primary routes/navigation are already cleaned up, but you need a final audit for stale copy, class names, tests, and maintenance affordances.
-- Legacy backend capabilities still exist in limited form (for example, refresh endpoints or storage paths) and the UI must describe them honestly without restoring the old product surface.
+## Audit checklist
+1. Confirm navigation and page copy no longer expose the retired surfaces.
+2. Search routes, HTMX fragments, helpers, CSS classes, and tests for dead references to the removed pages or panels.
+3. Preserve explicitly approved seams (for example trace pages or maintenance-only POST endpoints) and move any remaining operator affordances onto the surviving admin page.
+4. Update tests to assert both sides of the contract: removed routes 404, preserved routes/endpoints still exist.
+5. Update docs to describe deprecation honestly: what still exists in storage/runtime, what is disabled, and where operators now go instead.
 
-## Pattern
-
-1. Start with the shell and canonical admin page.
-   - Check `src/dashboard/views/layout.ts` for the primary nav actually shown to users.
-   - Check `src/dashboard/views/config.ts` for the operator story that replaces removed dashboards.
-2. Audit detail pages for leftover language, not just visible panels.
-   - Search for dead route names, `advanced-*` hooks, `timeline` classes, and removed panel copy.
-   - Rename neutral survivors (for example trace-only sections) so they no longer carry retired feature names.
-3. Prune CSS only after confirming markup usage.
-   - Search the repo for selector references first.
-   - Remove selectors that belong only to retired surfaces, especially shared-shell or settings-page leftovers that can mislead future work.
-4. Keep deprecation copy factual.
-   - If legacy storage or maintenance actions still exist, say so directly.
-   - Also say what is gone: prompt injection disabled, old dashboard retired, maintenance still lives in `/config`.
-5. Lock the cleanup with UI-facing tests.
-   - Assert the new copy exists.
-   - Assert retired links/routes/classes do not appear in rendered HTML.
-
-## Why
-
-Dashboard retirements often look complete in navigation while stale copy and CSS keep the old mental model alive for both users and developers. A final audit should remove those ghost references without erasing truthful operator information about remaining maintenance seams.
-
-## Current Evidence
-
-- `src/dashboard/views/layout.ts`
-- `src/dashboard/views/config.ts`
-- `src/dashboard/views/article.ts`
-- `src/dashboard/views/traces.ts`
-- `src/dashboard/public/styles.css`
-- `tests/dashboard/config.test.ts`
-
-## Watch-outs
-
-- Do not describe legacy storage as active product functionality if only migration/maintenance uses remain.
-- Do not remove trace or maintenance UX just because it shares words with retired surfaces; rename the hook if the capability still exists.
-- Prefer surgical text/class/test changes over wider route or backend refactors in this final-pass audit.
+## Repository examples
+- `src/dashboard/views/layout.ts` keeps only Dashboard, New Idea, and Settings in shared navigation.
+- `src/dashboard/views/article.ts` should not retain orphaned run/timeline chrome after `/runs` UI removal.
+- `src/dashboard/views/config.ts` is the replacement admin surface for memory-status copy and `POST /api/agents/refresh-all`.
+- `tests/dashboard/server.test.ts` is the regression seam for removed-route 404s and preserved trace/refresh behavior.
