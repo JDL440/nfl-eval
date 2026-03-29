@@ -104,3 +104,16 @@ Memory injection mechanism works flawlessly—memories are correctly injected wh
 
 ### Insight
 System does NOT automatically extract learnings from agent execution. Memory creation is opt-in only. No passive hooks record what agents learned, decided, or found during article production.
+
+## Learnings
+
+### 2026-03-29: Copilot CLI session artifact harvest
+
+- For preserved human-authored research/planning material, the high-signal local root is `C:\Users\jdl44\.copilot\session-state`. The nearby CLI-managed roots (`C:\Users\jdl44\AppData\Local\copilot`, `C:\Users\jdl44\AppData\Local\GitHub CLI`, `C:\Users\jdl44\AppData\Roaming\GitHub CLI`) were inspected and only exposed packaged docs/config, not project research worth archiving.
+- The reusable artifact seams inside session-state are:
+  - root-level carry-forward docs like `FINAL-SUMMARY.md`, `lead-issue-planning-draft.md`, and cleanup inventories
+  - per-session `plan.md`
+  - per-session `checkpoints\*.md`
+  - per-session `research\*.md`
+- Session UUID folders are much easier to triage when paired with session-store summaries (for example: `ee3cf027-724e-49f5-b205-0e8b3c3e90fc` = “Rearchitect Project For Version 2”, `fded7635-6d90-4180-ae1f-02247f6d5b78` = “Add Advanced LLM Inputs Outputs Page”).
+- Recommended repo destination for later copy-in: `C:\github\nfl-eval\research\copilot-session-archive\` with collision-safe filenames that preserve date, session summary, session id, and original basename.

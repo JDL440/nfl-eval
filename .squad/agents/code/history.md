@@ -19,3 +19,9 @@
 - 2026-03-29 — Final dashboard cleanup audits should check for dead article-detail remnants as well as removed pages: `src\dashboard\views\article.ts` must not reference `stageRuns`, pipeline-activity, or inline run-failure chrome once `/runs` is retired, and `tests\dashboard\server.test.ts` should assert `/agents`, `/memory`, `/runs`, and `/runs/:id` return 404 while trace pages and `POST /api/agents/refresh-all` stay live.
 - 2026-03-29 — Settings copy has to describe deprecation plainly: say legacy memory storage still exists, prompt injection is disabled, the old Memory dashboard stays retired, and refresh-all now lives on `/config`.
 - 2026-03-29T18:42:53Z — Dashboard cleanup audit/fix completed in background; repo files updated and filesystem verified; UX exposure audit confirmed simplified dashboard.
+- 2026-03-29 — Mobile-first dashboard modernization now rides on shared seams instead of page-only patches: `layout.ts` owns `.shared-mobile-header` / `.shared-mobile-nav`, `article.ts` + `publish.ts` share `.mobile-detail-layout`, and `config.ts` uses `.responsive-table` so narrow-screen structure is backed by real CSS and regression tests.
+
+## Cross-Agent Context Updates (2026-03-29T20-08-26Z)
+
+### From Orchestration (Scribe)
+**Mobile shell restyle handoff:** Implement the system-level mobile shell fix first, then layer premium dashboard polish on top. Eliminate hamburger overlap and overflow before page-specific decoration.
