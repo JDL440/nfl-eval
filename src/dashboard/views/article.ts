@@ -1,18 +1,16 @@
 /**
  * article.ts — Article detail view for the editorial workstation.
  *
- * Shows stage timeline, artifact tabs, action panel, usage stats,
- * audit log, and metadata.
+ * Shows article metadata, actions, artifacts, revisions, and usage.
  */
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
-import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
-import type { Article, Stage, StageTransition, StageRun, EditorReview, UsageEvent, LlmTrace } from '../../types.js';
+import { STAGE_NAMES } from '../../types.js';
+import type { Article, Stage, EditorReview, UsageEvent } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { parseRevisionBlockerMetadata, type RevisionHistoryEntry } from '../../pipeline/conversation.js';
 import { markdownToHtml } from '../../services/markdown.js';
-import { renderTraceSummaryPanel } from './traces.js';
 
 const DEPTH_LABELS: Record<number, string> = {
   1: 'Quick Take',
@@ -40,18 +38,13 @@ export const OPTIONAL_ARTIFACT_FILES = [
 export interface ArticleDetailData {
   config: AppConfig;
   article: Article;
-  transitions: StageTransition[];
   reviews: EditorReview[];
   revisionHistory?: RevisionHistoryEntry[];
   advanceCheck?: AdvanceCheck;
   usageEvents?: UsageEvent[];
-  stageRuns?: StageRun[];
-  llmTraces?: LlmTrace[];
   artifactNames?: string[];
   flashMessage?: string;
   errorMessage?: string;
-  autoAdvanceActive?: boolean;
-  pinnedAgents?: Array<{ agent_name: string; role: string | null }>;
 }
 
 function parseTeams(raw: string | null): string[] {
@@ -163,7 +156,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, transitions, reviews, revisionHistory, advanceCheck, usageEvents, stageRuns, llmTraces, artifactNames, flashMessage, errorMessage, autoAdvanceActive, pinnedAgents } = data;
+  const { config, article, reviews, revisionHistory, advanceCheck, usageEvents, artifactNames, flashMessage, errorMessage } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -179,41 +172,29 @@ export function renderArticleDetail(data: ArticleDetailData): string {
     <div class="article-detail">
       ${flashBanner}
       ${errorBanner}
-      ${renderPipelineActivityBar(article, autoAdvanceActive)}
       <div class="detail-header">
         <a href="/" class="back-link">← Dashboard</a>
         <div id="live-meta"
           hx-get="/htmx/articles/${eid}/live-header"
           hx-trigger="sse:stage_changed, sse:pipeline_complete"
-          hx-swap="innerHTML"
-          hx-indicator="#pipeline-activity">
+          hx-swap="innerHTML">
           ${renderArticleMetaDisplay(article)}
-          ${renderStageTimeline(article.current_stage, transitions)}
         </div>
       </div>
 
       <div class="detail-grid">
         <div class="detail-main">
-          ${renderActionPanel(article, advanceCheck, stageRuns)}
+          ${renderActionPanel(article, advanceCheck)}
           ${(revisionHistory?.length ?? 0) > 0 ? renderRevisionHistory(revisionHistory ?? []) : ''}
           ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
           <div id="live-artifacts"
             hx-get="/htmx/articles/${eid}/live-artifacts"
             hx-trigger="sse:stage_changed, sse:pipeline_complete"
-            hx-swap="innerHTML"
-            hx-indicator="#pipeline-activity">
+            hx-swap="innerHTML">
             ${renderArtifactTabs(article, artifactNames)}
           </div>
           ${(revisionHistory?.length ?? 0) === 0 && reviews.length > 0 ? renderEditorReviews(reviews) : ''}
-        </div>
-        <div class="detail-sidebar"
-          hx-get="/htmx/articles/${eid}/live-sidebar"
-          hx-trigger="sse:stage_changed, sse:pipeline_complete"
-          hx-swap="innerHTML"
-          hx-indicator="#pipeline-activity">
           ${renderUsagePanel(usageEvents ?? [])}
-          ${renderStageRunsPanel(stageRuns ?? [])}
-          ${renderAdvancedSection(article, transitions, llmTraces ?? [], pinnedAgents)}
         </div>
       </div>
     </div>`;
@@ -221,127 +202,14 @@ export function renderArticleDetail(data: ArticleDetailData): string {
   return renderLayout(article.title, content, config.leagueConfig.name);
 }
 
-// ── Pipeline activity indicator ──────────────────────────────────────────────
-
-function renderPipelineActivityBar(article: Article, autoAdvanceActive?: boolean): string {
-  const stageName = STAGE_NAMES[article.current_stage] ?? 'Unknown';
-  const active = autoAdvanceActive && article.current_stage < 7;
-  const eid = escapeHtml(article.id);
-  return `
-    <div id="pipeline-activity" class="pipeline-activity${active ? ' active' : ''}"
-      data-article-id="${eid}"
-      hx-swap-oob="true">
-      <span class="spinner"></span>
-      <span class="pipeline-activity-text">
-        Pipeline working… Stage ${article.current_stage} — ${escapeHtml(stageName)}
-      </span>
-    </div>
-    <script>
-      (function(){
-        var bar = document.getElementById('pipeline-activity');
-        if (!bar) return;
-        var textEl = bar.querySelector('.pipeline-activity-text');
-        var myArticle = bar.getAttribute('data-article-id');
-
-        function parseSSE(e) {
-          try { var full = JSON.parse(e.detail?.data ?? '{}'); return full.data || full; }
-          catch(ex) { return {}; }
-        }
-
-        function getArticleId(e) {
-          try { var full = JSON.parse(e.detail?.data ?? '{}'); return full.articleId || ''; }
-          catch(ex) { return ''; }
-        }
-
-        document.body.addEventListener('stage_working', function(e) {
-          if (getArticleId(e) !== myArticle) return;
-          var d = parseSSE(e);
-          bar.className = 'pipeline-activity active';
-          if (textEl) textEl.textContent = 'Pipeline working… Stage ' + (d.stage || '?') + ' — ' + (d.stageName || 'Processing');
-        });
-
-        document.body.addEventListener('stage_error', function(e) {
-          if (getArticleId(e) !== myArticle) return;
-          var d = parseSSE(e);
-          bar.className = 'pipeline-activity error';
-          if (textEl) textEl.textContent = '❌ Stage ' + (d.stage || '?') + ' failed: ' + (d.error || 'Unknown error').substring(0, 150);
-        });
-
-        document.body.addEventListener('stage_changed', function(e) {
-          if (getArticleId(e) !== myArticle) return;
-          var d = parseSSE(e);
-          bar.className = 'pipeline-activity active';
-          if (textEl) textEl.textContent = '✅ Advanced to Stage ' + (d.to || '?');
-        });
-
-        document.body.addEventListener('pipeline_complete', function(e) {
-          if (getArticleId(e) !== myArticle) return;
-          var d = parseSSE(e);
-          if (d.success) {
-            bar.className = 'pipeline-activity active';
-            if (textEl) textEl.textContent = '✅ Pipeline complete — Stage ' + (d.finalStage || '?') + ' — ' + (d.stageName || 'Done');
-          } else {
-            bar.className = 'pipeline-activity error';
-            if (textEl) textEl.textContent = '❌ Pipeline stopped: ' + (d.error || 'Unknown error').substring(0, 150);
-          }
-          // Reload the page after a brief delay so all sections update
-          setTimeout(function() { window.location.href = '/articles/' + myArticle; }, 2000);
-        });
-      })();
-    </script>`;
-}
-
 // ── Partial renders for SSE-driven live updates ─────────────────────────────
 
-export function renderLiveHeader(article: Article, transitions: StageTransition[]): string {
-  return renderArticleMetaDisplay(article) + renderStageTimeline(article.current_stage, transitions);
+export function renderLiveHeader(article: Article): string {
+  return renderArticleMetaDisplay(article);
 }
 
 export function renderLiveArtifacts(article: Article, artifactNames?: string[]): string {
   return renderArtifactTabs(article, artifactNames);
-}
-
-export function renderLiveSidebar(
-  article: Article,
-  usageEvents: UsageEvent[],
-  stageRuns: StageRun[],
-  transitions: StageTransition[],
-  llmTraces: LlmTrace[],
-  pinnedAgents?: Array<{ agent_name: string; role: string | null }>,
-): string {
-  return renderUsagePanel(usageEvents)
-    + renderStageRunsPanel(stageRuns)
-    + renderAdvancedSection(article, transitions, llmTraces, pinnedAgents);
-}
-
-// ── Stage timeline ───────────────────────────────────────────────────────────
-
-function renderStageTimeline(currentStage: Stage, transitions: StageTransition[] = []): string {
-  // Build a map of stage → transition time for tooltip display
-  const stageTransitionTime: Record<number, string> = {};
-  for (const t of transitions) {
-    stageTransitionTime[t.to_stage] = t.transitioned_at;
-  }
-
-  return `
-    <div class="stage-timeline">
-      ${VALID_STAGES.map((stage, i) => {
-        const state = stage < currentStage ? 'completed'
-          : stage === currentStage ? 'current'
-          : 'future';
-        const connector = i < VALID_STAGES.length - 1
-          ? `<div class="stage-connector ${stage < currentStage ? 'completed' : ''}"></div>`
-          : '';
-        const timeStr = stageTransitionTime[stage] ? formatDate(stageTransitionTime[stage]) : '';
-        const tooltip = `${STAGE_NAMES[stage]}${timeStr ? ` (${timeStr})` : ''}`;
-        return `
-          <div class="stage-step">
-            <div class="stage-dot ${state}" title="${escapeHtml(tooltip)}">${stage}</div>
-            ${state !== 'future' && timeStr ? `<div class="stage-time">${escapeHtml(timeStr)}</div>` : ''}
-          </div>
-          ${connector}`;
-      }).join('')}
-    </div>`;
 }
 
 // ── Artifact Tabs ────────────────────────────────────────────────────────────
@@ -548,18 +416,12 @@ export function extractThinking(content: string): { thinking: string | null; out
 
 // ── Action Panel ─────────────────────────────────────────────────────────────
 
-function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageRuns?: StageRun[]): string {
+function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): string {
   // Preview button for articles with a draft (stage >= 5)
   const previewLink = article.current_stage >= 5
     ? `<a href="/articles/${escapeHtml(article.id)}/preview" class="btn btn-secondary">👁 Preview</a>`
     : '';
-  const traceTimelineLink = `<a href="/articles/${escapeHtml(article.id)}/traces" class="btn btn-secondary">🧠 Full Trace Timeline</a>`;
-
-  // Find the most recent stage_run failure for inline display
-  const lastRun = stageRuns && stageRuns.length > 0 ? stageRuns[0] : undefined;
-  const lastRunError = lastRun && lastRun.status !== 'completed' && lastRun.notes
-    ? lastRun.notes
-    : undefined;
+  const traceTimelineLink = `<a href="/articles/${escapeHtml(article.id)}/traces" class="btn btn-secondary">🧠 Trace</a>`;
 
   // Stage 8 — published
   if (article.current_stage === 8) {
@@ -592,10 +454,6 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
     </button>
     <span id="retry-spinner-${escapeHtml(article.id)}" class="htmx-indicator" style="margin-left:0.5rem">⏳ Running…</span>`;
 
-  const stageRunErrorHtml = lastRunError
-    ? `<div class="stage-run-error">⚠️ Last run (Stage ${lastRun!.stage}, ${escapeHtml(lastRun!.status)}): ${escapeHtml(lastRunError)}</div>`
-    : '';
-
   if (article.current_stage === 6 && article.status === 'needs_lead_review') {
     return `
       <section class="detail-section action-panel"
@@ -626,7 +484,6 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           </details>
         </div>
         ${renderGuardStatus(false, 'Lead review required: repeated editor blocker detected. Review lead-review.md before resuming or sending the article back.')}
-        ${stageRunErrorHtml}
         <div id="advance-result-${escapeHtml(article.id)}"></div>
         <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
         ${renderDangerZone(article)}
@@ -677,7 +534,6 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           </details>
         </div>
         ${renderGuardStatus(hasDraft, publishStatus)}
-        ${stageRunErrorHtml}
         <div id="advance-result-${escapeHtml(article.id)}"></div>
         ${renderDangerZone(article)}
       </section>`;
@@ -731,7 +587,6 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, stageR
           </details>` : ''}
       </div>
       ${renderGuardStatus(canAdvance, guardReason)}
-      ${stageRunErrorHtml}
       <div id="advance-result-${escapeHtml(article.id)}"></div>
       <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
       ${renderDangerZone(article)}
@@ -885,213 +740,6 @@ function renderEditorReviews(reviews: EditorReview[]): string {
     </section>`;
 }
 
-// ── Audit Log ────────────────────────────────────────────────────────────────
-
-// ── Advanced collapsible section ─────────────────────────────────────────────
-
-function renderAdvancedSection(
-  article: Article,
-  transitions: StageTransition[],
-  llmTraces: LlmTrace[],
-  pinnedAgents?: Array<{ agent_name: string; role: string | null }>,
-): string {
-  return `
-    <section class="detail-section">
-      <details class="advanced-section">
-        <summary>⚙️ Advanced</summary>
-        <div class="advanced-content">
-          ${renderTraceSummaryPanel(article.id, llmTraces)}
-          ${renderRosterPanel(article)}
-          ${renderAuditLog(transitions)}
-          ${renderArticleMetadata(article, pinnedAgents)}
-          ${renderContextConfigInner(article.id)}
-        </div>
-      </details>
-    </section>`;
-}
-
-function renderRosterPanel(article: Article): string {
-  if (!article.primary_team) {
-    return `<div class="advanced-subsection">
-      <h3>🏈 Team Roster</h3>
-      <p class="empty-state">No primary team set</p>
-    </div>`;
-  }
-
-  return `
-    <div class="advanced-subsection">
-      <h3>🏈 Team Roster</h3>
-      <div id="roster-panel"
-        hx-get="/htmx/roster/${escapeHtml(article.primary_team)}"
-        hx-trigger="load"
-        hx-swap="innerHTML">
-        <p class="empty-state">Loading roster…</p>
-      </div>
-    </div>`;
-}
-
-function renderAuditLog(transitions: StageTransition[]): string {
-  if (transitions.length === 0) {
-    return `<div class="advanced-subsection">
-      <h3>Audit Log</h3>
-      <p class="empty-state">No stage transitions recorded</p>
-    </div>`;
-  }
-
-  return `
-    <div class="advanced-subsection">
-      <h3>Audit Log</h3>
-      <div class="audit-log">
-        ${transitions.map(t => `
-          <div class="audit-entry">
-            <div class="audit-stages">
-              ${t.from_stage != null ? `<span class="badge badge-stage badge-stage-${t.from_stage}">${t.from_stage}</span>` : '<span class="badge badge-stage">—</span>'}
-              <span class="audit-arrow">→</span>
-              <span class="badge badge-stage badge-stage-${t.to_stage}">${t.to_stage}</span>
-            </div>
-            <div class="audit-meta">
-              ${t.agent ? `<span class="audit-agent">${escapeHtml(t.agent)}</span>` : ''}
-              <span class="audit-time">${formatDate(t.transitioned_at)}</span>
-            </div>
-            ${t.notes ? `<div class="audit-notes">${escapeHtml(t.notes)}</div>` : ''}
-          </div>
-        `).join('')}
-      </div>
-    </div>`;
-}
-
-// ── Agent context settings ───────────────────────────────────────────────────
-
-function renderContextConfigInner(articleId: string): string {
-  return `
-    <div class="advanced-subsection">
-      <h3>Agent Context Settings</h3>
-      <div id="context-config-panel"
-        hx-get="/htmx/articles/${escapeHtml(articleId)}/context-config"
-        hx-trigger="load"
-        hx-swap="innerHTML">
-        <p class="empty-state">Loading…</p>
-      </div>
-    </div>`;
-}
-
-export function renderContextConfigShell(articleId: string): string {
-  return `
-    <section class="detail-section">
-      <details class="context-settings">
-        <summary>⚙️ Advanced: Agent Context Settings</summary>
-        <div id="context-config-panel"
-          hx-get="/htmx/articles/${escapeHtml(articleId)}/context-config"
-          hx-trigger="load"
-          hx-swap="innerHTML">
-          <p class="empty-state">Loading…</p>
-        </div>
-      </details>
-    </section>`;
-}
-
-export interface ContextConfigPanelData {
-  articleId: string;
-  stageNames: string[];
-  artifactChoices: string[];
-  defaults: Record<string, string[]>;
-  overrides: Record<string, string[]> | null;
-  preset?: string;
-}
-
-export function renderContextConfigPanel(data: ContextConfigPanelData): string {
-  const { articleId, stageNames, artifactChoices, defaults, overrides, preset } = data;
-  const hasOverrides = overrides != null && Object.keys(overrides).length > 0;
-  const effectivePreset = preset === 'rich' ? 'rich' : 'balanced';
-
-  const statusBadge = hasOverrides
-    ? '<span class="ctx-status ctx-status-custom">Custom</span>'
-    : `<span class="ctx-status ctx-status-default">${effectivePreset === 'rich' ? 'Rich defaults' : 'Defaults'}</span>`;
-
-  const stagesHtml = stageNames.map((stage) => {
-    const defaultSet = defaults[stage] ?? [];
-    const selected = overrides?.[stage] ?? defaultSet;
-
-    const checkboxes = artifactChoices.map((artifact) => {
-      const checked = selected.includes(artifact) ? 'checked' : '';
-      const isDefault = defaultSet.includes(artifact);
-      const isOverridden = hasOverrides && (checked ? !isDefault : isDefault);
-      const cls = isOverridden ? 'ctx-cb ctx-cb-overridden' : 'ctx-cb ctx-cb-default';
-      return `
-        <label class="${cls}">
-          <input type="checkbox" name="${escapeHtml(stage)}" value="${escapeHtml(artifact)}" ${checked} />
-          <span>${escapeHtml(artifact)}</span>
-        </label>`;
-    }).join('');
-
-    return `
-      <div class="ctx-stage" data-stage="${escapeHtml(stage)}">
-        <div class="ctx-stage-title"><code>${escapeHtml(stage)}</code></div>
-        <div class="ctx-checkboxes">${checkboxes}</div>
-      </div>`;
-  }).join('');
-
-  return `
-    <div class="ctx-config">
-      <div class="ctx-header">
-        <div class="ctx-header-left">
-          <span class="ctx-header-title">Context Artifacts</span>
-          ${statusBadge}
-        </div>
-        <p class="ctx-description">Controls which artifacts are injected into agent prompts at each pipeline stage. Override defaults to fine-tune context for this article.${effectivePreset === 'rich' ? ' The richer preset is currently active for this app.' : ''}</p>
-      </div>
-      <form class="ctx-form context-config-form"
-        hx-post="/api/articles/${escapeHtml(articleId)}/context-config"
-        hx-target="#context-config-panel"
-        hx-swap="innerHTML">
-        <div class="ctx-stages">${stagesHtml}</div>
-        <div class="ctx-legend">
-          <span class="ctx-legend-item ctx-legend-default">Inherited default</span>
-          <span class="ctx-legend-item ctx-legend-overridden">Overridden</span>
-        </div>
-        <div class="ctx-actions">
-          <button type="submit" class="btn btn-primary btn-sm">Save</button>
-          <button type="button" class="btn btn-secondary btn-sm"
-            hx-delete="/api/articles/${escapeHtml(articleId)}/context-config"
-            hx-target="#context-config-panel"
-            hx-swap="innerHTML"
-            hx-confirm="Reset context settings to defaults?"
-            ${hasOverrides ? '' : 'disabled'}>
-            Reset to Defaults
-          </button>
-        </div>
-      </form>
-    </div>`;
-}
-
-// ── Article Metadata ─────────────────────────────────────────────────────────
-
-function renderArticleMetadata(article: Article, pinnedAgents?: Array<{ agent_name: string; role: string | null }>): string {
-  const teams = parseTeams(article.teams);
-  const pinned = pinnedAgents && pinnedAgents.length > 0
-    ? `<dt>Pinned Agents</dt><dd>${pinnedAgents.map(a => escapeHtml(a.agent_name.replace(/-/g, ' '))).join(', ')}</dd>`
-    : '';
-  return `
-    <div class="advanced-subsection">
-      <h3>Article Metadata</h3>
-      <dl class="info-list">
-        <dt>ID</dt><dd><code>${escapeHtml(article.id)}</code></dd>
-        ${article.primary_team ? `<dt>Team</dt><dd>${escapeHtml(article.primary_team)}</dd>` : ''}
-        ${teams.length > 0 && teams.some(t => t !== article.primary_team) ? `<dt>Teams</dt><dd>${teams.map(t => escapeHtml(t)).join(', ')}</dd>` : ''}
-        <dt>League</dt><dd>${escapeHtml(article.league)}</dd>
-        <dt>Depth</dt><dd>${DEPTH_LABELS[article.depth_level] ?? article.depth_level}</dd>
-        <dt>Status</dt><dd>${escapeHtml(article.status)}</dd>
-        ${pinned}
-        <dt>Created</dt><dd>${formatDate(article.created_at)}</dd>
-        ${article.target_publish_date ? `<dt>Target Publish</dt><dd>${escapeHtml(article.target_publish_date)}</dd>` : ''}
-        ${article.publish_window ? `<dt>Publish Window</dt><dd>${escapeHtml(article.publish_window)}</dd>` : ''}
-        <dt>Time Sensitive</dt><dd>${article.time_sensitive ? 'Yes' : 'No'}</dd>
-        <dt>Updated</dt><dd>${formatDate(article.updated_at)}</dd>
-        ${article.published_at ? `<dt>Published</dt><dd>${formatDate(article.published_at)}</dd>` : ''}
-      </dl>
-    </div>`;
-}
-
 // ── Usage Panel ──────────────────────────────────────────────────────────────
 
 interface UsageSummary {
@@ -1217,47 +865,3 @@ export function renderUsagePanel(events: UsageEvent[]): string {
     </section>`;
 }
 
-// ── Stage Runs Panel ─────────────────────────────────────────────────────────
-
-export function renderStageRunsPanel(runs: StageRun[]): string {
-  if (runs.length === 0) {
-    return `<section class="detail-section">
-      <h2>Stage Runs</h2>
-      <p class="empty-state">No runs recorded</p>
-    </section>`;
-  }
-
-  return `
-    <section class="detail-section">
-      <h2>Stage Runs</h2>
-      <div class="stage-runs">
-        ${runs.map(r => {
-          const statusIcon = r.status === 'completed' ? '✅' : r.status === 'failed' ? '❌' : r.status === 'started' ? '🔄' : r.status === 'interrupted' ? '⚡' : '⏹';
-          const duration = r.completed_at && r.started_at
-            ? formatDuration(new Date(r.completed_at).getTime() - new Date(r.started_at).getTime())
-            : '';
-          const targetStage = Math.min(r.stage + 1, 8) as Stage;
-          const targetName = STAGE_NAMES[targetStage] ?? `Stage ${targetStage}`;
-          return `
-          <div class="stage-run stage-run-${r.status}">
-            <div class="stage-run-header">
-              <span class="stage-run-icon">${statusIcon}</span>
-                <a href="/runs/${escapeHtml(r.id)}" class="badge badge-stage badge-stage-${targetStage}">Stage ${targetStage} — ${escapeHtml(targetName)}</a>
-            </div>
-            <div class="stage-run-meta">
-              ${duration ? `<span class="stage-run-duration">⏱ ${duration}</span>` : ''}
-              <span class="stage-run-time">${formatDate(r.started_at)}</span>
-            </div>
-            ${r.requested_model ? `<div class="stage-run-model">🤖 ${escapeHtml(r.requested_model)}</div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-    </section>`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ${Math.floor((ms % 60_000) / 1000)}s`;
-  return `${Math.floor(ms / 3_600_000)}h ${Math.floor((ms % 3_600_000) / 60_000)}m`;
-}

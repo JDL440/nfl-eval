@@ -10,9 +10,8 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { join, resolve } from 'node:path';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
 import {
@@ -41,21 +40,18 @@ import {
   renderArtifactContent,
   renderAdvanceResult,
   renderUsagePanel,
-  renderStageRunsPanel,
   renderImageGallery,
   renderArticleMetaDisplay,
   renderArticleMetaEditForm,
-  renderContextConfigPanel,
   renderLiveHeader,
   renderLiveArtifacts,
-  renderLiveSidebar,
   ARTIFACT_FILES,
   OPTIONAL_ARTIFACT_FILES,
 } from './views/article.js';
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
-import { escapeHtml, formatDate, renderLayout } from './views/layout.js';
+import { escapeHtml } from './views/layout.js';
 import {
   renderNewIdeaPage,
   renderIdeaSuccess,
@@ -89,12 +85,6 @@ import { TwitterService } from '../services/twitter.js';
 import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
 import { buildTeamRosterContext } from '../pipeline/roster-context.js';
-import {
-  getContextConfigDefaults,
-  getArticleContextOverrides,
-  saveArticleContextOverrides,
-  deleteArticleContextOverrides,
-} from '../pipeline/context-config.js';
 import { LLMGateway } from '../llm/gateway.js';
 import { ModelPolicy } from '../llm/model-policy.js';
 import { AgentRunner, separateThinking } from '../agents/runner.js';
@@ -111,29 +101,8 @@ import { MockProvider } from '../llm/providers/mock.js';
 import { LMStudioProvider } from '../llm/providers/lmstudio.js';
 import { EventBus, registerSSE } from '../dashboard/sse.js';
 import { initGlobalCache, FileCacheProvider } from '../cache/index.js';
-import {
-  renderAgentsPage,
-  renderCharterDetail,
-  renderSkillDetail,
-  renderCharterEditForm,
-  renderCharterView,
-  renderSkillEditForm,
-  renderSkillView,
-  classifyCharter,
-  extractIdentity,
-} from './views/agents.js';
-import {
-  renderMemoryPage,
-  renderMemoryTable,
-  renderMemoryRow,
-  renderMemoryEditRow,
-  renderAgentMemorySection,
-} from './views/memory.js';
-import type { MemoryCategory } from '../agents/memory.js';
 import { renderConfigPage } from './views/config.js';
-import type { CharterSummary, SkillSummary } from './views/agents.js';
-import { renderRunsPage, renderRunsTable, renderRunDetailPage, type RunsFilters } from './views/runs.js';
-import { renderArticleTraceTimelinePage } from './views/traces.js';
+import { renderArticleTraceTimelinePage, renderStandaloneTracePage } from './views/traces.js';
 import { renderLoginPage } from './views/login.js';
 
 export const APP_TOOL_LOOP_PROVIDER_IDS = [
@@ -238,7 +207,7 @@ export function createApp(
 
   repo.deleteExpiredDashboardSessions();
 
-  // Track active auto-advance runs so article pages know whether to show the progress bar
+  // Track active auto-advance runs so duplicate launches are blocked and SSE updates stay coherent.
   const activeAdvances = new Map<string, { startedAt: number }>();
 
   /** Helper: emit SSE events for auto-advance steps. */
@@ -771,17 +740,11 @@ export function createApp(
     const errorParam = c.req.query('error');
     let flashMessage: string | undefined;
     let errorMessage: string | undefined;
-    // Show progress bar if auto-advance is actively running OR page was just redirected
-    let autoAdvanceActive = activeAdvances.has(id);
     if (from === 'auto-advance') {
       if (errorParam) {
         errorMessage = `Auto-advance failed: ${errorParam}`;
-        autoAdvanceActive = false;
       } else if (article.current_stage === 6 && article.status === 'needs_lead_review') {
         flashMessage = '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.';
-        autoAdvanceActive = false;
-      } else if (article.current_stage < 7) {
-        autoAdvanceActive = true;
       } else {
         flashMessage = `🚀 Auto-advance complete — article is at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
       }
@@ -791,7 +754,6 @@ export function createApp(
       renderArticleDetail({
         config,
         article,
-        transitions: repo.getStageTransitions(id),
         reviews: repo.getEditorReviews(id),
         revisionHistory: buildRevisionHistoryEntries(
           getArticleConversation(repo, id),
@@ -799,13 +761,9 @@ export function createApp(
         ),
         advanceCheck,
         usageEvents: repo.getUsageEvents(id),
-        stageRuns: repo.getStageRuns(id),
-        llmTraces: repo.getArticleLlmTraces(id),
         artifactNames: repo.artifacts.list(id).map(a => a.name),
         flashMessage,
         errorMessage,
-        autoAdvanceActive,
-        pinnedAgents: repo.getPinnedAgents(id),
       }),
     );
   });
@@ -818,6 +776,16 @@ export function createApp(
       config,
       article,
       traces: repo.getArticleLlmTraces(id, 0),
+    }));
+  });
+
+  app.get('/traces/:id', (c) => {
+    const id = c.req.param('id');
+    const trace = repo.getLlmTrace(id);
+    if (!trace) return c.notFound();
+    return c.html(renderStandaloneTracePage({
+      config,
+      trace,
     }));
   });
 
@@ -905,6 +873,7 @@ export function createApp(
     const envVars = [
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'LMSTUDIO_MODEL',
       'COPILOT_MODEL',
       'COPILOT_CLI_MODE',
       'COPILOT_CLI_MCP_CONFIG',
@@ -914,7 +883,6 @@ export function createApp(
       'SUBSTACK_TOKEN',
       'SUBSTACK_PUBLICATION_URL',
       'TWITTER_API_KEY',
-      'DATA_SOURCE',
       'DASHBOARD_AUTH_MODE',
       'DASHBOARD_AUTH_USERNAME',
       'DASHBOARD_AUTH_PASSWORD',
@@ -926,20 +894,19 @@ export function createApp(
     const displayableVars = new Set([
       'LLM_PROVIDER',
       'LMSTUDIO_URL',
+      'LMSTUDIO_MODEL',
       'COPILOT_MODEL',
       'COPILOT_CLI_MODE',
       'COPILOT_CLI_MCP_CONFIG',
       'COPILOT_CLI_SESSION_REUSE',
       'COPILOT_CLI_WEB_SEARCH',
       'SUBSTACK_PUBLICATION_URL',
-      'DATA_SOURCE',
       'DASHBOARD_AUTH_MODE',
       'DASHBOARD_AUTH_USERNAME',
       'DASHBOARD_SESSION_COOKIE',
       'DASHBOARD_SESSION_TTL_HOURS',
     ]);
     const envDefaultValues: Record<string, string> = {
-      DATA_SOURCE: 'scripts',
       COPILOT_MODEL: COPILOT_CLI_DEFAULT_MODEL,
       COPILOT_CLI_MODE: COPILOT_CLI_DEFAULT_MODE,
       COPILOT_CLI_MCP_CONFIG: join(process.cwd(), '.copilot', 'mcp-config.json'),
@@ -1023,21 +990,95 @@ export function createApp(
       return names.sort();
     };
 
-    const charters = listCharterNames();
-    const skills = listSkillNames();
+    const runner = deps?.actionContext?.runner;
+    const registeredProviders = runner
+      ? runner.gateway.listProviders().map((provider, index) => ({ ...provider, default: index === 0 }))
+      : [];
+    const substackConfigured = Boolean(process.env['SUBSTACK_TOKEN']?.trim() && process.env['SUBSTACK_PUBLICATION_URL']?.trim());
+    const twitterConfigured = Boolean(
+      process.env['TWITTER_API_KEY']?.trim()
+      && process.env['TWITTER_API_SECRET']?.trim()
+      && process.env['TWITTER_ACCESS_TOKEN']?.trim()
+      && process.env['TWITTER_ACCESS_TOKEN_SECRET']?.trim(),
+    );
+    const geminiConfigured = Boolean(process.env['GEMINI_API_KEY']?.trim());
 
     return c.html(renderConfigPage({
       labName: config.leagueConfig.name,
+      league: config.league,
+      environment: config.env,
       provider: {
         name: providerName,
         url: providerUrl,
         model: activeModel,
+        registeredProviders,
       },
       modelRouting,
       modelPolicyError,
-      charters,
-      skills,
+      charters: listCharterNames(),
+      skills: listSkillNames(),
       envStatus,
+      runtimePaths: [
+        { label: 'Data directory', value: config.dataDir },
+        { label: 'Pipeline database', value: config.dbPath },
+        { label: 'Articles directory', value: config.articlesDir },
+        { label: 'Images directory', value: config.imagesDir },
+        { label: 'Charters directory', value: config.chartersDir },
+        { label: 'Skills directory', value: config.skillsDir },
+        { label: 'Memory database', value: config.memoryDbPath },
+        { label: 'Logs directory', value: config.logsDir },
+        { label: 'Cache directory', value: config.cacheDir },
+      ],
+      dashboardAuth: {
+        mode: dashboardAuth.mode,
+        username: dashboardAuth.username,
+        sessionCookieName: dashboardAuth.sessionCookieName,
+        sessionTtlHours: dashboardAuth.sessionTtlHours,
+        secureCookies: dashboardAuth.secureCookies,
+      },
+      services: [
+        {
+          name: 'Knowledge refresh',
+          state: runner && memory ? 'ready' : 'disabled',
+          detail: runner && memory
+            ? 'Refresh-all can repopulate legacy knowledge storage from Settings; dedicated Agents and Memory pages are gone.'
+            : 'Runner or legacy memory storage is unavailable in this process.',
+        },
+        {
+          name: 'Memory storage',
+          state: memory ? 'partial' : 'disabled',
+          detail: memory
+            ? 'SQLite storage remains online for bootstrap and refresh workflows, but runtime prompt injection is disabled.'
+            : 'Legacy memory storage is not initialized for this process.',
+        },
+        {
+          name: 'Image generation',
+          state: imageService ? 'ready' : 'disabled',
+          detail: imageService
+            ? (geminiConfigured
+                ? 'Gemini-backed image generation is configured.'
+                : 'Image generation is available in stub mode because GEMINI_API_KEY is unset.')
+            : 'Image generation is unavailable.',
+        },
+        {
+          name: 'Substack publishing',
+          state: substackService ? 'ready' : 'disabled',
+          detail: substackConfigured
+            ? 'Draft and publish flows are configured.'
+            : 'SUBSTACK_TOKEN and SUBSTACK_PUBLICATION_URL are both required.',
+        },
+        {
+          name: 'Twitter posting',
+          state: twitterService ? 'ready' : 'disabled',
+          detail: twitterConfigured
+            ? 'Tweet publishing credentials are present.'
+            : 'Twitter credentials are not configured.',
+        },
+      ],
+      memoryStatus: {
+        storagePath: config.memoryDbPath,
+        refreshAllAvailable: Boolean(runner && memory),
+      },
     }));
   });
 
@@ -1155,6 +1196,7 @@ export function createApp(
   app.post('/api/ideas', async (c) => {
     const body = await c.req.json();
     const prompt = (typeof body.prompt === 'string' ? body.prompt : '').trim();
+    let ideaTraceId: string | null = null;
 
     if (!prompt) {
       return c.json({ error: 'prompt is required' }, 400);
@@ -1179,7 +1221,6 @@ export function createApp(
       let ideaAgent = '';
       let ideaProvider = '';
       let ideaTokensUsed: { prompt: number; completion: number } | undefined;
-      let ideaTraceId: string | null = null;
 
       if (actionContext) {
         // Build team context for the task
@@ -1225,6 +1266,7 @@ export function createApp(
             includeLocalExtensions: true,
             allowWriteTools: false,
             requestedTools: ['nflverse-data', 'prediction-markets'],
+            maxToolCalls: 50,
             context: {
               repo,
               engine: actionContext.engine,
@@ -1329,7 +1371,11 @@ export function createApp(
       }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      return c.json({ error: message }, 500);
+      return c.json({
+        error: message,
+        traceId: ideaTraceId,
+        traceUrl: ideaTraceId ? `/traces/${ideaTraceId}` : null,
+      }, 500);
     }
   });
 
@@ -1514,25 +1560,6 @@ export function createApp(
     );
   });
 
-  // ── htmx: upstream context config panel ─────────────────────────────────
-
-  function listContextArtifactChoices(articleId: string): string[] {
-    const canonical = [
-      ...(ARTIFACT_FILES as unknown as string[]),
-      'publisher-pass.md',
-    ];
-
-    const existing = repo.artifacts
-      .list(articleId)
-      .map(a => a.name)
-      .filter(n => n !== '_config.json');
-
-    const combined = [...canonical, ...existing]
-      .filter(n => !n.endsWith('.thinking.md'));
-
-    return Array.from(new Set(combined)).sort();
-  }
-
   // ── Roster panel (htmx) ──────────────────────────────────────────────────
   app.get('/htmx/roster/:team', (c) => {
     const team = c.req.param('team').toUpperCase();
@@ -1541,120 +1568,6 @@ export function createApp(
       return c.html('<p class="empty-state">Roster data unavailable</p>');
     }
     return c.html(`<div class="roster-content" style="max-height:400px;overflow-y:auto;font-size:0.85rem;">${markdownToHtml(rosterCtx)}</div>`);
-  });
-
-  app.get('/htmx/articles/:id/context-config', (c) => {
-    const id = c.req.param('id');
-    const article = repo.getArticle(id);
-    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-
-    const defaultConfig = getContextConfigDefaults(config.contextPreset);
-    const stageNames = Object.keys(defaultConfig);
-    const defaults: Record<string, string[]> = {};
-    for (const s of stageNames) defaults[s] = defaultConfig[s]?.include ?? [];
-
-    const overrides = getArticleContextOverrides(repo, id);
-    const artifactChoices = listContextArtifactChoices(id);
-
-    return c.html(renderContextConfigPanel({
-      articleId: id,
-      stageNames,
-      artifactChoices,
-      defaults,
-      overrides,
-      preset: config.contextPreset ?? 'balanced',
-    }));
-  });
-
-  app.post('/api/articles/:id/context-config', async (c) => {
-    const id = c.req.param('id');
-    const article = repo.getArticle(id);
-    if (!article) {
-      const isHtmx = c.req.header('hx-request') === 'true';
-      return isHtmx
-        ? c.html('<p class="empty-state">Article not found</p>', 404)
-        : c.json({ error: 'Article not found' }, 404);
-    }
-
-    try {
-      const body = await c.req.parseBody();
-      const defaultConfig = getContextConfigDefaults(config.contextPreset);
-      const stageNames = Object.keys(defaultConfig);
-      const artifactChoices = listContextArtifactChoices(id);
-      const allowed = new Set(artifactChoices);
-
-      const overridesToSave: Record<string, string[]> = {};
-      for (const stage of stageNames) {
-        const raw = body[stage];
-        let vals: string[] = [];
-        if (Array.isArray(raw)) vals = raw.map(v => String(v));
-        else if (typeof raw === 'string') vals = [raw];
-
-        const cleaned = vals
-          .map(v => v.trim())
-          .filter(Boolean)
-          .filter(v => allowed.has(v));
-
-        overridesToSave[stage] = Array.from(new Set(cleaned));
-      }
-
-      saveArticleContextOverrides(repo, id, overridesToSave);
-
-      const defaults: Record<string, string[]> = {};
-      for (const s of stageNames) defaults[s] = defaultConfig[s]?.include ?? [];
-
-      const isHtmx = c.req.header('hx-request') === 'true';
-      if (isHtmx) {
-        return c.html(renderContextConfigPanel({
-          articleId: id,
-          stageNames,
-          artifactChoices,
-          defaults,
-          overrides: overridesToSave,
-          preset: config.contextPreset ?? 'balanced',
-        }));
-      }
-
-      return c.json({ success: true });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      const isHtmx = c.req.header('hx-request') === 'true';
-      return isHtmx
-        ? c.html(`<p class="empty-state">❌ ${escapeHtml(message)}</p>`, 500)
-        : c.json({ error: message }, 500);
-    }
-  });
-
-  app.delete('/api/articles/:id/context-config', (c) => {
-    const id = c.req.param('id');
-    const article = repo.getArticle(id);
-    if (!article) {
-      const isHtmx = c.req.header('hx-request') === 'true';
-      return isHtmx
-        ? c.html('<p class="empty-state">Article not found</p>', 404)
-        : c.json({ error: 'Article not found' }, 404);
-    }
-
-    deleteArticleContextOverrides(repo, id);
-
-    const defaultConfig = getContextConfigDefaults(config.contextPreset);
-    const stageNames = Object.keys(defaultConfig);
-    const defaults: Record<string, string[]> = {};
-    for (const s of stageNames) defaults[s] = defaultConfig[s]?.include ?? [];
-
-    const isHtmx = c.req.header('hx-request') === 'true';
-    if (isHtmx) {
-      return c.html(renderContextConfigPanel({
-        articleId: id,
-        stageNames,
-        artifactChoices: listContextArtifactChoices(id),
-        defaults,
-        overrides: null,
-        preset: config.contextPreset ?? 'balanced',
-      }));
-    }
-
-    return c.json({ success: true });
   });
 
   // ── htmx: artifact content tab ────────────────────────────────────────────
@@ -1695,22 +1608,13 @@ export function createApp(
     return c.html(renderUsagePanel(repo.getUsageEvents(id)));
   });
 
-  // ── htmx: stage runs panel ────────────────────────────────────────────────
-
-  app.get('/htmx/articles/:id/stage-runs', (c) => {
-    const id = c.req.param('id');
-    const article = repo.getArticle(id);
-    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-    return c.html(renderStageRunsPanel(repo.getStageRuns(id)));
-  });
-
   // ── htmx: live partials (SSE-driven auto-refresh) ─────────────────────────
 
   app.get('/htmx/articles/:id/live-header', (c) => {
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('', 404);
-    return c.html(renderLiveHeader(article, repo.getStageTransitions(id)));
+    return c.html(renderLiveHeader(article));
   });
 
   app.get('/htmx/articles/:id/live-artifacts', (c) => {
@@ -1719,20 +1623,6 @@ export function createApp(
     if (!article) return c.html('', 404);
     return c.html(renderLiveArtifacts(article, repo.artifacts.list(id).map(a => a.name)));
   });
-
-  app.get('/htmx/articles/:id/live-sidebar', (c) => {
-    const id = c.req.param('id');
-    const article = repo.getArticle(id);
-    if (!article) return c.html('', 404);
-      return c.html(renderLiveSidebar(
-        article,
-        repo.getUsageEvents(id),
-        repo.getStageRuns(id),
-        repo.getStageTransitions(id),
-        repo.getArticleLlmTraces(id),
-        repo.getPinnedAgents(id),
-      ));
-    });
 
   // ── htmx: advance article ─────────────────────────────────────────────────
 
@@ -1773,7 +1663,7 @@ export function createApp(
     startBackgroundAutoAdvance(id);
 
     return c.html(
-      `<div class="advance-result advance-success">🚀 Auto-advance started — watch the progress bar above.</div>`,
+      `<div class="advance-result advance-success">🚀 Auto-advance started — live sections will refresh as each stage completes.</div>`,
       200,
     );
   });
@@ -2235,402 +2125,6 @@ export function createApp(
     }
   });
 
-  // ── Agent charter & skill viewer ──────────────────────────────────────────
-
-  function resolveCharterPath(name: string): string | null {
-    const candidates = [
-      join(config.chartersDir, `${name}.md`),
-      join(config.chartersDir, name, 'charter.md'),
-    ];
-
-    for (const candidate of candidates) {
-      if (existsSync(candidate)) return candidate;
-    }
-
-    return null;
-  }
-
-  function readCharterSummaries(): CharterSummary[] {
-    if (!existsSync(config.chartersDir)) return [];
-
-    return readdirSync(config.chartersDir, { withFileTypes: true })
-      .flatMap((entry): CharterSummary[] => {
-        if (entry.isFile() && entry.name.endsWith('.md')) {
-          const content = readFileSync(join(config.chartersDir, entry.name), 'utf-8');
-          return [{
-            name: entry.name.replace(/\.md$/i, ''),
-            filename: entry.name,
-            type: classifyCharter(entry.name),
-            identity: extractIdentity(content),
-          }];
-        }
-
-        if (entry.isDirectory()) {
-          const filePath = join(config.chartersDir, entry.name, 'charter.md');
-          if (!existsSync(filePath)) return [];
-
-          const content = readFileSync(filePath, 'utf-8');
-          return [{
-            name: entry.name,
-            filename: `${entry.name}\\charter.md`,
-            type: classifyCharter(entry.name),
-            identity: extractIdentity(content),
-          }];
-        }
-
-        return [];
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  function readSkillSummaries(): SkillSummary[] {
-    if (!existsSync(config.skillsDir)) return [];
-    return readdirSync(config.skillsDir)
-      .filter(f => f.endsWith('.md'))
-      .sort()
-      .map(f => ({
-        name: f.replace(/\.md$/i, ''),
-        filename: f,
-      }));
-  }
-
-  app.get('/agents', (c) => {
-    const freshness = memory?.knowledgeFreshness() ?? new Map<string, string>();
-    return c.html(
-      renderAgentsPage({
-        labName: config.leagueConfig.name,
-        charters: readCharterSummaries(),
-        skills: readSkillSummaries(),
-        freshness,
-      }),
-    );
-  });
-
-  // skills/:name MUST come before :name to avoid the catch-all matching "skills"
-  app.get('/agents/skills/:name', (c) => {
-    const name = c.req.param('name');
-    const filePath = join(config.skillsDir, `${name}.md`);
-    if (!existsSync(filePath)) {
-      return c.html('<p class="empty-state">Skill not found</p>', 404);
-    }
-    const content = readFileSync(filePath, 'utf-8');
-    return c.html(renderSkillDetail(name, content, config.leagueConfig.name));
-  });
-
-  app.get('/agents/:name', (c) => {
-    const name = c.req.param('name');
-    const filePath = resolveCharterPath(name);
-    if (!filePath) {
-      return c.html('<p class="empty-state">Charter not found</p>', 404);
-    }
-    const content = readFileSync(filePath, 'utf-8');
-    let memoryHtml: string | undefined;
-    if (memory) {
-      const entries = memory.recall(name, { limit: 50, includeExpired: true });
-      memoryHtml = renderAgentMemorySection(name, entries);
-    }
-    return c.html(renderCharterDetail(name, content, config.leagueConfig.name, memoryHtml));
-  });
-
-  // ── htmx: agent charter/skill inline editing ─────────────────────────────
-
-  app.get('/htmx/agents/skills/:name/edit', (c) => {
-    const name = c.req.param('name');
-    const filePath = join(config.skillsDir, `${name}.md`);
-    if (!existsSync(filePath)) return c.html('<p class="empty-state">Skill not found</p>', 404);
-    const content = readFileSync(filePath, 'utf-8');
-    return c.html(renderSkillEditForm(name, content));
-  });
-
-  app.get('/htmx/agents/skills/:name/view', (c) => {
-    const name = c.req.param('name');
-    const filePath = join(config.skillsDir, `${name}.md`);
-    if (!existsSync(filePath)) return c.html('<p class="empty-state">Skill not found</p>', 404);
-    const content = readFileSync(filePath, 'utf-8');
-    return c.html(renderSkillView(name, content));
-  });
-
-  app.get('/htmx/agents/:name/edit', (c) => {
-    const name = c.req.param('name');
-    const filePath = resolveCharterPath(name);
-    if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
-    const content = readFileSync(filePath, 'utf-8');
-    return c.html(renderCharterEditForm(name, content));
-  });
-
-  app.get('/htmx/agents/:name/view', (c) => {
-    const name = c.req.param('name');
-    const filePath = resolveCharterPath(name);
-    if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
-    const content = readFileSync(filePath, 'utf-8');
-    return c.html(renderCharterView(name, content));
-  });
-
-  app.put('/api/agents/skills/:name', async (c) => {
-    const name = c.req.param('name');
-    const filePath = join(config.skillsDir, `${name}.md`);
-    if (!existsSync(filePath)) return c.html('<p class="empty-state">Skill not found</p>', 404);
-    const body = await c.req.parseBody();
-    const content = typeof body['content'] === 'string' ? body['content'] : '';
-    writeFileSync(filePath, content, 'utf-8');
-    return c.html(renderSkillView(name, content));
-  });
-
-  app.put('/api/agents/:name', async (c) => {
-    const name = c.req.param('name');
-    const filePath = resolveCharterPath(name);
-    if (!filePath) return c.html('<p class="empty-state">Charter not found</p>', 404);
-
-    // Read existing content for history
-    const existingContent = existsSync(filePath) ? readFileSync(filePath, 'utf-8') : '';
-
-    const body = await c.req.parseBody();
-    const content = typeof body['content'] === 'string' ? body['content'] : '';
-
-    // Save history if content actually changed
-    if (existingContent.trim() !== content.trim()) {
-      try {
-        repo.insertCharterHistory(name, existingContent);
-      } catch (_) { /* non-fatal */ }
-    }
-
-    writeFileSync(filePath, content, 'utf-8');
-    return c.html(renderCharterView(name, content));
-  });
-
-  // ── Charter History ─────────────────────────────────────────────────────
-
-  app.get('/api/agents/:name/history', (c) => {
-    const name = c.req.param('name');
-    const rows = repo.getCharterHistorySummary(name);
-    return c.json(rows);
-  });
-
-  app.get('/htmx/agents/:name/history', (c) => {
-    const name = c.req.param('name');
-    const rows = repo.getCharterHistory(name);
-
-    if (rows.length === 0) {
-      return c.html('<p class="empty-state">No edit history</p>');
-    }
-
-    const items = rows.map(r => `
-      <details class="history-entry">
-        <summary>${formatDate(r.edited_at)} — ${r.content.length} chars</summary>
-        <pre class="history-content">${escapeHtml(r.content.slice(0, 2000))}</pre>
-      </details>
-    `).join('');
-
-    return c.html(`<div class="charter-history">${items}</div>`);
-  });
-
-  app.get('/htmx/agents/:name/memory-stats', (c) => {
-    const name = c.req.param('name');
-    if (!memory) return c.html('<p class="empty-state">Memory not available</p>');
-    const cats = memory.categoryStats(name);
-    if (cats.length === 0) return c.html('<p class="empty-state">No memories yet</p>');
-
-    const rows = cats.map(cat => `
-      <tr>
-        <td><span class="badge">${escapeHtml(cat.category)}</span></td>
-        <td>${cat.count}</td>
-        <td>${cat.avgRelevance.toFixed(2)}</td>
-        <td>${formatDate(cat.latestAt)}</td>
-      </tr>
-    `).join('');
-
-    return c.html(`
-      <table class="data-table compact">
-        <thead><tr><th>Category</th><th>Count</th><th>Avg Relevance</th><th>Latest</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `);
-  });
-
-  // ── Memory Browser ──────────────────────────────────────────────────────
-
-  /** Helper: open a lightweight admin connection for delete/update ops not in AgentMemory API. */
-  function memoryAdminDb(): DatabaseSync | null {
-    if (!config.memoryDbPath || !existsSync(config.memoryDbPath)) return null;
-    return new DatabaseSync(config.memoryDbPath);
-  }
-
-  /** Helper: get current filter params and refresh the memory table. */
-  function getFilteredEntries(c: { req: { query: (k: string) => string | undefined } }): { entries: import('../agents/memory.js').MemoryEntry[]; agent?: string; category?: string; search?: string } {
-    const agent = c.req.query('agent') || undefined;
-    const category = c.req.query('category') || undefined;
-    const search = c.req.query('search') || undefined;
-
-    if (!memory) return { entries: [], agent, category, search };
-
-    if (agent) {
-      return {
-        entries: memory.recall(agent, {
-          category: category as MemoryCategory | undefined,
-          limit: 200,
-          includeExpired: true,
-        }).filter(e => !search || e.content.toLowerCase().includes(search.toLowerCase())),
-        agent, category, search,
-      };
-    }
-
-    return {
-      entries: memory.recallGlobal({
-        category: category as MemoryCategory | undefined,
-        search,
-        limit: 200,
-      }),
-      agent, category, search,
-    };
-  }
-
-  app.get('/memory', (c) => {
-    if (!memory) {
-      return c.html(renderLayout('Memory', '<div class="empty-state">Agent memory is not available. Start the server with LLM providers configured.</div>', config.leagueConfig.name));
-    }
-
-    const { entries, agent, category, search } = getFilteredEntries(c);
-    const stats = memory.stats();
-    const agentNames = stats.map(s => s.agentName);
-
-    return c.html(renderMemoryPage({
-      labName: config.leagueConfig.name,
-      entries,
-      stats,
-      filters: { agent, category, search },
-      agentNames,
-    }));
-  });
-
-  // htmx: filtered memory table partial
-  app.get('/htmx/memory', (c) => {
-    const { entries } = getFilteredEntries(c);
-    return c.html(renderMemoryTable(entries));
-  });
-
-  // htmx: single entry edit form
-  app.get('/htmx/memory/:id/edit', (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-    if (!memory) return c.html('', 404);
-    const entries = memory.recallGlobal({ limit: 500 });
-    const entry = entries.find(e => e.id === id);
-    if (!entry) return c.html('', 404);
-    return c.html(renderMemoryEditRow(entry));
-  });
-
-  // htmx: single entry view (cancel edit)
-  app.get('/htmx/memory/:id/view', (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-    if (!memory) return c.html('', 404);
-    const entries = memory.recallGlobal({ limit: 500 });
-    const entry = entries.find(e => e.id === id);
-    if (!entry) return c.html('', 404);
-    return c.html(renderMemoryRow(entry));
-  });
-
-  // Delete a single memory entry
-  app.delete('/api/memory/:id', (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-    const db = memoryAdminDb();
-    if (!db) return c.html('', 404);
-    try {
-      db.prepare('DELETE FROM agent_memory WHERE id = ?').run(id);
-      return c.html(''); // Empty response removes the row via hx-swap="outerHTML"
-    } finally {
-      db.close();
-    }
-  });
-
-  // Update a memory entry
-  app.put('/api/memory/:id', async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-    const db = memoryAdminDb();
-    if (!db) return c.html('', 404);
-    try {
-      const body = await c.req.parseBody();
-      const content = typeof body['content'] === 'string' ? body['content'] : undefined;
-      const category = typeof body['category'] === 'string' ? body['category'] : undefined;
-      const relevanceStr = typeof body['relevanceScore'] === 'string' ? body['relevanceScore'] : undefined;
-      const relevanceScore = relevanceStr ? parseFloat(relevanceStr) : undefined;
-
-      const sets: string[] = [];
-      const params: (string | number)[] = [];
-      if (content !== undefined) { sets.push('content = ?'); params.push(content); }
-      if (category !== undefined) { sets.push('category = ?'); params.push(category); }
-      if (relevanceScore !== undefined && !isNaN(relevanceScore)) { sets.push('relevance_score = ?'); params.push(relevanceScore); }
-
-      if (sets.length > 0) {
-        params.push(id);
-        db.prepare(`UPDATE agent_memory SET ${sets.join(', ')} WHERE id = ?`).run(...params);
-      }
-
-      // Re-fetch updated entry to render the row
-      const row = db.prepare('SELECT * FROM agent_memory WHERE id = ?').get(id) as any;
-      if (!row) return c.html('', 404);
-      const entry = {
-        id: row.id,
-        agentName: row.agent_name,
-        category: row.category,
-        content: row.content,
-        sourceSession: row.source_session,
-        createdAt: row.created_at,
-        expiresAt: row.expires_at,
-        relevanceScore: row.relevance_score,
-        accessCount: row.access_count,
-      } as import('../agents/memory.js').MemoryEntry;
-      return c.html(renderMemoryRow(entry));
-    } finally {
-      db.close();
-    }
-  });
-
-  // Create a new memory entry
-  app.post('/api/memory', async (c) => {
-    if (!memory) return c.html('<div class="empty-state">Memory not available</div>', 500);
-    const body = await c.req.parseBody();
-    const agentName = typeof body['agentName'] === 'string' ? body['agentName'] : '';
-    const category = typeof body['category'] === 'string' ? body['category'] as MemoryCategory : 'learning';
-    const content = typeof body['content'] === 'string' ? body['content'] : '';
-    const relevanceStr = typeof body['relevanceScore'] === 'string' ? body['relevanceScore'] : '1.0';
-    const relevanceScore = parseFloat(relevanceStr) || 1.0;
-
-    if (!agentName || !content) {
-      return c.html('<div class="empty-state">Agent name and content are required.</div>', 400);
-    }
-
-    memory.store({ agentName, category, content, relevanceScore });
-
-    // Return refreshed table
-    const entries = memory.recallGlobal({ limit: 200 });
-    return c.html(renderMemoryTable(entries));
-  });
-
-  // Prune stale entries
-  app.post('/api/memory/prune', (c) => {
-    if (!memory) return c.html('<div class="empty-state">Memory not available</div>', 500);
-    const pruned = memory.prune();
-    const entries = memory.recallGlobal({ limit: 200 });
-    return c.html(
-      `<div class="memory-action-result">Pruned ${pruned} stale entries</div>` +
-      renderMemoryTable(entries),
-    );
-  });
-
-  // Decay all agents
-  app.post('/api/memory/decay', (c) => {
-    if (!memory) return c.html('<div class="empty-state">Memory not available</div>', 500);
-    const stats = memory.stats();
-    let totalDecayed = 0;
-    for (const s of stats) {
-      totalDecayed += memory.decay(s.agentName);
-    }
-    const entries = memory.recallGlobal({ limit: 200 });
-    return c.html(
-      `<div class="memory-action-result">Decayed ${totalDecayed} entries across ${stats.length} agents</div>` +
-      renderMemoryTable(entries),
-    );
-  });
-
   // ── Refresh Knowledge ────────────────────────────────────────────────────
 
   const TEAM_ABBRS_SET = new Set([
@@ -2686,110 +2180,29 @@ export function createApp(
     return `${base}\n\n${KNOWLEDGE_REFRESH_ENVELOPE_FOOTER}`;
   }
 
-  // Active background refreshes
-  const activeRefreshes = new Map<string, { startedAt: number }>();
-
-  app.post('/api/agents/:name/refresh-knowledge', async (c) => {
-    const name = c.req.param('name');
-    const isHtmx = c.req.header('HX-Request') === 'true';
-
-    const runner = deps?.actionContext?.runner;
-    if (!runner || !memory) {
-      const msg = 'Runner or memory not available';
-      return isHtmx
-        ? c.html(`<div class="memory-action-result" style="color:var(--danger)">${msg}</div>`, 503)
-        : c.json({ error: msg }, 503);
-    }
-
-    const skills = knowledgeSkillsFor(name);
-    if (skills.length === 0) {
-      const msg = `No data tools mapped for agent "${name}"`;
-      return isHtmx
-        ? c.html(`<div class="memory-action-result" style="color:var(--warning)">${msg}</div>`)
-        : c.json({ error: msg }, 400);
-    }
-
-    if (activeRefreshes.has(name)) {
-      const msg = `Refresh already in progress for "${name}"`;
-      return isHtmx
-        ? c.html(`<div class="memory-action-result">${msg}</div>`)
-        : c.json({ error: msg }, 409);
-    }
-
-    // Run in background — return immediately
-    activeRefreshes.set(name, { startedAt: Date.now() });
-
-    runner.run({
-      agentName: name,
-      task: knowledgePromptFor(name),
-      skills,
-      toolCalling: {
-        enabled: true,
-        includeLocalExtensions: true,
-        allowWriteTools: false,
-        requestedTools: skills,
-        context: {
-          repo,
-          engine: deps?.actionContext?.engine,
-          config,
-          actionContext: deps?.actionContext,
-          surface: 'knowledgeRefresh',
-          agentName: name,
-        },
-      },
-    }).then((result) => {
-      const structured = JSON.stringify({
-        type: 'knowledge_refresh',
-        agent: name,
-        summary: result.content,
-        source: 'llm-refresh',
-        refreshedAt: new Date().toISOString(),
-      });
-      memory.store({
-        agentName: name,
-        category: 'domain_knowledge',
-        content: structured,
-        relevanceScore: 1.0,
-        sourceSession: `refresh-${new Date().toISOString()}`,
-      });
-      activeRefreshes.delete(name);
-      bus.emit({ type: 'refresh_complete', articleId: name, data: { success: true, contentLength: result.content.length }, timestamp: new Date().toISOString() });
-    }).catch((err) => {
-      activeRefreshes.delete(name);
-      bus.emit({ type: 'refresh_complete', articleId: name, data: { error: String((err as Error).message ?? err) }, timestamp: new Date().toISOString() });
-    });
-
-    if (isHtmx) {
-      return c.html('<div class="memory-action-result">⏳ Knowledge refresh started — this may take a minute…</div>');
-    }
-    return c.json({ success: true, agent: name, status: 'started' });
-  });
-
   app.post('/api/agents/refresh-all', async (c) => {
     const isHtmx = c.req.header('HX-Request') === 'true';
 
     const runner = deps?.actionContext?.runner;
     if (!runner || !memory) {
-      const msg = 'Runner or memory not available';
+      const msg = 'Runner or legacy memory store not available';
       return isHtmx
-        ? c.html(`<div class="memory-action-result" style="color:var(--danger)">${msg}</div>`, 503)
+        ? c.html('<div class="admin-action-result admin-action-result-error">Runner or legacy memory store not available</div>', 503)
         : c.json({ error: msg }, 503);
     }
 
-    const allAgents = runner.listAgents();
-    const eligible = allAgents.filter((a) => knowledgeSkillsFor(a).length > 0);
-
+    const eligible = runner.listAgents().filter((agentName) => knowledgeSkillsFor(agentName).length > 0);
     if (eligible.length === 0) {
       const msg = 'No agents with mapped data tools found';
       return isHtmx
-        ? c.html(`<div class="memory-action-result">${msg}</div>`)
+        ? c.html('<div class="admin-action-result">No agents with mapped data tools found</div>')
         : c.json({ error: msg }, 400);
     }
 
-    // Run sequentially in background to avoid overwhelming the LLM
-    const doRefreshAll = async () => {
+    void (async () => {
       let succeeded = 0;
       let failed = 0;
+
       for (const name of eligible) {
         try {
           const skills = knowledgeSkillsFor(name);
@@ -2812,6 +2225,7 @@ export function createApp(
               },
             },
           });
+
           memory.store({
             agentName: name,
             category: 'domain_knowledge',
@@ -2819,71 +2233,24 @@ export function createApp(
             relevanceScore: 1.0,
             sourceSession: `refresh-all-${new Date().toISOString()}`,
           });
-          succeeded++;
+          succeeded += 1;
         } catch {
-          failed++;
+          failed += 1;
         }
       }
+
       bus.emit({
         type: 'refresh_complete',
         articleId: '_all',
         data: { succeeded, failed, total: eligible.length },
         timestamp: new Date().toISOString(),
       });
-    };
-    doRefreshAll();
+    })();
 
     if (isHtmx) {
-      return c.html(
-        `<div class="memory-action-result">⏳ Refreshing ${eligible.length} agents — this may take several minutes…</div>`,
-      );
+      return c.html(`<div class="admin-action-result">⏳ Refreshing ${eligible.length} agents — this may take several minutes…</div>`);
     }
     return c.json({ success: true, status: 'started', agentCount: eligible.length });
-  });
-
-  // ── Pipeline Runs page ────────────────────────────────────────────────────
-
-  app.get('/runs', (c) => {
-    const statusQuery = c.req.query('status');
-    const statusFilter: RunsFilters['status'] =
-      statusQuery === 'success' || statusQuery === 'error' ? statusQuery : '';
-    const search = c.req.query('search') || undefined;
-    const limitStr = c.req.query('limit');
-    const limit = limitStr ? parseInt(limitStr, 10) : 50;
-    const filters = { status: statusFilter, search };
-    const runs = repo.getAllStageRuns({ ...filters, limit, offset: 0 });
-    const totalCount = repo.countAllStageRuns(filters);
-    return c.html(
-      renderRunsPage({ config, runs, filters, totalCount, offset: 0, limit }),
-    );
-  });
-
-  // ── htmx: filtered runs partial ───────────────────────────────────────────
-
-  app.get('/htmx/runs', (c) => {
-    const statusQuery = c.req.query('status');
-    const statusFilter: RunsFilters['status'] =
-      statusQuery === 'success' || statusQuery === 'error' ? statusQuery : '';
-    const search = c.req.query('search') || undefined;
-    const offsetStr = c.req.query('offset');
-    const limitStr = c.req.query('limit');
-    const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
-    const limit = limitStr ? parseInt(limitStr, 10) : 50;
-    const filters = { status: statusFilter, search };
-    const runs = repo.getAllStageRuns({ ...filters, limit, offset });
-    const totalCount = repo.countAllStageRuns(filters);
-    return c.html(renderRunsTable(runs, filters, totalCount, offset, limit));
-  });
-
-  app.get('/runs/:id', (c) => {
-    const id = c.req.param('id');
-    const run = repo.getStageRunDetail(id);
-    if (!run) return c.notFound();
-    return c.html(renderRunDetailPage({
-      config,
-      run,
-      traces: repo.getStageRunLlmTraces(id),
-    }));
   });
 
   return app;
@@ -3146,7 +2513,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     );
   }
 
-  // Periodic relevance decay — throttled to once per hour
+  // Periodic legacy-memory decay — throttled to once per hour
   if (memory) {
     try {
       if (memory.shouldDecay(3_600_000)) {
@@ -3157,13 +2524,13 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
         }
         memory.recordDecay();
         if (totalDecayed > 0) {
-          console.log(`[memory] Decayed ${totalDecayed} entries across ${agentStats.length} agents (×0.95)`);
+          console.log(`[memory:legacy] Decayed ${totalDecayed} entries across ${agentStats.length} agents (×0.95)`);
         }
       } else {
-        console.log('[memory] Decay skipped — last decay was less than 1 hour ago');
+        console.log('[memory:legacy] Decay skipped — last decay was less than 1 hour ago');
       }
     } catch (err) {
-      console.warn(`[memory] Startup decay skipped: ${err instanceof Error ? err.message : err}`);
+      console.warn(`[memory:legacy] Startup decay skipped: ${err instanceof Error ? err.message : err}`);
     }
   }
 

@@ -174,6 +174,9 @@ export function seedKnowledge(dataDir: string, league: string = DEFAULT_LEAGUE):
     }
   }
 
+  // DEPRECATED — Memory bootstrap: DB and schema are created here to keep the storage layer
+  // intact for a future redesign spike, but runtime prompt injection is disabled in runner.ts.
+  // Entries seeded below will not be recalled or injected during pipeline execution.
   // Bootstrap memory (only if memory.db doesn't exist yet)
   const memoryPath = join(dataDir, 'agents', 'memory.db');
   const bootstrapPath = join(seedDir, 'bootstrap-memory.json');

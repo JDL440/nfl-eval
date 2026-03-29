@@ -200,6 +200,64 @@ class ToolLoopProvider implements LLMProvider {
   }
 }
 
+class EndlessToolProvider implements LLMProvider {
+  readonly id = 'tool-loop';
+  readonly name = 'Endless Tool Provider';
+  readonly requests: ChatRequest[] = [];
+
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    this.requests.push(request);
+    if (request.responseFormat === 'json') {
+      return {
+        content: JSON.stringify({
+          type: 'tool_call',
+          toolName: 'article_get',
+          args: { article_id: 'trace-article' },
+        }),
+        model: request.model ?? 'gpt-5.4',
+        provider: this.id,
+        usage: { promptTokens: 4, completionTokens: 2, totalTokens: 6 },
+        finishReason: 'stop',
+        providerMetadata: {
+          requestEnvelope: {
+            endpoint: 'http://localhost:1234/v1/chat/completions',
+            body: {
+              model: request.model ?? 'gpt-5.4',
+              response_format: request.responseSchema ?? null,
+            },
+          },
+          responseEnvelope: {
+            id: 'chatcmpl-endless',
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  type: 'tool_call',
+                  toolName: 'article_get',
+                  args: { article_id: 'trace-article' },
+                }),
+              },
+            }],
+          },
+        },
+      };
+    }
+    return {
+      content: 'Fallback text response',
+      model: request.model ?? 'gpt-5.4',
+      provider: this.id,
+      finishReason: 'stop',
+    };
+  }
+
+  listModels(): string[] {
+    return ['gpt-5.4'];
+  }
+
+  supportsModel(model: string): boolean {
+    return model.startsWith('gpt-5');
+  }
+}
+
 class TracingCopilotProvider implements LLMProvider {
   readonly id = 'copilot-cli';
   readonly name = 'GitHub Copilot CLI';
@@ -237,7 +295,7 @@ class TracingCopilotProvider implements LLMProvider {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe('AgentRunner', () => {
+  describe('AgentRunner', () => {
   let tempDir: string;
   let chartersDir: string;
   let skillsDir: string;
@@ -262,6 +320,99 @@ describe('AgentRunner', () => {
       providers: [new StubProvider()],
     });
     runner = new AgentRunner({ gateway, memory, chartersDir, skillsDir });
+  });
+
+  it('disables the legacy tool loop when explicit toolCalling is enabled', async () => {
+    const provider = new ToolLoopProvider();
+    const gateway = new LLMGateway({
+      modelPolicy: loadPolicy(),
+      providers: [provider],
+    });
+    const runnerWithLegacyLoop = new AgentRunner({
+      gateway,
+      memory,
+      chartersDir,
+      skillsDir,
+      toolLoop: {
+        enabledProviders: ['tool-loop'],
+        maxToolCalls: 3,
+      },
+    });
+
+    const result = await runnerWithLegacyLoop.run({
+      agentName: 'writer',
+      provider: 'tool-loop',
+      task: 'Say hello',
+      toolCalling: {
+        enabled: true,
+        includeLocalExtensions: true,
+        requestedTools: ['non-existent-tool'],
+        allowWriteTools: false,
+        context: {
+          surface: 'ideaGeneration',
+          agentName: 'writer',
+        },
+      },
+    });
+
+    expect(result.content).toBe('Fallback text response');
+    expect(provider.requests).toHaveLength(1);
+    expect(provider.requests[0]?.responseFormat).toBeUndefined();
+  });
+
+  it('records available tools and tool calls on failed traced runs', async () => {
+    const provider = new EndlessToolProvider();
+    const gateway = new LLMGateway({
+      modelPolicy: loadPolicy(),
+      providers: [provider],
+    });
+    const runnerWithTracing = new AgentRunner({
+      gateway,
+      memory,
+      chartersDir,
+      skillsDir,
+    });
+
+    const repo = new Repository(pipelineDbPath);
+    repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+
+    await expect(runnerWithTracing.run({
+      agentName: 'writer',
+      provider: 'tool-loop',
+      task: 'Use tools forever',
+      trace: {
+        repo,
+        articleId: 'trace-article',
+        stage: 1,
+        surface: 'ideaGeneration',
+      },
+      toolCalling: {
+        enabled: true,
+        includePipelineTools: true,
+        requestedTools: ['article_get'],
+        allowWriteTools: false,
+        maxToolCalls: 2,
+        context: {
+          repo,
+          stage: 1,
+          surface: 'ideaGeneration',
+          agentName: 'writer',
+        },
+      },
+    })).rejects.toThrow('Tool calling exhausted its 2 call budget');
+
+    const traces = repo.getArticleLlmTraces('trace-article', 0);
+    expect(traces).toHaveLength(1);
+    expect(traces[0]?.status).toBe('failed');
+    const metadata = JSON.parse(traces[0]?.metadata_json ?? '{}');
+    expect(metadata.availableTools).toContain('article_get');
+    expect(metadata.toolCalls).toHaveLength(2);
+    expect(metadata.toolCallCount).toBe(2);
+    expect(metadata.toolCallBudget).toBe(2);
+    expect(traces[0]?.provider_request_json).toContain('response_format');
+    expect(traces[0]?.provider_response_json).toContain('article_get');
+
+    repo.close();
   });
 
   afterEach(() => {
@@ -397,6 +548,9 @@ describe('AgentRunner', () => {
   // ── System Prompt Composition ───────────────────────────────────────────
 
   describe('composeSystemPrompt', () => {
+    // NOTE: composeSystemPrompt still accepts and renders memories when passed directly
+    // (e.g. for testing). The injection path is disabled in run(); these tests document
+    // the dormant capability that a future redesign can restore.
     it('composes system prompt from charter, skills, and memories', () => {
       const charter: AgentCharter = {
         name: 'Writer',
@@ -468,6 +622,8 @@ describe('AgentRunner', () => {
       expect(prompt).not.toContain('## Boundaries');
     });
 
+    // NOTE: tests the dormant memory rendering order in composeSystemPrompt directly.
+    // run() never produces this ordering at runtime; kept so the shape is verifiable.
     it('orders sections: identity, responsibilities, skills, memories, boundaries', () => {
       const charter: AgentCharter = {
         name: 'Test',
@@ -555,8 +711,11 @@ describe('AgentRunner', () => {
       expect(result.memoriesUsed).toBeGreaterThanOrEqual(0);
     });
 
-    it('recalls memories before running', async () => {
-      // Seed a memory
+    // DEPRECATED BEHAVIOR — memory injection is disabled; run() always passes [].
+    // This test documents the dormant path: stored memories exist in the DB but are
+    // not recalled or counted. Update to re-enable when injection is redesigned.
+    it('does not inject stored memories at runtime (injection disabled)', async () => {
+      // Seed a memory — it will be stored but not recalled/injected
       memory.store({
         agentName: 'writer',
         category: 'learning',
@@ -568,11 +727,14 @@ describe('AgentRunner', () => {
         task: 'Write about QB efficiency',
       });
 
-      expect(result.memoriesUsed).toBe(1);
+      // memoriesUsed is always 0 while injection is disabled
+      expect(result.memoriesUsed).toBe(0);
     });
 
-    it('touches recalled memories after successful run', async () => {
-      // Seed two memories
+    // DEPRECATED BEHAVIOR — touch() is only called on actually-recalled memories.
+    // Since injection is disabled, run() never calls touch(); access_count stays at 0.
+    it('does not touch stored memories when injection is disabled', async () => {
+      // Seed two memories — they will be stored but not recalled or touched
       memory.store({
         agentName: 'writer',
         category: 'learning',
@@ -593,15 +755,16 @@ describe('AgentRunner', () => {
         task: 'Analyze passing efficiency',
       });
 
-      // Verify each recalled memory was touched (access_count incremented)
+      // access_count must NOT have changed — no memories were injected or touched
       for (const bc of beforeCounts) {
         const after = memory.recall('writer').find((m) => m.id === bc.id);
         expect(after).toBeDefined();
-        expect(after!.accessCount).toBe(bc.accessCount + 1);
+        expect(after!.accessCount).toBe(bc.accessCount);
       }
     });
 
-    it('touches recalled memories with spy verification', async () => {
+    // DEPRECATED BEHAVIOR — touch() is not called when injection is disabled.
+    it('does not call touch() on stored memories (injection disabled)', async () => {
       memory.store({
         agentName: 'writer',
         category: 'learning',
@@ -615,9 +778,8 @@ describe('AgentRunner', () => {
         task: 'Write about rushing trends',
       });
 
-      const recalled = memory.recall('writer').filter((m) => m.content === 'Always cite sources');
-      expect(recalled).toHaveLength(1);
-      expect(touchSpy).toHaveBeenCalledWith(recalled[0].id);
+      // touch() must not be called because no memories are recalled/injected
+      expect(touchSpy).not.toHaveBeenCalled();
       touchSpy.mockRestore();
     });
 
@@ -898,7 +1060,11 @@ describe('AgentRunner', () => {
         expect(result.content).toBe('Tool-assisted final answer');
         expect(result.tokensUsed).toEqual({ prompt: 17, completion: 8 });
         expect(provider.requests).toHaveLength(2);
-        expect(provider.requests[1].messages.at(-1)?.content).toContain('Tool result for article_get');
+        expect(provider.requests[1].messages.at(-1)).toMatchObject({
+          role: 'tool',
+          name: 'article_get',
+          tool_call_id: 'tool-call-1',
+        });
 
         const trace = repo.getLlmTrace(result.traceId!);
         expect(trace).not.toBeNull();
@@ -974,6 +1140,451 @@ describe('AgentRunner', () => {
 
         expect(result.content).toBe('Tool-assisted final answer');
         expect(provider.requests).toHaveLength(2);
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('unwraps LM Studio typed wrapper args before executing tools', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new ToolLoopProvider((content, callCount) => {
+        if (callCount === 1) {
+          return JSON.stringify({
+            type: 'tool_call',
+            toolName: 'article_get',
+            args: {
+              article_id: { type: 'string', value: 'trace-article' },
+            },
+          });
+        }
+        return content;
+      });
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('Tool-assisted final answer');
+        const trace = repo.getLlmTrace(result.traceId!);
+        const metadata = JSON.parse(trace!.metadata_json ?? '{}') as {
+          toolCalls?: Array<{ args?: Record<string, unknown> }>;
+        };
+        expect(metadata.toolCalls?.[0]?.args).toEqual({ article_id: 'trace-article' });
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('returns validation failures as tool-role messages with hints', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new ToolLoopProvider((content, callCount) => {
+        if (callCount === 1) {
+          return JSON.stringify({
+            type: 'tool_call',
+            toolName: 'article_get',
+            args: {},
+          });
+        }
+        return JSON.stringify({
+          type: 'final',
+          content: 'Recovered after validation failure',
+        });
+      });
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('Recovered after validation failure');
+        const toolMessage = provider.requests[1].messages.at(-1);
+        expect(toolMessage).toMatchObject({
+          role: 'tool',
+          name: 'article_get',
+          tool_call_id: 'tool-call-1',
+        });
+        expect(JSON.parse(toolMessage!.content)).toMatchObject({
+          error: 'validation',
+          tool: 'article_get',
+        });
+        expect(toolMessage!.content).toContain('"hint"');
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('sends LM Studio native tools and preserves assistant tool_calls across turns', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      fetchSpy
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          id: 'chatcmpl-1',
+          object: 'chat.completion',
+          model: 'qwen/qwen3.5-35b-a3b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [{
+                id: 'call_native_1',
+                type: 'function',
+                function: {
+                  name: 'article_get',
+                  arguments: '{"article_id":"trace-article"}',
+                },
+              }],
+            },
+            finish_reason: 'tool_calls',
+          }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          id: 'chatcmpl-2',
+          object: 'chat.completion',
+          model: 'qwen/qwen3.5-35b-a3b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: '{"type":"final","content":"LM Studio native tool flow worked"}',
+            },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 6, completion_tokens: 4, total_tokens: 10 },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const gateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [new LMStudioProvider({ defaultModel: 'qwen/qwen3.5-35b-a3b' })],
+      });
+      const toolRunner = new AgentRunner({
+        gateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          provider: 'lmstudio',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('LM Studio native tool flow worked');
+
+        const firstBody = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
+        expect(firstBody.tools).toEqual([{
+          type: 'function',
+          function: {
+            name: 'article_get',
+            description: 'Get full details for a single article by ID, including stage history and validation.',
+            parameters: {
+              type: 'object',
+              properties: { article_id: { type: 'string', description: 'Article slug / ID' } },
+              required: ['article_id'],
+            },
+          },
+        }]);
+        expect(firstBody.messages[0].content).not.toContain('Available tools:');
+        expect(firstBody.messages[0].content).not.toContain('query_team_efficiency');
+
+        const secondBody = JSON.parse((fetchSpy.mock.calls[1] as [string, RequestInit])[1].body as string);
+        expect(secondBody.messages.at(-2)).toEqual({
+          role: 'assistant',
+          content: null,
+          tool_calls: [{
+            id: 'call_native_1',
+            type: 'function',
+            function: {
+              name: 'article_get',
+              arguments: '{"article_id":"trace-article"}',
+            },
+          }],
+        });
+        expect(secondBody.messages.at(-1)).toMatchObject({
+          role: 'tool',
+          tool_call_id: 'call_native_1',
+          name: 'article_get',
+        });
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('reuses the prior tool result when LM Studio repeats an identical tool call', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      fetchSpy
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          id: 'chatcmpl-1',
+          object: 'chat.completion',
+          model: 'qwen/qwen3.5-35b-a3b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [{
+                id: 'call_native_1',
+                type: 'function',
+                function: {
+                  name: 'article_get',
+                  arguments: '{"article_id":"trace-article"}',
+                },
+              }],
+            },
+            finish_reason: 'tool_calls',
+          }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          id: 'chatcmpl-2',
+          object: 'chat.completion',
+          model: 'qwen/qwen3.5-35b-a3b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [{
+                id: 'call_native_2',
+                type: 'function',
+                function: {
+                  name: 'article_get',
+                  arguments: '{"article_id":"trace-article"}',
+                },
+              }],
+            },
+            finish_reason: 'tool_calls',
+          }],
+          usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          id: 'chatcmpl-3',
+          object: 'chat.completion',
+          model: 'qwen/qwen3.5-35b-a3b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: '{"type":"final","content":"Done after duplicate replay"}',
+            },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 6, completion_tokens: 3, total_tokens: 9 },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const gateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [new LMStudioProvider({ defaultModel: 'qwen/qwen3.5-35b-a3b' })],
+      });
+      const toolRunner = new AgentRunner({
+        gateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          provider: 'lmstudio',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('Done after duplicate replay');
+        const thirdBody = JSON.parse((fetchSpy.mock.calls[2] as [string, RequestInit])[1].body as string);
+        expect(thirdBody.messages.at(-1).content).toContain('already executed earlier in this conversation');
+        expect(thirdBody.messages.at(-1).content).not.toContain('Duplicate tool call blocked');
       } finally {
         repo.close();
       }

@@ -63,8 +63,6 @@ describe('Config Viewer Page', () => {
 
     writeFileSync(join(chartersDir, 'sea.md'), '# SEA charter');
     writeFileSync(join(skillsDir, 'fact-checking.md'), '# Fact checking');
-
-    // Seed a minimal models.json so ModelPolicy can load
     writeFileSync(
       join(configDir, 'models.json'),
       JSON.stringify({
@@ -112,27 +110,49 @@ describe('Config Viewer Page', () => {
     expect(res.status).toBe(200);
   });
 
-  it('page contains provider info', async () => {
+  it('shows the redesigned runtime settings overview', async () => {
     const res = await app.request('/config');
     const html = await res.text();
-    expect(html).toContain('LLM Provider');
+    expect(html).toContain('Runtime Settings');
+    expect(html).toContain('Current runtime wiring for NFL Lab');
+    expect(html).toContain('Active provider');
     expect(html).toContain('Mock');
+    expect(html).toContain('Prompt Inventory');
+    expect(html).toContain('fact-checking');
+    expect(html).toContain('sea');
   });
 
-  it('page contains environment status section', async () => {
+  it('page contains maintenance and prompt inventory sections', async () => {
     const res = await app.request('/config');
     const html = await res.text();
-    expect(html).toContain('Environment Status');
-    expect(html).toContain('LLM_PROVIDER');
+    expect(html).toContain('Services &amp; Maintenance');
+    expect(html).toContain('Knowledge refresh');
+    expect(html).toContain('legacy runtime memory storage still exists');
+    expect(html).toContain('the old Memory dashboard stays retired');
+    expect(html).toContain('existing refresh-all endpoint from Settings');
+    expect(html).toContain('Refresh-all is unavailable until runner + memory services are initialized.');
+    expect(html).not.toContain('Refresh All Agent Knowledge');
+    expect(html).not.toContain('href="/memory"');
+    expect(html).not.toContain('href="/agents"');
+    expect(html).not.toContain('href="/runs"');
+    expect(html).not.toContain('Context preset:');
+    expect(html).toContain('id="knowledge-refresh-result"');
+    expect(html).toContain('Prompt Inventory');
+    expect(html).toContain('fact-checking');
+    expect(html).toContain('sea');
+    expect(html).toContain('Dashboard Access');
+    expect(html).toContain('config_test_session');
+    expect(html).toContain('24 hours');
+  });
+
+  it('shows safe environment values and Copilot defaults', async () => {
+    const res = await app.request('/config');
+    const html = await res.text();
+    expect(html).toContain('Environment Surface');
     expect(html).toContain('DASHBOARD_AUTH_MODE');
     expect(html).toContain('local');
     expect(html).toContain('DASHBOARD_AUTH_USERNAME');
     expect(html).toContain('joe');
-  });
-
-  it('shows the Copilot CLI runtime defaults when env vars are unset', async () => {
-    const res = await app.request('/config');
-    const html = await res.text();
     expect(html).toContain('COPILOT_MODEL');
     expect(html).toContain('claude-sonnet-4.6 (default)');
     expect(html).toContain('COPILOT_CLI_MODE');

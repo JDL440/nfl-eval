@@ -27,6 +27,7 @@ import type {
   RetrospectiveDigestFindingRow,
   RunStatus,
   Stage,
+  StageRunDetail,
   StageRun,
   StageTransition,
   UsageEvent,
@@ -184,6 +185,7 @@ interface FailLlmTraceParams {
   model?: string | null;
   errorMessage: string;
   latencyMs?: number | null;
+  metadata?: unknown;
   providerMode?: string | null;
   providerSessionId?: string | null;
   workingDirectory?: string | null;
@@ -366,79 +368,18 @@ export class Repository {
     return stmt.all(articleId, limit) as unknown as StageRun[];
   }
 
-  getStageRun(stageRunId: string): StageRun | null {
-    const stmt = this.db.prepare('SELECT * FROM stage_runs WHERE id = ?');
-    const row = stmt.get(stageRunId) as StageRun | undefined;
-    return row ?? null;
-  }
-
-  getStageRunDetail(stageRunId: string): (StageRun & {
-    article_title: string | null;
-    total_tokens: number | null;
-    trace_count: number;
-  }) | null {
+  getStageRunDetail(stageRunId: string): StageRunDetail | null {
     const stmt = this.db.prepare(
-      `SELECT sr.*, a.title AS article_title,
-          (SELECT SUM(COALESCE(ue.prompt_tokens, 0) + COALESCE(ue.output_tokens, 0))
-           FROM usage_events ue WHERE ue.stage_run_id = sr.id) AS total_tokens,
-          (SELECT COUNT(*) FROM llm_traces lt WHERE lt.stage_run_id = sr.id) AS trace_count
+      `SELECT sr.*, (
+         SELECT COUNT(*)
+         FROM llm_traces lt
+         WHERE lt.stage_run_id = sr.id
+       ) AS trace_count
        FROM stage_runs sr
-       LEFT JOIN articles a ON sr.article_id = a.id
        WHERE sr.id = ?`,
     );
-    const row = stmt.get(stageRunId) as (StageRun & {
-      article_title: string | null;
-      total_tokens: number | null;
-      trace_count: number;
-    }) | undefined;
+    const row = stmt.get(stageRunId) as StageRunDetail | undefined;
     return row ?? null;
-  }
-
-  getAllStageRuns(filters?: { status?: string; search?: string; limit?: number; offset?: number }): (StageRun & {
-    article_title: string | null;
-    total_tokens: number | null;
-    trace_count: number;
-  })[] {
-    let sql = `SELECT sr.*, a.title AS article_title,
-        (SELECT SUM(COALESCE(ue.prompt_tokens, 0) + COALESCE(ue.output_tokens, 0))
-         FROM usage_events ue WHERE ue.stage_run_id = sr.id) AS total_tokens,
-        (SELECT COUNT(*) FROM llm_traces lt WHERE lt.stage_run_id = sr.id) AS trace_count
-      FROM stage_runs sr
-      LEFT JOIN articles a ON sr.article_id = a.id`;
-    const params: (string | number)[] = [];
-    const conditions: string[] = [];
-    const normalizedStatus = filters?.status === 'success'
-      ? 'completed'
-      : filters?.status === 'error'
-        ? 'failed'
-        : filters?.status;
-
-    if (normalizedStatus) {
-      conditions.push('sr.status = ?');
-      params.push(normalizedStatus);
-    }
-    if (filters?.search) {
-      conditions.push('(a.title LIKE ? OR sr.article_id LIKE ?)');
-      params.push(`%${filters.search}%`, `%${filters.search}%`);
-    }
-
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
-    sql += ' ORDER BY sr.started_at DESC';
-    sql += ' LIMIT ?';
-    params.push(filters?.limit ?? 50);
-    if (filters?.offset) {
-      sql += ' OFFSET ?';
-      params.push(filters.offset);
-    }
-
-    const stmt = this.db.prepare(sql);
-    return stmt.all(...params) as unknown as (StageRun & {
-      article_title: string | null;
-      total_tokens: number | null;
-      trace_count: number;
-    })[];
   }
 
   getArticleLlmTraces(articleId: string, limit = 25): LlmTrace[] {
@@ -465,33 +406,6 @@ export class Repository {
     const stmt = this.db.prepare('SELECT * FROM llm_traces WHERE id = ?');
     const row = stmt.get(traceId) as LlmTrace | undefined;
     return row ?? null;
-  }
-
-  countAllStageRuns(filters?: { status?: string; search?: string }): number {
-    let sql = `SELECT COUNT(*) AS cnt
-      FROM stage_runs sr
-      LEFT JOIN articles a ON sr.article_id = a.id`;
-    const params: (string | number)[] = [];
-    const conditions: string[] = [];
-    const normalizedStatus = filters?.status === 'success'
-      ? 'completed'
-      : filters?.status === 'error'
-        ? 'failed'
-        : filters?.status;
-    if (normalizedStatus) {
-      conditions.push('sr.status = ?');
-      params.push(normalizedStatus);
-    }
-    if (filters?.search) {
-      conditions.push('(a.title LIKE ? OR sr.article_id LIKE ?)');
-      params.push(`%${filters.search}%`, `%${filters.search}%`);
-    }
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
-    const stmt = this.db.prepare(sql);
-    const row = stmt.get(...params) as { cnt: number } | undefined;
-    return row?.cnt ?? 0;
   }
 
   getStageTransitions(articleId: string): StageTransition[] {
@@ -1015,6 +929,7 @@ export class Repository {
        SET provider = COALESCE(?, provider),
             model = COALESCE(?, model),
             error_message = ?,
+            metadata_json = COALESCE(?, metadata_json),
             provider_mode = COALESCE(?, provider_mode),
             provider_session_id = COALESCE(?, provider_session_id),
             working_directory = COALESCE(?, working_directory),
@@ -1030,6 +945,7 @@ export class Repository {
       params.provider ?? null,
       params.model ?? null,
       params.errorMessage,
+      normalizeMetadataJson(params.metadata),
       params.providerMode ?? null,
       params.providerSessionId ?? null,
       params.workingDirectory ?? null,

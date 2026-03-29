@@ -2,10 +2,8 @@
  * wave2.test.ts — Tests for Wave 2 features:
  *   - Markdown artifact rendering
  *   - Token usage panel
- *   - Stage runs panel
- *   - Enhanced stage timeline
  *   - Editor verdict badges
- *   - New HTMX routes
+ *   - Trace-preserving article detail routes
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -19,9 +17,8 @@ import { markdownToHtml } from '../../src/services/markdown.js';
 import {
   renderArtifactContent,
   renderUsagePanel,
-  renderStageRunsPanel,
 } from '../../src/dashboard/views/article.js';
-import type { UsageEvent, StageRun } from '../../src/types.js';
+import type { UsageEvent } from '../../src/types.js';
 
 function makeTestConfig(overrides?: Partial<AppConfig>): AppConfig {
   return {
@@ -320,68 +317,6 @@ describe('renderUsagePanel', () => {
   });
 });
 
-// ── Stage runs panel unit tests ─────────────────────────────────────────────
-
-function makeStageRun(overrides: Partial<StageRun>): StageRun {
-  return {
-    id: 'run-1',
-    run_id: null,
-    article_id: 'test',
-    stage: 5,
-    surface: 'copilot',
-    actor: 'writer',
-    requested_model: 'claude-sonnet-4',
-    requested_model_tier: 'standard',
-    precedence_rank: null,
-    output_budget_tokens: null,
-    status: 'completed',
-    notes: null,
-    artifact_path: null,
-    started_at: new Date(Date.now() - 120000).toISOString(),
-    completed_at: new Date().toISOString(),
-    ...overrides,
-  };
-}
-
-describe('renderStageRunsPanel', () => {
-  it('shows empty state when no runs', () => {
-    const html = renderStageRunsPanel([]);
-    expect(html).toContain('No runs recorded');
-  });
-
-  it('shows run with status icon and stage badge', () => {
-    const html = renderStageRunsPanel([makeStageRun({})]);
-    expect(html).toContain('Stage Runs');
-    expect(html).toContain('✅');
-    expect(html).toContain('Stage 6');  // target stage (from=5 → target=6)
-    expect(html).toContain('Editor Pass');
-  });
-
-  it('shows failed run with error icon', () => {
-    const html = renderStageRunsPanel([makeStageRun({ status: 'failed' })]);
-    expect(html).toContain('❌');
-    expect(html).toContain('stage-run-failed');
-  });
-
-  it('shows duration for completed runs', () => {
-    const now = Date.now();
-    const html = renderStageRunsPanel([
-      makeStageRun({
-        started_at: new Date(now - 45000).toISOString(),
-        completed_at: new Date(now).toISOString(),
-      }),
-    ]);
-    expect(html).toContain('⏱');
-    expect(html).toContain('45.0s');
-  });
-
-  it('shows model info', () => {
-    const html = renderStageRunsPanel([makeStageRun({ requested_model: 'gpt-4o' })]);
-    expect(html).toContain('🤖');
-    expect(html).toContain('gpt-4o');
-  });
-});
-
 // ── Integration tests ───────────────────────────────────────────────────────
 
 describe('Wave 2 Routes', () => {
@@ -465,42 +400,8 @@ describe('Wave 2 Routes', () => {
     });
   });
 
-  describe('GET /htmx/articles/:id/stage-runs', () => {
-    it('returns stage runs panel with data', async () => {
-      repo.createArticle({ id: 'runs-test', title: 'Runs Test' });
-      const runId = repo.startStageRun({
-        articleId: 'runs-test',
-        stage: 5,
-        surface: 'copilot',
-        actor: 'writer-agent',
-        requestedModel: 'claude-sonnet-4',
-      });
-      repo.finishStageRun(runId, 'completed', 'Done');
-
-      const res = await app.request('/htmx/articles/runs-test/stage-runs');
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('Stage Runs');
-      expect(html).toContain('Stage 6');  // target stage (from=5 → target=6)
-      expect(html).toContain('claude-sonnet-4');
-    });
-
-    it('returns empty state for no runs', async () => {
-      repo.createArticle({ id: 'no-runs', title: 'No Runs' });
-      const res = await app.request('/htmx/articles/no-runs/stage-runs');
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('No runs recorded');
-    });
-
-    it('returns 404 for unknown article', async () => {
-      const res = await app.request('/htmx/articles/nonexistent/stage-runs');
-      expect(res.status).toBe(404);
-    });
-  });
-
   describe('Article detail page', () => {
-    it('includes usage and stage runs panels', async () => {
+    it('includes usage panel and trace link', async () => {
       repo.createArticle({ id: 'detail-test', title: 'Detail Test' });
       repo.recordUsageEvent({
         articleId: 'detail-test',
@@ -518,18 +419,18 @@ describe('Wave 2 Routes', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Token Usage');
-      expect(html).toContain('Stage Runs');
+      expect(html).toContain('/articles/detail-test/traces');
     });
 
-    it('includes enhanced stage timeline with timestamps', async () => {
+    it('does not include removed stage timeline markup', async () => {
       repo.createArticle({ id: 'timeline-test', title: 'Timeline Test' });
       repo.artifacts.put('timeline-test', 'idea.md', '# Idea');
 
       const res = await app.request('/articles/timeline-test');
       expect(res.status).toBe(200);
       const html = await res.text();
-      expect(html).toContain('stage-timeline');
-      expect(html).toContain('stage-step');
+      expect(html).not.toContain('stage-timeline');
+      expect(html).not.toContain('stage-step');
     });
 
     it('renders editor reviews with verdict badges', async () => {

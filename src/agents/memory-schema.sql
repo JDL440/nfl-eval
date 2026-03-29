@@ -1,3 +1,7 @@
+-- LEGACY — agent_memory schema is retained for a future redesign spike.
+-- Runtime prompt injection is disabled in AgentRunner.run() (runner.ts step 3).
+-- The table and indexes are created here to keep the storage layer intact and
+-- ready to be re-activated without a migration. Do not drop without a spike decision.
 CREATE TABLE IF NOT EXISTS agent_memory (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   agent_name TEXT NOT NULL,
