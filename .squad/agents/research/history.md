@@ -1,3 +1,10 @@
+## Spawn Batch — App/Runtime + Engineering-System Split (2026-03-29T19:07:44.9412166Z)
+
+- **Status:** Two implementation streams launched.
+- **Stream 1 (App/Runtime):** surfaces src\pipeline\*, src\dashboard\server.ts, article skills. Owners: Code + Publisher + UX (Lead review).
+- **Stream 2 (Engineering-System):** surfaces .squad/*, squad agent, ralph-watch, heartbeat. Owners: Lead + Ralph + Research + DevOps.
+- **Validation:** article quality, render QA, publish readiness, board hygiene, reduced coordination drift.
+
 # Research Agent History
 
 ## 2026-03-28: LM Studio Tool-Use Behavior Audit
@@ -105,4 +112,13 @@ Memory injection mechanism works flawlessly—memories are correctly injected wh
 ### Insight
 System does NOT automatically extract learnings from agent execution. Memory creation is opt-in only. No passive hooks record what agents learned, decided, or found during article production.
 - 2026-03-29 — New spawn batch queued Research to split the app kickoff into actionable slices after branch sync, with outputs intended to hand directly to Code for implementation start.
+
+
+## Learnings
+
+- 2026-03-29 — Anthropic harness follow-up work should be split into two implementation tracks: **app/runtime/product** and **engineering-system/Squad-Ralph workflow**. They have different owners, insertion points, validation loops, and failure modes.
+- App/runtime follow-up centers on `src\pipeline\actions.ts` (`runDiscussion`, `writeDraft`, `runEditor`), `src\pipeline\context-config.ts`, `src\pipeline\engine.ts`, `src\dashboard\server.ts` (`buildPublishPresentation`, `enrichSubstackDoc`), and `src\agents\runner.ts` / `src\db\repository.ts` for long-running handoffs and trace metadata.
+- Engineering-system follow-up centers on `.squad\agents\lead\charter.md`, `.squad\agents\ralph\charter.md`, `.squad\ceremonies.md`, `.squad\skills\github-project-board\SKILL.md`, `.github\agents\squad.agent.md`, `ralph-watch.ps1`, and `.github\workflows\squad-heartbeat.yml`.
+- 2026-03-29 — The recommended first app slice is contract-first article generation: create `article-contract.md` after `runDiscussion`, pass it through `context-config.ts`, and make Editor score against it before adding render-QA or reset mechanics.
+- 2026-03-29 — The recommended first engineering-system slice is documentation/prompt alignment before automation: require issue contracts in Lead + Squad instructions, then teach Ralph to escalate contractless work instead of starting implementation immediately.
 

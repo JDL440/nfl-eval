@@ -1,3 +1,10 @@
+## Spawn Batch — App/Runtime + Engineering-System Split (2026-03-29T19:07:44.9412166Z)
+
+- **Status:** Two implementation streams launched.
+- **Stream 1 (App/Runtime):** surfaces src\pipeline\*, src\dashboard\server.ts, article skills. Owners: Code + Publisher + UX (Lead review).
+- **Stream 2 (Engineering-System):** surfaces .squad/*, squad agent, ralph-watch, heartbeat. Owners: Lead + Ralph + Research + DevOps.
+- **Validation:** article quality, render QA, publish readiness, board hygiene, reduced coordination drift.
+
 # Code Agent Project History
 
 ## Core Context
@@ -20,4 +27,5 @@
 - 2026-03-29 — Settings copy has to describe deprecation plainly: say legacy memory storage still exists, prompt injection is disabled, the old Memory dashboard stays retired, and refresh-all now lives on `/config`.
 - 2026-03-29T18:42:53Z — Dashboard cleanup audit/fix completed in background; repo files updated and filesystem verified; UX exposure audit confirmed simplified dashboard.
 - 2026-03-29 — New spawn batch queued Code for app implementation kickoff, explicitly downstream of DevOps branch sync and Research plan-splitting so coding starts from a synced branch and agreed slices.
+
 

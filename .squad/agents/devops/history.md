@@ -1,3 +1,10 @@
+## Spawn Batch — App/Runtime + Engineering-System Split (2026-03-29T19:07:44.9412166Z)
+
+- **Status:** Two implementation streams launched.
+- **Stream 1 (App/Runtime):** surfaces src\pipeline\*, src\dashboard\server.ts, article skills. Owners: Code + Publisher + UX (Lead review).
+- **Stream 2 (Engineering-System):** surfaces .squad/*, squad agent, ralph-watch, heartbeat. Owners: Lead + Ralph + Research + DevOps.
+- **Validation:** article quality, render QA, publish readiness, board hygiene, reduced coordination drift.
+
 # DevOps History
 
 ## Learnings
@@ -18,4 +25,5 @@
 - Live `/v1/models` and plain-chat tool-call behavior were confirmed, but `response_format: json_object` failed with LM Studio-specific validation.
 - Targeted verification and `npm run v2:build` both passed.
 - 2026-03-29 — New spawn batch queued DevOps for branch sync in `C:\github\nfl-eval\worktrees\agenteval`; this sync is the prerequisite handoff before plan split and app implementation kickoff proceed.
+
 
