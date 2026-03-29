@@ -5,7 +5,7 @@ import { unlinkSync } from 'node:fs';
 
 import { Repository } from '../../src/db/repository.js';
 import { PipelineEngine } from '../../src/pipeline/engine.js';
-import { executeToolCall, listAvailableTools } from '../../src/agents/local-tools.js';
+import { buildToolCatalogPrompt, executeToolCall, listAvailableTools } from '../../src/agents/local-tools.js';
 
 describe('local tool executor', () => {
   it('filters pipeline tools by alias and read/write policy', async () => {
@@ -37,6 +37,24 @@ describe('local tool executor', () => {
     expect(result.isError).toBe(true);
     expect(result.text).toContain('failed validation');
     expect(result.text).toContain('article_id');
+    expect(result.text).toContain('expectedArgs');
+    expect(result.text).toContain('required');
+  });
+
+  it('includes parameter descriptions in the tool catalog prompt', async () => {
+    const [tool] = await listAvailableTools({
+      enabled: true,
+      includeLocalExtensions: true,
+      requestedTools: ['query_team_efficiency'],
+      allowWriteTools: false,
+    });
+
+    const prompt = buildToolCatalogPrompt([tool]);
+    expect(prompt).toContain('query_team_efficiency');
+    expect(prompt).toContain('3-letter team abbreviation');
+    expect(prompt).toContain('Season year (e.g., 2025)');
+    expect(prompt).toContain('team: string');
+    expect(prompt).toContain('season: integer');
   });
 
   it('executes pipeline tools with repository context', async () => {

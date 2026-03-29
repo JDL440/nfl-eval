@@ -942,15 +942,11 @@ export function createApp(
       : undefined;
 
     let modelPolicyError: string | undefined;
-    let modelRouting: Array<{ stageKey: string; model: string }> = [];
     let activeModel = usingMock ? 'mock' : (usingLMStudio ? (process.env['LMSTUDIO_MODEL'] ?? '(auto)') : '');
 
     try {
       const policyPath = join(config.dataDir, 'config', 'models.json');
       const modelPolicy = new ModelPolicy(policyPath);
-      modelRouting = Object.entries(modelPolicy.config.models)
-        .map(([stageKey, model]) => ({ stageKey, model }))
-        .sort((a, b) => a.stageKey.localeCompare(b.stageKey));
 
       if (!activeModel && !usingLMStudio) {
         activeModel = modelPolicy.resolve({ stageKey: 'lead' }).selectedModel;
@@ -959,36 +955,6 @@ export function createApp(
       modelPolicyError = `Model policy not available: ${err instanceof Error ? err.message : String(err)}`;
       if (!activeModel) activeModel = '(unknown)';
     }
-
-    const listCharterNames = (): string[] => {
-      if (!existsSync(config.chartersDir)) return [];
-      const entries = readdirSync(config.chartersDir, { withFileTypes: true });
-      const names: string[] = [];
-
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.md')) {
-          names.push(entry.name.replace(/\.md$/i, ''));
-        } else if (entry.isDirectory()) {
-          // Match AgentRunner behavior: require charter.md in subdir
-          const subCharter = join(config.chartersDir, entry.name, 'charter.md');
-          if (existsSync(subCharter)) names.push(entry.name);
-        }
-      }
-
-      return names.sort();
-    };
-
-    const listSkillNames = (): string[] => {
-      if (!existsSync(config.skillsDir)) return [];
-      const entries = readdirSync(config.skillsDir, { withFileTypes: true });
-      const names: string[] = [];
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.md')) {
-          names.push(entry.name.replace(/\.md$/i, ''));
-        }
-      }
-      return names.sort();
-    };
 
     const runner = deps?.actionContext?.runner;
     const registeredProviders = runner
@@ -1013,22 +979,8 @@ export function createApp(
         model: activeModel,
         registeredProviders,
       },
-      modelRouting,
       modelPolicyError,
-      charters: listCharterNames(),
-      skills: listSkillNames(),
       envStatus,
-      runtimePaths: [
-        { label: 'Data directory', value: config.dataDir },
-        { label: 'Pipeline database', value: config.dbPath },
-        { label: 'Articles directory', value: config.articlesDir },
-        { label: 'Images directory', value: config.imagesDir },
-        { label: 'Charters directory', value: config.chartersDir },
-        { label: 'Skills directory', value: config.skillsDir },
-        { label: 'Memory database', value: config.memoryDbPath },
-        { label: 'Logs directory', value: config.logsDir },
-        { label: 'Cache directory', value: config.cacheDir },
-      ],
       dashboardAuth: {
         mode: dashboardAuth.mode,
         username: dashboardAuth.username,

@@ -47,7 +47,7 @@ export function renderLayout(title: string, content: string, labName: string): s
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>${escapeHtml(title)} — ${escapeHtml(labName)} Dashboard</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
@@ -58,9 +58,16 @@ export function renderLayout(title: string, content: string, labName: string): s
     <div class="header-inner">
       <div class="header-brand">
         <a href="/" class="logo">${escapeHtml(labName)}</a>
-        <span class="header-tagline">Editorial workstation</span>
+        <span class="header-tagline">Editorial desk</span>
       </div>
-      <div class="header-controls">
+      <nav id="primary-nav" class="header-nav shared-mobile-nav" aria-label="Primary">
+        <a href="/" class="btn btn-header header-nav-link${activeNav === 'dashboard' ? ' is-active' : ''}">Dashboard</a>
+        <a href="/ideas/new" class="btn btn-header header-nav-link${activeNav === 'new-idea' ? ' is-active' : ''}">New Idea</a>
+        <a href="/config" class="btn btn-header header-nav-link${activeNav === 'settings' ? ' is-active' : ''}">Settings</a>
+      </nav>
+      <div class="header-meta">
+        <span class="env-badge header-env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
+        <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
         <button
           id="nav-toggle"
           class="btn btn-header btn-icon nav-toggle"
@@ -68,16 +75,7 @@ export function renderLayout(title: string, content: string, labName: string): s
           aria-label="Toggle navigation"
           aria-expanded="false"
           aria-controls="primary-nav"
-        >☰</button>
-        <nav id="primary-nav" class="header-nav shared-mobile-nav" aria-label="Primary">
-          <a href="/" class="btn btn-header header-nav-link${activeNav === 'dashboard' ? ' is-active' : ''}">Dashboard</a>
-          <a href="/ideas/new" class="btn btn-header header-nav-link${activeNav === 'new-idea' ? ' is-active' : ''}">New Idea</a>
-          <a href="/config" class="btn btn-header header-nav-link${activeNav === 'settings' ? ' is-active' : ''}">Settings</a>
-        </nav>
-        <div class="header-meta">
-          <span class="env-badge header-env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
-          <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
-        </div>
+        ><span class="nav-toggle-icon" aria-hidden="true">☰</span><span class="nav-toggle-label">Menu</span></button>
       </div>
     </div>
   </header>
@@ -87,8 +85,8 @@ export function renderLayout(title: string, content: string, labName: string): s
     </div>
   </main>
   <footer class="site-footer">
-    <p>${escapeHtml(labName)} Editorial Workstation</p>
-    <p class="site-footer-meta">Mobile-first editorial control across intake, review, traces, preview, and publishing.</p>
+    <p>${escapeHtml(labName)} editorial desk</p>
+    <p class="site-footer-meta">The queue, the draft, and the publish moment.</p>
   </footer>
   <script>
     function toggleTheme() {
@@ -113,17 +111,29 @@ export function renderLayout(title: string, content: string, labName: string): s
       if (!navToggle || !nav) return;
       function closeNav() {
         nav.classList.remove('is-open');
+        document.body.classList.remove('nav-open');
         navToggle.setAttribute('aria-expanded', 'false');
       }
       navToggle.addEventListener('click', function() {
         var nextOpen = !nav.classList.contains('is-open');
         nav.classList.toggle('is-open', nextOpen);
+        document.body.classList.toggle('nav-open', nextOpen);
         navToggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
       });
       nav.querySelectorAll('a').forEach(function(link) {
         link.addEventListener('click', function() {
           if (window.innerWidth < 768) closeNav();
         });
+      });
+      document.addEventListener('click', function(event) {
+        var target = event.target;
+        if (!(target instanceof Element)) return;
+        if (!nav.classList.contains('is-open')) return;
+        if (nav.contains(target) || navToggle.contains(target)) return;
+        closeNav();
+      });
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeNav();
       });
       window.addEventListener('resize', function() {
         if (window.innerWidth >= 768) closeNav();

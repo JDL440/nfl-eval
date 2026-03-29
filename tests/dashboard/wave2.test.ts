@@ -232,23 +232,36 @@ describe('renderArtifactContent', () => {
 describe('shared mobile dashboard shell', () => {
   it('renders mobile navigation hooks and active state in the shared layout', () => {
     const html = renderLayout('Settings', '<div>content</div>', 'NFL Lab');
+    expect(html).toContain('viewport-fit=cover');
     expect(html).toContain('shared-mobile-header');
+    expect(html).toContain('header-inner');
     expect(html).toContain('shared-mobile-nav');
     expect(html).toContain('id="nav-toggle"');
     expect(html).toContain('aria-controls="primary-nav"');
+    expect(html).toContain("nav.classList.toggle('is-open', nextOpen)");
+    expect(html).toContain("document.body.classList.toggle('nav-open', nextOpen)");
+    expect(html).toContain("navToggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false')");
     expect(html).toContain('header-nav-link is-active');
     expect(html).toContain('page-settings');
   });
 
-  it('styles the mobile shell hooks and responsive tables in the shared stylesheet', () => {
+  it('styles safe-area-aware mobile shell hooks and shared overflow guards in the shared stylesheet', () => {
     const cssPath = join(process.cwd(), 'src', 'dashboard', 'public', 'styles.css');
     const css = readFileSync(cssPath, 'utf8');
+    expect(css).toContain('--safe-area-top: env(safe-area-inset-top, 0px);');
     expect(css).toContain('.shared-mobile-header');
     expect(css).toContain('.shared-mobile-nav');
+    expect(css).toContain('.header-meta');
+    expect(css).toContain('.nav-toggle-label');
+    expect(css).toContain('grid-column: 1 / -1;');
     expect(css).toContain('.responsive-table');
     expect(css).toContain('.mobile-detail-layout');
     expect(css).toContain('.mobile-primary-column');
     expect(css).toContain('.mobile-secondary-column');
+    expect(css).toContain('.artifact-rendered table');
+    expect(css).toContain('body.nav-open');
+    expect(css).toContain('overflow-wrap: anywhere;');
+    expect(css).toContain('top: calc(var(--safe-area-top) + 5rem);');
   });
 });
 

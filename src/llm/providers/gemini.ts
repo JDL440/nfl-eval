@@ -144,7 +144,11 @@ export class GeminiProvider implements LLMProvider {
   private mapMessages(messages: ChatMessage[]): GeminiContent[] {
     return messages.map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
+      parts: [{
+        text: m.role === 'tool'
+          ? `Tool result for ${m.name ?? m.tool_call_id}:\n${m.content}`
+          : m.content,
+      }],
     }));
   }
 }

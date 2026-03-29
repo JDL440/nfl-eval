@@ -23,22 +23,13 @@ export interface ServiceStatusInfo {
   detail: string;
 }
 
-export interface RuntimePathInfo {
-  label: string;
-  value: string;
-}
-
 export interface ConfigPageData {
   labName: string;
   league: string;
   environment: string;
   provider: LLMProviderInfo;
-  modelRouting: Array<{ stageKey: string; model: string }>;
-  charters: string[];
-  skills: string[];
   envStatus: EnvVarStatus[];
   modelPolicyError?: string;
-  runtimePaths: RuntimePathInfo[];
   dashboardAuth: {
     mode: string;
     sessionCookieName: string;
@@ -56,27 +47,6 @@ export interface ConfigPageData {
 function renderStatusChip(state: ServiceStatusInfo['state']): string {
   const label = state === 'ready' ? 'ready' : state === 'partial' ? 'partial' : 'disabled';
   return `<span class="badge settings-status settings-status-${state}">${label}</span>`;
-}
-
-function renderRoutingTable(rows: Array<{ stageKey: string; model: string }>): string {
-  if (rows.length === 0) {
-    return '<p class="empty-state">No model routing policy loaded.</p>';
-  }
-
-  return `
-    <table class="artifact-table settings-table responsive-table">
-      <thead>
-        <tr><th>Stage Key</th><th>Model</th></tr>
-      </thead>
-      <tbody>
-        ${rows.map((row) => `
-          <tr>
-            <td data-label="Stage Key"><code>${escapeHtml(row.stageKey)}</code></td>
-            <td data-label="Model"><code>${escapeHtml(row.model)}</code></td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>`;
 }
 
 function renderEnvStatusTable(envStatus: EnvVarStatus[]): string {
@@ -103,16 +73,7 @@ function renderEnvStatusTable(envStatus: EnvVarStatus[]): string {
     </table>`;
 }
 
-function renderNameList(names: string[], emptyLabel: string): string {
-  if (names.length === 0) {
-    return `<p class="empty-state">${escapeHtml(emptyLabel)}</p>`;
-  }
 
-  return `
-    <ul class="settings-list">
-      ${names.map((name) => `<li><code>${escapeHtml(name)}</code></li>`).join('')}
-    </ul>`;
-}
 
 export function renderConfigPage(data: ConfigPageData): string {
   const {
@@ -120,12 +81,8 @@ export function renderConfigPage(data: ConfigPageData): string {
     league,
     environment,
     provider,
-    modelRouting,
-    charters,
-    skills,
     envStatus,
     modelPolicyError,
-    runtimePaths,
     dashboardAuth,
     services,
     memoryStatus,
@@ -135,9 +92,9 @@ export function renderConfigPage(data: ConfigPageData): string {
     <div class="settings-page">
       <section class="settings-hero detail-section">
         <div>
-          <p class="settings-eyebrow">Admin</p>
-          <h1>⚙️ Runtime Settings</h1>
-          <p class="page-subtitle">Current runtime wiring for ${escapeHtml(labName)}. Use this page for provider visibility, runtime paths, auth posture, and maintenance actions.</p>
+          <p class="settings-eyebrow">Workspace</p>
+          <h1>Settings</h1>
+          <p class="page-subtitle">Current runtime wiring for ${escapeHtml(labName)}. Review provider routing, auth posture, and maintenance without leaving the live desk.</p>
         </div>
         <div class="settings-hero-meta">
           <span class="badge badge-team">${escapeHtml(league.toUpperCase())}</span>
@@ -155,7 +112,6 @@ export function renderConfigPage(data: ConfigPageData): string {
             <div><dt>Registered providers</dt><dd>${provider.registeredProviders.length > 0 ? provider.registeredProviders.map((item) => `<span class="badge ${item.default ? 'badge-stage badge-stage-1' : 'badge-stage'}">${escapeHtml(item.id)}</span>`).join(' ') : '<span class="muted">No providers registered</span>'}</dd></div>
           </dl>
           ${modelPolicyError ? `<div class="settings-callout settings-callout-warning">${escapeHtml(modelPolicyError)}</div>` : ''}
-          ${renderRoutingTable(modelRouting)}
         </section>
 
         <section class="detail-section settings-panel">
@@ -191,18 +147,6 @@ export function renderConfigPage(data: ConfigPageData): string {
         </section>
 
         <section class="detail-section settings-panel">
-          <h2>Runtime Paths</h2>
-          <dl class="settings-kv settings-kv-paths">
-            ${runtimePaths.map((item) => `
-              <div>
-                <dt>${escapeHtml(item.label)}</dt>
-                <dd><code>${escapeHtml(item.value)}</code></dd>
-              </div>
-            `).join('')}
-          </dl>
-        </section>
-
-        <section class="detail-section settings-panel">
           <h2>Dashboard Access</h2>
           <dl class="settings-kv">
             <div><dt>Auth mode</dt><dd>${escapeHtml(dashboardAuth.mode)}</dd></div>
@@ -213,20 +157,6 @@ export function renderConfigPage(data: ConfigPageData): string {
           </dl>
         </section>
 
-        <section class="detail-section settings-panel">
-          <h2>Prompt Inventory</h2>
-          <p class="muted">Charter and skill files still live in the runtime data directory even though their dedicated dashboard browsers were removed.</p>
-          <div class="settings-inventory-grid">
-            <div>
-              <h3>Charters <span class="badge badge-team">${charters.length}</span></h3>
-              ${renderNameList(charters, 'No charters found.')}
-            </div>
-            <div>
-              <h3>Skills <span class="badge badge-depth">${skills.length}</span></h3>
-              ${renderNameList(skills, 'No skills found.')}
-            </div>
-          </div>
-        </section>
       </div>
 
       <section class="detail-section settings-panel">

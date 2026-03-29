@@ -14,8 +14,17 @@ import type { LLMProvider, ChatRequest, ChatResponse, ProviderMetadata } from '.
 
 interface LMStudioChoice {
   index: number;
-  message: { role: string; content: string | null };
+  message: { role: string; content: string | null; tool_calls?: LMStudioToolCall[] };
   finish_reason: string | null;
+}
+
+interface LMStudioToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
 }
 
 interface LMStudioResponse {
@@ -52,16 +61,71 @@ export interface LMStudioProviderOptions {
 
 const DEFAULT_BASE_URL = 'http://localhost:1234/v1';
 const DEFAULT_MODEL = 'qwen-35';
-const LMSTUDIO_JSON_RESPONSE_FORMAT = {
-  type: 'json_schema',
-  json_schema: {
-    name: 'structured_output',
-    schema: {
-      type: 'object',
-      additionalProperties: true,
+function buildJsonResponseFormat(schema?: Record<string, unknown>): Record<string, unknown> {
+  return {
+    type: 'json_schema',
+    json_schema: {
+      name: 'structured_output',
+      schema: schema ?? {
+        type: 'object',
+        additionalProperties: true,
+      },
     },
-  },
-} as const;
+  };
+}
+
+function parseToolCallArguments(raw: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function serializeNativeToolCall(toolCall: LMStudioToolCall): string {
+  return JSON.stringify({
+    type: 'tool_call',
+    toolName: toolCall.function.name,
+    toolCallId: toolCall.id,
+    args: parseToolCallArguments(toolCall.function.arguments),
+  });
+}
+
+function stripStructuredDecorators(raw: string): string {
+  let normalized = raw.trim().replace(/^\uFEFF/, '').trim();
+  normalized = normalized.replace(/<(think|thinking|reasoning)>([\s\S]*?)<\/\1>/gi, '').trim();
+  const orphanedThinkClose = normalized.indexOf('</think>');
+  if (orphanedThinkClose >= 0) {
+    normalized = normalized.slice(orphanedThinkClose + '</think>'.length).trim();
+  }
+  const fenced = normalized.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) {
+    return fenced[1].trim();
+  }
+  return normalized;
+}
+
+function looksLikeJsonObject(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.startsWith('{') || trimmed.startsWith('[');
+}
+
+function normalizeStructuredFinalContent(content: string, request: ChatRequest): string {
+  if (request.responseFormat !== 'json' || !request.tools || request.tools.length === 0) {
+    return content;
+  }
+  const normalized = stripStructuredDecorators(content);
+  if (looksLikeJsonObject(normalized)) {
+    return normalized;
+  }
+  return JSON.stringify({
+    type: 'final',
+    content: normalized,
+  });
+}
 
 export class LMStudioProvider implements LLMProvider {
   readonly id = 'lmstudio';
@@ -127,7 +191,10 @@ export class LMStudioProvider implements LLMProvider {
 
     const messages = request.messages.map((m) => ({
       role: m.role,
-      content: m.content,
+      content: m.role === 'assistant' && m.tool_calls && m.content.length === 0 ? null : m.content,
+      ...('tool_calls' in m && Array.isArray(m.tool_calls) ? { tool_calls: m.tool_calls } : {}),
+      ...('tool_call_id' in m ? { tool_call_id: m.tool_call_id } : {}),
+      ...('name' in m && typeof m.name === 'string' ? { name: m.name } : {}),
     }));
 
     const body: Record<string, unknown> = {
@@ -140,8 +207,11 @@ export class LMStudioProvider implements LLMProvider {
       body['max_tokens'] = request.maxTokens;
     }
 
-    if (request.responseFormat === 'json') {
-      body['response_format'] = LMSTUDIO_JSON_RESPONSE_FORMAT;
+    if (request.responseFormat === 'json' && (!request.tools || request.tools.length === 0)) {
+      body['response_format'] = buildJsonResponseFormat(request.responseSchema);
+    }
+    if (request.tools && request.tools.length > 0) {
+      body['tools'] = request.tools;
     }
 
     const providerMetadata: ProviderMetadata = {
@@ -191,9 +261,12 @@ export class LMStudioProvider implements LLMProvider {
       );
     }
     const choice = data.choices[0];
+    const nativeToolCall = choice?.message?.tool_calls?.[0];
 
     return {
-      content: choice?.message?.content ?? '',
+      content: nativeToolCall
+        ? serializeNativeToolCall(nativeToolCall)
+        : normalizeStructuredFinalContent(choice?.message?.content ?? '', request),
       model: data.model,
       provider: this.id,
       usage: data.usage

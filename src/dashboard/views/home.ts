@@ -28,42 +28,35 @@ export type PipelineSummary = Record<number, { name: string; count: number }>;
 
 export function renderHome(data: HomeData): string {
   const { config, readyArticles, recentIdeas, published, pipelineSummary, teams = [] } = data;
-  const totalPipeline = Object.values(pipelineSummary).reduce((sum, stage) => sum + stage.count, 0);
 
   const content = `
     <div class="dashboard-home">
       <section class="section section-hero dashboard-hero">
         <div>
-          <p class="section-kicker">Editorial control room</p>
+          <p class="section-kicker">Editorial desk</p>
           <h1>Dashboard</h1>
-          <p class="page-subtitle">Track every story from fresh idea to publish-ready draft with clearer hierarchy, faster scanning, and better narrow-screen ergonomics.</p>
-        </div>
-        <div class="dashboard-hero-stats">
-          <div class="hero-stat">
-            <span class="hero-stat-value">${readyArticles.length}</span>
-            <span class="hero-stat-label">ready to publish</span>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-value">${recentIdeas.length}</span>
-            <span class="hero-stat-label">recent ideas</span>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-value">${published.length}</span>
-            <span class="hero-stat-label">recently published</span>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-value">${totalPipeline}</span>
-            <span class="hero-stat-label">articles in flight</span>
-          </div>
+          <p class="page-subtitle">From first pitch to the final publish pass.</p>
         </div>
       </section>
 
       <div class="dashboard-grid">
+      <section class="section section-ideas" id="recent-ideas">
+        <div class="section-heading">
+          <p class="section-kicker">Intake</p>
+          <h2>Recent ideas</h2>
+          <p class="section-copy">Keep fresh pitches visible while the queue grows, with a direct path into the next draft.</p>
+        </div>
+        ${renderIdeaForm()}
+        <div id="ideas-list" hx-get="/htmx/recent-ideas" hx-trigger="refreshIdeas from:body, sse:article_created" hx-swap="innerHTML">
+          ${renderRecentIdeas(recentIdeas)}
+        </div>
+      </section>
+
       <section class="section section-filters" id="pipeline-filters">
         <div class="section-heading">
           <p class="section-kicker">Find work fast</p>
-          <h2>🔍 Search &amp; Filter</h2>
-          <p class="section-copy">Search across current work, then narrow by stage, team, depth, or archive status without leaving the page.</p>
+          <h2>Search the queue</h2>
+          <p class="section-copy">Search the active desk, then narrow by stage, team, depth, or archive status without breaking focus.</p>
         </div>
         <div class="filter-bar">
           <input type="search" name="search" placeholder="Search articles…" class="filter-input"
@@ -107,8 +100,8 @@ export function renderHome(data: HomeData): string {
       <section class="section section-ready" id="ready-to-publish">
         <div class="section-heading">
           <p class="section-kicker">Priority queue</p>
-          <h2>🚀 Ready to Publish</h2>
-          <p class="section-copy">Stage 7 stories should be easy to spot, easy to review, and easy to move into the publish workflow.</p>
+          <h2>Ready to publish</h2>
+          <p class="section-copy">Stage 7 stories stay front and center so the final review and publish handoff feel quick and deliberate.</p>
         </div>
         <div hx-get="/htmx/ready-to-publish" hx-trigger="refreshPublish from:body, sse:article_published" hx-swap="innerHTML">
           ${renderReadyToPublish(readyArticles)}
@@ -118,31 +111,19 @@ export function renderHome(data: HomeData): string {
       <section class="section section-pipeline" id="pipeline">
         <div class="section-heading">
           <p class="section-kicker">Flow overview</p>
-          <h2>📊 Pipeline</h2>
-          <p class="section-copy">Use the stage bars to inspect bottlenecks, balance the queue, and jump into the articles behind each count.</p>
+          <h2>Pipeline</h2>
+          <p class="section-copy">Scan bottlenecks, balance the desk, and jump directly into the work behind each stage.</p>
         </div>
         <div hx-get="/htmx/pipeline-summary" hx-trigger="refreshPipeline from:body, sse:stage_changed" hx-swap="innerHTML">
           ${renderPipelineSummary(pipelineSummary)}
         </div>
       </section>
 
-      <section class="section section-ideas" id="recent-ideas">
-        <div class="section-heading">
-          <p class="section-kicker">Intake</p>
-          <h2>💡 Recent Ideas</h2>
-          <p class="section-copy">Start new work from the dashboard, then keep the newest prompts visible while the queue grows.</p>
-        </div>
-        ${renderIdeaForm()}
-        <div id="ideas-list" hx-get="/htmx/recent-ideas" hx-trigger="refreshIdeas from:body, sse:article_created" hx-swap="innerHTML">
-          ${renderRecentIdeas(recentIdeas)}
-        </div>
-      </section>
-
       <section class="section section-published" id="published">
         <div class="section-heading">
           <p class="section-kicker">Latest output</p>
-          <h2>✅ Recently Published</h2>
-          <p class="section-copy">Recent wins stay visible with clear timestamps and direct links back to the published story.</p>
+          <h2>Recently published</h2>
+          <p class="section-copy">Recent stories stay close at hand with clean timestamps and direct links back to the live post.</p>
         </div>
         <div hx-get="/htmx/published" hx-trigger="refreshPublished from:body, sse:article_published" hx-swap="innerHTML">
           ${renderPublished(published)}
@@ -186,10 +167,6 @@ export function renderPipelineSummary(summary: PipelineSummary): string {
   const total = Object.values(summary).reduce((sum, s) => sum + s.count, 0);
   return `
     <div class="pipeline-overview">
-      <div class="pipeline-total">
-        <span class="total-count">${total}</span>
-        <span class="total-label">articles in pipeline</span>
-      </div>
       <div class="pipeline-stages">
         ${VALID_STAGES.map(stage => {
           const s = summary[stage];
@@ -227,7 +204,7 @@ export function renderRecentIdeas(articles: Article[]): string {
           <span class="meta-date">Created ${formatDate(a.created_at)}</span>
         </div>
         <div class="card-actions action-group">
-          <a href="/articles/${escapeHtml(a.id)}" class="btn btn-secondary">Draft Prompt ▶</a>
+          <a href="/articles/${escapeHtml(a.id)}" class="btn btn-secondary">Open article</a>
         </div>
       </div>
     `).join('')}
@@ -285,8 +262,8 @@ export function renderStageArticles(articles: Article[], stage: Stage): string {
 function renderIdeaForm(): string {
   return `
     <div class="idea-quick-actions action-group">
-      <a href="/ideas/new" class="btn btn-primary btn-lg">✨ New Article Idea</a>
-      <span class="idea-hint">Submit a prompt and let the pipeline do the rest</span>
+      <a href="/ideas/new" class="btn btn-primary btn-lg">Start a new idea</a>
+      <span class="idea-hint">Open the full intake flow to shape a pitch, assign teams, and set the depth.</span>
     </div>`;
 }
 

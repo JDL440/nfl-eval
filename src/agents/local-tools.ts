@@ -457,18 +457,74 @@ export async function listAvailableTools(config: ToolCallingConfig): Promise<Too
   return Array.from(deduped.values()).sort((left, right) => left.manifest.name.localeCompare(right.manifest.name));
 }
 
+function describeSchemaProperty(schema: ToolSchemaProperty): string {
+  const bits: string[] = [schema.type];
+  if (schema.enum && schema.enum.length > 0) {
+    bits.push(`enum=${schema.enum.join('|')}`);
+  }
+  if (typeof schema.minimum === 'number') {
+    bits.push(`min=${schema.minimum}`);
+  }
+  if (typeof schema.maximum === 'number') {
+    bits.push(`max=${schema.maximum}`);
+  }
+  if (schema.description) {
+    bits.push(schema.description);
+  }
+  return bits.join(', ');
+}
+
+function summarizeToolArgs(parameters: ToolInputSchema): string {
+  const required = new Set(parameters.required ?? []);
+  const props = Object.entries(parameters.properties).map(([key, schema]) => {
+    const suffix = required.has(key) ? 'required' : 'optional';
+    return `${key}: ${describeSchemaProperty(schema)} (${suffix})`;
+  });
+  return props.join('; ');
+}
+
+function buildValidationHint(tool: ToolDefinition): string {
+  const required = new Set(tool.manifest.parameters.required ?? []);
+  const exampleShape = Object.entries(tool.manifest.parameters.properties)
+    .filter(([key]) => required.has(key))
+    .map(([key, schema]) => {
+      let exampleValue = '<value>';
+      switch (schema.type) {
+        case 'string':
+          exampleValue = schema.description?.match(/\b[A-Z]{2,4}\b|\b[A-Z][a-z]{2,}\b/)?.[0]
+            ? `"${schema.description.match(/\b[A-Z]{2,4}\b|\b[A-Z][a-z]{2,}\b/)![0]}"`
+            : '"value"';
+          break;
+        case 'integer':
+          exampleValue = String(schema.minimum ?? 2025);
+          break;
+        case 'number':
+          exampleValue = String(schema.minimum ?? 0);
+          break;
+        case 'boolean':
+          exampleValue = 'true';
+          break;
+        case 'array':
+          exampleValue = '[]';
+          break;
+        case 'object':
+          exampleValue = '{}';
+          break;
+      }
+      return `"${key}": ${exampleValue}`;
+    });
+  return `Arguments must be like { ${exampleShape.join(', ')} }`;
+}
+
 export function buildToolCatalogPrompt(tools: ToolDefinition[]): string {
   if (tools.length === 0) return '';
   const lines = tools.map((tool) => {
     const required = tool.manifest.parameters.required ?? [];
-    const props = Object.entries(tool.manifest.parameters.properties).map(([key, schema]) => {
-      const bits: string[] = [schema.type];
-      if (schema.enum && schema.enum.length > 0) {
-        bits.push(`enum=${schema.enum.join('|')}`);
-      }
-      return `${key}:${bits.join(',')}`;
-    });
-    return `- ${tool.manifest.name}: ${tool.manifest.description} | args={${props.join('; ')}} | required=[${required.join(', ')}]`;
+    return [
+      `- ${tool.manifest.name}: ${tool.manifest.description}`,
+      `  args: ${summarizeToolArgs(tool.manifest.parameters)}`,
+      `  required: [${required.join(', ')}]`,
+    ].join('\n');
   });
   return [
     'Available tools:',
@@ -501,9 +557,12 @@ export async function executeToolCall(
     if (failures.length > 0) {
       return {
         text: JSON.stringify({
-          error: 'Tool arguments failed validation',
+          error: 'validation',
           tool: toolOrName.manifest.name,
           issues: failures,
+          hint: buildValidationHint(toolOrName),
+          expectedArgs: summarizeToolArgs(toolOrName.manifest.parameters),
+          required: toolOrName.manifest.parameters.required ?? [],
         }, null, 2),
         isError: true,
       };

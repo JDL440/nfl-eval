@@ -269,6 +269,8 @@ describe('Publish Workflow', () => {
 
       const html = await res.text();
       expect(html).toContain('Publish Preview Test');
+      expect(html).toContain('shared-mobile-header');
+      expect(html).toContain('mobile-detail-layout publish-layout');
       expect(html).toContain('Test Article');
       expect(html).toContain('Some content here');
       expect(html).toContain('Published Layout Preview');

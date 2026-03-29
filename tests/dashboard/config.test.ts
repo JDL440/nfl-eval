@@ -113,16 +113,19 @@ describe('Config Viewer Page', () => {
   it('shows the redesigned runtime settings overview', async () => {
     const res = await app.request('/config');
     const html = await res.text();
-    expect(html).toContain('Runtime Settings');
+    expect(html).toContain('Settings');
     expect(html).toContain('Current runtime wiring for NFL Lab');
+    expect(html).toContain('Workspace');
+    expect(html).toContain('without leaving the live desk');
     expect(html).toContain('Active provider');
     expect(html).toContain('Mock');
-    expect(html).toContain('Prompt Inventory');
-    expect(html).toContain('fact-checking');
-    expect(html).toContain('sea');
+    expect(html).not.toContain('Prompt Inventory');
+    expect(html).not.toContain('fact-checking');
+    expect(html).not.toContain('Runtime Paths');
+    expect(html).not.toContain('Stage Key');
   });
 
-  it('page contains maintenance and prompt inventory sections', async () => {
+  it('page contains maintenance section without runtime paths or prompt inventory', async () => {
     const res = await app.request('/config');
     const html = await res.text();
     expect(html).toContain('Services &amp; Maintenance');
@@ -137,9 +140,8 @@ describe('Config Viewer Page', () => {
     expect(html).not.toContain('href="/runs"');
     expect(html).not.toContain('Context preset:');
     expect(html).toContain('id="knowledge-refresh-result"');
-    expect(html).toContain('Prompt Inventory');
-    expect(html).toContain('fact-checking');
-    expect(html).toContain('sea');
+    expect(html).not.toContain('Prompt Inventory');
+    expect(html).not.toContain('Runtime Paths');
     expect(html).toContain('Dashboard Access');
     expect(html).toContain('config_test_session');
     expect(html).toContain('24 hours');

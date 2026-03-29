@@ -19,7 +19,7 @@ interface ViewportConfig {
 }
 
 const VIEWPORTS: ViewportConfig[] = [
-  { name: 'mobile', width: 375, height: 812 }, // iPhone SE/13
+  { name: 'mobile', width: 430, height: 932 }, // iPhone 14 Pro Max
   { name: 'tablet', width: 768, height: 1024 }, // iPad
   { name: 'desktop', width: 1280, height: 900 },
 ];
@@ -126,6 +126,44 @@ async function reviewPage(
 
   // Check header nav stacking on mobile
   if (viewport.name === 'mobile') {
+    const navToggleIssue = await page.evaluate(async () => {
+      const navToggle = document.querySelector<HTMLButtonElement>('#nav-toggle');
+      const nav = document.querySelector<HTMLElement>('#primary-nav');
+      if (!navToggle || !nav) return null;
+
+      navToggle.click();
+      await new Promise(resolve => window.setTimeout(resolve, 50));
+
+      const navRect = nav.getBoundingClientRect();
+      const toggleRect = navToggle.getBoundingClientRect();
+      const isOpen = nav.classList.contains('is-open');
+      const ariaExpanded = navToggle.getAttribute('aria-expanded');
+
+      if (!isOpen || ariaExpanded !== 'true') {
+        return 'Mobile nav toggle did not open the shared navigation menu';
+      }
+
+      if (navRect.top + 4 < toggleRect.bottom) {
+        return 'Mobile nav overlaps the shell controls instead of dropping below them';
+      }
+
+      if (navRect.right > window.innerWidth + 5) {
+        return 'Opened mobile nav extends beyond the viewport';
+      }
+
+      navToggle.click();
+      return null;
+    });
+
+    if (navToggleIssue) {
+      findings.push({
+        page: pageName,
+        viewport: viewport.name,
+        issue: navToggleIssue,
+        severity: 'major',
+      });
+    }
+
     const headerIssues = await page.evaluate(() => {
       const header = document.querySelector('.site-header');
       const nav = document.querySelector('.header-nav');

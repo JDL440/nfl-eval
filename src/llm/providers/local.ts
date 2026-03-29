@@ -14,8 +14,10 @@ const DEFAULT_BASE_URL = 'http://localhost:11434';
 // ---------------------------------------------------------------------------
 
 interface OllamaChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  tool_call_id?: string;
+  name?: string;
 }
 
 interface OllamaChoice {
@@ -65,6 +67,8 @@ export class LocalProvider implements LLMProvider {
     const messages: OllamaChatMessage[] = request.messages.map((m) => ({
       role: m.role,
       content: m.content,
+      ...('tool_call_id' in m ? { tool_call_id: m.tool_call_id } : {}),
+      ...('name' in m && typeof m.name === 'string' ? { name: m.name } : {}),
     }));
 
     const body: Record<string, unknown> = {

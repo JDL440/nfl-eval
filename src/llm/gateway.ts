@@ -5,17 +5,47 @@
  * which model (and therefore which provider) handles each request.
  */
 
-import { type ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 import { type ModelPolicy, type ResolvedModel } from './model-policy.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+export interface ChatToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
 }
+
+export interface ChatToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
+}
+
+export type ChatMessage =
+  | {
+      role: 'system' | 'user';
+      content: string;
+    }
+  | {
+      role: 'assistant';
+      content: string;
+      tool_calls?: ChatToolCall[];
+    }
+  | {
+      role: 'tool';
+      content: string;
+      tool_call_id: string;
+      name?: string;
+    };
 
 export interface ProviderContext {
   articleId?: string | null;
@@ -37,6 +67,7 @@ export interface ProviderMetadata {
 
 export interface ChatRequest {
   messages: ChatMessage[];
+  tools?: ChatToolDefinition[];
   provider?: string;
   model?: string;
   temperature?: number;
@@ -45,6 +76,7 @@ export interface ChatRequest {
   depthLevel?: number;
   taskFamily?: string;
   responseFormat?: 'text' | 'json';
+  responseSchema?: Record<string, unknown>;
   disallowedProviderIds?: string[];
   providerContext?: ProviderContext;
 }
@@ -316,7 +348,11 @@ export class LLMGateway {
     request: ChatRequest,
     schema: ZodType<T>,
   ): Promise<{ data: T; response: ChatResponse }> {
-    const response = await this.chat({ ...request, responseFormat: 'json' });
+    const response = await this.chat({
+      ...request,
+      responseFormat: 'json',
+      responseSchema: z.toJSONSchema(schema) as Record<string, unknown>,
+    });
     const raw = response.content;
     const parsed = parseStructuredJson(raw);
 

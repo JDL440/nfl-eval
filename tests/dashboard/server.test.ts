@@ -244,12 +244,19 @@ describe('Dashboard Server', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('viewport-fit=cover');
       expect(html).toContain('NFL Lab');
+      expect(html).toContain('shared-mobile-header');
+      expect(html).toContain('header-inner');
+      expect(html).toContain('shared-mobile-nav');
       expect(html).toContain('href="/config"');
       expect(html).toContain('href="/ideas/new"');
-      expect(html).toContain('Ready to Publish');
+      expect(html.indexOf('>Intake<')).toBeLessThan(html.indexOf('>Ready to publish<'));
+      expect(html).toContain('Ready to publish');
       expect(html).toContain('Pipeline');
-      expect(html).toContain('Recent Ideas');
+      expect(html).toContain('Recent ideas');
+      expect(html).not.toContain('pipeline-total');
+      expect(html).not.toContain('total-count');
       expect(html).not.toContain('href="/agents"');
       expect(html).not.toContain('href="/memory"');
       expect(html).not.toContain('href="/runs"');
@@ -285,6 +292,7 @@ describe('Dashboard Server', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Detail Test Article');
+      expect(html).toContain('mobile-detail-layout');
       expect(html).toContain('Stage 1');
       expect(html).toContain('Token Usage');
       expect(html).toContain('/articles/detail-test/traces');
@@ -453,7 +461,9 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/detail-trace-timeline/traces');
       const html = await res.text();
       expect(res.status).toBe(200);
-      expect(html).toContain('LLM Trace Timeline');
+      expect(html).toContain('Trace Timeline');
+      expect(html).toContain('shared-mobile-header');
+      expect(html).toContain('trace-page-header');
       expect(html).toContain('Idea output');
       expect(html).toContain('Prompt output');
       expect(html).toContain('ideaGeneration');
@@ -471,6 +481,8 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Preview Markdown');
       expect(html).toContain('trace-preview-btn');
       expect(html).toContain('artifact-rendered');
+      expect(html).toContain('data-trace-pane="raw" style="display:none"');
+      expect(html).toContain('data-trace-pane="preview"');
     });
 
     it('standalone trace page renders a failed unattached trace', async () => {
@@ -511,7 +523,7 @@ describe('Dashboard Server', () => {
       const res = await app.request('/traces/' + traceId);
       const html = await res.text();
       expect(res.status).toBe(200);
-      expect(html).toContain('LLM Trace');
+      expect(html).toContain('Trace detail');
       expect(html).toContain('New Idea');
       expect(html).toContain('Tool calls used: 7 / 50');
       expect(html).toContain('query_team_efficiency');
@@ -771,6 +783,7 @@ describe('Dashboard Server', () => {
 
       const configRes = await refreshApp.request('/config');
       const configHtml = await configRes.text();
+      expect(configHtml).toContain('responsive-table');
       expect(configHtml).toContain('/api/agents/refresh-all');
       expect(configHtml).not.toContain('href="/agents"');
       expect(configHtml).not.toContain('href="/memory"');

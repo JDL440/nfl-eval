@@ -100,7 +100,7 @@ describe('Live Server E2E', () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain('NFL Lab');
-    expect(html).toContain('Ready to Publish');
+    expect(html).toContain('Ready to publish');
   });
 
   // ── Idea creation: JSON API ─────────────────────────────────────────────
