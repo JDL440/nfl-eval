@@ -10,6 +10,7 @@
 - Current live tool-loop compatibility is blocked for that Qwen model because `src/llm/gateway.ts` forces `responseFormat: 'json'`, `src/llm/providers/lmstudio.ts` sends `response_format: { type: 'json_object' }`, and the live endpoint rejected that shape in favor of `json_schema` or `text`.
 - DevOps verification on 2026-03-28: targeted LM Studio + tool-loop tests passed via `npm run test -- tests/llm/provider-lmstudio.test.ts tests/agents/runner.test.ts tests/agents/local-tools.test.ts`, and `npm run v2:build` passed cleanly.
 - Local LM Studio was reachable at `http://localhost:1234/v1/models` and returned a live model list, but this worktree shell had no `LLM_PROVIDER`, `LMSTUDIO_URL`, or `LMSTUDIO_MODEL` set, so dashboard startup would not auto-register LM Studio without an explicit env opt-in (`src/dashboard/server.ts`).
+- DevOps branch sync on 2026-03-29: `feature/agenteval` was clean but 8 commits behind `origin/main`; `git fetch origin main` followed by `git merge --no-ff --no-edit origin/main` updated the worktree branch without conflicts or discarded changes.
 
 ## 2026-03-28: LM Studio eval follow-up
 
