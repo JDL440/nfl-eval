@@ -1,5 +1,9 @@
 # Active Decisions
 
+- **Dashboard cleanup audit final** (2026-03-29T18:42:53Z): Treat `/config` (Settings) as the only remaining dashboard admin surface. Keep `/articles/:id/traces`, `/traces/:id`, and `POST /api/agents/refresh-all`. Remove/fail closed any leftover references implying retired `/agents`, `/memory`, `/runs`, `/runs/:id`, or article-detail stage-run/timeline chrome still exist. Trace observability lives on trace pages; maintenance lives on Settings; retired admin browsers do not linger through copy, tests, or dead code.
+- **Dashboard article cleanup complete** (2026-03-29T11:38:22Z by Code): Removed pipeline-activity bar, stageRuns data, stageRunErrorHtml from article detail. Cleaned dead CSS. All view/test/import artifacts confirmed already removed.
+- **Dashboard surface retirement** (2026-03-29): Retire `/agents`, `/memory`, and `/runs` surfaces instead of keeping placeholder pages. Preserve trace observability via `/articles/:id/traces`, `/traces/:id`. Preserve operator maintenance through `/config` + `POST /api/agents/refresh-all`. Delete obsolete view modules and route tests; keep artifact trace access via simple Trace button.
+- **UX settings copy guidance** (2026-03-29): Call `/config` "Settings" in operator-facing copy to match nav label. Remove references to retired context-config UI. Describe memory honestly as legacy storage for refresh/migration maintenance, not as active user-facing feature.
 - Dashboard cleanup remains the current direction: `/config` is the single admin surface; legacy `/agents`, `/memory`, `/runs`, and article-side advanced/context-config/stage-runs UI are removed.
 - Trace observability stays on `/articles/:id/traces` and `/traces/:id`, and `POST /api/agents/refresh-all` stays available.
 - Memory storage/schema remain intact, but runtime memory injection stays disabled pending redesign.
