@@ -23,6 +23,15 @@
 - 2026-03-29 — Shared mobile shell fixes should land in `src\dashboard\public\styles.css` + `src\dashboard\views\layout.ts` first: add `viewport-fit=cover`, safe-area CSS variables, and make the mobile nav drop below the control row with grid spanning instead of relying on nowrap flex behavior.
 - 2026-03-29 — High-value mobile regression coverage is route-plus-system focused: assert shared shell hooks on `/`, `/articles/:id`, `/articles/:id/publish`, `/articles/:id/traces`, and `/config`, while `tests\dashboard\wave2.test.ts` protects safe-area/nav CSS contracts and `tests\ux-playwright-review.ts` checks the hamburger can open without overlap.
 
+## Cross-Agent Context Updates (2026-03-29T20:19:14Z)
+
+### From Scribe — Dashboard Mobile Shell Review
+- **Architecture root causes identified:** Breakpoint mismatch (JS 768px vs CSS 768px/767px dual queries), missing nav z-index/backdrop, dual conflicting media queries, missing .action-stack primitive, table overflow-only strategy.
+- **Minimal file set for fix (4 phases, 10 files):** Phase 1: layout.ts + styles.css (breakpoint unification, z-index guard); Phase 2: styles.css (add .action-stack, .responsive-table card mode); Phase 3: article.ts, publish.ts, config.ts, home.ts (apply primitives); Phase 4: wave2.test.ts, server.test.ts, publish.test.ts (test coverage).
+- **Shell audit confirmed baseline is healthy:** Shared routes (/, /ideas/new, /config, /login) are working correctly at tested viewports. Do not reopen generic shell bug work.
+- **Focus on content-heavy routes:** Prioritize article artifact surfaces (.artifact-rendered table/pre), publish sidebar density (.publish-workflow-actions), traces readability (.trace-card) — these were not live-testable in current pass.
+- **Test regression protection:** 9 critical gaps including hamburger toggle visibility at viewport boundaries, nav close behavior, responsive table mobile transformation, width constraints, breakpoint boundary consistency. Prioritize 3 critical tests.
+
 ## Cross-Agent Context Updates (2026-03-29T20-08-26Z)
 
 ### From Orchestration (Scribe)

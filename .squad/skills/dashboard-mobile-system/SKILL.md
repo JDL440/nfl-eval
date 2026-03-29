@@ -64,4 +64,21 @@ Treat mobile dashboard work in this repo as a system task: extend the shared she
 - Keep selector namespaces distinct when a chip-picker grid and a content-card grid need different responsive behavior; for example, `.idea-agent-grid` and `.agents-directory-grid`.
 - When the mobile hamburger/nav is part of the shared shell, regression coverage should protect both markup and behavior: unit tests should assert the layout script toggles `aria-expanded`/`.is-open`, stylesheet tests should assert the nav spans the full mobile row, and viewport review scripts should verify the opened nav sits below the control row and stays inside the viewport.
 
+## Mobile UX Maturity (as of 2026-03-30)
+
+**Foundation (complete):** The dashboard has solid mobile infrastructure from the 2026-03-30 Playwright modernization:
+- `html/body/site-header { overflow-x: hidden }` prevents viewport blowout
+- `.shared-mobile-header`, `.shared-mobile-nav`, `.nav-toggle` with proper aria/keyboard/close-on-click behavior
+- Responsive breakpoints at 767px, 640px, 480px, 420px with grid collapses
+- `.responsive-table` stacks tables as cards on mobile
+- Safe-area awareness: header/footer use `env(safe-area-inset-*)`
+- Button tap targets: `.btn { min-height: 44px; min-width: 44px }`
+
+**Remaining work (design refinement, not foundation fixes):**
+1. **Article content width overflow risk:** `.artifact-rendered` markdown containers need aggressive word-break rules and markdown table overflow handling to prevent long URLs, code identifiers, and wide tables from blowing out the viewport.
+2. **Hamburger/nav interaction polish:** Nav toggle uses text glyph "☰" instead of proper icon; opened nav lacks visual drawer affordance (no backdrop, no elevation, no animation); nav link sizing is too compact for mobile editorial use.
+3. **Premium editorial restyle:** Dashboard reads as "AI app template" instead of "premium editorial product" — needs editorial typography (serif headlines), editorial color system (NFL brand colors), confident visual hierarchy (bold CTAs, larger headlines, breathing room).
+
+**Code-based mobile audits:** When local server setup is not immediately available, prioritize code-based review of `layout.ts`, view modules, and `styles.css` mobile breakpoints. Existing Playwright test infrastructure at `tests/ux-playwright-review.ts` can validate overflow + layout issues without manual browser testing.
+
 
