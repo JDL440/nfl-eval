@@ -8,7 +8,8 @@ Use this when a dashboard/admin surface is being removed or collapsed into anoth
 2. Search routes, HTMX fragments, helpers, CSS classes, and tests for dead references to the removed pages or panels.
 3. Preserve explicitly approved seams (for example trace pages or maintenance-only POST endpoints) and move any remaining operator affordances onto the surviving admin page.
 4. Update tests to assert both sides of the contract: removed routes 404, preserved routes/endpoints still exist.
-5. Update docs to describe deprecation honestly: what still exists in storage/runtime, what is disabled, and where operators now go instead.
+5. Update docs to describe deprecation honestly: what still exists in storage/runtime, what is disabled in live behavior, and where operators now go instead.
+6. Prune dead view-model props or helper fields left behind by the removed surface so TypeScript/data shapes do not keep implying the old UI still exists.
 
 ## Repository examples
 - `src/dashboard/views/layout.ts` keeps only Dashboard, New Idea, and Settings in shared navigation.
