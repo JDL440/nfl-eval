@@ -51,3 +51,4 @@ This aligns LM Studio with all other providers (Copilot, Mock) and allows model 
 - Confirmed the live LM Studio endpoint is reachable and serves `qwen/qwen3.5-35b-a3b`.
 - `response_format: { type: "json_object" }` is rejected by LM Studio; plain chat still returned valid tool-call JSON.
 - Targeted LM Studio/provider and agent tests passed, and `npm run v2:build` succeeded.
+- 2026-03-29 — The v4 idea page intentionally uses the app-managed tool loop (`src\dashboard\server.ts` POST `/api/ideas` -> `src\agents\runner.ts`) so Lead can call read-only idea research tools, but the surface task must explicitly tell the model to wrap the finished idea markdown in the runner envelope `{"type":"final","content":"..."}`. Without that reminder, LM Studio/Qwen can follow the idea template literally and return the article-idea body/schema directly, which then fails `TOOL_LOOP_RESPONSE_SCHEMA` validation at `src\agents\runner.ts`.
