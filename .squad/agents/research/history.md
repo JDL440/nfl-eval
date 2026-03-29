@@ -104,3 +104,5 @@ Memory injection mechanism works flawlessly—memories are correctly injected wh
 
 ### Insight
 System does NOT automatically extract learnings from agent execution. Memory creation is opt-in only. No passive hooks record what agents learned, decided, or found during article production.
+- 2026-03-29 — New spawn batch queued Research to split the app kickoff into actionable slices after branch sync, with outputs intended to hand directly to Code for implementation start.
+

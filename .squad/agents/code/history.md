@@ -19,3 +19,5 @@
 - 2026-03-29 — Final dashboard cleanup audits should check for dead article-detail remnants as well as removed pages: `src\dashboard\views\article.ts` must not reference `stageRuns`, pipeline-activity, or inline run-failure chrome once `/runs` is retired, and `tests\dashboard\server.test.ts` should assert `/agents`, `/memory`, `/runs`, and `/runs/:id` return 404 while trace pages and `POST /api/agents/refresh-all` stay live.
 - 2026-03-29 — Settings copy has to describe deprecation plainly: say legacy memory storage still exists, prompt injection is disabled, the old Memory dashboard stays retired, and refresh-all now lives on `/config`.
 - 2026-03-29T18:42:53Z — Dashboard cleanup audit/fix completed in background; repo files updated and filesystem verified; UX exposure audit confirmed simplified dashboard.
+- 2026-03-29 — New spawn batch queued Code for app implementation kickoff, explicitly downstream of DevOps branch sync and Research plan-splitting so coding starts from a synced branch and agreed slices.
+

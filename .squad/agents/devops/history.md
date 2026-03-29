@@ -17,3 +17,5 @@
 - Treat LM Studio live evaluation as an opt-in local verification path; keep `LLM_PROVIDER=lmstudio` or `LMSTUDIO_URL` explicit.
 - Live `/v1/models` and plain-chat tool-call behavior were confirmed, but `response_format: json_object` failed with LM Studio-specific validation.
 - Targeted verification and `npm run v2:build` both passed.
+- 2026-03-29 — New spawn batch queued DevOps for branch sync in `C:\github\nfl-eval\worktrees\agenteval`; this sync is the prerequisite handoff before plan split and app implementation kickoff proceed.
+
