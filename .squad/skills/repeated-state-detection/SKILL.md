@@ -16,11 +16,12 @@ tools: [typescript, vitest]
 ## Pattern
 
 1. **Fingerprint the state** — Normalize a state signature (e.g., blocker type + IDs) into a comparable form.
-2. **Compare consecutive instances** — Look at the immediately previous and current state; skip stale/old history.
-3. **Trigger escalation on match** — When signatures are identical, create an escalation artifact (e.g., `lead-review.md`) and transition to a holding state.
-4. **Keep holding state minimal** — Use a status flag (e.g., `needs_lead_review`) rather than adding a new pipeline stage.
-5. **Define post-escalation outcomes** — Document what happens after human/external review: rework, wait, abandon.
-6. **Add focused tests** — Prove the detection logic fires and the old loop path does not.
+2. **Persist the signature inputs once** — Store the normalized ingredients in durable workflow history (for example, blocker type + blocker IDs on revision records) so routing, UI, and tests reuse the same source of truth.
+3. **Compare consecutive instances** — Look at the immediately previous and current state; skip stale/old history.
+4. **Trigger escalation on match** — When signatures are identical, create an escalation artifact (e.g., `lead-review.md`) and transition to a holding state.
+5. **Keep holding state minimal** — Use a status flag (e.g., `needs_lead_review`) rather than adding a new pipeline stage.
+6. **Define post-escalation outcomes** — Document what happens after human/external review: rework, wait, abandon.
+7. **Add focused tests** — Prove the detection logic fires and the old loop path does not.
 
 ## NFL Lab example
 
@@ -37,6 +38,7 @@ When Editor returns a `REVISE` with the same blocker signature as the immediatel
 
 **Implementation seams:**
 - Detection helpers: `src/pipeline/conversation.ts` — normalize `blocker_type` + `blocker_ids`, then compare only the last two editor `REVISE` summaries
+- Persistence seam: `src/pipeline/conversation.ts` + `src/db/repository.ts` — keep blocker metadata on `revision_summaries` rows so dashboard/history readers do not parse artifacts ad hoc
 - Escalation seam: `src/pipeline/actions.ts` — `maybeEscalateRepeatedRevisionBlocker()` writes `lead-review.md` and flips the article to `needs_lead_review`
 - Visibility seam: `src/dashboard/views/article.ts` + `src/db/repository.ts` — treat `lead-review.md` as a first-class Stage 6 artifact and clear it automatically on regressions below Stage 6
 - Tests: `tests/pipeline/actions.test.ts` + `tests/pipeline/conversation.test.ts` — prove the exact-match detection fires and the old regress/force-approve path does not
