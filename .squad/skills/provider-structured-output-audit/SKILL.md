@@ -29,8 +29,9 @@ Audit changes where a shared gateway or runner asks for machine-readable output,
    - provider request-shaping assertions
    - gateway parse/schema-validation assertions
    - caller/runner loop assertions proving the structured output still drives control flow end to end
-6. Include at least one provider-realistic failure fixture (invalid JSON, schema mismatch, reasoning prefix, wrong structured mode) so the regression is not hidden by happy-path mocks.
-7. If the provider advertises broad `supportsModel()` coverage or can be the default route, trace the non-explicit path too: verify gateway policy aliases are either translated to the provider's loaded/runtime model or intentionally suppressed, rather than assuming the provider-only request-shaping test proves the live path.
+6. Include at least one provider-realistic failure fixture (invalid JSON, schema mismatch, think-tag/code-fence wrappers, reasoning prefix, wrong structured mode) so the regression is not hidden by happy-path mocks.
+7. When the backend can emit reasoning text around the payload, add a shared parser recovery step that strips wrapper tags/fences and extracts the first balanced JSON object before schema validation; keep the recovery narrow so non-JSON prose still fails closed.
+8. If the provider advertises broad `supportsModel()` coverage or can be the default route, trace the non-explicit path too: verify gateway policy aliases are either translated to the provider's loaded/runtime model or intentionally suppressed, rather than assuming the provider-only request-shaping test proves the live path.
 
 ## Review Checklist
 
@@ -47,6 +48,7 @@ Audit changes where a shared gateway or runner asks for machine-readable output,
 - `worktrees\v4\src\llm\gateway.ts` uses `chatStructuredWithResponse()` to force `responseFormat: 'json'`.
 - `worktrees\v4\src\agents\runner.ts` expects `TOOL_LOOP_RESPONSE_SCHEMA` with `type: 'tool_call' | 'final'`.
 - `worktrees\v4\src\llm\providers\lmstudio.ts` is the adapter seam where LM Studio request shaping must match what Qwen actually honors.
+- `worktrees\v4\src\llm\gateway.ts` can safely recover JSON when Qwen wraps the object in `<think>...</think>`, code fences, or surrounding prose, but must still fail if no balanced JSON object remains.
 - `worktrees\v4\tests\llm\provider-lmstudio.test.ts`, `worktrees\v4\tests\llm\gateway.test.ts`, and `worktrees\v4\tests\agents\runner.test.ts` together should prove or disprove a real fix.
 
 ## Boundaries

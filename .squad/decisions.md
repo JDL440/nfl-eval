@@ -1708,3 +1708,81 @@ In this repo today, fully enabling LM Studio for tools, repo MCP servers, and we
 - `tests\llm\gateway.test.ts`
 - `tests\mcp\server.test.ts`
 - `.squad\decisions.md`
+
+---
+
+# Code Decision — Fix v4 idea-page JSON failure in the LM Studio/Qwen seam
+
+## Context
+
+The v4 dashboard idea page (\/ideas/new\) submits to \POST /api/ideas\, and that route uses \AgentRunner.run()\ with the app-owned tool loop enabled for the Lead agent.
+
+For non-Copilot providers, the tool loop depends on \src\llm\gateway.ts::chatStructuredWithResponse()\ parsing strict JSON objects that match \TOOL_LOOP_RESPONSE_SCHEMA\. With LM Studio serving \qwen/qwen3.5-35b-a3b\, the live response can include reasoning wrappers or prose around the JSON payload, producing the user-facing error:
+
+\LLM response is not valid JSON: The user wants me to generate a structured article idea...\
+
+## Decision
+
+Treat this as a structured-output seam bug in the LM Studio/Qwen path, not a dashboard route bug.
+
+Keep the dashboard request path unchanged and fix the provider/gateway boundary:
+
+1. LM Studio must not send \esponse_format: { type: "json_object" }\ for this path.
+2. The shared gateway may recover JSON from Qwen-style wrappers (think tags, code fences, leading/trailing prose) before schema validation.
+3. LM Studio should continue honoring the loaded local model by default, only forwarding \equest.model\ when it matches a real discovered LM Studio model id.
+
+## Why
+
+The request is already hitting the intended code path: idea page → \/api/ideas\ → \AgentRunner\ tool loop → \chatStructuredWithResponse()\.
+
+The failure happens before any dashboard-specific logic goes wrong. It is caused by backend-specific structured-output drift plus local-model aliasing risk, so the safest localized fix is at the gateway/provider seam with regression coverage.
+
+## Validation
+
+- \
+pm run v2:test -- tests/llm/gateway.test.ts tests/llm/provider-lmstudio.test.ts tests/agents/runner.test.ts\
+- \
+pm run v2:build\
+
+---
+
+# DevOps Decision — LM Studio v4 revision should preserve local default-model safety
+
+## Context
+
+The first LM Studio patch in \worktrees\v4\ correctly fixed the structured-output seam for Qwen by:
+
+- teaching \src\llm\gateway.ts\ to recover JSON from think-tag/code-fence wrappers
+- removing LM Studio's rejected \esponse_format: { type: "json_object" }\
+
+But the rejected revision also started forwarding \equest.model\ blindly from gateway policy resolution into \src\llm\providers\lmstudio.ts\.
+
+## Decision
+
+Keep the structured-output fixes, but treat gateway policy aliases as routing hints, not transport-level model ids, when LM Studio is the executing provider.
+
+For LM Studio:
+
+1. forward \equest.model\ only when it matches the known local/default LM Studio model set
+2. otherwise keep the provider's loaded/default local model as the effective request model
+3. preserve envelope telemetry so traces show both \equestedModel\ and \ffectiveModel\
+
+## Why
+
+\gpt-5-mini\ is a gateway/model-policy alias, not a real LM Studio-loaded model. If LM Studio is the default/first provider, blindly passing that alias can override or bypass the intended loaded Qwen model and break the real live path.
+
+The startup path in \src\dashboard\server.ts\ already auto-detects loaded LM Studio models and sets the provider default when no \LMSTUDIO_MODEL\ override is supplied. The provider must honor that runtime-local default on policy-routed requests.
+
+## Evidence
+
+- Focused regressions now cover:
+  - gateway policy alias → LM Studio default-model path
+  - explicit discovered LM Studio model passthrough
+  - alias fallback to default local model
+  - Qwen-style wrapped JSON parsing in the runner/gateway seam
+- Validation passed:
+  - \
+pm run v2:build\
+  - \
+pm run v2:test -- tests/llm/provider-lmstudio.test.ts tests/llm/gateway.test.ts tests/agents/runner.test.ts\
+- Live smoke against local LM Studio succeeded with \qwen/qwen3.5-35b-a3b\, showing \equestedModel: "gpt-5-mini"\ and \ffectiveModel: "qwen/qwen3.5-35b-a3b"\ in provider metadata.
