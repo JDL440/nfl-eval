@@ -1,4 +1,13 @@
-# Now — NFL Lab
+# What the team is working on now
 
-**Focus:** Cleaning stale V3 port state and fixing article-page mobile width in `worktrees\V3`.  
-**Last updated:** 2026-03-27T14:00:00Z
+**Focus:** Dashboard cleanup complete — article page stripped to essentials
+
+**Current state:**
+- Pipeline activity bar removed from article detail view
+- stageRuns data path removed (interface, server call, renderActionPanel)
+- Dead CSS removed (.pipeline-activity, .stage-run-error)
+- runs.ts / agents.ts / memory.ts UI views already gone
+- Config route is the rich admin/settings page
+- All 10 dashboard test files passing (235 tests)
+
+**Next up:** Unknown — awaiting user direction

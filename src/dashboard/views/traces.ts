@@ -1,12 +1,28 @@
 import type { Article, LlmTrace } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import { escapeHtml, formatDate, renderLayout } from './layout.js';
+import { markdownToHtml } from '../../services/markdown.js';
 
 interface TracePart {
   channel?: 'system' | 'user';
   kind?: string;
   label?: string;
   content?: string;
+}
+
+interface ToolCallTraceView {
+  toolName?: string;
+  args?: unknown;
+  source?: string;
+  isError?: boolean;
+  resultText?: string;
+}
+
+interface TraceMetadataView {
+  availableTools?: string[];
+  toolCalls?: ToolCallTraceView[];
+  toolCallCount?: number;
+  toolCallBudget?: number;
 }
 
 function parseJson(raw: string | null): unknown {
@@ -52,22 +68,126 @@ function renderTracePreview(text: string | null, maxLength = 160): string {
   return escapeHtml(compact.slice(0, maxLength).trimEnd() + '…');
 }
 
-function renderTextBlock(title: string, content: string | null, open = false): string {
-  if (!content) return '';
+function slugifyTraceKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'trace-block';
+}
+
+function looksLikeMarkdown(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed) return false;
+  return /^(#{1,6}\s|> |\s*[-*+]\s|\s*\d+\.\s|```|\|.+\|)/m.test(trimmed)
+    || /(\*\*|__|\*[^*\n]+\*|_[^_\n]+_|`[^`\n]+`|\[[^\]]+\]\([^)]+\))/m.test(trimmed);
+}
+
+function highlightJson(raw: string): string {
+  const tokenPattern = /"(?:\\.|[^"\\])*"(?=\s*:)|"(?:\\.|[^"\\])*"|\btrue\b|\bfalse\b|\bnull\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+  let cursor = 0;
+  let html = '';
+
+  for (const match of raw.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    if (index > cursor) {
+      html += escapeHtml(raw.slice(cursor, index));
+    }
+
+    let className = 'trace-json-number';
+    if (token === 'true' || token === 'false') {
+      className = 'trace-json-boolean';
+    } else if (token === 'null') {
+      className = 'trace-json-null';
+    } else if (token.startsWith('"')) {
+      className = raw.slice(index + token.length).trimStart().startsWith(':')
+        ? 'trace-json-key'
+        : 'trace-json-string';
+    }
+
+    html += `<span class="${className}">${escapeHtml(token)}</span>`;
+    cursor = index + token.length;
+  }
+
+  if (cursor < raw.length) {
+    html += escapeHtml(raw.slice(cursor));
+  }
+
+  return html;
+}
+
+function renderJsonPreview(value: unknown): string {
+  const pretty = JSON.stringify(value, null, 2) ?? String(value);
+  return `<pre class="trace-json-code"><code>${highlightJson(pretty)}</code></pre>`;
+}
+
+function renderTraceBlock(
+  title: string,
+  rawContent: string | null,
+  options?: {
+    open?: boolean;
+    jsonValue?: unknown;
+  },
+): string {
+  if (!rawContent) return '';
+  const blockId = slugifyTraceKey(`${title}-${Math.random().toString(36).slice(2, 8)}`);
+  const jsonValue = options?.jsonValue;
+  const hasJsonPreview = jsonValue !== undefined;
+  const hasMarkdownPreview = !hasJsonPreview && looksLikeMarkdown(rawContent);
+  const controls = hasJsonPreview || hasMarkdownPreview
+    ? `<div class="trace-preview-toolbar">
+        <button type="button" class="btn btn-secondary trace-preview-btn is-active" onclick="toggleTracePreview('${blockId}', 'raw')">Raw</button>
+        ${hasJsonPreview
+          ? `<button type="button" class="btn btn-secondary trace-preview-btn" onclick="toggleTracePreview('${blockId}', 'preview')">Preview JSON</button>`
+          : ''}
+        ${hasMarkdownPreview
+          ? `<button type="button" class="btn btn-secondary trace-preview-btn" onclick="toggleTracePreview('${blockId}', 'preview')">Preview Markdown</button>`
+          : ''}
+      </div>`
+    : '';
+  const preview = hasJsonPreview
+    ? `<div class="trace-preview-pane" data-trace-pane="preview" style="display:none">${renderJsonPreview(jsonValue)}</div>`
+    : hasMarkdownPreview
+      ? `<div class="trace-preview-pane artifact-rendered" data-trace-pane="preview" style="display:none">${markdownToHtml(rawContent)}</div>`
+      : '';
+
   return `
-    <details class="trace-block"${open ? ' open' : ''}>
+    <details class="trace-block"${options?.open ? ' open' : ''} data-trace-block="${blockId}">
       <summary>${escapeHtml(title)}</summary>
-      <pre class="artifact-pre trace-pre">${escapeHtml(content)}</pre>
+      ${controls}
+      <pre class="artifact-pre trace-pre" data-trace-pane="raw">${escapeHtml(rawContent)}</pre>
+      ${preview}
     </details>`;
 }
 
-function renderJsonBlock(title: string, raw: string | null, open = false): string {
-  if (!raw) return '';
+function parseTraceMetadata(raw: string | null): TraceMetadataView {
   const parsed = parseJson(raw);
-  const text = typeof parsed === 'string'
-    ? parsed
-    : JSON.stringify(parsed, null, 2);
-  return renderTextBlock(title, text, open);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {};
+  }
+  return parsed as TraceMetadataView;
+}
+
+function renderToolMetadata(trace: LlmTrace): string {
+  const metadata = parseTraceMetadata(trace.metadata_json);
+  const availableTools = Array.isArray(metadata.availableTools) ? metadata.availableTools : [];
+  const toolCalls = Array.isArray(metadata.toolCalls) ? metadata.toolCalls : [];
+  const toolStats = typeof metadata.toolCallCount === 'number' && typeof metadata.toolCallBudget === 'number'
+    ? `<div class="muted" style="margin:0.4rem 0 0.75rem 0">Tool calls used: ${metadata.toolCallCount} / ${metadata.toolCallBudget}</div>`
+    : '';
+  if (availableTools.length === 0 && toolCalls.length === 0 && !toolStats) {
+    return '';
+  }
+
+  const availableToolsBlock = availableTools.length > 0
+    ? renderTraceBlock('Available Tools', availableTools.join('\n'))
+    : '';
+
+  const toolCallsBlock = toolCalls.length > 0
+    ? renderTraceBlock('Tool Calls', JSON.stringify(toolCalls, null, 2), {
+        open: true,
+        jsonValue: toolCalls,
+      })
+    : '';
+
+  return toolStats + availableToolsBlock + toolCallsBlock;
 }
 
 function renderProviderSessionSummary(trace: LlmTrace): string {
@@ -80,32 +200,22 @@ function renderProviderSessionSummary(trace: LlmTrace): string {
     : '';
 }
 
-export function renderTraceSummaryPanel(articleId: string, traces: LlmTrace[]): string {
+function renderTracePreviewScript(): string {
   return `
-    <div class="advanced-subsection">
-      <h3>LLM Traces</h3>
-      ${traces.length === 0
-        ? '<p class="empty-state">No LLM traces recorded yet</p>'
-        : `<div class="audit-log">
-            ${traces.slice(0, 5).map((trace) => `
-              <div class="audit-entry">
-                <div class="audit-meta">
-                  <span class="audit-agent">${escapeHtml(trace.agent_name)}</span>
-                  <span class="muted">${escapeHtml(trace.surface ?? 'trace')}</span>
-                  ${statusBadge(trace.status)}
-                </div>
-                <div class="audit-notes">
-                  <strong>${escapeHtml(trace.model ?? trace.requested_model ?? 'pending model')}</strong>
-                  · ${formatDate(trace.started_at)}
-                  ${trace.stage != null ? ` · Stage ${trace.stage}` : ''}
-                  ${trace.stage_run_id ? ` · <a href="/runs/${escapeHtml(trace.stage_run_id)}#trace-${escapeHtml(trace.id)}">View trace</a>` : ''}
-                </div>
-                <div class="muted">${renderTracePreview(trace.output_text ?? trace.error_message)}</div>
-              </div>`).join('')}
-           </div>`
+    <script>
+      function toggleTracePreview(blockId, pane) {
+        var block = document.querySelector('[data-trace-block="' + blockId + '"]');
+        if (!block) return;
+        block.querySelectorAll('[data-trace-pane]').forEach(function(node) {
+          node.style.display = node.getAttribute('data-trace-pane') === pane ? '' : 'none';
+        });
+        block.querySelectorAll('.trace-preview-btn').forEach(function(button, index) {
+          var isRawButton = index === 0;
+          var shouldBeActive = (pane === 'raw' && isRawButton) || (pane === 'preview' && !isRawButton);
+          button.classList.toggle('is-active', shouldBeActive);
+        });
       }
-      <p style="margin-top:0.75rem"><a href="/articles/${escapeHtml(articleId)}/traces">View full trace timeline →</a></p>
-    </div>`;
+    </script>`;
 }
 
 export function renderTraceCards(traces: LlmTrace[]): string {
@@ -143,19 +253,24 @@ export function renderTraceCards(traces: LlmTrace[]): string {
               <span class="stat stat-note">Tokens: ${formatTokens(trace.total_tokens)}</span>
               <span class="stat stat-note">Latency: ${trace.latency_ms != null ? `${trace.latency_ms}ms` : '—'}</span>
             </div>
-            ${trace.error_message ? `<div class="stage-run-error">❌ ${escapeHtml(trace.error_message)}</div>` : ''}
+            ${trace.error_message ? `<div class="trace-error-banner">❌ ${escapeHtml(trace.error_message)}</div>` : ''}
             ${renderProviderSessionSummary(trace)}
-            <div class="advanced-subsection">
+            <div class="trace-subsection">
               <h3>Context Stack</h3>
               ${contextList}
             </div>
-            ${renderTextBlock('System Prompt', trace.system_prompt, index === 0)}
-            ${renderTextBlock('User Message', trace.user_message, index === 0)}
-            ${renderTextBlock('Provider-Wrapped Prompt', trace.incremental_prompt)}
-            ${renderJsonBlock('Provider Request Envelope', trace.provider_request_json)}
-            ${renderJsonBlock('Provider Response Envelope', trace.provider_response_json)}
-            ${renderTextBlock('Thinking', trace.thinking_text)}
-            ${renderTextBlock('Assistant Output', trace.output_text, true)}
+            ${renderTraceBlock('System Prompt', trace.system_prompt, { open: index === 0 })}
+            ${renderTraceBlock('User Message', trace.user_message, { open: index === 0 })}
+            ${renderTraceBlock('Provider-Wrapped Prompt', trace.incremental_prompt)}
+            ${renderTraceBlock('Provider Request Envelope', trace.provider_request_json, {
+              jsonValue: parseJson(trace.provider_request_json),
+            })}
+            ${renderTraceBlock('Provider Response Envelope', trace.provider_response_json, {
+              jsonValue: parseJson(trace.provider_response_json),
+            })}
+            ${renderToolMetadata(trace)}
+            ${renderTraceBlock('Thinking', trace.thinking_text)}
+            ${renderTraceBlock('Assistant Output', trace.output_text, { open: true })}
           </article>`;
       }).join('')}
     </div>`;
@@ -175,7 +290,33 @@ export function renderArticleTraceTimelinePage(data: {
     </div>
     <section class="detail-section">
       ${renderTraceCards(traces)}
-    </section>`;
+    </section>
+    ${renderTracePreviewScript()}`;
 
   return renderLayout(`Trace Timeline — ${article.title}`, content, config.leagueConfig.name);
+}
+
+export function renderStandaloneTracePage(data: {
+  config: AppConfig;
+  trace: LlmTrace;
+}): string {
+  const { config, trace } = data;
+  const title = trace.article_id
+    ? `Trace ${trace.id} — ${trace.article_id}`
+    : `Trace ${trace.id}`;
+  const backLink = trace.article_id
+    ? `<a href="/articles/${escapeHtml(trace.article_id)}/traces" class="back-link">← Article trace timeline</a>`
+    : '<a href="/ideas/new" class="back-link">← New Idea</a>';
+  const content = `
+    <div class="page-header">
+      ${backLink}
+      <h1>LLM Trace</h1>
+      <p class="page-subtitle">${escapeHtml(title)}</p>
+    </div>
+    <section class="detail-section">
+      ${renderTraceCards([trace])}
+    </section>
+    ${renderTracePreviewScript()}`;
+
+  return renderLayout(`LLM Trace — ${trace.id}`, content, config.leagueConfig.name);
 }

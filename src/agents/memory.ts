@@ -89,6 +89,17 @@ function rowToEntry(row: MemoryRow): MemoryEntry {
 
 // ── AgentMemory ──────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated Legacy subsystem — retained for a future redesign spike.
+ *
+ * The AgentMemory class, its SQLite schema, and all DB bootstrapping are
+ * intentionally preserved but **dormant**. Runtime prompt injection has been
+ * disabled in AgentRunner.run() (see runner.ts step 3). No memory entries are
+ * recalled or inserted into agent prompts during normal pipeline execution.
+ *
+ * To re-enable injection: restore the `this.memory.recall()` call in runner.ts
+ * and remove the `const memories: MemoryEntry[] = []` stub.
+ */
 export class AgentMemory {
   private db: DatabaseSync;
 

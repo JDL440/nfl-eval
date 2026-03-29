@@ -43,16 +43,21 @@ export function renderLayout(title: string, content: string, labName: string): s
 <body hx-ext="sse" sse-connect="/events">
   <header class="site-header">
     <div class="header-inner">
-      <a href="/" class="logo">${escapeHtml(labName)}</a>
-      <nav class="header-nav">
-        <a href="/agents" class="btn btn-header">🤖 Agents</a>
-        <a href="/memory" class="btn btn-header">🧠 Memory</a>
-        <a href="/runs" class="btn btn-header">📊 Runs</a>
-        <a href="/config" class="btn btn-header">⚙️ Config</a>
-        <a href="/ideas/new" class="btn btn-header">+ New Idea</a>
-        <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
-        <span class="env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
-      </nav>
+      <div class="header-brand">
+        <a href="/" class="logo">${escapeHtml(labName)}</a>
+        <span class="header-tagline">Editorial workstation</span>
+      </div>
+      <div class="header-controls">
+      <nav class="header-nav" aria-label="Primary">
+          <a href="/" class="btn btn-header header-nav-link">Dashboard</a>
+          <a href="/ideas/new" class="btn btn-header header-nav-link">New Idea</a>
+          <a href="/config" class="btn btn-header header-nav-link">Settings</a>
+        </nav>
+        <div class="header-meta">
+          <span class="env-badge header-env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
+          <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
+        </div>
+      </div>
     </div>
   </header>
   <main class="content">

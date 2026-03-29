@@ -233,7 +233,7 @@ export function renderPublishWorkflow(data: PublishResultData): string {
         </div>`
     : '';
   const configHintHtml = needsSubstackConfig
-    ? `<p class="hint">Set <code>SUBSTACK_PUBLICATION_URL</code> and <code>SUBSTACK_TOKEN</code> in <code>.env</code>, restart the dashboard, then try again. You can confirm the current environment on the <a href="/config">Config</a> page.</p>`
+    ? `<p class="hint">Set <code>SUBSTACK_PUBLICATION_URL</code> and <code>SUBSTACK_TOKEN</code> in <code>.env</code>, restart the dashboard, then try again. You can confirm the current environment on the <a href="/config">Settings</a> page.</p>`
     : '';
 
   if (article.current_stage === 8 || publishedUrl) {
@@ -419,7 +419,7 @@ export function renderPublishAll(articleId: string, substackConfigured: boolean 
     : 'disabled aria-disabled="true" title="Set SUBSTACK_PUBLICATION_URL and SUBSTACK_TOKEN, restart the dashboard, then try again."';
   const unavailableHint = substackConfigured
     ? ''
-    : '<p class="hint">Configure Substack on the <a href="/config">Config</a> page before using Publish All.</p>';
+    : '<p class="hint">Configure Substack on the <a href="/config">Settings</a> page before using Publish All.</p>';
   return `
     <section class="detail-section">
       <h2>🚀 Publish All</h2>

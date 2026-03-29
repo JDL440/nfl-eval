@@ -245,9 +245,23 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('NFL Lab');
+      expect(html).toContain('href="/config"');
+      expect(html).toContain('href="/ideas/new"');
       expect(html).toContain('Ready to Publish');
       expect(html).toContain('Pipeline');
       expect(html).toContain('Recent Ideas');
+      expect(html).not.toContain('href="/agents"');
+      expect(html).not.toContain('href="/memory"');
+      expect(html).not.toContain('href="/runs"');
+    });
+
+    it('removed legacy dashboard pages return 404', async () => {
+      const legacyPaths = ['/agents', '/memory', '/runs', '/runs/test-run'];
+
+      for (const path of legacyPaths) {
+        const res = await app.request(path);
+        expect(res.status).toBe(404);
+      }
     });
 
     it('home page shows articles in correct sections', async () => {
@@ -272,9 +286,9 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('Detail Test Article');
       expect(html).toContain('Stage 1');
-      expect(html).toContain('Audit Log');
-      expect(html).toContain('Agent Context Settings');
-      expect(html).toContain('/htmx/articles/detail-test/context-config');
+      expect(html).toContain('Token Usage');
+      expect(html).toContain('/articles/detail-test/traces');
+      expect(html).not.toContain('Audit Log');
     });
 
     it('article detail usage panel keeps older copilot-cli usage after many later events', async () => {
@@ -322,17 +336,10 @@ describe('Dashboard Server', () => {
       expect(html).toContain('ids=stale-stat');
     });
 
-    it('article detail advanced section surfaces llm trace summaries', async () => {
+    it('article detail links to trace views while trace pages surface llm details', async () => {
       repo.createArticle({ id: 'detail-traces', title: 'Detail Traces' });
-      const stageRunId = repo.startStageRun({
-        articleId: 'detail-traces',
-        stage: 1,
-        surface: 'generatePrompt',
-        actor: 'lead',
-      });
       const traceId = repo.startLlmTrace({
         articleId: 'detail-traces',
-        stageRunId,
         stage: 1,
         surface: 'generatePrompt',
         agentName: 'lead',
@@ -352,13 +359,18 @@ describe('Dashboard Server', () => {
         providerResponse: { stdout: 'Trace output preview' },
       });
 
-      const res = await app.request('/articles/detail-traces');
-      const html = await res.text();
-      expect(res.status).toBe(200);
-      expect(html).toContain('LLM Traces');
-      expect(html).toContain('Trace output preview');
-      expect(html).toContain(`/runs/${stageRunId}#trace-${traceId}`);
-      expect(html).toContain('/articles/detail-traces/traces');
+      const detailRes = await app.request('/articles/detail-traces');
+      const detailHtml = await detailRes.text();
+      expect(detailRes.status).toBe(200);
+      expect(detailHtml).toContain('/articles/detail-traces/traces');
+      expect(detailHtml).toContain('🧠 Trace');
+
+      const traceRes = await app.request(`/traces/${traceId}`);
+      const traceHtml = await traceRes.text();
+      expect(traceRes.status).toBe(200);
+      expect(traceHtml).toContain('Trace output preview');
+      expect(traceHtml).toContain(`trace-${traceId}`);
+      expect(traceHtml).toContain('Article trace timeline');
     });
 
     it('article trace timeline page renders all traces for the article', async () => {
@@ -413,8 +425,20 @@ describe('Dashboard Server', () => {
       repo.completeLlmTrace(traceTwo, {
         provider: 'lmstudio',
         model: 'qwen-35',
-        outputText: 'Prompt output',
+        outputText: '## Prompt output\n\n- First preview bullet',
         totalTokens: 222,
+        metadata: {
+          availableTools: ['query_team_efficiency', 'query_prediction_markets'],
+          toolCalls: [
+            {
+              toolName: 'query_team_efficiency',
+              args: { team: 'SEA', season: 2025 },
+              source: 'local-extension',
+              isError: false,
+              resultText: 'SEA efficiency result',
+            },
+          ],
+        },
         incrementalPrompt: 'Prompt provider prompt',
         providerRequest: {
           endpoint: 'http://localhost:1234/v1/chat/completions',
@@ -422,7 +446,7 @@ describe('Dashboard Server', () => {
         },
         providerResponse: {
           id: 'chatcmpl-prompt',
-          choices: [{ message: { content: 'Prompt output' } }],
+          choices: [{ message: { content: '## Prompt output\n\n- First preview bullet' } }],
         },
       });
 
@@ -439,6 +463,59 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Provider Request Envelope');
       expect(html).toContain('http://localhost:1234/v1/chat/completions');
       expect(html).toContain('chatcmpl-prompt');
+      expect(html).toContain('Available Tools');
+      expect(html).toContain('Tool Calls');
+      expect(html).toContain('query_team_efficiency');
+      expect(html).toContain('SEA efficiency result');
+      expect(html).toContain('Preview JSON');
+      expect(html).toContain('Preview Markdown');
+      expect(html).toContain('trace-preview-btn');
+      expect(html).toContain('artifact-rendered');
+    });
+
+    it('standalone trace page renders a failed unattached trace', async () => {
+      const traceId = repo.startLlmTrace({
+        stage: 1,
+        surface: 'ideaGeneration',
+        agentName: 'lead',
+        requestedModel: 'qwen/qwen3.5-35b-a3b',
+        systemPrompt: 'Idea prompt',
+        userMessage: 'Idea task',
+      });
+      repo.failLlmTrace(traceId, {
+        provider: 'lmstudio',
+        model: 'qwen/qwen3.5-35b-a3b',
+        errorMessage: 'Tool calling exhausted its 50 call budget without producing a final answer.',
+        metadata: {
+          availableTools: ['query_team_efficiency'],
+          toolCallCount: 7,
+          toolCallBudget: 50,
+          toolCalls: [
+            {
+              toolName: 'query_team_efficiency',
+              args: { team: 'SEA', season: 2025 },
+              source: 'local-extension',
+              isError: false,
+              resultText: 'SEA efficiency result',
+            },
+          ],
+        },
+        providerRequest: {
+          endpoint: 'http://localhost:1234/v1/chat/completions',
+        },
+        providerResponse: {
+          id: 'chatcmpl-failed-trace',
+        },
+      });
+
+      const res = await app.request('/traces/' + traceId);
+      const html = await res.text();
+      expect(res.status).toBe(200);
+      expect(html).toContain('LLM Trace');
+      expect(html).toContain('New Idea');
+      expect(html).toContain('Tool calls used: 7 / 50');
+      expect(html).toContain('query_team_efficiency');
+      expect(html).toContain('chatcmpl-failed-trace');
     });
 
     it('article detail surfaces paused lead review state and artifact tab', async () => {
@@ -602,6 +679,16 @@ describe('Dashboard Server', () => {
       expect(body.stages['2'].count).toBe(1);
       expect(body.stages['2'].name).toBe('Discussion Prompt');
     });
+
+    it('POST /api/agents/refresh-all remains available and returns 503 without runner or memory', async () => {
+      const res = await app.request('/api/agents/refresh-all', {
+        method: 'POST',
+      });
+      expect(res.status).toBe(503);
+      const body = await res.json() as { error: string };
+      expect(body.error).toContain('legacy memory store');
+    });
+
   });
 
   // ── htmx partials ──────────────────────────────────────────────────────────
@@ -619,16 +706,12 @@ describe('Dashboard Server', () => {
       expect(html).not.toContain('<!DOCTYPE html>');
     });
 
-    it('GET /htmx/articles/:id/live-sidebar keeps older copilot-cli usage visible', async () => {
+    it('GET /htmx/articles/:id/live-sidebar is retired with the removed article live sidebar surface', async () => {
       repo.createArticle({ id: 'live-usage-history', title: 'Live Usage History' });
       seedOlderCopilotUsage('live-usage-history');
 
       const res = await app.request('/htmx/articles/live-usage-history/live-sidebar');
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('Token Usage');
-      expect(html).toContain('copilot-cli');
-      expect(html).toContain('gpt-5.4');
+      expect(res.status).toBe(404);
     });
 
     it('GET /htmx/ready-to-publish returns HTML fragment', async () => {
@@ -660,80 +743,44 @@ describe('Dashboard Server', () => {
       expect(html).toContain('card-idea');
     });
 
-    it('GET /htmx/articles/:id/context-config returns defaults when no overrides', async () => {
-      repo.createArticle({ id: 'ctx-1', title: 'Ctx One' });
-
-      const res = await app.request('/htmx/articles/ctx-1/context-config');
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('context-config-form');
-
-      const idx = html.indexOf('data-stage="composePanel"');
-      expect(idx).toBeGreaterThanOrEqual(0);
-      const composeSection = html.slice(idx);
-      // composePanel includes idea.md by default
-      expect(composeSection).toMatch(/name="composePanel" value="idea\.md" checked/);
-      expect(html).toContain('type="checkbox"');
-    });
-
-    it('POST /api/articles/:id/context-config saves overrides and DELETE resets', async () => {
-      repo.createArticle({ id: 'ctx-2', title: 'Ctx Two' });
-
-      const body = new URLSearchParams();
-      body.append('composePanel', 'idea.md');
-      body.append('composePanel', 'discussion-summary.md');
-      body.append('writeDraft', 'discussion-prompt.md');
-
-      function extractStage(html: string, stage: string): string {
-        const idx = html.indexOf(`data-stage="${stage}"`);
-        if (idx < 0) return '';
-        const rest = html.slice(idx);
-        const nextIdx = rest.slice(1).search(/data-stage="/);
-        return nextIdx >= 0 ? rest.slice(0, nextIdx + 1) : rest;
-      }
-
-      const postRes = await app.request('/api/articles/ctx-2/context-config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'hx-request': 'true',
-        },
-        body: body.toString(),
-      });
-      expect(postRes.status).toBe(200);
-      expect(repo.artifacts.get('ctx-2', '_config.json')).toBeTruthy();
-      const postHtml = await postRes.text();
-      const postCompose = extractStage(postHtml, 'composePanel');
-      const postWrite = extractStage(postHtml, 'writeDraft');
-      expect(postCompose).toMatch(/name="composePanel" value="discussion-summary\.md" checked/);
-      expect(postWrite).toMatch(/name="writeDraft" value="discussion-prompt\.md" checked/);
-
-      const delRes = await app.request('/api/articles/ctx-2/context-config', {
-        method: 'DELETE',
-        headers: { 'hx-request': 'true' },
-      });
-      expect(delRes.status).toBe(200);
-      expect(repo.artifacts.get('ctx-2', '_config.json')).toBeNull();
-      const delHtml = await delRes.text();
-      const delCompose = extractStage(delHtml, 'composePanel');
-      // back to defaults: composePanel includes idea.md but not discussion-summary.md
-      expect(delCompose).toMatch(/name="composePanel" value="idea\.md" checked/);
-      expect(delCompose).not.toMatch(/name="composePanel" value="discussion-summary\.md" checked/);
-    });
-
-    it('GET /htmx/articles/:id/context-config reflects rich preset defaults', async () => {
-      repo.createArticle({ id: 'ctx-rich', title: 'Ctx Rich' });
-      const richApp = createApp(repo, makeTestConfig({
+    it('POST /api/agents/refresh-all stays available without the removed agent pages', async () => {
+      const refreshConfig = makeTestConfig({
         dbPath: join(tempDir, 'test.db'),
         articlesDir: join(tempDir, 'articles'),
-        contextPreset: 'rich',
-      }));
+      });
+      const memoryStore = {
+        store: vi.fn(),
+        stats: () => [],
+        knowledgeFreshness: () => new Map<string, string>(),
+      } as any;
+      const run = vi.fn(async () => ({ content: 'Updated knowledge brief' }));
+      const refreshApp = createApp(repo, refreshConfig, {
+        memory: memoryStore,
+        actionContext: {
+          repo,
+          config: refreshConfig,
+          engine: {} as any,
+          auditor: {} as any,
+          runner: {
+            gateway: { listProviders: () => [] },
+            listAgents: () => ['analytics'],
+            run,
+          } as any,
+        },
+      });
 
-      const res = await richApp.request('/htmx/articles/ctx-rich/context-config');
+      const configRes = await refreshApp.request('/config');
+      const configHtml = await configRes.text();
+      expect(configHtml).toContain('/api/agents/refresh-all');
+      expect(configHtml).not.toContain('href="/agents"');
+      expect(configHtml).not.toContain('href="/memory"');
+      expect(configHtml).not.toContain('href="/runs"');
+
+      const res = await refreshApp.request('/api/agents/refresh-all', { method: 'POST' });
       expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain('Rich defaults');
-      expect(html).toContain('The richer preset is currently active');
+      expect(await res.json()).toMatchObject({ success: true, status: 'started', agentCount: 1 });
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(memoryStore.store).toHaveBeenCalledTimes(1);
     });
 
     it('GET /htmx/published returns HTML fragment', async () => {
@@ -834,16 +881,15 @@ describe('Dashboard Server', () => {
   // ── Article detail view enhancements ──────────────────────────────────────
 
   describe('article detail view', () => {
-    it('renders stage timeline with stage-dot classes', async () => {
+    it('does not render removed stage timeline classes', async () => {
       repo.createArticle({ id: 'timeline-test', title: 'Timeline Test' });
       repo.advanceStage('timeline-test', 1, 2, 'test');
 
       const res = await app.request('/articles/timeline-test');
       const html = await res.text();
-      expect(html).toContain('stage-dot completed');
-      expect(html).toContain('stage-dot current');
-      expect(html).toContain('stage-dot future');
-      expect(html).toContain('stage-connector');
+      expect(html).not.toContain('stage-dot');
+      expect(html).not.toContain('stage-connector');
+      expect(html).toContain('Stage 2');
     });
 
     it('renders artifact tabs with htmx attributes', async () => {
@@ -881,26 +927,45 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Published');
     });
 
-    it('renders audit log section', async () => {
+    it('omits removed audit log section', async () => {
       repo.createArticle({ id: 'audit-test', title: 'Audit Test' });
       repo.advanceStage('audit-test', 1, 2, 'agent-x', 'test note');
 
       const res = await app.request('/articles/audit-test');
       const html = await res.text();
-      expect(html).toContain('Audit Log');
-      expect(html).toContain('audit-entry');
-      expect(html).toContain('agent-x');
-      expect(html).toContain('test note');
+      expect(html).not.toContain('Audit Log');
+      expect(html).not.toContain('audit-entry');
     });
 
-    it('renders article metadata section', async () => {
+    it('keeps metadata badges and edit affordance without sidebar metadata section', async () => {
       repo.createArticle({ id: 'meta-test', title: 'Meta Test', primary_team: 'seahawks' });
 
       const res = await app.request('/articles/meta-test');
       const html = await res.text();
-      expect(html).toContain('Article Metadata');
+      expect(html).toContain('id="article-meta"');
+      expect(html).toContain('class="meta-title-row"');
+      expect(html).toContain('title="Edit metadata"');
+      expect(html).toContain('class="icon-button"');
+      expect(html).toContain('hx-get="/htmx/articles/meta-test/edit-meta"');
+      expect(html).not.toContain('Edit Article Metadata');
+      expect(html).not.toContain('/context-config');
       expect(html).toContain('seahawks');
-      expect(html).toContain('Depth');
+      expect(html).toContain('badge-depth');
+    });
+
+    it('does not surface legacy stage-run failure chrome on article detail', async () => {
+      repo.createArticle({ id: 'no-runs-ui', title: 'No Runs UI' });
+      repo.startStageRun({
+        articleId: 'no-runs-ui',
+        stage: 2,
+        status: 'running',
+        startedBy: 'tester',
+      });
+
+      const res = await app.request('/articles/no-runs-ui');
+      const html = await res.text();
+      expect(html).not.toContain('Last run (Stage');
+      expect(html).not.toContain('stage-run-error');
     });
   });
 

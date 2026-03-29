@@ -67,3 +67,40 @@ LM Studio does NOT use native tool-calling (not available in its OpenAI-compatib
 - Verified the live endpoint exposes the intended model and can emit valid `{"type":"tool_call",...}` JSON without provider-native tool definitions.
 - Captured the LM Studio rejection of `response_format: { type: "json_object" }`, which is the key runtime compatibility caveat.
 - The app-managed JSON loop remains the correct tool-use contract to document.
+
+## 2026-03-29: Memory Injection Audit
+
+### Request
+Verify whether memories are being created and injected into runtime; find the most recent memory injection timestamp, if any.
+
+### Key Findings
+
+**Current State (as of 2026-03-29 09:35 UTC):**
+- **0 memories in agent_memory table** — complete empty state
+- **All 87 LLM traces have empty memories_json** (value is [], never populated with actual entries)
+- **1,198 memories created historically** (SQLite seq counter shows 1198, all now deleted)
+- **Last decay/prune operation:** 2026-03-29 09:05:16 UTC
+- **Traces created post-prune:** 11 new traces, all with empty memory arrays
+
+**Architecture Verification (Sound):**
+1. Memory recall and injection path is correct:
+   - AgentRunner.run() line 884: memory.recall(agentName, { limit: 10 })
+   - Line 973: memories passed to startLlmTrace({ ... memories })
+   - Repository.startLlmTrace() line 952: memories correctly stored via normalizeMetadataJson(params.memories)
+
+2. Memory creation entry points exist but dormant:
+   - Dashboard UI: /api/memory/create endpoint (line 2616, server.ts)
+   - Domain refresh: LLM-generated knowledge summaries (line 2763, server.ts)
+   - Bootstrap: One-time seed from bootstrap-memory.json (line 186, config/index.ts)
+   - Roster context: Team roster populated as domain_knowledge (line 507, roster-context.ts)
+
+**Root Cause Identified:**
+Memory injection mechanism works flawlessly—memories are correctly injected when present. However, **no code is actively creating new memories** during normal pipeline execution. All 1,198 historical memories were purged by prune() method. System awaits manual dashboard creation or explicit refresh triggers.
+
+**Evidence:**
+- Direct DB query + code inspection of src/agents/memory.ts, src/agents/runner.ts, src/db/repository.ts
+- Most recent non-empty memory: Never (agent_memory table always empty)
+- Most recent attempted injection: 2026-03-29 09:21:04 (writer agent) — contains memories_json = []
+
+### Insight
+System does NOT automatically extract learnings from agent execution. Memory creation is opt-in only. No passive hooks record what agents learned, decided, or found during article production.

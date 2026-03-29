@@ -1,8 +1,13 @@
 /**
- * AgentRunner — loads agent charters/skills, injects memories, calls LLM Gateway.
+ * AgentRunner — loads agent charters/skills, calls LLM Gateway.
  *
  * Charters are markdown files in chartersDir with ## sections.
  * Skills are markdown files in skillsDir with YAML frontmatter.
+ *
+ * NOTE: Memory injection is intentionally DISABLED. The AgentMemory subsystem
+ * (storage, schema, bootstrapping) is kept dormant for a future spike/redesign.
+ * No memory entries are recalled or injected into prompts at runtime.
+ * See: memory.ts, buildSystemPromptParts(), and run() step 3 for the disabled paths.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -20,7 +25,10 @@ import {
   type ToolCallingConfig,
   type ToolExecutionResult as LegacyToolExecutionResult,
 } from './local-tools.js';
-import type { ToolExecutionResult as StructuredToolExecutionResult } from '../tools/catalog-types.js';
+import type {
+  ToolDefinition,
+  ToolExecutionResult as StructuredToolExecutionResult,
+} from '../tools/catalog-types.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,16 +115,6 @@ export function separateThinking(content: string): { thinking: string | null; ou
   };
 }
 
-function appendToolResultMessage(toolName: string, result: StructuredToolExecutionResult): string {
-  return [
-    `Tool result for ${toolName}:`,
-    result.text,
-    '',
-    'If you need another tool, respond with JSON only using {"type":"tool_call","toolName":"...","args":{...}}.',
-    'Otherwise respond with JSON only using {"type":"final","content":"..."}',
-  ].join('\n');
-}
-
 export interface AgentRunResult {
   content: string;
   thinking: string | null;
@@ -144,6 +142,7 @@ interface PromptTracePart {
 
 interface ToolCallTrace {
   toolName: string;
+  toolCallId?: string;
   args: Record<string, unknown>;
   source: string;
   isError: boolean;
@@ -158,6 +157,7 @@ const ToolLoopTurnSchema = z.union([
   z.object({
     type: z.literal('tool_call'),
     toolName: z.string().min(1),
+    toolCallId: z.string().min(1).optional(),
     args: z.record(z.string(), z.unknown()).default({}),
   }),
 ]);
@@ -166,6 +166,7 @@ const TOOL_LOOP_RESPONSE_SCHEMA = z.object({
   type: z.enum(['final', 'tool_call']),
   content: z.string().optional(),
   toolName: z.string().optional(),
+  toolCallId: z.string().optional(),
   args: z.record(z.string(), z.unknown()).optional(),
 }).superRefine((value, ctx) => {
   if (value.type === 'final' && (!value.content || value.content.trim().length === 0)) {
@@ -199,26 +200,117 @@ function extractProviderToolCalls(providerMetadata: import('../llm/gateway.js').
     return [];
   }
   const toolLoop = (responseEnvelope as Record<string, unknown>)['toolLoop'];
-  if (!toolLoop || typeof toolLoop !== 'object') {
-    return [];
+  if (toolLoop && typeof toolLoop === 'object') {
+    const calls = (toolLoop as Record<string, unknown>)['calls'];
+    if (Array.isArray(calls)) {
+      return calls.flatMap((call) => {
+        if (!call || typeof call !== 'object') return [];
+        const record = call as Record<string, unknown>;
+        const toolName = typeof record['toolName'] === 'string' ? record['toolName'] : null;
+        if (!toolName) return [];
+        return [{
+          toolName,
+          args: {},
+          source: typeof record['source'] === 'string' ? record['source'] : 'provider',
+          isError: record['isError'] === true,
+          resultText: '',
+        }];
+      });
+    }
   }
-  const calls = (toolLoop as Record<string, unknown>)['calls'];
-  if (!Array.isArray(calls)) {
-    return [];
-  }
-  return calls.flatMap((call) => {
-    if (!call || typeof call !== 'object') return [];
-    const record = call as Record<string, unknown>;
-    const toolName = typeof record['toolName'] === 'string' ? record['toolName'] : null;
-    if (!toolName) return [];
-    return [{
-      toolName,
-      args: {},
-      source: typeof record['source'] === 'string' ? record['source'] : 'provider',
-      isError: record['isError'] === true,
-      resultText: '',
-    }];
+  const choices = Array.isArray((responseEnvelope as Record<string, unknown>)['choices'])
+    ? (responseEnvelope as Record<string, unknown>)['choices'] as Array<Record<string, unknown>>
+    : [];
+  return choices.flatMap((choice) => {
+    const message = choice['message'];
+    if (!message || typeof message !== 'object') return [];
+    const toolCalls = Array.isArray((message as Record<string, unknown>)['tool_calls'])
+      ? (message as Record<string, unknown>)['tool_calls'] as Array<Record<string, unknown>>
+      : [];
+    return toolCalls.flatMap((call) => {
+      const fn = call['function'];
+      if (!fn || typeof fn !== 'object') return [];
+      const toolName = typeof (fn as Record<string, unknown>)['name'] === 'string'
+        ? (fn as Record<string, unknown>)['name'] as string
+        : null;
+      if (!toolName) return [];
+      const toolCallId = typeof call['id'] === 'string' ? call['id'] : undefined;
+      const rawArguments = typeof (fn as Record<string, unknown>)['arguments'] === 'string'
+        ? (fn as Record<string, unknown>)['arguments'] as string
+        : '{}';
+      let args: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(rawArguments);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          args = parsed as Record<string, unknown>;
+        }
+      } catch {
+        args = {};
+      }
+      return [{
+        toolName,
+        toolCallId,
+        args,
+        source: 'provider',
+        isError: false,
+        resultText: '',
+      }];
+    });
   });
+}
+
+function buildNativeToolDefinitions(tools: ToolDefinition[]): import('../llm/gateway.js').ChatToolDefinition[] {
+  return tools.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.manifest.name,
+      description: tool.manifest.description,
+      parameters: tool.manifest.parameters as unknown as Record<string, unknown>,
+    },
+  }));
+}
+
+function normalizeToolCallArgValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeToolCallArgValue(item));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length === 2 && 'type' in record && 'value' in record) {
+    return normalizeToolCallArgValue(record['value']);
+  }
+
+  return Object.fromEntries(
+    Object.entries(record).map(([key, child]) => [key, normalizeToolCallArgValue(child)]),
+  );
+}
+
+function normalizeToolCallArgs(args: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!args) return {};
+  return Object.fromEntries(
+    Object.entries(args).map(([key, value]) => [key, normalizeToolCallArgValue(value)]),
+  );
+}
+
+function buildToolMessageContent(result: StructuredToolExecutionResult): string {
+  return result.text;
+}
+
+function buildRepeatedToolResultMessage(result: StructuredToolExecutionResult): StructuredToolExecutionResult {
+  return {
+    ...result,
+    text: [
+      result.text,
+      '',
+      'Note: This exact tool call was already executed earlier in this conversation.',
+      'Reuse the result above instead of repeating the same tool call. If it answers the question, finalize now; otherwise choose a different tool.',
+    ].join('\n'),
+    isError: false,
+  };
 }
 
 // ── Parsing helpers ──────────────────────────────────────────────────────────
@@ -413,7 +505,14 @@ export class AgentRunner {
       .sort();
   }
 
-  /** Compose a system prompt from charter sections, skills, memories, and optional roster. */
+  /**
+   * Compose a system prompt from charter sections, skills, and optional roster.
+   *
+   * @param memories - DEPRECATED. Memory injection is disabled; pass [] at runtime.
+   *   The parameter is retained so the method signature and trace infrastructure stay intact
+   *   for a future redesign. Entries in this array will still render if passed directly
+   *   (e.g., in unit tests), but run() no longer passes real recalled memories here.
+   */
   composeSystemPrompt(
     charter: AgentCharter,
     skills: AgentSkill[],
@@ -428,6 +527,8 @@ export class AgentRunner {
   private buildSystemPromptParts(
     charter: AgentCharter,
     skills: AgentSkill[],
+    // DEPRECATED: memories param is kept for trace-shape parity and future redesign.
+    // run() always passes [] here — see step 3 in run() for the disabled recall.
     memories: MemoryEntry[],
     rosterContext?: string,
   ): PromptTracePart[] {
@@ -475,7 +576,10 @@ export class AgentRunner {
       });
     }
 
-    // Memories
+    // DEPRECATED — Memory injection block. This code path is intentionally dormant.
+    // run() passes an empty array for memories; entries will not appear in live prompts.
+    // Kept in place (with full trace instrumentation) so the shape is ready for a future
+    // redesign that restores or replaces memory injection. Do not remove without a spike.
     if (memories.length > 0) {
       const memLines = memories.map((m) => `- [${m.category}] ${m.content}`);
       const content = '## Relevant Context\n' + memLines.join('\n');
@@ -713,12 +817,13 @@ export class AgentRunner {
       }
 
       const toolCall = parsed.data;
-      const cacheKey = stableToolCallKey(toolCall.toolName, toolCall.args);
+      const normalizedArgs = normalizeToolCallArgs(toolCall.args);
+      const cacheKey = stableToolCallKey(toolCall.toolName, normalizedArgs);
       const toolResult = toolResultCache.has(cacheKey)
         ? toolResultCache.get(cacheKey)!
         : await (async () => {
           try {
-            return await executeToolCall(toolCall.toolName, toolCall.args, {
+            return await executeToolCall(toolCall.toolName, normalizedArgs, {
               includeWebSearch: this.toolLoopWebSearchEnabled,
             });
           } catch (error) {
@@ -731,10 +836,10 @@ export class AgentRunner {
                 readOnlyHint: true,
                 inputSchema: { type: 'object' },
               },
-              args: toolCall.args,
-              output: `Tool error: ${error instanceof Error ? error.message : String(error)}`,
-              isError: true,
-              source: 'local' as const,
+                args: normalizedArgs,
+                output: `Tool error: ${error instanceof Error ? error.message : String(error)}`,
+                isError: true,
+                source: 'local' as const,
             };
           }
         })();
@@ -792,8 +897,11 @@ export class AgentRunner {
       }
     }
 
-    // 3. Recall relevant memories
-    const memories = this.memory.recall(agentName, { limit: 10 });
+    // 3. [DEPRECATED] Memory recall — injection is disabled pending redesign.
+    //    AgentMemory storage and schema remain intact (see memory.ts); nothing is retrieved
+    //    or injected into prompts here. Replace this stub with a real recall strategy during
+    //    the future memory spike. memoriesUsed in the result will always be 0 until then.
+    const memories: MemoryEntry[] = [];
 
     const model = charter.model && charter.model !== 'auto' ? charter.model : undefined;
     const stageKey = AGENT_STAGE_KEY[agentName];
@@ -805,7 +913,9 @@ export class AgentRunner {
       stageKey: model ? undefined : stageKey,
       taskFamily,
     });
-    const toolLoopEnabled = this.shouldUseToolLoop(route.providerId, responseFormat);
+    const toolLoopEnabled = params.toolCalling?.enabled === true
+      ? false
+      : this.shouldUseToolLoop(route.providerId, responseFormat);
     const requestedTools = Array.from(new Set([
       ...(params.toolCalling?.requestedTools ?? []),
       ...skills.flatMap((skill) => skill.tools),
@@ -831,7 +941,8 @@ export class AgentRunner {
         systemParts.push(toolLoopPart);
       }
     }
-    if (availableTools.length > 0) {
+    const useNativeLmstudioTools = params.toolCalling?.enabled === true && route.providerId === 'lmstudio';
+    if (availableTools.length > 0 && !useNativeLmstudioTools) {
       const toolPrompt = buildToolCatalogPrompt(availableTools);
       systemParts.push({
         channel: 'system',
@@ -895,6 +1006,9 @@ export class AgentRunner {
     const requestStartedAt = Date.now();
     let response;
     const toolCalls: ToolCallTrace[] = [];
+    let lastProviderMetadata: import('../llm/gateway.js').ProviderMetadata | undefined;
+    let lastProviderId: string | null = null;
+    let lastModelId: string | null = null;
     try {
       const providerContext = {
         articleId: params.trace?.articleId ?? articleContext?.slug ?? null,
@@ -907,6 +1021,7 @@ export class AgentRunner {
       if (availableTools.length > 0 && responseFormat !== 'json' && route.providerId !== 'copilot-cli') {
         const toolConversation: ChatMessage[] = [...messages];
         const seenCalls = new Set<string>();
+        const priorToolResults = new Map<string, StructuredToolExecutionResult>();
         const maxToolCalls = Math.max(1, params.toolCalling?.maxToolCalls ?? 4);
         let aggregatedUsage: {
           promptTokens: number;
@@ -919,6 +1034,7 @@ export class AgentRunner {
           const structured = await this._gateway.chatStructuredWithResponse(
             {
               messages: toolConversation,
+              tools: route.providerId === 'lmstudio' ? buildNativeToolDefinitions(availableTools) : undefined,
               provider,
               model,
               temperature,
@@ -930,6 +1046,9 @@ export class AgentRunner {
             },
             TOOL_LOOP_RESPONSE_SCHEMA,
           );
+          lastProviderMetadata = structured.response.providerMetadata;
+          lastProviderId = structured.response.provider;
+          lastModelId = structured.response.model;
 
           if (structured.response.usage) {
             aggregatedUsage = aggregatedUsage ?? {
@@ -952,7 +1071,8 @@ export class AgentRunner {
           }
 
           const toolName = structured.data.toolName ?? '';
-          const args = structured.data.args ?? {};
+          const toolCallId = structured.data.toolCallId ?? `tool-call-${attempt + 1}`;
+          const args = normalizeToolCallArgs(structured.data.args);
           const key = `${toolName}:${JSON.stringify(args)}`;
           const tool = availableTools.find((candidate) => candidate.manifest.name === toolName);
 
@@ -963,17 +1083,21 @@ export class AgentRunner {
               isError: true,
             };
           } else if (seenCalls.has(key)) {
-            toolResult = {
-              text: JSON.stringify({ error: `Duplicate tool call blocked for '${toolName}'` }, null, 2),
-              isError: true,
-            };
+            toolResult = buildRepeatedToolResultMessage(
+              priorToolResults.get(key) ?? {
+                text: JSON.stringify({ error: `Duplicate tool call blocked for '${toolName}'` }, null, 2),
+                isError: false,
+              },
+            );
           } else {
             seenCalls.add(key);
             toolResult = await executeToolCall(tool, args, toolContext);
+            priorToolResults.set(key, toolResult);
           }
 
           toolCalls.push({
             toolName,
+            toolCallId,
             args,
             source: tool?.source ?? 'unknown',
             isError: toolResult.isError === true,
@@ -982,11 +1106,21 @@ export class AgentRunner {
 
           toolConversation.push({
             role: 'assistant',
-            content: JSON.stringify({ type: 'tool_call', toolName, args }),
+            content: '',
+            tool_calls: [{
+              id: toolCallId,
+              type: 'function',
+              function: {
+                name: toolName,
+                arguments: JSON.stringify(args),
+              },
+            }],
           });
           toolConversation.push({
-            role: 'user',
-            content: appendToolResultMessage(toolName, toolResult),
+            role: 'tool',
+            tool_call_id: toolCallId,
+            name: toolName,
+            content: buildToolMessageContent(toolResult),
           });
         }
 
@@ -1025,16 +1159,33 @@ export class AgentRunner {
         const providerMetadata = error instanceof Error
           ? (error as Error & { providerMetadata?: import('../llm/gateway.js').ProviderMetadata }).providerMetadata
           : undefined;
+        const traceProviderMetadata = providerMetadata ?? lastProviderMetadata;
+        const failedTraceMetadata = availableTools.length > 0 || toolCalls.length > 0
+          ? {
+            ...(availableTools.length > 0
+              ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
+              : {}),
+            ...(params.toolCalling?.enabled === true
+              ? {
+                toolCallCount: toolCalls.length,
+                toolCallBudget: Math.max(1, params.toolCalling?.maxToolCalls ?? 4),
+              }
+              : {}),
+            ...(toolCalls.length > 0 ? { toolCalls } : {}),
+          }
+          : null;
         params.trace?.repo.failLlmTrace(traceId, {
-          model: model ?? null,
+          provider: lastProviderId ?? route.providerId ?? provider ?? null,
+          model: lastModelId ?? model ?? route.model ?? null,
           errorMessage: message,
           latencyMs: Date.now() - requestStartedAt,
-          providerMode: providerMetadata?.providerMode ?? null,
-          providerSessionId: providerMetadata?.providerSessionId ?? null,
-          workingDirectory: providerMetadata?.workingDirectory ?? null,
-          incrementalPrompt: providerMetadata?.incrementalPrompt ?? null,
-          providerRequest: providerMetadata?.requestEnvelope,
-          providerResponse: providerMetadata?.responseEnvelope,
+          metadata: failedTraceMetadata,
+          providerMode: traceProviderMetadata?.providerMode ?? null,
+          providerSessionId: traceProviderMetadata?.providerSessionId ?? null,
+          workingDirectory: traceProviderMetadata?.workingDirectory ?? null,
+          incrementalPrompt: traceProviderMetadata?.incrementalPrompt ?? null,
+          providerRequest: traceProviderMetadata?.requestEnvelope,
+          providerResponse: traceProviderMetadata?.responseEnvelope,
         });
       }
       throw error;
@@ -1048,6 +1199,12 @@ export class AgentRunner {
         ? {
           ...(availableTools.length > 0
             ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
+            : {}),
+          ...(params.toolCalling?.enabled === true
+            ? {
+              toolCallCount: toolCalls.length + providerToolCalls.length,
+              toolCallBudget: Math.max(1, params.toolCalling?.maxToolCalls ?? 4),
+            }
             : {}),
           ...((toolCalls.length > 0 || providerToolCalls.length > 0)
             ? { toolCalls: [...toolCalls, ...providerToolCalls] }
@@ -1074,7 +1231,8 @@ export class AgentRunner {
       });
     }
 
-    // 8b. Boost relevance of memories that were used in this successful run
+    // 8b. [DEPRECATED] Relevance boost — dormant because memories is always [].
+    //     Kept in place so the logic is ready when memory injection is re-enabled.
     for (const mem of memories) {
       this.memory.touch(mem.id);
     }
