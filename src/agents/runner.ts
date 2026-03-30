@@ -1112,10 +1112,28 @@ export class AgentRunner {
       try {
         raw = JSON.parse(response.content);
       } catch {
+        // Re-prompt once for invalid JSON before throwing
+        if (attempt < params.maxToolCalls) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: 'Your response was not valid JSON. Please respond with valid JSON in this format: {"type":"final","content":"your full answer here"}',
+          });
+          continue;
+        }
         throw new Error(`Tool loop response was not valid JSON: ${response.content.slice(0, 200)}`);
       }
       const parsed = ToolLoopTurnSchema.safeParse(normalizeToolLoopResponse(raw));
       if (!parsed.success) {
+        // Re-prompt once for schema failures (e.g. empty content) before throwing
+        if (attempt < params.maxToolCalls) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: 'Your response did not match the required format. The "content" field must be a non-empty string. Please respond with: {"type":"final","content":"your full answer here"}',
+          });
+          continue;
+        }
         throw new Error(`Tool loop response did not match the required JSON contract: ${parsed.error.message}`);
       }
 
