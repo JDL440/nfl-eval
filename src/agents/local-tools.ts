@@ -50,6 +50,7 @@ export interface ToolCallingConfig {
   enabled?: boolean;
   includeLocalExtensions?: boolean;
   includePipelineTools?: boolean;
+  includeWebSearch?: boolean;
   allowWriteTools?: boolean;
   requestedTools?: string[];
   maxToolCalls?: number;
@@ -387,6 +388,34 @@ async function runWebSearch(args: Record<string, unknown>): Promise<ToolExecutio
   };
 }
 
+function buildWebSearchToolDefinition(): ToolDefinition {
+  return {
+    manifest: {
+      name: WEB_SEARCH_TOOL_NAME,
+      description: 'Search the public web and return a short list of results with URLs and snippets.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Natural-language search query' },
+          max_results: { type: 'integer', description: 'Maximum number of results to return (1-8)' },
+        },
+        required: ['query'],
+      },
+    },
+    handler: async (args) => {
+      const result = await runWebSearch(args);
+      return { text: result.output };
+    },
+    source: 'local-extension',
+    aliases: ['web', 'search'],
+    safety: {
+      readOnly: true,
+      writesState: false,
+      externalSideEffects: false,
+    },
+  };
+}
+
 export async function getSafeLocalToolCatalog(options?: { includeWebSearch?: boolean }): Promise<ToolCatalogEntry[]> {
   const registry = await loadRegistryModule();
   const safeNames = new Set(registry.SAFE_READ_ONLY_TOOL_NAMES);
@@ -406,23 +435,17 @@ export async function getSafeLocalToolCatalog(options?: { includeWebSearch?: boo
     }));
 
   if (options?.includeWebSearch) {
+    const tool = buildWebSearchToolDefinition();
     tools.push({
-      name: WEB_SEARCH_TOOL_NAME,
-      description: 'Search the public web and return a short list of results with URLs and snippets.',
+      name: tool.manifest.name,
+      description: tool.manifest.description,
       category: 'web',
       sideEffects: 'none (read-only public web search)',
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: true,
-      inputSchema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string' },
-          max_results: { type: 'integer' },
-        },
-        required: ['query'],
-      },
+      inputSchema: tool.manifest.parameters,
       examples: [{ query: 'latest Seahawks cap update', max_results: 5 }],
     });
   }
@@ -445,6 +468,9 @@ export async function listAvailableTools(config: ToolCallingConfig): Promise<Too
   }
   if (config.includePipelineTools) {
     toolSets.push(getPipelineToolDefinitions());
+  }
+  if (config.includeWebSearch) {
+    toolSets.push([buildWebSearchToolDefinition()]);
   }
 
   const allowWriteTools = config.allowWriteTools === true;

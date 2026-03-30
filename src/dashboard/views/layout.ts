@@ -66,6 +66,7 @@ export function renderLayout(title: string, content: string, labName: string): s
         <a href="/config" class="btn btn-header header-nav-link${activeNav === 'settings' ? ' is-active' : ''}">Settings</a>
       </nav>
       <div class="header-meta">
+        <!-- TODO: receive NODE_ENV via template param instead of direct process.env read -->
         <span class="env-badge header-env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
         <button id="theme-toggle" class="btn btn-header btn-icon" title="Toggle theme" onclick="toggleTheme()">🌓</button>
         <button

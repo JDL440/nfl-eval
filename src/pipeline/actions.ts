@@ -519,6 +519,27 @@ function buildAgentTraceContext(
   };
 }
 
+const DEFAULT_STAGE_REQUESTED_TOOLS = [
+  'pipeline-read',
+  'nflverse-data',
+  'prediction-markets',
+  'web_search',
+] as const;
+
+function buildStageRequestedTools(
+  surface: string,
+  explicitRequestedTools?: string[],
+): string[] {
+  const requested = new Set<string>(DEFAULT_STAGE_REQUESTED_TOOLS);
+  if (surface === 'runPublisherPass') {
+    requested.add('article');
+  }
+  for (const tool of explicitRequestedTools ?? []) {
+    if (tool) requested.add(tool);
+  }
+  return [...requested];
+}
+
 function runAgent(
   ctx: ActionContext,
   articleId: string,
@@ -533,9 +554,12 @@ function runAgent(
     trace: buildAgentTraceContext(ctx, articleId, stage, surface),
     toolCalling: {
       enabled: true,
-      includeLocalExtensions: true,
-      includePipelineTools: true,
-      allowWriteTools: true,
+      includeLocalExtensions: params.toolCalling?.includeLocalExtensions ?? true,
+      includePipelineTools: params.toolCalling?.includePipelineTools ?? true,
+      includeWebSearch: params.toolCalling?.includeWebSearch ?? true,
+      allowWriteTools: params.toolCalling?.allowWriteTools ?? false,
+      maxToolCalls: params.toolCalling?.maxToolCalls ?? 12,
+      requestedTools: buildStageRequestedTools(surface, params.toolCalling?.requestedTools),
       context: {
         repo: ctx.repo,
         engine: ctx.engine,

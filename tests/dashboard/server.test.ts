@@ -68,6 +68,8 @@ describe('Dashboard Server', () => {
   it('enables the app-owned tool loop for non-Copilot-CLI providers', () => {
     expect(buildDashboardToolLoopOptions()).toEqual({
       enabledProviders: [...APP_TOOL_LOOP_PROVIDER_IDS],
+      enableWebSearch: true,
+      maxToolCalls: 12,
     });
     expect(APP_TOOL_LOOP_PROVIDER_IDS).toContain('lmstudio');
     expect(APP_TOOL_LOOP_PROVIDER_IDS).toContain('copilot');

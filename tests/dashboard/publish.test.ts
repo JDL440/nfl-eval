@@ -313,8 +313,7 @@ describe('Publish Workflow', () => {
 
       const html = await res.text();
       expect(html).toContain('Substack publishing is not configured.');
-      expect(html).toContain('SUBSTACK_PUBLICATION_URL');
-      expect(html).toContain('SUBSTACK_TOKEN');
+      expect(html).toContain('Configure Substack credentials');
       expect(html).toContain('/config');
       expect(html).toContain('aria-disabled="true"');
       expect(html).toContain('Draft needed');
@@ -481,8 +480,7 @@ describe('Publish Workflow', () => {
 
       const html = await res.text();
       expect(html).toContain('Substack publishing is not configured.');
-      expect(html).toContain('SUBSTACK_PUBLICATION_URL');
-      expect(html).toContain('SUBSTACK_TOKEN');
+      expect(html).toContain('Configure Substack credentials');
       expect(html).toContain('/config');
       expect(html).toContain('aria-disabled="true"');
     });
@@ -736,8 +734,7 @@ describe('Publish Workflow', () => {
 
       const html = await res.text();
       expect(html).toContain('Substack publishing is not configured.');
-      expect(html).toContain('SUBSTACK_PUBLICATION_URL');
-      expect(html).toContain('SUBSTACK_TOKEN');
+      expect(html).toContain('Configure Substack credentials');
       expect(html).toContain('/config');
       expect(html).toContain('aria-disabled="true"');
     });
