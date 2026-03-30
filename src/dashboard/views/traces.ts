@@ -124,13 +124,15 @@ function renderTraceBlock(
   options?: {
     open?: boolean;
     jsonValue?: unknown;
+    rawOnly?: boolean;
   },
 ): string {
   if (!rawContent) return '';
   const blockId = slugifyTraceKey(`${title}-${Math.random().toString(36).slice(2, 8)}`);
   const jsonValue = options?.jsonValue;
-  const hasJsonPreview = jsonValue !== undefined;
-  const hasMarkdownPreview = !hasJsonPreview && looksLikeMarkdown(rawContent);
+  const rawOnly = options?.rawOnly === true;
+  const hasJsonPreview = !rawOnly && jsonValue !== undefined;
+  const hasMarkdownPreview = !rawOnly && !hasJsonPreview && looksLikeMarkdown(rawContent);
   const showPreviewByDefault = hasJsonPreview || hasMarkdownPreview;
   const controls = hasJsonPreview || hasMarkdownPreview
     ? `<div class="trace-preview-toolbar">
@@ -178,7 +180,7 @@ function renderToolMetadata(trace: LlmTrace): string {
   }
 
   const availableToolsBlock = availableTools.length > 0
-    ? renderTraceBlock('Available Tools', availableTools.join('\n'))
+    ? renderTraceBlock('Available Tools', availableTools.join('\n'), { rawOnly: true })
     : '';
 
   const toolCallsBlock = toolCalls.length > 0
