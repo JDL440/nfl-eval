@@ -329,7 +329,7 @@ export function createApp(
     }
   }
 
-  function buildPublishPresentation(articleId: string): {
+  function buildPublishPresentation(articleId: string, options?: { previewMode?: boolean }): {
     htmlBody: string;
     coverImageUrl: string | null;
     inlineImageUrls: string[];
@@ -341,7 +341,7 @@ export function createApp(
 
     if (rawDraft) {
       const cleanDraft = separateThinking(rawDraft).output;
-      const doc = markdownToProseMirror(cleanDraft);
+      const doc = markdownToProseMirror(cleanDraft, { previewMode: options?.previewMode });
       htmlBody = proseMirrorToHtml(doc);
       substackDoc = doc;
     }
@@ -1902,7 +1902,7 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
 
-    const presentation = buildPublishPresentation(id);
+    const presentation = buildPublishPresentation(id, { previewMode: true });
 
     return c.html(
       renderArticlePreview({
@@ -1921,7 +1921,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
-    const presentation = buildPublishPresentation(id);
+    const presentation = buildPublishPresentation(id, { previewMode: true });
 
     return c.html(
       renderPublishPreview({
@@ -1939,7 +1939,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-    const presentation = buildPublishPresentation(id);
+    const presentation = buildPublishPresentation(id, { previewMode: true });
     return c.html(
       renderArticlePreviewFrame({
         config,
