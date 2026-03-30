@@ -376,17 +376,69 @@ export function getEscalatedArticles(
 }
 
 function extractRevisionBlockerMetadata(reviewContent: string): RevisionBlockerMetadata | null {
+  // Primary: look for structured [BLOCKER type:id] tags
   const matches = [...reviewContent.matchAll(/\[BLOCKER\s+([a-z0-9_-]+):([a-z0-9_-]+)\]/gi)];
-  if (matches.length === 0) return null;
+  if (matches.length > 0) {
+    const blockerTypes = [...new Set(matches.map((match) => match[1]!.trim().toLowerCase()).filter(Boolean))];
+    const blockerIds = [...new Set(matches.map((match) => match[2]!.trim().toLowerCase()).filter(Boolean))];
+    if (blockerIds.length > 0) {
+      return {
+        blockerType: blockerTypes.length === 1 ? blockerTypes[0] : 'mixed',
+        blockerIds,
+      };
+    }
+  }
 
-  const blockerTypes = [...new Set(matches.map((match) => match[1]!.trim().toLowerCase()).filter(Boolean))];
-  const blockerIds = [...new Set(matches.map((match) => match[2]!.trim().toLowerCase()).filter(Boolean))];
-  if (blockerIds.length === 0) return null;
+  // Fallback: extract blockers from natural review formats.
+  // LLMs often use bold items under ERRORS/🔴 headings instead of structured tags.
+  const ids: string[] = [];
+  const types: string[] = [];
 
-  return {
-    blockerType: blockerTypes.length === 1 ? blockerTypes[0] : 'mixed',
-    blockerIds,
-  };
+  // Pattern: **Bold Error Title** or **Bold Error Title:** under an ERRORS/🔴 section
+  const errorSectionMatch = reviewContent.match(/#{1,3}\s*(?:🔴|ERRORS)[^\n]*\n([\s\S]*?)(?=\n#{1,3}\s|\n## Verdict|$)/i);
+  if (errorSectionMatch) {
+    const errorSection = errorSectionMatch[1]!;
+    const boldItems = [...errorSection.matchAll(/\*\*([^*]+)\*\*/g)];
+    for (const item of boldItems) {
+      const label = item[1]!.trim()
+        .replace(/[^a-z0-9\s-]/gi, '')  // strip special chars
+        .replace(/\s+/g, '-')
+        .toLowerCase()
+        .slice(0, 40);
+      if (label.length > 2) {
+        ids.push(label);
+        // Infer type from keywords
+        if (/evidence|source|claim|unsupported|stat/i.test(item[1]!)) {
+          types.push('evidence');
+        } else if (/structure|format|tldr|layout|section/i.test(item[1]!)) {
+          types.push('structure');
+        } else if (/temporal|date|season|year|time/i.test(item[1]!)) {
+          types.push('temporal');
+        } else {
+          types.push('editorial');
+        }
+      }
+    }
+  }
+
+  if (ids.length > 0) {
+    const uniqueTypes = [...new Set(types)];
+    return {
+      blockerType: uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed',
+      blockerIds: [...new Set(ids)],
+    };
+  }
+
+  // Last resort: if there's a REVISE verdict but no parseable blockers at all,
+  // synthesize a generic blocker so the revision loop can proceed.
+  if (/\bREVISE\b/i.test(reviewContent)) {
+    return {
+      blockerType: 'editorial',
+      blockerIds: ['unstructured-review'],
+    };
+  }
+
+  return null;
 }
 
 function summarizeMarkdownLine(text: string | null | undefined, maxLength = 180): string | null {

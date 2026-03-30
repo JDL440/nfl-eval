@@ -1078,7 +1078,7 @@ REVISE`,
       expect(history[0]?.blocker_ids).toBe(JSON.stringify(['missing-tldr', 'stale-stat']));
     });
 
-    it('fails explicitly when the editor returns REVISE without valid blocker tags', async () => {
+    it('synthesises generic blocker metadata when editor returns REVISE without structured tags', async () => {
       setRunnerProvider(fixtures, new RecordingProvider([
         `# Editor Review
 
@@ -1097,13 +1097,16 @@ REVISE`,
 
       const result = await STAGE_ACTIONS.runEditor('test-re-revise-missing-blockers', fixtures.ctx);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Editor requested revisions without valid structured [BLOCKER type:id] tags.');
-      expect(getRevisionHistory(fixtures.repo, 'test-re-revise-missing-blockers')).toEqual([]);
+      expect(result.success).toBe(true);
+      expect(result.outcome).toBe('REVISE');
+      const revisions = getRevisionHistory(fixtures.repo, 'test-re-revise-missing-blockers');
+      expect(revisions).toHaveLength(1);
+      expect(revisions[0]!.blocker_type).toBe('editorial');
+      expect(revisions[0]!.blocker_ids).toContain('unstructured-review');
       expect(fixtures.repo.artifacts.get('test-re-revise-missing-blockers', 'editor-review.md')).toContain('## Verdict');
     });
 
-    it('fails explicitly when the editor returns REVISE with malformed blocker tags', async () => {
+    it('synthesises blocker metadata from last-resort when editor returns REVISE with malformed tags', async () => {
       setRunnerProvider(fixtures, new RecordingProvider([
         `# Editor Review
 
@@ -1123,9 +1126,43 @@ REVISE`,
 
       const result = await STAGE_ACTIONS.runEditor('test-re-revise-malformed-blockers', fixtures.ctx);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Editor requested revisions without valid structured [BLOCKER type:id] tags.');
-      expect(getRevisionHistory(fixtures.repo, 'test-re-revise-malformed-blockers')).toEqual([]);
+      expect(result.success).toBe(true);
+      expect(result.outcome).toBe('REVISE');
+      const revisions = getRevisionHistory(fixtures.repo, 'test-re-revise-malformed-blockers');
+      expect(revisions).toHaveLength(1);
+      // Falls through to last-resort since malformed tag has no :id
+      expect(revisions[0]!.blocker_type).toBe('editorial');
+    });
+
+    it('extracts blockers from bold items under ERRORS section when no structured tags present', async () => {
+      setRunnerProvider(fixtures, new RecordingProvider([
+        `## 🔴 ERRORS (Must Fix Before Publish)
+- [ ] **Unsupported Claim: "MVP-Style Receiver"** — The article's central thesis calls the player an "MVP-style receiver," but his 2025 stats show EPA of 17.621, ranking him #49 among WRs.
+- [ ] **Temporal Accuracy: Missing Supporting Context** — The claim is not supported by the article contract or provided evidence anchors.
+
+## 🟡 SUGGESTIONS (Strong Recommendations)
+- [ ] **Reframe the "MVP-style" claim** — Consider changing to "high-volume versatility" instead.
+
+## Verdict
+REVISE`,
+      ]));
+      createArticleWithStage(fixtures, 'test-re-revise-bold-items', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': validDraft(1000),
+      });
+
+      const result = await STAGE_ACTIONS.runEditor('test-re-revise-bold-items', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(result.outcome).toBe('REVISE');
+      const revisions = getRevisionHistory(fixtures.repo, 'test-re-revise-bold-items');
+      expect(revisions).toHaveLength(1);
+      // Should extract from bold items under ERRORS section
+      expect(revisions[0]!.blocker_type).toBe('mixed');
+      expect(revisions[0]!.blocker_ids!.length).toBeGreaterThanOrEqual(2);
     });
 
     it('passes writer-factcheck.md to editor as advisory context', async () => {
@@ -1469,7 +1506,7 @@ ${longText(450)}`,
     expect(result.error).toContain('Writer draft failed validation after self-heal');
   });
 
-  it('stops with an explicit error when runEditor returns REVISE without valid blocker tags', async () => {
+  it('regresses to writer with synthetic blockers when runEditor returns REVISE without structured tags', async () => {
     setRunnerProvider(fixtures, new RecordingProvider([
       `# Editor Review
 
@@ -1477,6 +1514,8 @@ Need fresher support for the lede.
 
 ## Verdict
 REVISE`,
+      // writeDraft (after regression to stage 4) — produces a short draft that fails validation
+      validDraft(150),
     ]));
     createArticleWithStage(fixtures, 'test-auto-editor-revise-missing-blockers', 5 as Stage, {
       'idea.md': '# Idea',
@@ -1491,12 +1530,13 @@ REVISE`,
       maxRevisions: 1,
     });
 
-    expect(result.error).toBe('Editor requested revisions without valid structured [BLOCKER type:id] tags.');
-    expect(result.steps.some((step) => step.type === 'regress')).toBe(false);
-    expect(result.revisionCount).toBe(0);
-    expect(result.finalStage).toBe(5);
-    expect(fixtures.repo.getArticle('test-auto-editor-revise-missing-blockers')!.current_stage).toBe(5);
-    expect(getRevisionHistory(fixtures.repo, 'test-auto-editor-revise-missing-blockers')).toEqual([]);
+    // Should have regressed to writer (stage 4) with synthetic blocker metadata
+    expect(result.revisionCount).toBe(1);
+    expect(result.steps.some((step) => step.type === 'regress')).toBe(true);
+    const revisions = getRevisionHistory(fixtures.repo, 'test-auto-editor-revise-missing-blockers');
+    expect(revisions).toHaveLength(1);
+    expect(revisions[0]!.blocker_type).toBe('editorial');
+    expect(revisions[0]!.blocker_ids).toContain('unstructured-review');
   });
 
   it('escalates repeated blocker signatures to lead review instead of regressing again', async () => {
