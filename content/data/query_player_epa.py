@@ -99,7 +99,7 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
             agg_exprs.append(pl.col(col).sum().alias(col))
     
     # Rate stats (mean them)
-    rate_cols = ["cpoe", "dakota", "racr", "target_share", "air_yards_share"]
+    rate_cols = ["passing_cpoe", "racr", "target_share", "air_yards_share"]
     for col in rate_cols:
         if col in player_df.columns:
             agg_exprs.append(pl.col(col).mean().alias(col))
@@ -153,8 +153,8 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
             "passing_tds": player["passing_tds"][0] if "passing_tds" in player.columns else 0,
             "interceptions": player["passing_interceptions"][0] if "passing_interceptions" in player.columns else 0,
             "passing_epa": round(player["passing_epa"][0], 3) if "passing_epa" in player.columns else None,
-            "cpoe": round(player["cpoe"][0], 3) if "cpoe" in player.columns else None,
-            "dakota": round(player["dakota"][0], 3) if "dakota" in player.columns else None,
+            "cpoe": round(player["passing_cpoe"][0], 3) if "passing_cpoe" in player.columns else None,
+            "dakota": None,  # removed from nflverse
             "position_rank": position_rank,
         }
     elif position == "RB":

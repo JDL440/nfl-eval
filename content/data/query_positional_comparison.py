@@ -28,7 +28,7 @@ CACHE_DIR = Path(__file__).parent / "cache"
 
 # Position -> available metrics mapping
 POSITION_METRICS = {
-    "QB": ["passing_epa", "passing_yards", "passing_tds", "completions", "attempts", "cpoe", "dakota"],
+    "QB": ["passing_epa", "passing_yards", "passing_tds", "completions", "attempts", "passing_cpoe"],
     "RB": ["rushing_epa", "rushing_yards", "rushing_tds", "carries", "receiving_yards", "receptions", "targets"],
     "WR": ["receiving_epa", "receiving_yards", "receiving_tds", "receptions", "targets", "target_share", "air_yards_share", "racr"],
     "TE": ["receiving_epa", "receiving_yards", "receiving_tds", "receptions", "targets", "target_share", "air_yards_share"],
@@ -94,7 +94,7 @@ def query_positional_comparison(position: str, metric: str, season: int, top_n: 
             agg_exprs.append(pl.col(col).sum().alias(col))
     
     # Mean rate stats
-    rate_cols = ["cpoe", "dakota", "racr", "target_share", "air_yards_share"]
+    rate_cols = ["passing_cpoe", "racr", "target_share", "air_yards_share"]
     for col in rate_cols:
         if col in position_df.columns:
             agg_exprs.append(pl.col(col).mean().alias(col))
