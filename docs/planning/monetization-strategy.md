@@ -334,3 +334,76 @@ Until you prove KC and DAL articles are as good as SEA articles, the entire 32-t
 | 7 | Acquisition | 15% | 18-36 mo | $3-10M | Build traction first |
 
 **The single most important thing to do right now:** Measure cost per article, build the fantasy agent, and sign up for sports betting affiliate programs. Those three actions unlock the two highest-probability revenue streams.
+
+---
+
+## Passive Income Reality Check
+
+Almost none of these paths are truly passive, but two can get close with the right setup.
+
+### Passive Income Scorecard
+
+| Path | Passive? | Why / Why Not |
+|------|----------|---------------|
+| **Consulting** | ❌ Zero | Pure time-for-money. Stop working, income stops immediately. |
+| **Affiliates (RevShare)** | 🟡 Semi | Closest to passive — referred users generate revenue forever without additional work. |
+| **Subscriptions** | 🟡 Semi | Only if pipeline automation is built (VISION.md Phase 2). Still needs ~15 min/day approval. |
+| **Sponsorships** | ❌ Low | Requires ongoing publishing cadence + sponsor relationship management. |
+| **Platform license** | 🟡 Semi | Passive once built and sold, but requires ongoing support and maintenance. |
+| **Content API** | 🟡 Semi | Same — passive after build, but needs maintenance, uptime, and updates. |
+| **Acquisition** | ✅ One-time | Not income — it's a liquidity event. Most passive possible: sell and walk away. |
+
+### The Two Semi-Passive Paths
+
+#### 1. Affiliate RevShare — Closest to True Passive
+
+If you choose **revenue share** (not CPA) with DraftKings/FanDuel, you earn a percentage of every referred user's betting activity *forever*:
+
+- Publish an article in June 2026 with affiliate links
+- 5 people sign up for DraftKings through your link
+- Those 5 people bet actively through the NFL season
+- You earn 25-35% of their net gaming revenue — every month — without doing anything else
+- That one article keeps paying as long as those users keep betting
+
+**This compounds.** 50 referred users × $20/month average revenue to you = $1,000/month from articles you already wrote. The key requirement: articles need ongoing traffic (SEO, Substack archive, Google indexing).
+
+#### 2. Automated Pipeline + Subscriptions — Passive-ish
+
+This is what VISION.md Phase 2 describes: cron triggers → auto-draft → auto-review → human clicks "approve." If you build this:
+
+- ~10-15 minutes/day to review and approve
+- Subscription revenue flows automatically via Substack
+- Affiliate links embedded in every automated article generate ongoing referrals
+
+But building that automation is **months of active work** (Top 20 item #1), and you still need to maintain agent knowledge freshness and handle edge cases.
+
+### The Realistic Best Case for "Passive"
+
+Nothing is passive until pipeline automation (Top 20 item #1) is built. The honest path:
+
+1. Build pipeline automation (~2-3 months of active work)
+2. Choose affiliate RevShare model (not CPA)
+3. Build Fantasy Expert agent (highest affiliate conversion content)
+4. Accumulate 50-100 referred betting users over time
+5. Daily involvement drops to **~15 minutes** (approve queue review)
+6. Revenue: $1K-3K/month from RevShare + subscriptions, growing as content library grows
+
+**That's not passive. That's "15 minutes a day."** Which is the realistic best case for a solo-operated AI content business. True zero-effort passive income doesn't exist here — but "one coffee's worth of daily effort for $1-3K/month" is achievable.
+
+### What Must Be True for Even Semi-Passive to Work
+
+| Prerequisite | Status | Why It Matters |
+|-------------|--------|---------------|
+| Pipeline automation (cron + approve queue) | ❌ Not built | Without this, every article requires 30-60 min of manual stage management |
+| Fantasy Expert agent | ❌ Not built | Affiliate content requires fantasy analysis — highest conversion content type |
+| Affiliate program signup | ❌ Not done | Need DraftKings/FanDuel RevShare accounts before any revenue flows |
+| Cost per article measured | ❌ Unknown | If articles cost $50 each, passive revenue must exceed that or you lose money on autopilot |
+| Agent knowledge refresh automation | ❌ Fragile | Stale knowledge = bad content = lost subscribers. Must be automated, not manual |
+| SEO / evergreen traffic | ❌ Unproven | RevShare passive income requires articles to keep getting found by new readers via search |
+
+---
+
+## Related Documents
+
+- **[monetization-deep-dives.md](monetization-deep-dives.md)** — Detailed playbooks for consulting pitch deck, affiliate mechanics, sponsorship platforms, and platform licensing/acquisition paths
+- **Research report** — Exhaustive codebase/history analysis with Top 20 implementation priorities (session archive)
