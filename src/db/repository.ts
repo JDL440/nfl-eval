@@ -1106,7 +1106,7 @@ export class Repository {
    * as 'interrupted', and reset articles stuck in transient 'revision' status
    * with no active runs. Returns summary of recovered items.
    */
-  recoverOrphanedRuns(): { stageRuns: number; articleRuns: number; articles: string[] } {
+  recoverOrphanedRuns(): { stageRuns: number; articleRuns: number; articles: string[]; traces: number } {
     const now = nowISO();
 
     // 1. Mark orphaned stage_runs (started but never finished)
@@ -1121,7 +1121,13 @@ export class Repository {
        WHERE status = 'started'`,
     ).run(now);
 
-    // 3. Find articles stuck in 'revision' or 'in_production' with no active runs
+    // 3. Mark orphaned LLM traces (started but never completed)
+    const traceResult = this.db.prepare(
+      `UPDATE llm_traces SET status = 'failed', error_message = 'Server restarted before completion', completed_at = ?
+       WHERE status = 'started'`,
+    ).run(now);
+
+    // 4. Find articles stuck in 'revision' or 'in_production' with no active runs
     const stuckArticles = this.db.prepare(
       `SELECT DISTINCT a.id FROM articles a
        WHERE a.status IN ('revision', 'in_production')
@@ -1143,6 +1149,7 @@ export class Repository {
       stageRuns: Number(stageResult.changes),
       articleRuns: Number(articleRunResult.changes),
       articles: stuckArticles.map(r => r.id),
+      traces: Number(traceResult.changes),
     };
   }
 

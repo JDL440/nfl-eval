@@ -2623,6 +2623,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     const parts: string[] = [];
     if (recovery.stageRuns > 0) parts.push(`${recovery.stageRuns} stage runs`);
     if (recovery.articleRuns > 0) parts.push(`${recovery.articleRuns} article runs`);
+    if (recovery.traces > 0) parts.push(`${recovery.traces} LLM traces`);
     if (recovery.articles.length > 0) parts.push(`${recovery.articles.length} stuck articles`);
     if (parts.length > 0) {
       console.log(`[recovery] Cleaned up from previous shutdown: ${parts.join(', ')}`);

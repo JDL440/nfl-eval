@@ -87,23 +87,39 @@ function currentSeason(): number {
 function lookupPlayerStats(player: string, season: number): string | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
-  return cache.getOrFetch<string>(key, () => {
-    return runPythonQuery('query_player_epa.py', [
-      '--player', player,
-      '--season', String(season),
-    ]);
-  }, DEFAULT_TTL.playerStats);
+  // validators.ts shares this cache key but stores parsed objects;
+  // we need a raw JSON string, so re-stringify if the cached value is an object.
+  const cached = cache.get<unknown>(key);
+  if (cached != null) {
+    return typeof cached === 'string' ? cached : JSON.stringify(cached, null, 2);
+  }
+  const raw = runPythonQuery('query_player_epa.py', [
+    '--player', player,
+    '--season', String(season),
+  ]);
+  if (raw != null) {
+    cache.set(key, raw, { ttlSeconds: DEFAULT_TTL.playerStats });
+  }
+  return raw;
 }
 
 /** Look up draft history for a player. */
 function lookupDraftHistory(player: string): string | null {
   const cache = getGlobalCache();
   const key = draftHistoryCacheKey([player.toLowerCase()]);
-  return cache.getOrFetch<string>(key, () => {
-    return runPythonQuery('query_draft_value.py', [
-      '--player', player,
-    ]);
-  }, DEFAULT_TTL.draftHistory);
+  // validators.ts shares this cache key but stores parsed objects;
+  // re-stringify if the cached value is an object.
+  const cached = cache.get<unknown>(key);
+  if (cached != null) {
+    return typeof cached === 'string' ? cached : JSON.stringify(cached, null, 2);
+  }
+  const raw = runPythonQuery('query_draft_value.py', [
+    '--player', player,
+  ]);
+  if (raw != null) {
+    cache.set(key, raw, { ttlSeconds: DEFAULT_TTL.draftHistory });
+  }
+  return raw;
 }
 
 // ---------------------------------------------------------------------------
