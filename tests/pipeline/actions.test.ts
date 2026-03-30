@@ -490,7 +490,7 @@ describe('STAGE_ACTIONS', () => {
       expect(traces[0].article_id).toBe('test-gp-trace');
     });
 
-    it('requests the default 12-call tool budget for stage agent runs', async () => {
+    it('requests the default 50-call tool budget for stage agent runs', async () => {
       createArticleWithStage(fixtures, 'test-gp-budget', 1 as Stage, {
         'idea.md': '# Great Idea\nAnalyze the Seahawks secondary.',
       });
@@ -500,7 +500,7 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(runSpy).toHaveBeenCalled();
-      expect(runSpy.mock.calls[0]?.[0]?.toolCalling?.maxToolCalls).toBe(12);
+      expect(runSpy.mock.calls[0]?.[0]?.toolCalling?.maxToolCalls).toBe(50);
     });
   });
 

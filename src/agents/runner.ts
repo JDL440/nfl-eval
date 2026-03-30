@@ -1019,7 +1019,9 @@ export class AgentRunner {
       }
 
       if (attempt >= params.maxToolCalls) {
-        throw new Error(`Tool loop exceeded the max of ${params.maxToolCalls} tool calls without a final answer.`);
+        const err = new Error(`Tool loop exceeded the max of ${params.maxToolCalls} tool calls without a final answer.`);
+        (err as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents = toolEvents;
+        throw err;
       }
 
       const toolCall = parsed.data;
@@ -1086,7 +1088,9 @@ export class AgentRunner {
     }
 
     if (!finalResponse) {
-      throw new Error('Tool loop ended without a final response.');
+      const err = new Error('Tool loop ended without a final response.');
+      (err as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents = toolEvents;
+      throw err;
     }
 
     return {
@@ -1399,18 +1403,30 @@ export class AgentRunner {
           ? (error as Error & { providerMetadata?: import('../llm/gateway.js').ProviderMetadata }).providerMetadata
           : undefined;
         const traceProviderMetadata = providerMetadata ?? lastProviderMetadata;
-        const failedTraceMetadata = availableTools.length > 0 || toolCalls.length > 0
+        // Recover tool events from runWithToolLoop errors so they appear in the trace
+        const legacyToolEvents = error instanceof Error
+          ? (error as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents ?? []
+          : [];
+        const recoveredToolCalls: ToolCallTrace[] = legacyToolEvents.map((event) => ({
+          toolName: event.tool.name,
+          args: event.args ?? {},
+          source: event.source ?? 'unknown',
+          isError: event.isError === true,
+          resultText: event.output ?? '',
+        }));
+        const allToolCalls = [...toolCalls, ...recoveredToolCalls];
+        const failedTraceMetadata = availableTools.length > 0 || allToolCalls.length > 0
           ? {
             ...(availableTools.length > 0
               ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
               : {}),
             ...(params.toolCalling?.enabled === true
                 ? {
-                  toolCallCount: toolCalls.length,
+                  toolCallCount: allToolCalls.length,
                   toolCallBudget: effectiveToolCallBudget,
                 }
               : {}),
-            ...(toolCalls.length > 0 ? { toolCalls } : {}),
+            ...(allToolCalls.length > 0 ? { toolCalls: allToolCalls } : {}),
           }
           : null;
         params.trace?.repo.failLlmTrace(traceId, {

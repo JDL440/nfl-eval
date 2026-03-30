@@ -757,7 +757,7 @@ function runAgent(
       includePipelineTools: params.toolCalling?.includePipelineTools ?? true,
       includeWebSearch: params.toolCalling?.includeWebSearch ?? true,
       allowWriteTools: params.toolCalling?.allowWriteTools ?? false,
-      maxToolCalls: params.toolCalling?.maxToolCalls ?? 12,
+      maxToolCalls: params.toolCalling?.maxToolCalls ?? 50,
       requestedTools: buildStageRequestedTools(surface, params.toolCalling?.requestedTools),
       context: {
         repo: ctx.repo,
