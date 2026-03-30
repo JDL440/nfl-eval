@@ -330,6 +330,7 @@ function renderPublishingTab(data: ConfigPageData): string {
         <div><dt>Twitter Credentials</dt><dd>${secretStatusHtml(publishing.twitterCredentialsConfigured)}</dd></div>
       </dl>
       <form class="settings-form" hx-post="/api/settings/secrets" hx-target="#publishing-secrets-result" hx-swap="innerHTML">
+        <input type="hidden" name="group" value="publishing">
         <div class="form-group">
           <label for="secret-substack-token">Substack Token</label>
           <input type="password" id="secret-substack-token" name="substackToken" placeholder="Paste new token to update">
@@ -391,6 +392,7 @@ function renderImagesTab(data: ConfigPageData): string {
         <div><dt>Gemini API Key</dt><dd>${secretStatusHtml(images.geminiKeyConfigured)}</dd></div>
       </dl>
       <form class="settings-form" hx-post="/api/settings/secrets" hx-target="#images-secrets-result" hx-swap="innerHTML">
+        <input type="hidden" name="group" value="images">
         <div class="form-group">
           <label for="secret-gemini-key">Gemini API Key</label>
           <input type="password" id="secret-gemini-key" name="geminiApiKey" placeholder="Paste new key to update">

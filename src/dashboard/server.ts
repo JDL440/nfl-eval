@@ -976,14 +976,26 @@ export function createApp(
   app.post('/api/settings/provider-profiles', async (c) => {
     try {
       const body = await c.req.parseBody();
-      const providerId = String(body['provider_id'] || '');
+      const providerId = String(body['providerId'] || body['provider_id'] || '');
       const label = String(body['label'] || '');
 
       if (!providerId || !label) {
         return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Provider and label are required</div>', 400);
       }
 
-      const configJson = body['config_json'] ? String(body['config_json']) : '{}';
+      // Build config_json from individual form fields if not provided as JSON blob
+      let configJson = '{}';
+      if (body['config_json']) {
+        configJson = String(body['config_json']);
+      } else {
+        const config: Record<string, string> = {};
+        const defaultModel = String(body['defaultModel'] || '');
+        const baseUrl = String(body['baseUrl'] || '');
+        if (defaultModel) config.defaultModel = defaultModel;
+        if (baseUrl) config.baseUrl = baseUrl;
+        if (Object.keys(config).length > 0) configJson = JSON.stringify(config);
+      }
+
       const profile = repo.createProviderProfile({
         scopeType: 'workspace',
         providerId,
@@ -1047,7 +1059,7 @@ export function createApp(
   });
 
   // Set default
-  app.post('/api/settings/provider-profiles/:id/default', (c) => {
+  app.post('/api/settings/provider-profiles/:id/set-default', (c) => {
     try {
       const id = c.req.param('id');
       repo.setDefaultProviderProfile('workspace', null, id);
@@ -1067,7 +1079,7 @@ export function createApp(
     }
   });
 
-  // Delete profile
+  // Delete profile (POST fallback)
   app.post('/api/settings/provider-profiles/:id/delete', (c) => {
     try {
       const id = c.req.param('id');
@@ -1090,7 +1102,62 @@ export function createApp(
     }
   });
 
-  // Set secret
+  // Delete profile (HTMX hx-delete)
+  app.delete('/api/settings/provider-profiles/:id', (c) => {
+    try {
+      const id = c.req.param('id');
+      const before = repo.getProviderProfile(id);
+      repo.deleteProviderProfile(id);
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'provider_profile',
+        targetKey: id,
+        action: 'delete',
+        beforeJson: before ? JSON.stringify({ label: before.label, providerId: before.provider_id }) : null,
+      });
+
+      c.header('HX-Redirect', '/config?tab=providers');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Deleted</span> Profile removed</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Toggle profile enabled/disabled
+  app.post('/api/settings/provider-profiles/:id/toggle', (c) => {
+    try {
+      const id = c.req.param('id');
+      const existing = repo.getProviderProfile(id);
+      if (!existing) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Profile not found</div>', 404);
+      }
+
+      const newEnabled = !existing.enabled;
+      repo.updateProviderProfile(id, { enabled: newEnabled });
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'provider_profile',
+        targetKey: id,
+        action: 'update',
+        beforeJson: JSON.stringify({ enabled: !newEnabled }),
+        afterJson: JSON.stringify({ enabled: newEnabled }),
+      });
+
+      c.header('HX-Redirect', '/config?tab=providers');
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-approved">Toggled</span> Profile ${newEnabled ? 'enabled' : 'disabled'}</div>`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Set secret(s) — accepts batch named fields from the HTMX forms.
+  // The form sends a hidden `group` field (e.g. "publishing", "images")
+  // plus named secret fields (e.g. substackToken, twitterApiKey).
+  // Each non-empty, non-meta field is stored as its own encrypted secret.
   app.post('/api/settings/secrets', async (c) => {
     try {
       if (!isSecretCryptoAvailable()) {
@@ -1098,25 +1165,49 @@ export function createApp(
       }
 
       const body = await c.req.parseBody();
-      const group = String(body['group'] || '');
-      const key = String(body['key'] || '');
-      const value = String(body['value'] || '');
+      const metaKeys = new Set(['group', 'key', 'value', '_method']);
 
-      if (!group || !key || !value) {
-        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Group, key, and value are required</div>', 400);
+      // Legacy single-secret mode: group + key + value
+      const group = String(body['group'] || '');
+      const singleKey = String(body['key'] || '');
+      const singleValue = String(body['value'] || '');
+
+      if (group && singleKey && singleValue) {
+        const ciphertext = encryptSecret(singleValue);
+        repo.setEncryptedSecret('workspace', null, group, singleKey, ciphertext);
+        repo.recordSettingsAudit({
+          scopeType: 'workspace',
+          targetType: 'secret',
+          targetKey: `${group}.${singleKey}`,
+          action: 'update',
+        });
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Saved</span> Secret updated</div>');
       }
 
-      const ciphertext = encryptSecret(value);
-      repo.setEncryptedSecret('workspace', null, group, key, ciphertext);
+      // Batch mode: iterate over all non-meta fields with non-empty values
+      const secretEntries = Object.entries(body).filter(
+        ([k, v]) => !metaKeys.has(k) && typeof v === 'string' && v.trim() !== '',
+      );
 
-      repo.recordSettingsAudit({
-        scopeType: 'workspace',
-        targetType: 'secret',
-        targetKey: `${group}.${key}`,
-        action: 'update',
-      });
+      if (secretEntries.length === 0) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> No secrets to save (all fields are empty)</div>', 400);
+      }
 
-      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Saved</span> Secret updated</div>');
+      // Infer group from field names or use provided group
+      const inferredGroup = group || 'publishing';
+
+      for (const [key, value] of secretEntries) {
+        const ciphertext = encryptSecret(String(value));
+        repo.setEncryptedSecret('workspace', null, inferredGroup, key, ciphertext);
+        repo.recordSettingsAudit({
+          scopeType: 'workspace',
+          targetType: 'secret',
+          targetKey: `${inferredGroup}.${key}`,
+          action: 'update',
+        });
+      }
+
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-approved">Saved</span> ${secretEntries.length} secret(s) updated</div>`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
