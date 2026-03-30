@@ -412,10 +412,10 @@ function extractProviderToolCalls(providerMetadata: import('../llm/gateway.js').
         if (!toolName) return [];
         return [{
           toolName,
-          args: {},
+          args: record['args'] && typeof record['args'] === 'object' ? record['args'] as Record<string, unknown> : {},
           source: typeof record['source'] === 'string' ? record['source'] : 'provider',
           isError: record['isError'] === true,
-          resultText: '',
+          resultText: typeof record['output'] === 'string' ? record['output'] : '',
         }];
       });
     }
@@ -952,6 +952,8 @@ export class AgentRunner {
         toolLoop: {
           calls: toolEvents.map((event) => ({
             toolName: event.tool.name,
+            args: event.args,
+            output: event.output,
             source: event.source,
             isError: event.isError,
           })),

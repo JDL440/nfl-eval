@@ -1807,7 +1807,7 @@ class TracingCopilotProvider implements LLMProvider {
         const firstBody = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
         // Text-based tool calling: tool catalog in system prompt, no native tools
         expect(firstBody.tools).toBeUndefined();
-        expect(firstBody.messages[0].content).toContain('Available tools:');
+        expect(firstBody.messages[0].content).toContain('# Available Tools');
 
         const secondBody = JSON.parse((fetchSpy.mock.calls[1] as [string, RequestInit])[1].body as string);
         // Assistant's tool_call JSON preserved, tool result sent as user message
