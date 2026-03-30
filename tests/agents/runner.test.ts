@@ -2151,4 +2151,48 @@ describe('normalizeToolLoopResponse', () => {
     expect(normalizeToolLoopResponse(null)).toBeNull();
     expect(normalizeToolLoopResponse(undefined)).toBeUndefined();
   });
+
+  it('aliases "name" to toolName when type is "tool_call"', () => {
+    const input = { type: 'tool_call', name: 'web_search', args: { query: 'NFL draft' } };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result['type']).toBe('tool_call');
+    expect(result['toolName']).toBe('web_search');
+    expect(result['args']).toEqual({ query: 'NFL draft' });
+  });
+
+  it('aliases "tool_name" and "function" to toolName when type is "tool_call"', () => {
+    const r1 = normalizeToolLoopResponse({ type: 'tool_call', tool_name: 'query_pfr_defense', arguments: { team: 'SEA' } }) as Record<string, unknown>;
+    expect(r1['type']).toBe('tool_call');
+    expect(r1['toolName']).toBe('query_pfr_defense');
+
+    const r2 = normalizeToolLoopResponse({ type: 'tool_call', function: 'web_search', parameters: { query: 'test' } }) as Record<string, unknown>;
+    expect(r2['type']).toBe('tool_call');
+    expect(r2['toolName']).toBe('web_search');
+    expect(r2['args']).toEqual({ query: 'test' });
+  });
+
+  it('recovers type:"final" when content is missing but "text" is present', () => {
+    const input = { type: 'final', text: 'Here is the article about the Cowboys.' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result['type']).toBe('final');
+    expect(result['content']).toBe('Here is the article about the Cowboys.');
+  });
+
+  it('recovers type:"final" when content is missing but "answer" or "response" is present', () => {
+    const r1 = normalizeToolLoopResponse({ type: 'final', answer: 'The Seahawks won.' }) as Record<string, unknown>;
+    expect(r1['type']).toBe('final');
+    expect(r1['content']).toBe('The Seahawks won.');
+
+    const r2 = normalizeToolLoopResponse({ type: 'final', response: 'Analysis complete.' }) as Record<string, unknown>;
+    expect(r2['type']).toBe('final');
+    expect(r2['content']).toBe('Analysis complete.');
+  });
+
+  it('stringifies type:"final" with no recognisable content field', () => {
+    const input = { type: 'final', data: { score: 42 } };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result['type']).toBe('final');
+    expect(typeof result['content']).toBe('string');
+    expect(result['content']).toContain('"score": 42');
+  });
 });

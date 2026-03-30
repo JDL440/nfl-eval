@@ -329,18 +329,27 @@ export function normalizeToolLoopResponse(value: unknown): unknown {
     };
   }
 
-  if (type === 'tool' || type === 'tool_use' || type === 'function_call') {
+  // Alias tool-call type variants AND fix missing toolName when using alternative
+  // field names like `name`, `tool_name`, `function`, etc.
+  if (type === 'tool_call' || type === 'tool' || type === 'tool_use' || type === 'function_call') {
     const toolName = typeof record['toolName'] === 'string'
       ? record['toolName']
       : typeof record['toolname'] === 'string'
         ? record['toolname']
+      : typeof record['tool_name'] === 'string'
+        ? record['tool_name']
       : typeof record['name'] === 'string'
         ? record['name']
+      : typeof record['function'] === 'string'
+        ? record['function']
+      : typeof record['function_name'] === 'string'
+        ? record['function_name']
         : null;
     const args = parseToolLoopArgsCandidate(record['args'])
       ?? parseToolLoopArgsCandidate(record['arguments'])
       ?? parseToolLoopArgsCandidate(record['Arguments'])
       ?? parseToolLoopArgsCandidate(record['input'])
+      ?? parseToolLoopArgsCandidate(record['parameters'])
       ?? {};
     if (toolName && toolName.trim().length > 0) {
       return {
@@ -349,6 +358,36 @@ export function normalizeToolLoopResponse(value: unknown): unknown {
         toolName,
         args,
       };
+    }
+  }
+
+  // Handle `type: "final"` with missing or empty `content` — look for alternative
+  // content field names (text, answer, response, etc.).
+  if (type === 'final') {
+    const altContent = typeof record['content'] === 'string' && record['content'].trim().length > 0
+      ? record['content']
+      : typeof record['text'] === 'string' && (record['text'] as string).trim().length > 0
+        ? record['text']
+      : typeof record['answer'] === 'string' && (record['answer'] as string).trim().length > 0
+        ? record['answer']
+      : typeof record['response'] === 'string' && (record['response'] as string).trim().length > 0
+        ? record['response']
+      : typeof record['result'] === 'string' && (record['result'] as string).trim().length > 0
+        ? record['result']
+      : typeof record['output'] === 'string' && (record['output'] as string).trim().length > 0
+        ? record['output']
+      : typeof record['message'] === 'string' && (record['message'] as string).trim().length > 0
+        ? record['message']
+      : typeof record['markdown'] === 'string' && (record['markdown'] as string).trim().length > 0
+        ? record['markdown']
+        : null;
+    if (altContent) {
+      return { ...record, type: 'final', content: altContent };
+    }
+    // type is "final" but no recognisable content anywhere — stringify the whole object
+    const stringified = JSON.stringify(value, null, 2);
+    if (stringified.length > 2) {
+      return { type: 'final', content: stringified };
     }
   }
 
