@@ -1522,18 +1522,24 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     let finalResult = result;
     let validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
     const initialPreflight = validation.preflight;
+    let repairAttempts = 0;
+    const MAX_SELF_HEAL_ATTEMPTS = 2;
 
-    // Self-heal: retry once when the writer misses the minimum draft contract.
-    if (needsDraftRepair(validation)) {
+    // Self-heal: retry up to MAX_SELF_HEAL_ATTEMPTS times when the writer misses the draft contract.
+    while (needsDraftRepair(validation) && repairAttempts < MAX_SELF_HEAL_ATTEMPTS) {
+      repairAttempts++;
       const repairReason = validation.wordCount < MIN_DRAFT_WORDS
         ? `draft only ${validation.wordCount} words`
         : !validation.structure.passed
           ? validation.structure.reason
           : validation.preflight.blockingIssues[0]?.message ?? 'writer preflight issue';
-      console.warn(`[writeDraft] Draft validation failed for '${articleId}' (${repairReason}), retrying with targeted repair instruction`);
-      const retryResult = await runAgent(ctx, articleId, article.current_stage, 'writeDraft-retry', {
+      const escalation = repairAttempts > 1
+        ? ' If you cannot source a claim from the supplied artifacts, REMOVE or SOFTEN the claim entirely — do not keep unsupported precise figures.'
+        : '';
+      console.warn(`[writeDraft] Draft validation failed for '${articleId}' (${repairReason}), self-heal attempt ${repairAttempts}/${MAX_SELF_HEAL_ATTEMPTS}`);
+      const retryResult = await runAgent(ctx, articleId, article.current_stage, `writeDraft-retry-${repairAttempts}`, {
         agentName: 'writer',
-        task: buildDraftRepairInstruction(validation),
+        task: buildDraftRepairInstruction(validation) + escalation,
         skills: ['substack-article', WRITER_FACTCHECK_SKILL_NAME],
         conversationContext: conversationCtx || undefined,
         articleContext: {
@@ -1544,7 +1550,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         },
       });
       writeAgentResult(ctx.repo, articleId, 'draft.md', retryResult);
-      recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-retry', retryResult);
+      recordAgentUsage(ctx, articleId, article.current_stage, `writeDraft-retry-${repairAttempts}`, retryResult);
       addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', retryResult.content);
       finalResult = retryResult;
       validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
@@ -1561,10 +1567,10 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       }),
     );
 
-    if (needsDraftRepair(validation)) {
+     if (needsDraftRepair(validation)) {
       return {
         success: false,
-        error: `Writer draft failed validation after self-heal: ${
+        error: `Writer draft failed validation after ${repairAttempts} self-heal attempt(s): ${
           validation.wordCount < MIN_DRAFT_WORDS
             ? `Draft has ${validation.wordCount} words (minimum ${MIN_DRAFT_WORDS})`
             : !validation.structure.passed

@@ -163,6 +163,26 @@ const ToolLoopTurnSchema = z.union([
 ]);
 
 /**
+ * Detect whether a JSON object looks like an agent persona or config envelope
+ * echoed back by the LLM (e.g. `{"name":"Lead","role":"...","model":"auto"}`).
+ * These should never become artifact content.
+ */
+export function looksLikePersonaOrConfig(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  const keys = new Set(Object.keys(obj).map((k) => k.toLowerCase()));
+  // Must have "name" plus at least one persona-like key
+  if (!keys.has('name')) return false;
+  const personaKeys = ['role', 'persona', 'model', 'identity', 'badge', 'scope'];
+  const matchCount = personaKeys.filter((k) => keys.has(k)).length;
+  if (matchCount === 0) return false;
+  // Reject if the object also has content-like keys (it may be a real response)
+  const contentKeys = ['content', 'markdown', 'prompt', 'article', 'draft', 'summary', 'analysis', 'output', 'result'];
+  if (contentKeys.some((k) => keys.has(k))) return false;
+  return true;
+}
+
+/**
  * Detect whether a "final" content string is actually raw JSON data
  * (e.g. a tool result the LLM echoed back) rather than prose content.
  * Used by the tool loop to reject data payloads and re-prompt the LLM.
@@ -454,6 +474,16 @@ export function normalizeToolLoopResponse(value: unknown): unknown {
         args,
       };
     }
+  }
+
+  // Guard: reject persona/config envelopes echoed back by the LLM.
+  // These look like {"name":"Lead","role":"...","model":"auto"} and should never
+  // become artifact content.  Re-prompt instead.
+  if (looksLikePersonaOrConfig(value)) {
+    return {
+      type: 'final',
+      content: '',  // empty → schema validation will reject, triggering re-prompt
+    };
   }
 
   // Last resort: if the response is a non-empty object without a recognized type,
@@ -1055,6 +1085,9 @@ export class AgentRunner {
     const toolResultCache = new Map<string, LegacyToolExecutionResult>();
     let aggregatedUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let finalResponse: import('../llm/gateway.js').ChatResponse | null = null;
+    let lastCallKey = '';
+    let consecutiveDupes = 0;
+    const MAX_CONSECUTIVE_DUPES = 3;
 
     for (let attempt = 0; attempt <= params.maxToolCalls; attempt += 1) {
       const response = await this._gateway.chat({
@@ -1117,6 +1150,29 @@ export class AgentRunner {
       const toolCall = parsed.data;
       const normalizedArgs = normalizeToolCallArgs(toolCall.args);
       const cacheKey = stableToolCallKey(toolCall.toolName, normalizedArgs);
+
+      // Track consecutive identical tool calls to break infinite loops
+      if (cacheKey === lastCallKey) {
+        consecutiveDupes++;
+      } else {
+        consecutiveDupes = 1;
+        lastCallKey = cacheKey;
+      }
+
+      if (consecutiveDupes > MAX_CONSECUTIVE_DUPES) {
+        // LLM is stuck in a loop — force it to produce a final answer
+        messages.push({ role: 'assistant', content: response.content });
+        messages.push({
+          role: 'user',
+          content: [
+            `You have called ${toolCall.toolName} with the same arguments ${consecutiveDupes} times in a row.`,
+            'You already have the data you need. STOP calling tools.',
+            'Respond with {"type":"final","content":"your complete answer here"} using the data you have gathered so far.',
+          ].join('\n\n'),
+        });
+        continue;
+      }
+
       const structuredTool = params.availableTools?.find((candidate) => candidate.manifest.name === toolCall.toolName);
       const toolResult = toolResultCache.has(cacheKey)
         ? toolResultCache.get(cacheKey)!

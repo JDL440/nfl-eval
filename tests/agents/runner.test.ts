@@ -6,6 +6,7 @@ import {
   AgentRunner,
   normalizeToolLoopResponse,
   looksLikeJsonDataPayload,
+  looksLikePersonaOrConfig,
   type AgentCharter,
   type AgentSkill,
   type AgentRunParams,
@@ -383,6 +384,54 @@ class DataPayloadProvider implements LLMProvider {
       provider: this.id,
       finishReason: 'stop',
     };
+  }
+
+  listModels(): string[] { return ['qwen/qwen3.5-35b-a3b', 'gpt-5.4', 'gpt-5-mini']; }
+  supportsModel(model: string): boolean { return model.includes('qwen') || model.startsWith('gpt-5'); }
+}
+
+/**
+ * Provider that keeps calling the same tool with identical args, then yields
+ * a final answer after the repetition-breaker message tells it to stop.
+ */
+class RepetitiveToolCallProvider implements LLMProvider {
+  readonly id = 'lmstudio';
+  readonly name = 'Repetitive Tool Call Provider';
+  readonly requests: ChatRequest[] = [];
+  private callCount = 0;
+
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    this.requests.push(request);
+    this.callCount += 1;
+
+    if (request.responseFormat === 'json') {
+      // After getting the "stop calling tools" message, produce final answer
+      const lastMsg = request.messages?.[request.messages.length - 1];
+      const lastContent = typeof lastMsg === 'object' && lastMsg !== null && 'content' in lastMsg
+        ? String(lastMsg.content) : '';
+      if (lastContent.includes('STOP calling tools')) {
+        return {
+          content: JSON.stringify({ type: 'final', content: 'Amik Robertson allowed a 102.6 passer rating in 2025.' }),
+          model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+          provider: this.id,
+          usage: { promptTokens: 5, completionTokens: 3, totalTokens: 8 },
+          finishReason: 'stop',
+        };
+      }
+      // Keep requesting the same tool call
+      return {
+        content: JSON.stringify({
+          type: 'tool_call',
+          toolName: 'query_pfr_defense',
+          args: { player: 'Amik Robertson', season: 2025, top: 10 },
+        }),
+        model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+        provider: this.id,
+        usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+        finishReason: 'stop',
+      };
+    }
+    return { content: 'Fallback', model: 'qwen/qwen3.5-35b-a3b', provider: this.id, finishReason: 'stop' };
   }
 
   listModels(): string[] { return ['qwen/qwen3.5-35b-a3b', 'gpt-5.4', 'gpt-5-mini']; }
@@ -1854,6 +1903,83 @@ class TracingCopilotProvider implements LLMProvider {
       }
     });
 
+    it('breaks consecutive duplicate tool calls after 3 repetitions', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'dupe-article', title: 'Dupe Article' });
+      const provider = new RepetitiveToolCallProvider();
+      const dupeGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const dupeRunner = new AgentRunner({
+        gateway: dupeGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+        toolLoop: { maxToolCalls: 20 },
+      });
+
+      try {
+        const result = await dupeRunner.run({
+          agentName: 'writer',
+          task: 'Analyze Amik Robertson coverage stats',
+          trace: {
+            repo,
+            articleId: 'dupe-article',
+            stage: 3,
+            surface: 'discussion',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['query_pfr_defense'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'dupe-article',
+              stage: 3,
+              surface: 'discussion',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        // Should get the final answer after the breaker message
+        expect(result.content).toContain('Amik Robertson');
+        // Provider should be called: 1 (first tool call) + 3 more dupes + 1 breaker nudge + final = ~6
+        // The exact count depends on when the breaker fires, but should be < 50
+        expect(provider.requests.length).toBeLessThan(15);
+        // The breaker message should appear in the conversation
+        const breakerRequest = provider.requests.find((r) =>
+          r.messages.some((m) => typeof m.content === 'string' && m.content.includes('STOP calling tools')),
+        );
+        expect(breakerRequest).toBeDefined();
+      } finally {
+        repo.close();
+      }
+    });
+
     it('sends LM Studio text-based tool calls and preserves messages across turns', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
       fetchSpy
@@ -2379,5 +2505,62 @@ describe('looksLikeJsonDataPayload', () => {
 
   it('rejects non-JSON strings starting with {', () => {
     expect(looksLikeJsonDataPayload('{not valid json')).toBe(false);
+  });
+});
+
+describe('looksLikePersonaOrConfig', () => {
+  it('detects a typical persona envelope', () => {
+    expect(looksLikePersonaOrConfig({
+      name: 'Lead',
+      role: 'Lead Orchestrator & GM Analyst',
+      persona: 'Calm, structured, decisive.',
+      model: 'auto',
+    })).toBe(true);
+  });
+
+  it('detects a minimal persona with name + role', () => {
+    expect(looksLikePersonaOrConfig({ name: 'Analytics', role: 'NFL analyst' })).toBe(true);
+  });
+
+  it('detects name + model without role', () => {
+    expect(looksLikePersonaOrConfig({ name: 'Writer', model: 'qwen/qwen3.5' })).toBe(true);
+  });
+
+  it('rejects objects without name', () => {
+    expect(looksLikePersonaOrConfig({ role: 'Analyst', model: 'auto' })).toBe(false);
+  });
+
+  it('rejects objects with content-like keys alongside name+role', () => {
+    expect(looksLikePersonaOrConfig({
+      name: 'Lead',
+      role: 'Analyst',
+      content: '# The article about the Cowboys',
+    })).toBe(false);
+  });
+
+  it('rejects normal data objects', () => {
+    expect(looksLikePersonaOrConfig({ team: 'DET', season: 2025, yards: 4500 })).toBe(false);
+  });
+
+  it('rejects arrays and primitives', () => {
+    expect(looksLikePersonaOrConfig([1, 2, 3])).toBe(false);
+    expect(looksLikePersonaOrConfig('hello')).toBe(false);
+    expect(looksLikePersonaOrConfig(null)).toBe(false);
+  });
+});
+
+describe('normalizeToolLoopResponse — persona guard', () => {
+  it('rejects persona JSON with empty content (triggers schema validation failure)', () => {
+    const input = { name: 'Lead', role: 'Lead Orchestrator', persona: 'Calm', model: 'auto' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result['type']).toBe('final');
+    expect(result['content']).toBe('');
+  });
+
+  it('still accepts non-persona untyped objects via last-resort stringify', () => {
+    const input = { headline: 'Cowboys Win', angle: 'Surprising comeback' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result['type']).toBe('final');
+    expect(result['content']).toContain('Cowboys Win');
   });
 });

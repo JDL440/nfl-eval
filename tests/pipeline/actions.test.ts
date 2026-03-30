@@ -791,6 +791,28 @@ ${longText(400)}`,
       expect(draft).toContain('> **📋 TLDR**');
     });
 
+    it('succeeds on second self-heal attempt when first retry still fails', async () => {
+      const provider = new RecordingProvider([
+        PANEL_FACTCHECK_OK,
+        `# Headline\n\n*Subtitle*\n\n${longText(400)}`,
+        `# Headline\n\n*Subtitle*\n\n${longText(450)}`,
+        validDraft(500),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      createArticleWithStage(fixtures, 'test-wd-repair-2nd', 4 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary\nKey takeaways from panel discussion.',
+      });
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-repair-2nd', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const draft = fixtures.repo.artifacts.get('test-wd-repair-2nd', 'draft.md') ?? '';
+      expect(draft).toContain('> **📋 TLDR**');
+    });
+
     it('fails when the retry draft still misses the TLDR contract', async () => {
       const provider = new RecordingProvider([
         PANEL_FACTCHECK_OK,
@@ -804,6 +826,11 @@ ${longText(400)}`,
 *Subtitle*
 
 ${longText(450)}`,
+        `# Headline
+
+*Subtitle*
+
+${longText(460)}`,
       ]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-repair-fail', 4 as Stage, {
@@ -816,7 +843,7 @@ ${longText(450)}`,
       const result = await STAGE_ACTIONS.writeDraft('test-wd-repair-fail', fixtures.ctx);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Writer draft failed validation after self-heal');
+      expect(result.error).toContain('Writer draft failed validation after 2 self-heal attempt(s)');
       expect(result.error).toContain('TLDR');
     });
 
@@ -1479,6 +1506,11 @@ ${longText(400)}`,
 *Subtitle*
 
 ${longText(450)}`,
+      `# Headline
+
+*Subtitle*
+
+${longText(460)}`,
     ]));
     createArticleWithStage(fixtures, 'test-auto-editor-revise', 5 as Stage, {
       'idea.md': '# Idea',
@@ -1503,7 +1535,7 @@ ${longText(450)}`,
     expect(fixtures.repo.getArticle('test-auto-editor-revise')!.current_stage).toBe(4);
     expect(fixtures.repo.getArticle('test-auto-editor-revise')!.status).toBe('revision');
     expect(fixtures.repo.artifacts.get('test-auto-editor-revise', 'lead-review.md')).toBeNull();
-    expect(result.error).toContain('Writer draft failed validation after self-heal');
+    expect(result.error).toContain('Writer draft failed validation after 2 self-heal attempt(s)');
   });
 
   it('regresses to writer with synthetic blockers when runEditor returns REVISE without structured tags', async () => {
@@ -1782,6 +1814,11 @@ ${longText(400)}`,
 *Subtitle*
 
 ${longText(450)}`,
+      `# Headline
+
+*Subtitle*
+
+${longText(460)}`,
     ]));
     createArticleWithStage(fixtures, 'test-auto-no-lead-review', 5 as Stage, {
       'idea.md': '# Idea',
@@ -1820,7 +1857,7 @@ ${longText(450)}`,
     expect(result.steps.some((step) => /Escalated to Lead review/i.test(step.action))).toBe(false);
     expect(article?.status).not.toBe('needs_lead_review');
     expect(fixtures.repo.artifacts.get('test-auto-no-lead-review', 'lead-review.md')).toBeNull();
-    expect(result.error).toContain('Writer draft failed validation after self-heal');
+    expect(result.error).toContain('Writer draft failed validation after 2 self-heal attempt(s)');
   });
 });
 
