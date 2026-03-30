@@ -16,7 +16,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   getGlobalCache, DEFAULT_TTL,
-  rosterCacheKey, snapsCacheKey, pythonQueryCacheKey,
+  rosterCacheKey, snapsCacheKey, playerStatsCacheKey, teamEfficiencyCacheKey, pythonQueryCacheKey,
 } from '../cache/index.js';
 
 // ---------------------------------------------------------------------------
@@ -123,8 +123,163 @@ function querySnaps(team: string, season: number, group: string, top: number): S
 }
 
 // ---------------------------------------------------------------------------
-// Context builder
+// Player stats + team efficiency — injected into roster context so panelists
+// have real nflverse data instead of relying on (often wrong) LLM training data.
 // ---------------------------------------------------------------------------
+
+interface PlayerStats {
+  player: string;
+  position: string;
+  team: string;
+  season: number;
+  completions?: number;
+  attempts?: number;
+  passing_yards?: number;
+  passing_tds?: number;
+  interceptions?: number;
+  passing_epa?: number;
+  cpoe?: number;
+  rushing_yards?: number;
+  rushing_tds?: number;
+  rushing_epa?: number;
+  receiving_yards?: number;
+  receiving_tds?: number;
+  receptions?: number;
+  targets?: number;
+  receiving_epa?: number;
+  position_rank?: number;
+  [key: string]: unknown;
+}
+
+interface TeamEfficiency {
+  team: string;
+  season: number;
+  offensive_epa_play?: number;
+  defensive_epa_play?: number;
+  pass_epa_play?: number;
+  rush_epa_play?: number;
+  total_yards?: number;
+  turnovers_lost?: number;
+  turnovers_gained?: number;
+  sacks?: number;
+  def_interceptions?: number;
+  [key: string]: unknown;
+}
+
+/** Query player stats from nflverse — returns parsed object or null. */
+function queryPlayerStats(player: string, season: number): PlayerStats | null {
+  const cache = getGlobalCache();
+  const key = playerStatsCacheKey(player, season);
+  return cache.getOrFetch<PlayerStats>(key, () => {
+    const raw = runPythonQuery('query_player_epa.py', [
+      '--player', player,
+      '--season', String(season),
+    ]);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed[0] ?? null;
+      return parsed as PlayerStats;
+    } catch {
+      return null;
+    }
+  }, DEFAULT_TTL.playerStats);
+}
+
+/** Query team efficiency metrics from nflverse. */
+function queryTeamEfficiency(team: string, season: number): TeamEfficiency | null {
+  const cache = getGlobalCache();
+  const key = teamEfficiencyCacheKey(team, season);
+  return cache.getOrFetch<TeamEfficiency>(key, () => {
+    const raw = runPythonQuery('query_team_efficiency.py', [
+      '--team', team,
+      '--season', String(season),
+    ]);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as TeamEfficiency;
+    } catch {
+      return null;
+    }
+  }, DEFAULT_TTL.playerStats);
+}
+
+/** Positions we query stats for (skill positions where stats matter most). */
+const STAT_POSITIONS = new Set(['QB', 'RB', 'FB', 'WR', 'TE']);
+const MIN_SNAP_PCT_FOR_STATS = 25;
+const MAX_STAT_PLAYERS = 10;
+
+/** Build the "Key Player Statistics" section for high-snap offensive players. */
+function buildKeyStatsSection(
+  roster: RosterPlayer[],
+  snapPct: Map<string, number>,
+  team: string,
+  season: number,
+): string | null {
+  // Identify high-snap skill players
+  const candidates = roster
+    .filter(p => STAT_POSITIONS.has(p.position) && (snapPct.get(p.full_name) ?? 0) >= MIN_SNAP_PCT_FOR_STATS)
+    .sort((a, b) => (snapPct.get(b.full_name) ?? 0) - (snapPct.get(a.full_name) ?? 0))
+    .slice(0, MAX_STAT_PLAYERS);
+
+  if (candidates.length === 0) return null;
+
+  const lines: string[] = [];
+  lines.push('### Key Player Statistics (nflverse verified)');
+  lines.push('');
+  lines.push('> ⚠️ These are ACTUAL stats from the nflverse dataset. Use these numbers, not training data.');
+  lines.push('> If a stat below contradicts a claim, the nflverse data is correct.');
+  lines.push('');
+
+  for (const p of candidates) {
+    const stats = queryPlayerStats(p.full_name, season);
+    if (!stats) continue;
+
+    const statParts: string[] = [];
+    if (stats.position === 'QB') {
+      if (stats.completions != null && stats.attempts != null) {
+        const pct = ((stats.completions / stats.attempts) * 100).toFixed(1);
+        statParts.push(`${stats.completions}/${stats.attempts} (${pct}%)`);
+      }
+      if (stats.passing_yards != null) statParts.push(`${stats.passing_yards.toLocaleString()} pass yds`);
+      if (stats.passing_tds != null) statParts.push(`${stats.passing_tds} TDs`);
+      if (stats.interceptions != null) statParts.push(`**${stats.interceptions} INTs**`);
+      if (stats.passing_epa != null) statParts.push(`${stats.passing_epa.toFixed(1)} pass EPA`);
+    } else if (stats.position === 'RB' || stats.position === 'FB') {
+      if (stats.rushing_yards != null) statParts.push(`${stats.rushing_yards.toLocaleString()} rush yds`);
+      if (stats.rushing_tds != null) statParts.push(`${stats.rushing_tds} rush TDs`);
+      if (stats.receptions != null) statParts.push(`${stats.receptions} rec`);
+      if (stats.receiving_yards != null) statParts.push(`${stats.receiving_yards.toLocaleString()} rec yds`);
+    } else {
+      // WR / TE
+      if (stats.receptions != null && stats.targets != null) statParts.push(`${stats.receptions}/${stats.targets} rec/tgt`);
+      if (stats.receiving_yards != null) statParts.push(`${stats.receiving_yards.toLocaleString()} rec yds`);
+      if (stats.receiving_tds != null) statParts.push(`${stats.receiving_tds} TDs`);
+      if (stats.receiving_epa != null) statParts.push(`${stats.receiving_epa.toFixed(1)} rec EPA`);
+    }
+    if (stats.position_rank != null) statParts.push(`#${stats.position_rank} at ${stats.position}`);
+
+    if (statParts.length > 0) {
+      lines.push(`- **${p.full_name}** (${stats.position}): ${statParts.join(', ')}`);
+    }
+  }
+
+  // Also add team efficiency
+  const teamStats = queryTeamEfficiency(team, season);
+  if (teamStats) {
+    lines.push('');
+    lines.push(`**${team} Team Totals:** `
+      + [
+        teamStats.total_yards != null ? `${teamStats.total_yards.toLocaleString()} total yds` : null,
+        teamStats.turnovers_lost != null ? `**${teamStats.turnovers_lost} turnovers lost**` : null,
+        teamStats.sacks != null ? `${teamStats.sacks} sacks allowed` : null,
+        teamStats.pass_epa_play != null ? `${teamStats.pass_epa_play.toFixed(3)} pass EPA/play` : null,
+        teamStats.rush_epa_play != null ? `${teamStats.rush_epa_play.toFixed(3)} rush EPA/play` : null,
+      ].filter(Boolean).join(', '));
+  }
+
+  return lines.join('\n');
+}
 
 /** Current NFL season — offseason articles reference the previous season's data. */
 function currentSeason(): number {
@@ -252,7 +407,15 @@ export function buildTeamRosterContext(team: string): string | null {
     parts.push('');
   }
 
-  parts.push(`*Data source: nflverse official roster (week ${rosterWeek}) + snap counts (${season} season).*`);
+  // Key player statistics — nflverse verified data to prevent LLM fabrication
+  const statsSection = buildKeyStatsSection(roster, snapPct, teamUpper, season);
+  if (statsSection) {
+    parts.push('');
+    parts.push(statsSection);
+    parts.push('');
+  }
+
+  parts.push(`*Data source: nflverse official roster (week ${rosterWeek}) + snap counts + player stats (${season} season).*`);
   parts.push('*Updates daily. Very recent signings, trades, or cuts (last 24-48h) may not appear yet.*');
 
   return parts.join('\n');
