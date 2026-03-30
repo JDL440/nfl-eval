@@ -372,6 +372,11 @@ export class MockProvider implements LLMProvider {
       content = MOCK_RESPONSES[stage] ?? `Mock response for request with ${request.messages.length} messages.`;
     }
 
+    // When the runner requests JSON (structured tool loop), wrap as a final envelope
+    if (request.responseFormat === 'json') {
+      content = JSON.stringify({ type: 'final', content });
+    }
+
     const promptTokens = Math.floor(100 + Math.random() * 400);
     const completionTokens = Math.floor(200 + Math.random() * 800);
 

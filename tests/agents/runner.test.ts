@@ -1701,7 +1701,7 @@ class TracingCopilotProvider implements LLMProvider {
           tool_call_id: 'tool-call-1',
         });
         expect(JSON.parse(toolMessage!.content)).toMatchObject({
-          error: 'Tool arguments failed validation',
+          error: 'validation',
           tool: 'article_get',
         });
       } finally {

@@ -264,6 +264,46 @@ describe('LLMGateway', () => {
       ).rejects.toThrow(StructuredOutputError);
     });
 
+    it('passes the derived JSON schema to providers', async () => {
+      const captured: ChatRequest[] = [];
+      class CapturingProvider extends FakeProvider {
+        override async chat(request: ChatRequest): Promise<ChatResponse> {
+          captured.push(request);
+          return {
+            content: '{"name":"Alice"}',
+            model: request.model ?? 'stub-model',
+            provider: this.id,
+            finishReason: 'stop',
+          };
+        }
+      }
+
+      const schema = z.object({ name: z.string() });
+      const provider = new CapturingProvider('stub', 'stub');
+      const gw = new LLMGateway({ modelPolicy: policy, providers: [provider] });
+
+      await gw.chatStructured(
+        {
+          messages: [{ role: 'user', content: 'get person' }],
+          model: 'stub-model',
+        },
+        schema,
+      );
+
+      expect(captured).toHaveLength(1);
+      expect(captured[0]).toEqual(expect.objectContaining({
+        responseFormat: 'json',
+        responseSchema: expect.objectContaining({
+          type: 'object',
+          properties: expect.objectContaining({
+            name: expect.objectContaining({ type: 'string' }),
+          }),
+          required: ['name'],
+          additionalProperties: false,
+        }),
+      }));
+    });
+
     it('parses JSON wrapped in qwen think tags and code fences', async () => {
       const schema = z.object({ type: z.literal('tool_call'), toolName: z.string() });
       const stub = new StubProvider({
@@ -368,16 +408,20 @@ describe('LLMGateway', () => {
       );
 
       const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
-      expect(body.response_format).toEqual({
+      expect(body.response_format).toEqual(expect.objectContaining({
         type: 'json_schema',
-        json_schema: {
+        json_schema: expect.objectContaining({
           name: 'structured_output',
-          schema: {
+          schema: expect.objectContaining({
             type: 'object',
-            additionalProperties: true,
-          },
-        },
-      });
+            properties: expect.objectContaining({
+              ok: expect.objectContaining({ type: 'boolean' }),
+            }),
+            required: ['ok'],
+            additionalProperties: false,
+          }),
+        }),
+      }));
       expect(result).toEqual({ ok: true });
     });
   });

@@ -110,54 +110,40 @@ describe('Config Viewer Page', () => {
     expect(res.status).toBe(200);
   });
 
-  it('shows the redesigned runtime settings overview', async () => {
+  it('shows the tabbed admin settings page with overview', async () => {
     const res = await app.request('/config');
     const html = await res.text();
-    expect(html).toContain('Runtime Settings');
-    expect(html).toContain('Current runtime wiring for NFL Lab');
-    expect(html).toContain('Active provider');
-    expect(html).toContain('Mock');
-    expect(html).toContain('Prompt Inventory');
-    expect(html).toContain('fact-checking');
-    expect(html).toContain('sea');
+    expect(html).toContain('Settings');
+    // Tab navigation
+    expect(html).toContain('settings-tabs');
+    expect(html).toContain('Overview');
+    expect(html).toContain('LLM Providers');
+    expect(html).toContain('Publishing');
+    expect(html).toContain('Diagnostics');
+    // Overview tab content
+    expect(html).toContain('Default Provider');
+    expect(html).toContain('Service Readiness');
+    // No old removed items
+    expect(html).not.toContain('Prompt Inventory');
+    expect(html).not.toContain('Runtime Paths');
+    expect(html).not.toContain('Stage Key');
   });
 
-  it('page contains maintenance and prompt inventory sections', async () => {
-    const res = await app.request('/config');
+  it('diagnostics tab contains effective settings and service readiness', async () => {
+    const res = await app.request('/config?tab=diagnostics');
     const html = await res.text();
-    expect(html).toContain('Services &amp; Maintenance');
-    expect(html).toContain('Knowledge refresh');
-    expect(html).toContain('legacy runtime memory storage still exists');
-    expect(html).toContain('the old Memory dashboard stays retired');
-    expect(html).toContain('existing refresh-all endpoint from Settings');
-    expect(html).toContain('Refresh-all is unavailable until runner + memory services are initialized.');
-    expect(html).not.toContain('Refresh All Agent Knowledge');
+    expect(html).toContain('Diagnostics');
+    expect(html).toContain('Effective Settings');
+    // No old navigation links
     expect(html).not.toContain('href="/memory"');
     expect(html).not.toContain('href="/agents"');
     expect(html).not.toContain('href="/runs"');
-    expect(html).not.toContain('Context preset:');
-    expect(html).toContain('id="knowledge-refresh-result"');
-    expect(html).toContain('Prompt Inventory');
-    expect(html).toContain('fact-checking');
-    expect(html).toContain('sea');
-    expect(html).toContain('Dashboard Access');
-    expect(html).toContain('config_test_session');
-    expect(html).toContain('24 hours');
   });
 
-  it('shows safe environment values and Copilot defaults', async () => {
-    const res = await app.request('/config');
+  it('access tab shows auth settings', async () => {
+    const res = await app.request('/config?tab=access');
     const html = await res.text();
-    expect(html).toContain('Environment Surface');
-    expect(html).toContain('DASHBOARD_AUTH_MODE');
-    expect(html).toContain('local');
-    expect(html).toContain('DASHBOARD_AUTH_USERNAME');
-    expect(html).toContain('joe');
-    expect(html).toContain('COPILOT_MODEL');
-    expect(html).toContain('claude-sonnet-4.6 (default)');
-    expect(html).toContain('COPILOT_CLI_MODE');
-    expect(html).toContain('article-tools (default)');
-    expect(html).toContain('COPILOT_CLI_SESSION_REUSE');
-    expect(html).toContain('1 (default)');
+    expect(html).toContain('Access');
+    expect(html).toContain('Auth Mode');
   });
 });

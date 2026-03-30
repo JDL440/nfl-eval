@@ -131,28 +131,29 @@ function renderTraceBlock(
   const jsonValue = options?.jsonValue;
   const hasJsonPreview = jsonValue !== undefined;
   const hasMarkdownPreview = !hasJsonPreview && looksLikeMarkdown(rawContent);
+  const showPreviewByDefault = hasJsonPreview || hasMarkdownPreview;
   const controls = hasJsonPreview || hasMarkdownPreview
     ? `<div class="trace-preview-toolbar">
-        <button type="button" class="btn btn-secondary trace-preview-btn is-active" onclick="toggleTracePreview('${blockId}', 'raw')">Raw</button>
+        <button type="button" class="btn btn-secondary trace-preview-btn${!showPreviewByDefault ? ' is-active' : ''}" onclick="toggleTracePreview('${blockId}', 'raw')">Raw</button>
         ${hasJsonPreview
-          ? `<button type="button" class="btn btn-secondary trace-preview-btn" onclick="toggleTracePreview('${blockId}', 'preview')">Preview JSON</button>`
+          ? `<button type="button" class="btn btn-secondary trace-preview-btn${showPreviewByDefault ? ' is-active' : ''}" onclick="toggleTracePreview('${blockId}', 'preview')">Preview JSON</button>`
           : ''}
         ${hasMarkdownPreview
-          ? `<button type="button" class="btn btn-secondary trace-preview-btn" onclick="toggleTracePreview('${blockId}', 'preview')">Preview Markdown</button>`
+          ? `<button type="button" class="btn btn-secondary trace-preview-btn${showPreviewByDefault ? ' is-active' : ''}" onclick="toggleTracePreview('${blockId}', 'preview')">Preview Markdown</button>`
           : ''}
       </div>`
     : '';
   const preview = hasJsonPreview
-    ? `<div class="trace-preview-pane" data-trace-pane="preview" style="display:none">${renderJsonPreview(jsonValue)}</div>`
+    ? `<div class="trace-preview-pane" data-trace-pane="preview"${showPreviewByDefault ? '' : ' style="display:none"'}>${renderJsonPreview(jsonValue)}</div>`
     : hasMarkdownPreview
-      ? `<div class="trace-preview-pane artifact-rendered" data-trace-pane="preview" style="display:none">${markdownToHtml(rawContent)}</div>`
+      ? `<div class="trace-preview-pane artifact-rendered" data-trace-pane="preview"${showPreviewByDefault ? '' : ' style="display:none"'}>${markdownToHtml(rawContent)}</div>`
       : '';
 
   return `
     <details class="trace-block"${options?.open ? ' open' : ''} data-trace-block="${blockId}">
       <summary>${escapeHtml(title)}</summary>
       ${controls}
-      <pre class="artifact-pre trace-pre" data-trace-pane="raw">${escapeHtml(rawContent)}</pre>
+      <pre class="artifact-pre trace-pre" data-trace-pane="raw"${showPreviewByDefault ? ' style="display:none"' : ''}>${escapeHtml(rawContent)}</pre>
       ${preview}
     </details>`;
 }
@@ -283,11 +284,11 @@ export function renderArticleTraceTimelinePage(data: {
 }): string {
   const { config, article, traces } = data;
   const content = `
-    <div class="page-header">
+    <section class="detail-section page-header trace-page-header">
       <a href="/articles/${escapeHtml(article.id)}" class="back-link">← Article detail</a>
-      <h1>LLM Trace Timeline</h1>
+      <h1>Trace timeline</h1>
       <p class="page-subtitle">${escapeHtml(article.title)} · ${traces.length} trace${traces.length === 1 ? '' : 's'}</p>
-    </div>
+    </section>
     <section class="detail-section">
       ${renderTraceCards(traces)}
     </section>
@@ -308,11 +309,11 @@ export function renderStandaloneTracePage(data: {
     ? `<a href="/articles/${escapeHtml(trace.article_id)}/traces" class="back-link">← Article trace timeline</a>`
     : '<a href="/ideas/new" class="back-link">← New Idea</a>';
   const content = `
-    <div class="page-header">
+    <section class="detail-section page-header trace-page-header">
       ${backLink}
-      <h1>LLM Trace</h1>
+      <h1>Trace detail</h1>
       <p class="page-subtitle">${escapeHtml(title)}</p>
-    </div>
+    </section>
     <section class="detail-section">
       ${renderTraceCards([trace])}
     </section>

@@ -285,9 +285,9 @@ CREATE TABLE agent_memory (
 ### How Memory Is Used
 
 1. **Recall** — Before each agent run, the top 10 entries by `relevance_score DESC` are recalled
-2. **Inject** — Recalled memories are added to the system prompt as `## Relevant Context`
-3. **Auto-learn** — After each successful run, a summary of the output is stored as a `learning` entry
-4. **Touch** — When an entry is useful, its relevance score is boosted (max 2.0)
+2. **Inject** — _Deprecated in the live dashboard runtime today._ The old `## Relevant Context` prompt block remains in source as a dormant shape, but active agent runs currently skip memory injection.
+3. **Write paths** — In the current dashboard/runtime, memory writes come from bootstrap seeding, explicit maintenance flows such as refresh-all, and direct/manual storage operations rather than per-run auto-learning
+4. **Touch** — The relevance-boost path still exists in source, but live article runs currently do not touch memories because injection is disabled
 5. **Decay** — Periodic multiplicative decay (default 0.95×) reduces stale entries
 6. **Prune** — Entries older than 90 days or below 0.1 relevance are deleted
 
@@ -302,11 +302,11 @@ CREATE TABLE agent_memory (
 
 ### Dashboard
 
-The Memory Browser at `/memory` provides:
-- **Stats** — Entry counts and average relevance per agent
-- **Filters** — By agent, category, search text
-- **CRUD** — Create, edit, delete individual entries
-- **Bulk operations** — Prune old/low-relevance entries, decay all entries
+The dashboard now exposes legacy-memory operations through `/config` instead of keeping the retired
+`/memory` browser in the product surface:
+- **Refresh control** — Run `POST /api/agents/refresh-all` from the admin/settings page
+- **Visibility** — Confirm storage path and runtime posture from the settings panels
+- **Manual edits** — Inspect or modify `memory.db` directly with SQLite tooling when needed
 
 ## Bootstrap Process
 

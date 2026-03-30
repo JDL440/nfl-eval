@@ -228,6 +228,69 @@ export interface DashboardSessionRecord {
   expires_at: string;
 }
 
+export interface UserRecord {
+  id: string;
+  username: string;
+  display_name: string | null;
+  role: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  last_login_at: string | null;
+}
+
+export interface WorkspaceSettingRow {
+  namespace: string;
+  key: string;
+  value_json: string;
+  updated_by_user_id: string | null;
+  updated_at: string;
+}
+
+export interface UserSettingRow {
+  user_id: string;
+  namespace: string;
+  key: string;
+  value_json: string;
+  updated_at: string;
+}
+
+export interface ProviderProfileRow {
+  id: string;
+  scope_type: string;
+  scope_user_id: string | null;
+  provider_id: string;
+  label: string;
+  enabled: number;
+  is_default: number;
+  config_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecretStatusRow {
+  id: string;
+  scope_type: string;
+  scope_user_id: string | null;
+  secret_group: string;
+  secret_key: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SettingsAuditRow {
+  id: number;
+  actor_user_id: string | null;
+  scope_type: string;
+  scope_user_id: string | null;
+  target_type: string;
+  target_key: string;
+  action: string;
+  before_json: string | null;
+  after_json: string | null;
+  created_at: string;
+}
+
 // ── Repository ───────────────────────────────────────────────────────────────
 
 export class Repository {
@@ -495,6 +558,314 @@ export class Repository {
       'DELETE FROM dashboard_sessions WHERE expires_at <= ?',
     ).run(referenceTime);
     return Number(result.changes ?? 0);
+  }
+
+  // ── Users ───────────────────────────────────────────────────────────────────
+
+  ensureBootstrapAdmin(username: string | null): UserRecord {
+    const name = username ?? 'admin';
+    const id = randomUUID();
+    const now = nowISO();
+    this.db.prepare(
+      `INSERT OR IGNORE INTO users (id, username, display_name, role, status, created_at, updated_at)
+       VALUES (?, ?, ?, 'admin', 'active', ?, ?)`,
+    ).run(id, name, name, now, now);
+    return this.getUserByUsername(name)!;
+  }
+
+  getUserByUsername(username: string): UserRecord | null {
+    const row = this.db.prepare(
+      'SELECT id, username, display_name, role, status, created_at, updated_at, last_login_at FROM users WHERE username = ?',
+    ).get(username) as UserRecord | undefined;
+    return row ?? null;
+  }
+
+  getUserById(id: string): UserRecord | null {
+    const row = this.db.prepare(
+      'SELECT id, username, display_name, role, status, created_at, updated_at, last_login_at FROM users WHERE id = ?',
+    ).get(id) as UserRecord | undefined;
+    return row ?? null;
+  }
+
+  getUserForSession(sessionId: string): UserRecord | null {
+    const row = this.db.prepare(
+      `SELECT u.id, u.username, u.display_name, u.role, u.status, u.created_at, u.updated_at, u.last_login_at
+       FROM dashboard_sessions ds
+       JOIN users u ON u.username = ds.username
+       WHERE ds.session_id = ? AND ds.expires_at > ?`,
+    ).get(sessionId, nowISO()) as UserRecord | undefined;
+    return row ?? null;
+  }
+
+  touchUserLogin(userId: string): void {
+    const now = nowISO();
+    this.db.prepare(
+      'UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?',
+    ).run(now, now, userId);
+  }
+
+  // ── Workspace settings ──────────────────────────────────────────────────────
+
+  getWorkspaceSetting(namespace: string, key: string): string | null {
+    const row = this.db.prepare(
+      'SELECT value_json FROM workspace_settings WHERE namespace = ? AND key = ?',
+    ).get(namespace, key) as { value_json: string } | undefined;
+    return row?.value_json ?? null;
+  }
+
+  setWorkspaceSetting(namespace: string, key: string, valueJson: string, actorUserId: string | null): void {
+    const now = nowISO();
+    this.db.prepare(
+      `INSERT OR REPLACE INTO workspace_settings (namespace, key, value_json, updated_by_user_id, updated_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(namespace, key, valueJson, actorUserId, now);
+  }
+
+  listWorkspaceSettings(namespace?: string): WorkspaceSettingRow[] {
+    if (namespace != null) {
+      return this.db.prepare(
+        'SELECT namespace, key, value_json, updated_by_user_id, updated_at FROM workspace_settings WHERE namespace = ?',
+      ).all(namespace) as unknown as WorkspaceSettingRow[];
+    }
+    return this.db.prepare(
+      'SELECT namespace, key, value_json, updated_by_user_id, updated_at FROM workspace_settings',
+    ).all() as unknown as WorkspaceSettingRow[];
+  }
+
+  // ── User settings ──────────────────────────────────────────────────────────
+
+  getUserSetting(userId: string, namespace: string, key: string): string | null {
+    const row = this.db.prepare(
+      'SELECT value_json FROM user_settings WHERE user_id = ? AND namespace = ? AND key = ?',
+    ).get(userId, namespace, key) as { value_json: string } | undefined;
+    return row?.value_json ?? null;
+  }
+
+  setUserSetting(userId: string, namespace: string, key: string, valueJson: string): void {
+    const now = nowISO();
+    this.db.prepare(
+      `INSERT OR REPLACE INTO user_settings (user_id, namespace, key, value_json, updated_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(userId, namespace, key, valueJson, now);
+  }
+
+  listUserSettings(userId: string, namespace?: string): UserSettingRow[] {
+    if (namespace != null) {
+      return this.db.prepare(
+        'SELECT user_id, namespace, key, value_json, updated_at FROM user_settings WHERE user_id = ? AND namespace = ?',
+      ).all(userId, namespace) as unknown as UserSettingRow[];
+    }
+    return this.db.prepare(
+      'SELECT user_id, namespace, key, value_json, updated_at FROM user_settings WHERE user_id = ?',
+    ).all(userId) as unknown as UserSettingRow[];
+  }
+
+  // ── Provider profiles ──────────────────────────────────────────────────────
+
+  listProviderProfiles(scopeType: string, scopeUserId?: string | null): ProviderProfileRow[] {
+    if (scopeUserId != null) {
+      return this.db.prepare(
+        `SELECT id, scope_type, scope_user_id, provider_id, label, enabled, is_default, config_json, created_at, updated_at
+         FROM provider_profiles WHERE scope_type = ? AND scope_user_id = ?`,
+      ).all(scopeType, scopeUserId) as unknown as ProviderProfileRow[];
+    }
+    return this.db.prepare(
+      `SELECT id, scope_type, scope_user_id, provider_id, label, enabled, is_default, config_json, created_at, updated_at
+       FROM provider_profiles WHERE scope_type = ? AND scope_user_id IS NULL`,
+    ).all(scopeType) as unknown as ProviderProfileRow[];
+  }
+
+  getProviderProfile(id: string): ProviderProfileRow | null {
+    const row = this.db.prepare(
+      `SELECT id, scope_type, scope_user_id, provider_id, label, enabled, is_default, config_json, created_at, updated_at
+       FROM provider_profiles WHERE id = ?`,
+    ).get(id) as ProviderProfileRow | undefined;
+    return row ?? null;
+  }
+
+  createProviderProfile(input: {
+    scopeType: string;
+    scopeUserId?: string | null;
+    providerId: string;
+    label: string;
+    configJson?: string;
+    enabled?: boolean;
+    isDefault?: boolean;
+  }): ProviderProfileRow {
+    const id = randomUUID();
+    const now = nowISO();
+    this.db.prepare(
+      `INSERT INTO provider_profiles (id, scope_type, scope_user_id, provider_id, label, enabled, is_default, config_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      input.scopeType,
+      input.scopeUserId ?? null,
+      input.providerId,
+      input.label,
+      input.enabled === false ? 0 : 1,
+      input.isDefault ? 1 : 0,
+      input.configJson ?? '{}',
+      now,
+      now,
+    );
+    return this.getProviderProfile(id)!;
+  }
+
+  updateProviderProfile(id: string, patch: { label?: string; configJson?: string; enabled?: boolean }): ProviderProfileRow {
+    const existing = this.getProviderProfile(id);
+    if (!existing) throw new Error(`Provider profile '${id}' not found`);
+
+    const setParts: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (patch.label != null) {
+      setParts.push('label = ?');
+      params.push(patch.label);
+    }
+    if (patch.configJson != null) {
+      setParts.push('config_json = ?');
+      params.push(patch.configJson);
+    }
+    if (patch.enabled != null) {
+      setParts.push('enabled = ?');
+      params.push(patch.enabled ? 1 : 0);
+    }
+
+    if (setParts.length === 0) return existing;
+
+    const now = nowISO();
+    setParts.push('updated_at = ?');
+    params.push(now);
+    params.push(id);
+
+    this.db.prepare(
+      `UPDATE provider_profiles SET ${setParts.join(', ')} WHERE id = ?`,
+    ).run(...params);
+    return this.getProviderProfile(id)!;
+  }
+
+  deleteProviderProfile(id: string): void {
+    this.db.prepare('DELETE FROM provider_profiles WHERE id = ?').run(id);
+  }
+
+  setDefaultProviderProfile(scopeType: string, scopeUserId: string | null, profileId: string): void {
+    try {
+      this.db.exec('BEGIN IMMEDIATE');
+      if (scopeUserId != null) {
+        this.db.prepare(
+          'UPDATE provider_profiles SET is_default = 0, updated_at = ? WHERE scope_type = ? AND scope_user_id = ?',
+        ).run(nowISO(), scopeType, scopeUserId);
+      } else {
+        this.db.prepare(
+          'UPDATE provider_profiles SET is_default = 0, updated_at = ? WHERE scope_type = ? AND scope_user_id IS NULL',
+        ).run(nowISO(), scopeType);
+      }
+      this.db.prepare(
+        'UPDATE provider_profiles SET is_default = 1, updated_at = ? WHERE id = ?',
+      ).run(nowISO(), profileId);
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+  }
+
+  // ── Encrypted secrets ──────────────────────────────────────────────────────
+
+  setEncryptedSecret(scopeType: string, scopeUserId: string | null, group: string, key: string, ciphertext: string): void {
+    const id = randomUUID();
+    const now = nowISO();
+    this.db.prepare(
+      `INSERT INTO encrypted_secrets (id, scope_type, scope_user_id, secret_group, secret_key, ciphertext, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (scope_type, scope_user_id, secret_group, secret_key)
+       DO UPDATE SET id = ?, ciphertext = ?, updated_at = ?`,
+    ).run(id, scopeType, scopeUserId, group, key, ciphertext, now, now, id, ciphertext, now);
+  }
+
+  getEncryptedSecret(scopeType: string, scopeUserId: string | null, group: string, key: string): string | null {
+    const row = scopeUserId != null
+      ? this.db.prepare(
+          'SELECT ciphertext FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id = ? AND secret_group = ? AND secret_key = ?',
+        ).get(scopeType, scopeUserId, group, key) as { ciphertext: string } | undefined
+      : this.db.prepare(
+          'SELECT ciphertext FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id IS NULL AND secret_group = ? AND secret_key = ?',
+        ).get(scopeType, group, key) as { ciphertext: string } | undefined;
+    return row?.ciphertext ?? null;
+  }
+
+  clearEncryptedSecret(scopeType: string, scopeUserId: string | null, group: string, key: string): void {
+    if (scopeUserId != null) {
+      this.db.prepare(
+        'DELETE FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id = ? AND secret_group = ? AND secret_key = ?',
+      ).run(scopeType, scopeUserId, group, key);
+    } else {
+      this.db.prepare(
+        'DELETE FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id IS NULL AND secret_group = ? AND secret_key = ?',
+      ).run(scopeType, group, key);
+    }
+  }
+
+  listSecretStatus(scopeType: string, scopeUserId: string | null, group?: string): SecretStatusRow[] {
+    if (group != null) {
+      if (scopeUserId != null) {
+        return this.db.prepare(
+          `SELECT id, scope_type, scope_user_id, secret_group, secret_key, created_at, updated_at
+           FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id = ? AND secret_group = ?`,
+        ).all(scopeType, scopeUserId, group) as unknown as SecretStatusRow[];
+      }
+      return this.db.prepare(
+        `SELECT id, scope_type, scope_user_id, secret_group, secret_key, created_at, updated_at
+         FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id IS NULL AND secret_group = ?`,
+      ).all(scopeType, group) as unknown as SecretStatusRow[];
+    }
+    if (scopeUserId != null) {
+      return this.db.prepare(
+        `SELECT id, scope_type, scope_user_id, secret_group, secret_key, created_at, updated_at
+         FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id = ?`,
+      ).all(scopeType, scopeUserId) as unknown as SecretStatusRow[];
+    }
+    return this.db.prepare(
+      `SELECT id, scope_type, scope_user_id, secret_group, secret_key, created_at, updated_at
+       FROM encrypted_secrets WHERE scope_type = ? AND scope_user_id IS NULL`,
+    ).all(scopeType) as unknown as SecretStatusRow[];
+  }
+
+  // ── Settings audit log ─────────────────────────────────────────────────────
+
+  recordSettingsAudit(entry: {
+    actorUserId?: string | null;
+    scopeType: string;
+    scopeUserId?: string | null;
+    targetType: string;
+    targetKey: string;
+    action: string;
+    beforeJson?: string | null;
+    afterJson?: string | null;
+  }): void {
+    this.db.prepare(
+      `INSERT INTO settings_audit_log (actor_user_id, scope_type, scope_user_id, target_type, target_key, action, before_json, after_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      entry.actorUserId ?? null,
+      entry.scopeType,
+      entry.scopeUserId ?? null,
+      entry.targetType,
+      entry.targetKey,
+      entry.action,
+      entry.beforeJson ?? null,
+      entry.afterJson ?? null,
+      nowISO(),
+    );
+  }
+
+  listRecentSettingsAudit(limit?: number): SettingsAuditRow[] {
+    const cap = limit ?? 50;
+    return this.db.prepare(
+      `SELECT id, actor_user_id, scope_type, scope_user_id, target_type, target_key, action, before_json, after_json, created_at
+       FROM settings_audit_log ORDER BY id DESC LIMIT ?`,
+    ).all(cap) as unknown as SettingsAuditRow[];
   }
 
   // ── Draft URL management ───────────────────────────────────────────────────

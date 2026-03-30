@@ -50,6 +50,7 @@ export interface ToolCallingConfig {
   enabled?: boolean;
   includeLocalExtensions?: boolean;
   includePipelineTools?: boolean;
+  includeWebSearch?: boolean;
   allowWriteTools?: boolean;
   requestedTools?: string[];
   maxToolCalls?: number;
@@ -387,6 +388,34 @@ async function runWebSearch(args: Record<string, unknown>): Promise<ToolExecutio
   };
 }
 
+function buildWebSearchToolDefinition(): ToolDefinition {
+  return {
+    manifest: {
+      name: WEB_SEARCH_TOOL_NAME,
+      description: 'Search the public web and return a short list of results with URLs and snippets.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Natural-language search query' },
+          max_results: { type: 'integer', description: 'Maximum number of results to return (1-8)' },
+        },
+        required: ['query'],
+      },
+    },
+    handler: async (args) => {
+      const result = await runWebSearch(args);
+      return { text: result.output };
+    },
+    source: 'local-extension',
+    aliases: ['web', 'search'],
+    safety: {
+      readOnly: true,
+      writesState: false,
+      externalSideEffects: false,
+    },
+  };
+}
+
 export async function getSafeLocalToolCatalog(options?: { includeWebSearch?: boolean }): Promise<ToolCatalogEntry[]> {
   const registry = await loadRegistryModule();
   const safeNames = new Set(registry.SAFE_READ_ONLY_TOOL_NAMES);
@@ -406,23 +435,17 @@ export async function getSafeLocalToolCatalog(options?: { includeWebSearch?: boo
     }));
 
   if (options?.includeWebSearch) {
+    const tool = buildWebSearchToolDefinition();
     tools.push({
-      name: WEB_SEARCH_TOOL_NAME,
-      description: 'Search the public web and return a short list of results with URLs and snippets.',
+      name: tool.manifest.name,
+      description: tool.manifest.description,
       category: 'web',
       sideEffects: 'none (read-only public web search)',
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: true,
-      inputSchema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string' },
-          max_results: { type: 'integer' },
-        },
-        required: ['query'],
-      },
+      inputSchema: tool.manifest.parameters,
       examples: [{ query: 'latest Seahawks cap update', max_results: 5 }],
     });
   }
@@ -446,6 +469,9 @@ export async function listAvailableTools(config: ToolCallingConfig): Promise<Too
   if (config.includePipelineTools) {
     toolSets.push(getPipelineToolDefinitions());
   }
+  if (config.includeWebSearch) {
+    toolSets.push([buildWebSearchToolDefinition()]);
+  }
 
   const allowWriteTools = config.allowWriteTools === true;
   const deduped = new Map<string, ToolDefinition>();
@@ -457,18 +483,74 @@ export async function listAvailableTools(config: ToolCallingConfig): Promise<Too
   return Array.from(deduped.values()).sort((left, right) => left.manifest.name.localeCompare(right.manifest.name));
 }
 
+function describeSchemaProperty(schema: ToolSchemaProperty): string {
+  const bits: string[] = [schema.type];
+  if (schema.enum && schema.enum.length > 0) {
+    bits.push(`enum=${schema.enum.join('|')}`);
+  }
+  if (typeof schema.minimum === 'number') {
+    bits.push(`min=${schema.minimum}`);
+  }
+  if (typeof schema.maximum === 'number') {
+    bits.push(`max=${schema.maximum}`);
+  }
+  if (schema.description) {
+    bits.push(schema.description);
+  }
+  return bits.join(', ');
+}
+
+function summarizeToolArgs(parameters: ToolInputSchema): string {
+  const required = new Set(parameters.required ?? []);
+  const props = Object.entries(parameters.properties).map(([key, schema]) => {
+    const suffix = required.has(key) ? 'required' : 'optional';
+    return `${key}: ${describeSchemaProperty(schema)} (${suffix})`;
+  });
+  return props.join('; ');
+}
+
+function buildValidationHint(tool: ToolDefinition): string {
+  const required = new Set(tool.manifest.parameters.required ?? []);
+  const exampleShape = Object.entries(tool.manifest.parameters.properties)
+    .filter(([key]) => required.has(key))
+    .map(([key, schema]) => {
+      let exampleValue = '<value>';
+      switch (schema.type) {
+        case 'string':
+          exampleValue = schema.description?.match(/\b[A-Z]{2,4}\b|\b[A-Z][a-z]{2,}\b/)?.[0]
+            ? `"${schema.description.match(/\b[A-Z]{2,4}\b|\b[A-Z][a-z]{2,}\b/)![0]}"`
+            : '"value"';
+          break;
+        case 'integer':
+          exampleValue = String(schema.minimum ?? 2025);
+          break;
+        case 'number':
+          exampleValue = String(schema.minimum ?? 0);
+          break;
+        case 'boolean':
+          exampleValue = 'true';
+          break;
+        case 'array':
+          exampleValue = '[]';
+          break;
+        case 'object':
+          exampleValue = '{}';
+          break;
+      }
+      return `"${key}": ${exampleValue}`;
+    });
+  return `Arguments must be like { ${exampleShape.join(', ')} }`;
+}
+
 export function buildToolCatalogPrompt(tools: ToolDefinition[]): string {
   if (tools.length === 0) return '';
   const lines = tools.map((tool) => {
     const required = tool.manifest.parameters.required ?? [];
-    const props = Object.entries(tool.manifest.parameters.properties).map(([key, schema]) => {
-      const bits: string[] = [schema.type];
-      if (schema.enum && schema.enum.length > 0) {
-        bits.push(`enum=${schema.enum.join('|')}`);
-      }
-      return `${key}:${bits.join(',')}`;
-    });
-    return `- ${tool.manifest.name}: ${tool.manifest.description} | args={${props.join('; ')}} | required=[${required.join(', ')}]`;
+    return [
+      `- ${tool.manifest.name}: ${tool.manifest.description}`,
+      `  args: ${summarizeToolArgs(tool.manifest.parameters)}`,
+      `  required: [${required.join(', ')}]`,
+    ].join('\n');
   });
   return [
     'Available tools:',
@@ -501,9 +583,12 @@ export async function executeToolCall(
     if (failures.length > 0) {
       return {
         text: JSON.stringify({
-          error: 'Tool arguments failed validation',
+          error: 'validation',
           tool: toolOrName.manifest.name,
           issues: failures,
+          hint: buildValidationHint(toolOrName),
+          expectedArgs: summarizeToolArgs(toolOrName.manifest.parameters),
+          required: toolOrName.manifest.parameters.required ?? [],
         }, null, 2),
         isError: true,
       };

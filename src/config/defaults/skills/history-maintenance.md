@@ -1,6 +1,6 @@
 ---
 name: "history-maintenance"
-description: "How to maintain memory.db health — decay, pruning, touch/boost, and the Memory Browser dashboard"
+description: "How to maintain memory.db health — decay, pruning, touch/boost, and the post-browser maintenance workflow"
 domain: "knowledge-management"
 confidence: "high"
 source: "v2-rewrite"
@@ -14,14 +14,15 @@ tools: ["AgentMemory"]
 Agent knowledge in `memory.db` accumulates over time. Without maintenance, old entries
 crowd out fresh knowledge, relevance scores go stale, and the store grows unbounded.
 This skill defines the three maintenance operations — **decay**, **prune**, and
-**touch** — plus the dashboard Memory Browser for manual management.
+**touch** — plus the remaining config/maintenance surfaces for manual oversight.
 
 ## Why This Exists
 
-At spawn, each agent receives its **top 10 entries by relevance_score**. If old entries
-retain high scores indefinitely, they'll block newer, more relevant knowledge from
-appearing in the agent's `## Relevant Context`. Maintenance ensures the most useful
-knowledge always surfaces.
+When prompt injection is enabled, each agent receives its **top 10 entries by relevance_score**.
+If old entries retain high scores indefinitely, they'll block newer, more relevant knowledge
+from appearing in the agent's `## Relevant Context`. Even with injection currently disabled in
+the live dashboard runtime, maintenance still matters for bootstrap, refresh, and any future
+reactivation of the feature.
 
 ---
 
@@ -170,22 +171,20 @@ for (const agent of stats) {
 
 ### On Demand
 
-Use the **Dashboard Memory Browser** at `/memory` for manual management.
+Use the **Dashboard Settings** page at `/config` for refresh controls, and manage `memory.db`
+directly (SQLite/CLI or migration tooling) for manual inspection and cleanup.
 
 ---
 
-## Dashboard Memory Browser
+## Dashboard Settings + Direct Storage Access
 
-The Memory Browser at `/memory` provides a visual interface for managing memory.db:
+The dashboard no longer exposes a dedicated Memory browser. Current operations split into:
 
-- **Browse:** View all entries filtered by agent, category, or relevance range
-- **Search:** Full-text search across all memory content
-- **Touch/Boost:** Click to boost an entry's relevance score
-- **Delete:** Remove individual entries that are incorrect or outdated
-- **Stats:** Per-agent entry counts and average relevance scores
-- **Category badges:** Color-coded tags for learning, decision, preference, domain_knowledge, error_pattern
+- **`/config` refresh control:** Run `POST /api/agents/refresh-all` from the admin page
+- **SQLite inspection:** Query `memory.db` directly for filtered browsing and search
+- **Migration/maintenance tooling:** Use repo scripts and direct DB edits for cleanup operations
 
-Use the browser for:
+Use this flow for:
 - Spot-checking what agents "know" before a research session
 - Manually removing incorrect entries that haven't decayed yet
 - Verifying that maintenance is keeping the store healthy

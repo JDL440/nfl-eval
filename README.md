@@ -167,7 +167,7 @@ Skills can also advertise tool groups in frontmatter. The runtime resolves those
 
 - Charters: `~/.nfl-lab/agents/charters/{league}/` — agent identity and boundaries
 - Skills: `~/.nfl-lab/agents/skills/` — workflow instructions and output formats
-- Memory: `~/.nfl-lab/agents/memory.db` — persistent learnings, decisions, and domain knowledge
+- Memory: `~/.nfl-lab/agents/memory.db` — persistent learnings, decisions, and domain knowledge (storage remains, but live prompt injection is currently disabled)
 
 See **[docs/knowledge-system.md](docs/knowledge-system.md)** for the full knowledge architecture, bootstrap process, and multi-league extensibility guide.
 
@@ -181,12 +181,12 @@ The repo also includes a proof-of-concept structured knowledge slice for issue #
 The editorial dashboard includes:
 
 - **Home** (`/`) — ready-to-publish queue, pipeline summary, recent ideas, recent publishing activity, filters
-- **Article Detail** (`/articles/:id`) — stage timeline, action panel, artifacts, runs, usage, metadata, publisher checks
+- **Article Detail** (`/articles/:id`) — action panel, artifacts, revision history, usage, metadata, publishing checks, and trace access
 - **New Idea** (`/ideas/new`) — prompt-driven article creation with team selection and optional auto-advance
-- **Config** (`/config`) — active provider, model routing, charters, skills, and env var status
-- **Agents** (`/agents`) — charter and skill browser
-- **Memory** (`/memory`) — agent memory browser with filters, CRUD, prune/decay
-- **Runs** (`/runs`) — filterable execution history for stage runs
+- **Config** (`/config`) — active provider, model routing, runtime paths, prompt inventory, env var status, and refresh-all maintenance
+- **Trace Pages** (`/articles/:id/traces`, `/traces/:id`) — dedicated LLM trace timelines and per-trace inspection
+
+Legacy Agents, Memory, and Runs dashboard pages were removed from the primary UI surface. Memory storage still exists for bootstrap/refresh workflows, but the dashboard now represents it as a deprecated backend capability rather than an active browser surface.
 
 ## Pipeline Stages
 

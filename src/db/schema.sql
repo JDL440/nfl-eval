@@ -431,3 +431,81 @@ CREATE TABLE IF NOT EXISTS charter_history (
   edited_at TEXT NOT NULL DEFAULT (datetime('now')),
   summary TEXT
 );
+
+-- ── USERS ──────────────────────────────────────────────────────────────────
+-- Persistent principals for local dashboard auth.
+CREATE TABLE IF NOT EXISTS users (
+    id           TEXT PRIMARY KEY,
+    username     TEXT NOT NULL UNIQUE,
+    display_name TEXT,
+    role         TEXT NOT NULL DEFAULT 'admin',
+    status       TEXT NOT NULL DEFAULT 'active',
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login_at TEXT
+);
+
+-- ── WORKSPACE SETTINGS ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS workspace_settings (
+    namespace        TEXT NOT NULL,
+    key              TEXT NOT NULL,
+    value_json       TEXT NOT NULL,
+    updated_by_user_id TEXT REFERENCES users(id),
+    updated_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (namespace, key)
+);
+
+-- ── USER SETTINGS ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    namespace  TEXT NOT NULL,
+    key        TEXT NOT NULL,
+    value_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, namespace, key)
+);
+
+-- ── PROVIDER PROFILES ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS provider_profiles (
+    id             TEXT PRIMARY KEY,
+    scope_type     TEXT NOT NULL CHECK (scope_type IN ('workspace', 'user')),
+    scope_user_id  TEXT REFERENCES users(id) ON DELETE CASCADE,
+    provider_id    TEXT NOT NULL,
+    label          TEXT NOT NULL,
+    enabled        INTEGER NOT NULL DEFAULT 1,
+    is_default     INTEGER NOT NULL DEFAULT 0,
+    config_json    TEXT NOT NULL DEFAULT '{}',
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK ((scope_type = 'workspace' AND scope_user_id IS NULL) OR (scope_type = 'user' AND scope_user_id IS NOT NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_provider_profiles_scope
+    ON provider_profiles(scope_type, scope_user_id, enabled);
+
+-- ── ENCRYPTED SECRETS ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS encrypted_secrets (
+    id             TEXT PRIMARY KEY,
+    scope_type     TEXT NOT NULL CHECK (scope_type IN ('workspace', 'user')),
+    scope_user_id  TEXT REFERENCES users(id) ON DELETE CASCADE,
+    secret_group   TEXT NOT NULL,
+    secret_key     TEXT NOT NULL,
+    ciphertext     TEXT NOT NULL,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(scope_type, scope_user_id, secret_group, secret_key)
+);
+
+-- ── SETTINGS AUDIT LOG ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS settings_audit_log (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_user_id   TEXT REFERENCES users(id),
+    scope_type      TEXT NOT NULL,
+    scope_user_id   TEXT REFERENCES users(id),
+    target_type     TEXT NOT NULL,
+    target_key      TEXT NOT NULL,
+    action          TEXT NOT NULL,
+    before_json     TEXT,
+    after_json      TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);

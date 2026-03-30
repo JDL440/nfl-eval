@@ -166,3 +166,16 @@ Both audits converge: article detail should be editorial-first. Existing trace i
 
 - 2026-03-30 — Debug/trace surfaces are well-segregated; the issue is article-detail hierarchy, not trace isolation. Article page mixes machine metadata with editorial context; moving debug content to secondary areas aligns with existing trace-page strategy. No new trace infrastructure needed; just hierarchy/copy fixes.
 
+
+## Learnings
+
+### 2026-03-29: Copilot CLI session artifact harvest
+
+- For preserved human-authored research/planning material, the high-signal local root is `C:\Users\jdl44\.copilot\session-state`. The nearby CLI-managed roots (`C:\Users\jdl44\AppData\Local\copilot`, `C:\Users\jdl44\AppData\Local\GitHub CLI`, `C:\Users\jdl44\AppData\Roaming\GitHub CLI`) were inspected and only exposed packaged docs/config, not project research worth archiving.
+- The reusable artifact seams inside session-state are:
+  - root-level carry-forward docs like `FINAL-SUMMARY.md`, `lead-issue-planning-draft.md`, and cleanup inventories
+  - per-session `plan.md`
+  - per-session `checkpoints\*.md`
+  - per-session `research\*.md`
+- Session UUID folders are much easier to triage when paired with session-store summaries (for example: `ee3cf027-724e-49f5-b205-0e8b3c3e90fc` = “Rearchitect Project For Version 2”, `fded7635-6d90-4180-ae1f-02247f6d5b78` = “Add Advanced LLM Inputs Outputs Page”).
+- Recommended repo destination for later copy-in: `C:\github\nfl-eval\research\copilot-session-archive\` with collision-safe filenames that preserve date, session summary, session id, and original basename.

@@ -25,6 +25,9 @@ import {
 } from '../config/index.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
 import type { Stage, Article } from '../types.js';
+import { SettingsResolver } from '../settings/resolver.js';
+import { ensureBootstrapAdmin } from '../settings/bootstrap.js';
+import { encryptSecret, isSecretCryptoAvailable } from '../settings/crypto.js';
 import { PipelineEngine } from '../pipeline/engine.js';
 import {
   renderHome,
@@ -117,6 +120,8 @@ export const APP_TOOL_LOOP_PROVIDER_IDS = [
 export function buildDashboardToolLoopOptions(): ConstructorParameters<typeof AgentRunner>[0]['toolLoop'] {
   return {
     enabledProviders: [...APP_TOOL_LOOP_PROVIDER_IDS],
+    enableWebSearch: true,
+    maxToolCalls: 12,
   };
 }
 
@@ -896,216 +901,285 @@ export function createApp(
   });
 
   app.get('/config', (c) => {
-    const envVars = [
-      'LLM_PROVIDER',
-      'LMSTUDIO_URL',
-      'LMSTUDIO_MODEL',
-      'COPILOT_MODEL',
-      'COPILOT_CLI_MODE',
-      'COPILOT_CLI_MCP_CONFIG',
-      'COPILOT_CLI_SESSION_REUSE',
-      'COPILOT_CLI_WEB_SEARCH',
-      'GEMINI_API_KEY',
-      'SUBSTACK_TOKEN',
-      'SUBSTACK_PUBLICATION_URL',
-      'TWITTER_API_KEY',
-      'DASHBOARD_AUTH_MODE',
-      'DASHBOARD_AUTH_USERNAME',
-      'DASHBOARD_AUTH_PASSWORD',
-      'DASHBOARD_SESSION_COOKIE',
-      'DASHBOARD_SESSION_TTL_HOURS',
-    ];
+    const resolver = new SettingsResolver(repo, config);
+    const profileSet = resolver.resolveProviderProfiles();
+    const publishing = resolver.resolvePublishingConfig();
+    const images = resolver.resolveImageConfig();
+    const auth = resolver.resolveDashboardAuth();
+    const uiPrefs = resolver.resolveUiPreferences();
+    const diagnostics = resolver.buildDiagnosticsSnapshot();
+    const recentAudit = repo.listRecentSettingsAudit(10);
 
-    // Non-secret env vars whose values we can safely display
-    const displayableVars = new Set([
-      'LLM_PROVIDER',
-      'LMSTUDIO_URL',
-      'LMSTUDIO_MODEL',
-      'COPILOT_MODEL',
-      'COPILOT_CLI_MODE',
-      'COPILOT_CLI_MCP_CONFIG',
-      'COPILOT_CLI_SESSION_REUSE',
-      'COPILOT_CLI_WEB_SEARCH',
-      'SUBSTACK_PUBLICATION_URL',
-      'DASHBOARD_AUTH_MODE',
-      'DASHBOARD_AUTH_USERNAME',
-      'DASHBOARD_SESSION_COOKIE',
-      'DASHBOARD_SESSION_TTL_HOURS',
-    ]);
-    const envDefaultValues: Record<string, string> = {
-      COPILOT_MODEL: COPILOT_CLI_DEFAULT_MODEL,
-      COPILOT_CLI_MODE: COPILOT_CLI_DEFAULT_MODE,
-      COPILOT_CLI_MCP_CONFIG: join(process.cwd(), '.copilot', 'mcp-config.json'),
-      COPILOT_CLI_SESSION_REUSE: COPILOT_CLI_DEFAULT_SESSION_REUSE ? '1' : '0',
-      COPILOT_CLI_WEB_SEARCH: COPILOT_CLI_DEFAULT_WEB_SEARCH ? '1' : '0',
-      DASHBOARD_AUTH_MODE: dashboardAuth.mode,
-      DASHBOARD_SESSION_COOKIE: dashboardAuth.sessionCookieName,
-      DASHBOARD_SESSION_TTL_HOURS: String(dashboardAuth.sessionTtlHours),
-    };
-
-    const envStatus = envVars.map((key) => {
-      const rawVal = process.env[key] ? String(process.env[key]).trim() : '';
-      const isSet = Boolean(rawVal);
-      const displayValue = displayableVars.has(key)
-        ? (rawVal || envDefaultValues[key] ? `${rawVal || envDefaultValues[key]}${!rawVal && envDefaultValues[key] ? ' (default)' : ''}` : undefined)
-        : undefined;
-      return { key, isSet, displayValue };
-    });
-
-    const usingMock = process.env['MOCK_LLM'] === '1';
-    const usingLMStudio = process.env['LLM_PROVIDER'] === 'lmstudio' || Boolean(process.env['LMSTUDIO_URL']);
-
-    let providerName = 'Copilot';
-    if (usingMock) providerName = 'Mock';
-    else if (usingLMStudio) providerName = 'LM Studio';
-
-    const providerUrl = usingLMStudio
-      ? (() => {
-          let base = (process.env['LMSTUDIO_URL'] ?? 'http://localhost:1234/v1').replace(/\/+$/, '');
-          if (!base.endsWith('/v1')) base += '/v1';
-          return base;
-        })()
-      : undefined;
-
-    let modelPolicyError: string | undefined;
-    let modelRouting: Array<{ stageKey: string; model: string }> = [];
-    let activeModel = usingMock ? 'mock' : (usingLMStudio ? (process.env['LMSTUDIO_MODEL'] ?? '(auto)') : '');
-
-    try {
-      const policyPath = join(config.dataDir, 'config', 'models.json');
-      const modelPolicy = new ModelPolicy(policyPath);
-      modelRouting = Object.entries(modelPolicy.config.models)
-        .map(([stageKey, model]) => ({ stageKey, model }))
-        .sort((a, b) => a.stageKey.localeCompare(b.stageKey));
-
-      if (!activeModel && !usingLMStudio) {
-        activeModel = modelPolicy.resolve({ stageKey: 'lead' }).selectedModel;
-      }
-    } catch (err) {
-      modelPolicyError = `Model policy not available: ${err instanceof Error ? err.message : String(err)}`;
-      if (!activeModel) activeModel = '(unknown)';
-    }
-
-    const listCharterNames = (): string[] => {
-      if (!existsSync(config.chartersDir)) return [];
-      const entries = readdirSync(config.chartersDir, { withFileTypes: true });
-      const names: string[] = [];
-
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.md')) {
-          names.push(entry.name.replace(/\.md$/i, ''));
-        } else if (entry.isDirectory()) {
-          // Match AgentRunner behavior: require charter.md in subdir
-          const subCharter = join(config.chartersDir, entry.name, 'charter.md');
-          if (existsSync(subCharter)) names.push(entry.name);
-        }
-      }
-
-      return names.sort();
-    };
-
-    const listSkillNames = (): string[] => {
-      if (!existsSync(config.skillsDir)) return [];
-      const entries = readdirSync(config.skillsDir, { withFileTypes: true });
-      const names: string[] = [];
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.md')) {
-          names.push(entry.name.replace(/\.md$/i, ''));
-        }
-      }
-      return names.sort();
-    };
-
-    const runner = deps?.actionContext?.runner;
-    const registeredProviders = runner
-      ? runner.gateway.listProviders().map((provider, index) => ({ ...provider, default: index === 0 }))
-      : [];
-    const substackConfigured = Boolean(process.env['SUBSTACK_TOKEN']?.trim() && process.env['SUBSTACK_PUBLICATION_URL']?.trim());
-    const twitterConfigured = Boolean(
-      process.env['TWITTER_API_KEY']?.trim()
-      && process.env['TWITTER_API_SECRET']?.trim()
-      && process.env['TWITTER_ACCESS_TOKEN']?.trim()
-      && process.env['TWITTER_ACCESS_TOKEN_SECRET']?.trim(),
-    );
-    const geminiConfigured = Boolean(process.env['GEMINI_API_KEY']?.trim());
+    const activeTab = (c.req.query('tab') as string) || 'overview';
 
     return c.html(renderConfigPage({
       labName: config.leagueConfig.name,
       league: config.league,
       environment: config.env,
-      provider: {
-        name: providerName,
-        url: providerUrl,
-        model: activeModel,
-        registeredProviders,
-      },
-      modelRouting,
-      modelPolicyError,
-      charters: listCharterNames(),
-      skills: listSkillNames(),
-      envStatus,
-      runtimePaths: [
-        { label: 'Data directory', value: config.dataDir },
-        { label: 'Pipeline database', value: config.dbPath },
-        { label: 'Articles directory', value: config.articlesDir },
-        { label: 'Images directory', value: config.imagesDir },
-        { label: 'Charters directory', value: config.chartersDir },
-        { label: 'Skills directory', value: config.skillsDir },
-        { label: 'Memory database', value: config.memoryDbPath },
-        { label: 'Logs directory', value: config.logsDir },
-        { label: 'Cache directory', value: config.cacheDir },
-      ],
-      dashboardAuth: {
-        mode: dashboardAuth.mode,
-        username: dashboardAuth.username,
-        sessionCookieName: dashboardAuth.sessionCookieName,
-        sessionTtlHours: dashboardAuth.sessionTtlHours,
-        secureCookies: dashboardAuth.secureCookies,
-      },
-      services: [
-        {
-          name: 'Knowledge refresh',
-          state: runner && memory ? 'ready' : 'disabled',
-          detail: runner && memory
-            ? 'Refresh-all can repopulate legacy knowledge storage from Settings; dedicated Agents and Memory pages are gone.'
-            : 'Runner or legacy memory storage is unavailable in this process.',
-        },
-        {
-          name: 'Memory storage',
-          state: memory ? 'partial' : 'disabled',
-          detail: memory
-            ? 'SQLite storage remains online for bootstrap and refresh workflows, but runtime prompt injection is disabled.'
-            : 'Legacy memory storage is not initialized for this process.',
-        },
-        {
-          name: 'Image generation',
-          state: imageService ? 'ready' : 'disabled',
-          detail: imageService
-            ? (geminiConfigured
-                ? 'Gemini-backed image generation is configured.'
-                : 'Image generation is available in stub mode because GEMINI_API_KEY is unset.')
-            : 'Image generation is unavailable.',
-        },
-        {
-          name: 'Substack publishing',
-          state: substackService ? 'ready' : 'disabled',
-          detail: substackConfigured
-            ? 'Draft and publish flows are configured.'
-            : 'SUBSTACK_TOKEN and SUBSTACK_PUBLICATION_URL are both required.',
-        },
-        {
-          name: 'Twitter posting',
-          state: twitterService ? 'ready' : 'disabled',
-          detail: twitterConfigured
-            ? 'Tweet publishing credentials are present.'
-            : 'Twitter credentials are not configured.',
-        },
-      ],
+      activeTab,
+      defaultProvider: profileSet.defaultProfile
+        ? { label: profileSet.defaultProfile.label, providerId: profileSet.defaultProfile.providerId }
+        : null,
+      serviceReadiness: diagnostics.serviceReadiness,
+      recentAudit: recentAudit.map(a => ({
+        action: a.action,
+        targetKey: a.target_key,
+        createdAt: a.created_at,
+      })),
+      providerProfiles: profileSet.profiles.map(p => ({
+        id: p.id,
+        providerId: p.providerId,
+        label: p.label,
+        isDefault: p.isDefault,
+        enabled: p.enabled,
+        config: p.config as Record<string, unknown>,
+      })),
+      publishing,
+      images,
+      dashboardAuth: auth,
+      uiPreferences: uiPrefs,
+      diagnostics,
+      secretCryptoAvailable: isSecretCryptoAvailable(),
       memoryStatus: {
         storagePath: config.memoryDbPath,
-        refreshAllAvailable: Boolean(runner && memory),
+        refreshAllAvailable: Boolean(deps?.actionContext?.runner && memory),
       },
     }));
+  });
+
+  // ── Settings API routes ───────────────────────────────────────────────────
+
+  app.post('/api/settings/workspace', async (c) => {
+    try {
+      const body = await c.req.parseBody();
+      const namespace = String(body['namespace'] || '');
+      const entries = Object.entries(body).filter(([k]) => k !== 'namespace' && k !== '_method');
+
+      if (!namespace) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Namespace is required</div>', 400);
+      }
+
+      for (const [key, value] of entries) {
+        const valueJson = JSON.stringify(value);
+        repo.setWorkspaceSetting(namespace, key, valueJson, null);
+        repo.recordSettingsAudit({
+          scopeType: 'workspace',
+          targetType: 'workspace_setting',
+          targetKey: `${namespace}.${key}`,
+          action: 'update',
+          afterJson: valueJson,
+        });
+      }
+
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Saved</span> Settings updated successfully</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  app.post('/api/settings/me', async (c) => {
+    try {
+      const body = await c.req.parseBody();
+      const namespace = String(body['namespace'] || 'ui');
+      const entries = Object.entries(body).filter(([k]) => k !== 'namespace' && k !== '_method');
+
+      // For now, use bootstrap admin (single-user model)
+      const user = repo.ensureBootstrapAdmin(null);
+
+      for (const [key, value] of entries) {
+        repo.setUserSetting(user.id, namespace, key, JSON.stringify(value));
+      }
+
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Saved</span> Preferences updated</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Create profile
+  app.post('/api/settings/provider-profiles', async (c) => {
+    try {
+      const body = await c.req.parseBody();
+      const providerId = String(body['provider_id'] || '');
+      const label = String(body['label'] || '');
+
+      if (!providerId || !label) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Provider and label are required</div>', 400);
+      }
+
+      const configJson = body['config_json'] ? String(body['config_json']) : '{}';
+      const profile = repo.createProviderProfile({
+        scopeType: 'workspace',
+        providerId,
+        label,
+        configJson,
+      });
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'provider_profile',
+        targetKey: profile.id,
+        action: 'create',
+        afterJson: JSON.stringify({ providerId, label }),
+      });
+
+      // Return redirect header for HTMX
+      c.header('HX-Redirect', '/config?tab=providers');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Created</span> Provider profile added</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Get profile (for edit form)
+  app.get('/api/settings/provider-profiles/:id', (c) => {
+    const profile = repo.getProviderProfile(c.req.param('id'));
+    if (!profile) return c.json({ error: 'Not found' }, 404);
+    return c.json(profile);
+  });
+
+  // Update profile
+  app.post('/api/settings/provider-profiles/:id', async (c) => {
+    try {
+      const id = c.req.param('id');
+      const body = await c.req.parseBody();
+
+      const patch: { label?: string; configJson?: string; enabled?: boolean } = {};
+      if (body['label']) patch.label = String(body['label']);
+      if (body['config_json']) patch.configJson = String(body['config_json']);
+      if (body['enabled'] !== undefined) patch.enabled = body['enabled'] === '1' || body['enabled'] === 'true';
+
+      const before = repo.getProviderProfile(id);
+      const updated = repo.updateProviderProfile(id, patch);
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'provider_profile',
+        targetKey: id,
+        action: 'update',
+        beforeJson: before ? JSON.stringify({ label: before.label }) : null,
+        afterJson: JSON.stringify({ label: updated.label }),
+      });
+
+      c.header('HX-Redirect', '/config?tab=providers');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Updated</span> Profile saved</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Set default
+  app.post('/api/settings/provider-profiles/:id/default', (c) => {
+    try {
+      const id = c.req.param('id');
+      repo.setDefaultProviderProfile('workspace', null, id);
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'provider_profile',
+        targetKey: id,
+        action: 'set_default',
+      });
+
+      c.header('HX-Redirect', '/config?tab=providers');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Done</span> Default provider updated</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Delete profile
+  app.post('/api/settings/provider-profiles/:id/delete', (c) => {
+    try {
+      const id = c.req.param('id');
+      const before = repo.getProviderProfile(id);
+      repo.deleteProviderProfile(id);
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'provider_profile',
+        targetKey: id,
+        action: 'delete',
+        beforeJson: before ? JSON.stringify({ label: before.label, providerId: before.provider_id }) : null,
+      });
+
+      c.header('HX-Redirect', '/config?tab=providers');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Deleted</span> Profile removed</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Set secret
+  app.post('/api/settings/secrets', async (c) => {
+    try {
+      if (!isSecretCryptoAvailable()) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> NFL_SETTINGS_MASTER_KEY is not configured — secret storage is disabled</div>', 400);
+      }
+
+      const body = await c.req.parseBody();
+      const group = String(body['group'] || '');
+      const key = String(body['key'] || '');
+      const value = String(body['value'] || '');
+
+      if (!group || !key || !value) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Group, key, and value are required</div>', 400);
+      }
+
+      const ciphertext = encryptSecret(value);
+      repo.setEncryptedSecret('workspace', null, group, key, ciphertext);
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'secret',
+        targetKey: `${group}.${key}`,
+        action: 'update',
+      });
+
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Saved</span> Secret updated</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  // Clear secret
+  app.post('/api/settings/secrets/clear', async (c) => {
+    try {
+      const body = await c.req.parseBody();
+      const group = String(body['group'] || '');
+      const key = String(body['key'] || '');
+
+      if (!group || !key) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Group and key are required</div>', 400);
+      }
+
+      repo.clearEncryptedSecret('workspace', null, group, key);
+
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'secret',
+        targetKey: `${group}.${key}`,
+        action: 'clear',
+      });
+
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Cleared</span> Secret removed</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  app.get('/api/settings/effective', (c) => {
+    const resolver = new SettingsResolver(repo, config);
+    const snapshot = resolver.buildDiagnosticsSnapshot();
+    return c.json(snapshot);
   });
 
   // ── API routes (JSON) ─────────────────────────────────────────────────────
@@ -1290,8 +1364,9 @@ export function createApp(
           toolCalling: {
             enabled: true,
             includeLocalExtensions: true,
+            includeWebSearch: true,
             allowWriteTools: false,
-            requestedTools: ['nflverse-data', 'prediction-markets'],
+            requestedTools: ['nflverse-data', 'prediction-markets', 'web_search'],
             maxToolCalls: 50,
             context: {
               repo,
@@ -2362,6 +2437,21 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     }
   } catch (err) {
     console.warn(`[recovery] Startup recovery failed: ${err instanceof Error ? err.message : err}`);
+  }
+
+  // ── Bootstrap admin user for DB-backed settings ──
+  try {
+    const bootstrap = ensureBootstrapAdmin(repo, process.env['DASHBOARD_AUTH_USERNAME']);
+    if (bootstrap.created) {
+      console.log(`[settings] Bootstrap admin user created: ${bootstrap.username}`);
+    }
+  } catch (err) {
+    console.warn(`[settings] Bootstrap admin creation failed: ${err instanceof Error ? err.message : err}`);
+  }
+
+  const useDbConfig = process.env['NFL_USE_DB_CONFIG'] === '1';
+  if (useDbConfig) {
+    console.log('[settings] DB-backed configuration enabled (NFL_USE_DB_CONFIG=1)');
   }
 
   // Build ActionContext for agent-powered auto-advance (optional)

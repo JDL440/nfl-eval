@@ -58,8 +58,13 @@ export class AnthropicProvider implements LLMProvider {
     // Separate system message from conversation messages
     const systemMsg = request.messages.find((m) => m.role === 'system');
     const conversationMsgs: AnthropicMessage[] = request.messages
-      .filter((m): m is ChatMessage & { role: 'user' | 'assistant' } => m.role !== 'system')
-      .map((m) => ({ role: m.role, content: m.content }));
+      .filter((m): m is Exclude<ChatMessage, { role: 'system' }> => m.role !== 'system')
+      .map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.role === 'tool'
+          ? `Tool result for ${m.name ?? m.tool_call_id}:\n${m.content}`
+          : m.content,
+      }));
 
     const body: Record<string, unknown> = {
       model,

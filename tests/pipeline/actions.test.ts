@@ -216,7 +216,11 @@ class RecordingProvider implements LLMProvider {
   chat(request: ChatRequest): Promise<ChatResponse> {
     this.lastRequest = request;
     this.requests.push(request);
-    const content = this.responses.shift() ?? validDraft();
+    let content = this.responses.shift() ?? validDraft();
+    // When the runner requests JSON (structured tool loop), wrap as a final envelope
+    if (request.responseFormat === 'json') {
+      content = JSON.stringify({ type: 'final', content });
+    }
     return Promise.resolve({
       content,
       model: request.model ?? 'recording-model',
@@ -264,6 +268,11 @@ class PipelineTestProvider implements LLMProvider {
       content = '# Summary\n\nPanel discussion summary.';
     } else if (lowered.includes('create a compact article contract')) {
       content = '# Contract\n\nArticle contract content.';
+    }
+
+    // When the runner requests JSON (structured tool loop), wrap as a final envelope
+    if (request.responseFormat === 'json') {
+      content = JSON.stringify({ type: 'final', content });
     }
 
     return Promise.resolve({
@@ -481,7 +490,7 @@ describe('STAGE_ACTIONS', () => {
       expect(traces[0].article_id).toBe('test-gp-trace');
     });
 
-    it('requests a 50-call tool budget for stage agent runs', async () => {
+    it('requests the default 12-call tool budget for stage agent runs', async () => {
       createArticleWithStage(fixtures, 'test-gp-budget', 1 as Stage, {
         'idea.md': '# Great Idea\nAnalyze the Seahawks secondary.',
       });
@@ -491,7 +500,7 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(runSpy).toHaveBeenCalled();
-      expect(runSpy.mock.calls[0]?.[0]?.toolCalling?.maxToolCalls).toBe(50);
+      expect(runSpy.mock.calls[0]?.[0]?.toolCalling?.maxToolCalls).toBe(12);
     });
   });
 

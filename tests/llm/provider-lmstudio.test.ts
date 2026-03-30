@@ -30,6 +30,7 @@ function chatResponse(overrides: {
   model?: string;
   finishReason?: string;
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  toolCalls?: Array<{ id: string; name: string; arguments: string }>;
 } = {}): Response {
   return okResponse({
     id: 'chatcmpl-test',
@@ -38,7 +39,22 @@ function chatResponse(overrides: {
     choices: [
       {
         index: 0,
-        message: { role: 'assistant', content: overrides.content ?? 'Hello!' },
+        message: {
+          role: 'assistant',
+          content: overrides.toolCalls ? null : (overrides.content ?? 'Hello!'),
+          ...(overrides.toolCalls
+            ? {
+                tool_calls: overrides.toolCalls.map((toolCall) => ({
+                  id: toolCall.id,
+                  type: 'function',
+                  function: {
+                    name: toolCall.name,
+                    arguments: toolCall.arguments,
+                  },
+                })),
+              }
+            : {}),
+        },
         finish_reason: overrides.finishReason ?? 'stop',
       },
     ],
@@ -250,6 +266,219 @@ describe('LMStudioProvider', () => {
             additionalProperties: true,
           },
         },
+      });
+    });
+
+    it('passes through a structured response schema when provided', async () => {
+      fetchSpy.mockResolvedValueOnce(chatResponse());
+
+      await provider.chat(req({
+        responseFormat: 'json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            type: { enum: ['final', 'tool_call'] },
+          },
+          required: ['type'],
+          additionalProperties: false,
+        },
+      }));
+
+      const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
+      expect(body.response_format).toEqual({
+        type: 'json_schema',
+        json_schema: {
+          name: 'structured_output',
+          schema: {
+            type: 'object',
+            properties: {
+              type: { enum: ['final', 'tool_call'] },
+            },
+            required: ['type'],
+            additionalProperties: false,
+          },
+        },
+      });
+    });
+
+    it('sends native OpenAI-style tools when provided', async () => {
+      fetchSpy.mockResolvedValueOnce(chatResponse());
+
+      await provider.chat(req({
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'query_team_efficiency',
+            description: 'Get team efficiency metrics',
+            parameters: {
+              type: 'object',
+              properties: {
+                team: { type: 'string' },
+                season: { type: 'integer' },
+              },
+              required: ['team', 'season'],
+            },
+          },
+        }],
+      }));
+
+      const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
+      expect(body.tools).toEqual([{
+        type: 'function',
+        function: {
+          name: 'query_team_efficiency',
+          description: 'Get team efficiency metrics',
+          parameters: {
+            type: 'object',
+            properties: {
+              team: { type: 'string' },
+              season: { type: 'integer' },
+            },
+            required: ['team', 'season'],
+          },
+        },
+      }]);
+      expect(body.response_format).toBeUndefined();
+    });
+
+    it('does not combine tools with structured output constraints', async () => {
+      fetchSpy.mockResolvedValueOnce(chatResponse());
+
+      await provider.chat(req({
+        responseFormat: 'json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            type: { enum: ['final', 'tool_call'] },
+          },
+          required: ['type'],
+        },
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'query_team_efficiency',
+            description: 'Get team efficiency metrics',
+            parameters: {
+              type: 'object',
+              properties: {
+                team: { type: 'string' },
+                season: { type: 'integer' },
+              },
+              required: ['team', 'season'],
+            },
+          },
+        }],
+      }));
+
+      const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
+      expect(body.tools).toBeDefined();
+      expect(body.response_format).toBeUndefined();
+    });
+
+    it('passes assistant tool_calls and tool results through in OpenAI format', async () => {
+      fetchSpy.mockResolvedValueOnce(chatResponse());
+
+      await provider.chat(req({
+        messages: [
+          {
+            role: 'assistant',
+            content: '',
+            tool_calls: [{
+              id: 'call_123',
+              type: 'function',
+              function: {
+                name: 'query_team_efficiency',
+                arguments: '{"team":"SEA","season":2025}',
+              },
+            }],
+          },
+          {
+            role: 'tool',
+            tool_call_id: 'call_123',
+            name: 'query_team_efficiency',
+            content: '{"efficiency":0.12}',
+          },
+        ],
+      }));
+
+      const body = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
+      expect(body.messages).toEqual([
+        {
+          role: 'assistant',
+          content: null,
+          tool_calls: [{
+            id: 'call_123',
+            type: 'function',
+            function: {
+              name: 'query_team_efficiency',
+              arguments: '{"team":"SEA","season":2025}',
+            },
+          }],
+        },
+        {
+          role: 'tool',
+          tool_call_id: 'call_123',
+          name: 'query_team_efficiency',
+          content: '{"efficiency":0.12}',
+        },
+      ]);
+    });
+
+    it('translates native LM Studio tool_calls into the runner tool-call envelope', async () => {
+      fetchSpy.mockResolvedValueOnce(chatResponse({
+        toolCalls: [{
+          id: 'call_123',
+          name: 'query_team_efficiency',
+          arguments: '{"team":"SEA","season":2025}',
+        }],
+      }));
+
+      const res = await provider.chat(req({
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'query_team_efficiency',
+            description: 'Get team efficiency metrics',
+            parameters: { type: 'object', properties: {}, required: [] },
+          },
+        }],
+      }));
+
+      expect(JSON.parse(res.content)).toEqual({
+        type: 'tool_call',
+        toolName: 'query_team_efficiency',
+        toolCallId: 'call_123',
+        args: { team: 'SEA', season: 2025 },
+      });
+    });
+
+    it('wraps plain-text final responses into the internal final envelope for tool loops', async () => {
+      fetchSpy.mockResolvedValueOnce(chatResponse({
+        content: '</think> # Article Idea: The Zero-INT Rookie and the Giants QB Dilemma',
+      }));
+
+      const res = await provider.chat(req({
+        responseFormat: 'json',
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'query_team_efficiency',
+            description: 'Get team efficiency metrics',
+            parameters: {
+              type: 'object',
+              properties: {
+                team: { type: 'string' },
+                season: { type: 'integer' },
+              },
+              required: ['team', 'season'],
+            },
+          },
+        }],
+      }));
+
+      expect(JSON.parse(res.content)).toEqual({
+        type: 'final',
+        content: '# Article Idea: The Zero-INT Rookie and the Giants QB Dilemma',
       });
     });
 

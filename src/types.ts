@@ -251,6 +251,10 @@ export interface StageRun {
   completed_at: string | null;
 }
 
+export interface StageRunDetail extends StageRun {
+  trace_count: number;
+}
+
 export interface UsageEvent {
   id: number;
   run_id: string | null;

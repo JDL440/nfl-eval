@@ -20,6 +20,9 @@
 - 2026-03-30 — The new-idea auto-advance handoff needs state-aware article banners: `src\dashboard\views\new-idea.ts` sends users to `/articles/:id?from=auto-advance` immediately after kicking off the background run, so `src\dashboard\server.ts` must check `activeAdvances` before claiming completion. Focused proof lives in `tests\dashboard\new-idea.test.ts` (client handoff wiring) and `tests\dashboard\server.test.ts` (`getAutoAdvanceArticleFlash()` running/paused/failed/complete states); current auth-gated E2E suites are still not reliable evidence for this seam.
 - 2026-03-30 — New-idea failure UX should preserve `/api/ideas` structured diagnostics instead of flattening to `data.error`: `src\dashboard\views\new-idea.ts` now uses a shared escaped formatter to show the main error plus `traceId`/`traceUrl`, and `tests\dashboard\new-idea.test.ts` covers both the inline surface and the failure-response seam after a trace starts. The same test file’s auto-advance fixtures must include `article-contract.md` whenever they expect Stage 4→5+ progression.
 - 2026-03-30 — Audit result for the idea-trace surface: the surgical fix is complete in the current worktree without further product-code edits. The proving seam is `tests\dashboard\new-idea.test.ts`, which covers the `POST /api/ideas` failure envelope plus the rendered client error state; broader `tests\e2e\live-server.test.ts` and `tests\e2e\ux-happy-path.test.ts` are presently blocked by dashboard auth assumptions (302/401) and are not trustworthy evidence for this slice until refreshed for the current auth contract.
+- 2026-03-30 — The safest way to finish the 4-phase content-page UX pass was to leave `layout.ts` alone and harden content-heavy routes locally: article markdown needs `.artifact-rendered` containment hooks plus internal table scrolling, publish needs a two-step primary workflow with optional follow-up sections, and traces benefit from lead-summary cards instead of shell-level chrome changes.
+- 2026-03-31 — Dashboard cleanup simplified UI to match actual operator priorities: trace previews now default to rendered markdown/JSON instead of raw text, "calmer" copy removed as overpromising, high-level hero stats removed to surface actual work sections faster, Settings page simplified by removing stage routing table/runtime paths/prompt inventory sections that felt too engineering-focused.
+- 2026-03-31 — Dashboard section ordering now follows operator workflow: Intake (recent ideas) moved to top of home grid, immediately after hero, so new pitches are more visible before diving into search/filters or ready-to-publish queue.
 - 2026-03-29 — Dashboard regression tests for the approved cleanup should assert operator-visible states only: `/config` always renders the maintenance target, refresh-all form visibility depends on runner+memory initialization, and article tests should verify the current metadata/detail shape while excluding legacy `/context-config` and inline edit-form copy.
 - 2026-03-29 — Dashboard surface cleanup validated: deprecated `/agents`, `/memory`, and `/runs` UI was removed; trace pages and `POST /api/agents/refresh-all` stayed intact; article detail now focuses on metadata, artifacts, revisions, reviews, actions, and usage.
 - 2026-03-29 — The clean integration lane for v4 forward-port validation is `C:\github\worktrees\nfl-eval-v4-integration-f31a5ec` on branch `devops/v4-integration-f31a5ec`; use it for focused validation instead of the dirty root checkout when possible.
@@ -45,3 +48,32 @@
 - 2026-03-29 — Thin blocker-escalation read-model slice should stay additive: keep repeated-blocker detection in `src\pipeline\conversation.ts`, expose query helpers from `src\pipeline\actions.ts`, and surface the smallest tool payload via `src\tools\pipeline-tools.ts` by extending `article_get` instead of inventing new tool names or stage transitions. Focused regression coverage belongs in `tests\pipeline\actions.test.ts`, `tests\mcp\server.test.ts`, and `tests\agents\local-tools.test.ts`.
 - 2026-03-30T02:36:07Z — **New-idea error trace surfacing complete:** `src\dashboard\views\new-idea.ts` updated to render `traceId` and `traceUrl` from failed `/api/ideas` 500 responses in the existing error banner; no success-path changes. `tests\dashboard\new-idea.test.ts` covers both inline surface rendering and API contract. UX reviewed and approved the surgical change. Five inbox decisions merged (code-surface-idea-trace, code-normalize-tool-loop-message, blocker-tag-hardening, user-directive-e2e-test). Team coordinated across Code + UX. Unblocks next implementation slice.
 
+- 2026-03-29 — Mobile-first dashboard modernization now rides on shared seams instead of page-only patches: `layout.ts` owns `.shared-mobile-header` / `.shared-mobile-nav`, `article.ts` + `publish.ts` share `.mobile-detail-layout`, and `config.ts` uses `.responsive-table` so narrow-screen structure is backed by real CSS and regression tests.
+- 2026-03-29 — Shared mobile shell fixes should land in `src\dashboard\public\styles.css` + `src\dashboard\views\layout.ts` first: add `viewport-fit=cover`, safe-area CSS variables, and make the mobile nav drop below the control row with grid spanning instead of relying on nowrap flex behavior.
+- 2026-03-29 — High-value mobile regression coverage is route-plus-system focused: assert shared shell hooks on `/`, `/articles/:id`, `/articles/:id/publish`, `/articles/:id/traces`, and `/config`, while `tests\dashboard\wave2.test.ts` protects safe-area/nav CSS contracts and `tests\ux-playwright-review.ts` checks the hamburger can open without overlap.
+
+## Cross-Agent Context Updates (2026-03-29T23:21:31Z)
+
+### Dashboard Cleanup Completion
+- **Final orchestration:** UX + Code agents completed background sync tasks. All tests passing (`tests/dashboard/{server,config,publish,wave2}.test.ts` + `npm run v2:build`).
+- **Decisions merged:** `code-dashboard-followup.md` and `ux-dashboard-followup.md` merged to `.squad/decisions/decisions.md` with deduplication. Mobile-restyle decision also captured.
+- **Scope verified:** No further UX changes needed. Code ready for team integration.
+
+## Cross-Agent Context Updates (2026-03-29T20:19:14Z)
+
+### From Scribe — Dashboard Mobile Shell Review
+- **Architecture root causes identified:** Breakpoint mismatch (JS 768px vs CSS 768px/767px dual queries), missing nav z-index/backdrop, dual conflicting media queries, missing .action-stack primitive, table overflow-only strategy.
+- **Minimal file set for fix (4 phases, 10 files):** Phase 1: layout.ts + styles.css (breakpoint unification, z-index guard); Phase 2: styles.css (add .action-stack, .responsive-table card mode); Phase 3: article.ts, publish.ts, config.ts, home.ts (apply primitives); Phase 4: wave2.test.ts, server.test.ts, publish.test.ts (test coverage).
+- **Shell audit confirmed baseline is healthy:** Shared routes (/, /ideas/new, /config, /login) are working correctly at tested viewports. Do not reopen generic shell bug work.
+- **Focus on content-heavy routes:** Prioritize article artifact surfaces (.artifact-rendered table/pre), publish sidebar density (.publish-workflow-actions), traces readability (.trace-card) — these were not live-testable in current pass.
+- **Test regression protection:** 9 critical gaps including hamburger toggle visibility at viewport boundaries, nav close behavior, responsive table mobile transformation, width constraints, breakpoint boundary consistency. Prioritize 3 critical tests.
+
+## Cross-Agent Context Updates (2026-03-29T20-08-26Z)
+
+### From Orchestration (Scribe)
+**Mobile shell restyle handoff:** Implement the system-level mobile shell fix first, then layer premium dashboard polish on top. Eliminate hamburger overlap and overflow before page-specific decoration.
+
+## Cross-Agent Context Updates (2026-03-29T20-15-11Z)
+
+### UX Agent Coordination
+**Mobile dashboard shared-shell restyle:** UX agent is running parallel background+sync follow-up task to eliminate hamburger/menu overlap, horizontal overflow, and restyle toward premium design. Shared shell contracts: (1) `viewport-fit=cover` in HTML heads, (2) safe-area-aware spacing in `src\dashboard\public\styles.css`, (3) mobile header grid layout for `.shared-mobile-nav`. Both UX and Code agents verify outcomes via filesystem and test suite. Mobile restyle decision baseline is now recorded in decisions.md.

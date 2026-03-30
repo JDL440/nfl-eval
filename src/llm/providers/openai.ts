@@ -35,8 +35,10 @@ const OPENAI_MODELS = [
 const API_BASE = 'https://api.openai.com';
 
 interface OpenAIChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  tool_call_id?: string;
+  name?: string;
 }
 
 interface OpenAIChoice {
@@ -76,6 +78,8 @@ export class OpenAIProvider implements LLMProvider {
     const messages: OpenAIChatMessage[] = request.messages.map((m) => ({
       role: m.role,
       content: m.content,
+      ...('tool_call_id' in m ? { tool_call_id: m.tool_call_id } : {}),
+      ...('name' in m && typeof m.name === 'string' ? { name: m.name } : {}),
     }));
 
     const body: Record<string, unknown> = {
