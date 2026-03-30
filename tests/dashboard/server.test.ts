@@ -379,6 +379,7 @@ describe('Dashboard Server', () => {
       expect(traceHtml).toContain('Trace output preview');
       expect(traceHtml).toContain(`trace-${traceId}`);
       expect(traceHtml).toContain('Article trace timeline');
+      expect(traceHtml).toContain('CWD: C:\\github\\worktrees\\copilot-session-reuse');
     });
 
     it('article trace timeline page renders all traces for the article', async () => {
@@ -546,6 +547,9 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('Needs Lead review');
       expect(html).toContain('Lead review required: repeated editor blocker detected');
+      expect(html).toContain('article-artifact-section');
+      expect(html).toContain('article-artifact-tabs');
+      expect(html).toContain('article-artifact-panel');
       expect(html).toContain('/htmx/articles/detail-lead-review/artifact/lead-review.md');
       expect(html).toContain('data-tab="lead-review.md"');
       expect(html).toContain('id="artifact-content-detail-lead-review"');

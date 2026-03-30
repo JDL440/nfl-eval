@@ -241,11 +241,17 @@ export function renderPublishWorkflow(data: PublishResultData): string {
 
   if (article.current_stage === 8 || publishedUrl) {
     return `
-      <section id="publish-workflow" class="detail-section">
-        <h2>Publish Status</h2>
-        ${alertHtml}
-        <p class="status-info">This article is now live on Substack.</p>
-        <div class="action-bar">
+      <section id="publish-workflow" class="detail-section publish-workflow-section publish-workflow-complete">
+        <div class="publish-workflow-header">
+          <div class="publish-workflow-kicker-row">
+            <p class="section-kicker">Primary path</p>
+            <span class="publish-status-badge is-live">Live</span>
+          </div>
+          <h2>Publish Status</h2>
+          ${alertHtml}
+          <p class="status-info publish-workflow-summary">This article is now live on Substack.</p>
+        </div>
+        <div class="action-bar publish-workflow-actions">
           ${publishedUrl
             ? `<a href="${escapeHtml(publishedUrl)}" target="_blank" class="btn btn-secondary">View Live Article ↗</a>`
             : ''}
@@ -271,27 +277,39 @@ export function renderPublishWorkflow(data: PublishResultData): string {
           hx-swap="outerHTML"
           hx-confirm="Publish this article live to Substack now?"`
     : unavailableAttrs;
+  const draftButtonHtml = hasDraft
+    ? `<button class="btn btn-secondary"${draftActionAttrs}>
+         Update Draft on Substack
+       </button>`
+    : `<button class="btn btn-primary"${draftActionAttrs}>
+         Save Draft to Substack
+       </button>`;
+  const publishButtonHtml = hasDraft
+    ? `<button class="btn btn-primary btn-publish"${publishActionAttrs}>
+         Publish Now
+       </button>`
+    : '';
 
   return `
-    <section id="publish-workflow" class="detail-section">
-      <h2>Publish Status</h2>
-      ${alertHtml}
-      ${configHintHtml}
-      <p class="status-info">${escapeHtml(draftCopy)}</p>
+    <section id="publish-workflow" class="detail-section publish-workflow-section">
+      <div class="publish-workflow-header">
+        <div class="publish-workflow-kicker-row">
+          <p class="section-kicker">Primary path</p>
+          <span class="publish-status-badge ${hasDraft ? 'is-ready' : 'is-blocked'}">${hasDraft ? 'Draft linked' : 'Draft needed'}</span>
+        </div>
+        <h2>Publish Status</h2>
+        ${alertHtml}
+        ${configHintHtml}
+        <p class="status-info publish-workflow-summary">${escapeHtml(draftCopy)}</p>
+      </div>
       ${article.substack_draft_url
-        ? `<p class="status-info">Current draft: <a href="${escapeHtml(article.substack_draft_url)}" target="_blank">Open in Substack ↗</a></p>`
+        ? `<p class="status-info publish-workflow-link">Current draft: <a href="${escapeHtml(article.substack_draft_url)}" target="_blank">Open in Substack ↗</a></p>`
         : ''}
       <div class="action-bar action-group publish-workflow-actions">
-        <button class="btn btn-secondary"${draftActionAttrs}>
-          ${hasDraft ? 'Update Draft on Substack' : 'Save Draft to Substack'}
-        </button>
-        ${hasDraft
-          ? `<button class="btn btn-primary btn-publish"${publishActionAttrs}>
-               Publish Now
-             </button>`
-          : ''}
+        ${publishButtonHtml}
+        ${draftButtonHtml}
       </div>
-      <p class="hint">${hasDraft
+      <p class="hint publish-workflow-hint">${hasDraft
         ? '“Publish Now” updates the linked Substack draft with the latest article body, then publishes it live.'
         : 'Publishing becomes available after this article has a linked Substack draft.'}</p>
     </section>`;
@@ -344,7 +362,8 @@ export function renderNoteComposer(article: Article): string {
   const articleId = escapeHtml(article.id);
 
   return `
-    <section class="detail-section">
+    <section class="detail-section publish-support-section">
+      <p class="section-kicker">Optional follow-up</p>
       <h2>📝 Substack Note</h2>
       <div id="note-composer">
         <textarea id="note-content" name="content" rows="4" class="form-textarea"
@@ -376,7 +395,8 @@ export function renderTweetComposer(article: Article): string {
   const articleId = escapeHtml(article.id);
 
   return `
-    <section class="detail-section">
+    <section class="detail-section publish-support-section">
+      <p class="section-kicker">Optional follow-up</p>
       <h2>🐦 Tweet</h2>
       <div id="tweet-composer">
         <textarea id="tweet-content" name="content" rows="3" class="form-textarea"
@@ -424,7 +444,8 @@ export function renderPublishAll(articleId: string, substackConfigured: boolean 
     ? ''
     : '<p class="hint">Configure Substack on the <a href="/config">Settings</a> page before using Publish All.</p>';
   return `
-    <section class="detail-section">
+    <section class="detail-section publish-support-section publish-all-section">
+      <p class="section-kicker">Automation</p>
       <h2>🚀 Publish All</h2>
       <p class="hint">Publish the latest article live, then optionally post a Note and Tweet in sequence.</p>
       ${unavailableHint}

@@ -274,6 +274,10 @@ describe('Publish Workflow', () => {
       expect(html).toContain('Test Article');
       expect(html).toContain('Some content here');
       expect(html).toContain('Published Layout Preview');
+      expect(html).toContain('Primary path');
+      expect(html).toContain('publish-status-badge is-ready');
+      expect(html).toContain('Optional follow-up');
+      expect(html).toContain('Automation');
       expect(html).toContain('Update Draft on Substack');
       expect(html).toContain('Publish Now');
     });
@@ -293,6 +297,7 @@ describe('Publish Workflow', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('No article draft found yet');
+      expect(html).toContain('publish-status-badge is-blocked');
       expect(html).toContain('No Substack draft is linked yet. Save a draft to Substack before publishing live.');
       expect(html).not.toContain('Publish Now');
     });
@@ -312,6 +317,7 @@ describe('Publish Workflow', () => {
       expect(html).toContain('SUBSTACK_TOKEN');
       expect(html).toContain('/config');
       expect(html).toContain('aria-disabled="true"');
+      expect(html).toContain('Draft needed');
       expect(html).toContain('Configure Substack on the <a href="/config">Settings</a> page before using Publish All.');
       expect(html).not.toContain('hx-post="/api/articles/no-substack-config/draft"');
       expect(html).not.toContain('hx-post="/api/articles/no-substack-config/publish"');

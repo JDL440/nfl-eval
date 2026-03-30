@@ -259,9 +259,14 @@ describe('shared mobile dashboard shell', () => {
     expect(css).toContain('.mobile-primary-column');
     expect(css).toContain('.mobile-secondary-column');
     expect(css).toContain('.artifact-rendered table');
+    expect(css).toContain('.artifact-tabs .tab-bar');
+    expect(css).toContain('.thinking-content');
+    expect(css).toContain('.publish-status-badge');
     expect(css).toContain('body.nav-open');
     expect(css).toContain('overflow-wrap: anywhere;');
     expect(css).toContain('top: calc(var(--safe-area-top) + 5rem);');
+    expect(css).not.toContain('.tab-btn-thinking');
+    expect(css).not.toContain('.alert-info');
   });
 });
 

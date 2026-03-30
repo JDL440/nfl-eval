@@ -225,9 +225,9 @@ function renderArtifactTabs(article: Article, artifactNames?: string[]): string 
   const thinkingFiles = new Set((artifactNames ?? []).filter(n => n.endsWith('.thinking.md')));
 
   return `
-    <section class="detail-section">
+    <section class="detail-section article-artifact-section">
       <h2>Artifacts</h2>
-      <div class="artifact-tabs">
+      <div class="artifact-tabs article-artifact-tabs">
         <div class="tab-bar" role="tablist">
           ${tabNames.map((name) => {
             const thinkName = name.replace('.md', '.thinking.md');
@@ -245,7 +245,7 @@ function renderArtifactTabs(article: Article, artifactNames?: string[]): string 
             `;
           }).join('')}
         </div>
-        <div class="tab-content" id="artifact-content-${escapeHtml(article.id)}"
+        <div class="tab-content article-artifact-panel" id="artifact-content-${escapeHtml(article.id)}"
           hx-get="/htmx/articles/${escapeHtml(article.id)}/artifact/${escapeHtml(defaultTab)}"
           hx-trigger="load"
           hx-swap="innerHTML">

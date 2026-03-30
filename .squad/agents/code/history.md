@@ -9,6 +9,7 @@
 - Fast-forward-only advancement of checked-out `main` is the safe integration policy.
 
 ## Learnings
+- 2026-03-30 — The safest way to finish the 4-phase content-page UX pass was to leave `layout.ts` alone and harden content-heavy routes locally: article markdown needs `.artifact-rendered` containment hooks plus internal table scrolling, publish needs a two-step primary workflow with optional follow-up sections, and traces benefit from lead-summary cards instead of shell-level chrome changes.
 - 2026-03-31 — Dashboard cleanup simplified UI to match actual operator priorities: trace previews now default to rendered markdown/JSON instead of raw text, "calmer" copy removed as overpromising, high-level hero stats removed to surface actual work sections faster, Settings page simplified by removing stage routing table/runtime paths/prompt inventory sections that felt too engineering-focused.
 - 2026-03-31 — Dashboard section ordering now follows operator workflow: Intake (recent ideas) moved to top of home grid, immediately after hero, so new pitches are more visible before diving into search/filters or ready-to-publish queue.
 - 2026-03-29 — Dashboard regression tests for the approved cleanup should assert operator-visible states only: `/config` always renders the maintenance target, refresh-all form visibility depends on runner+memory initialization, and article tests should verify the current metadata/detail shape while excluding legacy `/context-config` and inline edit-form copy.
