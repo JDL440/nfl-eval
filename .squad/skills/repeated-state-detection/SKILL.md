@@ -21,7 +21,8 @@ tools: [typescript, vitest]
 4. **Trigger escalation on match** — When signatures are identical, create an escalation artifact (e.g., `lead-review.md`) and transition to a holding state.
 5. **Keep holding state minimal** — Use a status flag (e.g., `needs_lead_review`) rather than adding a new pipeline stage.
 6. **Define post-escalation outcomes** — Document what happens after human/external review: rework, wait, abandon.
-7. **Add focused tests** — Prove the detection logic fires and the old loop path does not.
+7. **Split detection from active hold state in the read-model** — Expose whether a repeated fingerprint is detectable, whether the workflow is actively escalated, and whether the handoff artifact exists so tool/API consumers do not infer state from a single boolean.
+8. **Add focused tests** — Prove the detection logic fires and the old loop path does not.
 
 ## NFL Lab example
 

@@ -1,6 +1,20 @@
 # Active Decisions
 
+- **User directive: E2E test after new-idea fixes** (2026-03-30T02:23:32Z): After fixes on the new article idea flow, always do an end-to-end test by creating a new article idea on auto advance. Per user request — captured for team memory.
+
+- **Code: Surface idea-creation trace details** (2026-03-30T19:36:30Z): Keep the new-idea success flow unchanged, but render `traceId` and `traceUrl` inside the existing failure status area when `/api/ideas` returns them. The API already preserves trace metadata for LLM/schema failures, so expose that data in the current error surface instead of introducing a broader UI redesign.
+
+- **Code: Normalize tool-loop message envelopes** (2026-03-30): New article idea creation / auto-advance could fail with `LLM response does not match schema` when a provider returned a structured tool-loop envelope using `type: "message"` instead of the app's expected `type: "final"`. Normalize provider/tool-loop structured responses inside `src\agents\runner.ts` before schema validation, mapping compatible `message` final envelopes (and closely related tool-call aliases) onto the app's canonical `final` / `tool_call` contract. This keeps the fix surgical in app/runtime plumbing, avoids weakening unrelated schemas globally, and hardens the dashboard idea + auto-advance flows against provider/runtime contract drift without changing article artifacts or stage logic.
+
+- **Blocker tag hardening** (2026-03-30): Treat an editor `REVISE` verdict without at least one valid structured `[BLOCKER type:id]` tag as an explicit contract failure instead of silently recording an unstructured revision. Repeated-blocker detection and downstream runtime reads depend on structured blocker metadata. Tighten Stage 5 editor prompt so `REVISE` explicitly requires `[BLOCKER type:id]` tags. Make `runEditor` fail loudly when a `REVISE` verdict has no parseable blocker tags. Leave the wider state machine and escalation flow unchanged.
+
+- **Code: Blocker read-model slice** (2026-03-29T23:50:54Z): Implemented additive read-model helpers in `src\pipeline\actions.ts` with `getArticleEscalationStatus()` and `getEscalatedArticles()` exports; extended `article_get` response surface in `src\tools\pipeline-tools.ts`; added focused unit tests. Test validation: 111/111 tests passing. No changes to stage transitions, guard outcomes, or auto-advance logic. Detection remains exact-match, consecutive-only. Report detection, hold-state, and handoff-artifact presence separately per guardrails.
+
+- **User directive: Switch coding agents to GPT-5.4** (2026-03-29T23:36:23Z): All coding agents now use GPT-5.4 per user request. Captured for team memory.
+
 - **User directive: Reduce subagent count** (2026-03-29T23:24:34Z): Keep subagents to 5 or fewer due to rate limiting. Captured for team memory.
+
+- **Code: Blocker read-model slice** (2026-03-29): Expose repeated-blocker escalation seams as additive read-model helpers in `src\pipeline\actions.ts`, surface via extended `article_get` response in `src\tools\pipeline-tools.ts`. No changes to stage transitions, guard outcomes, or auto-advance logic. Detection remains exact-match, consecutive-only. Report detection, hold-state, and handoff-artifact presence separately. Test coverage: 111/111 tests passing.
 
 - **Code: Promote article-contract.md to first-class Stage 4 artifact** (2026-03-29): Added contract generation in `runDiscussion()` after discussion summary. Enhanced Stage 4→5 guard with `requireArticleContract()` + `requireDiscussionComplete()`. Kept recovery path in `writeDraft()`. Updated skill docs. All 153 tests passing. Contract generation now appears in Stage 3→4 traces, not Stage 5. One additional LLM call per article in Stage 3→4 flow (200-400 words).
 
