@@ -788,9 +788,13 @@ export function createApp(
     const id = c.req.param('id');
     const trace = repo.getLlmTrace(id);
     if (!trace) return c.notFound();
+    const adjacent = trace.article_id
+      ? repo.getAdjacentTraces(trace.article_id, id)
+      : undefined;
     return c.html(renderStandaloneTracePage({
       config,
       trace,
+      adjacent,
     }));
   });
 

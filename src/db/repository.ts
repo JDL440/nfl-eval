@@ -471,6 +471,16 @@ export class Repository {
     return row ?? null;
   }
 
+  getAdjacentTraces(articleId: string, traceId: string): { prevId: string | null; nextId: string | null } {
+    const traces = this.getArticleLlmTraces(articleId, 0);
+    const idx = traces.findIndex((t) => t.id === traceId);
+    if (idx === -1) return { prevId: null, nextId: null };
+    return {
+      prevId: idx > 0 ? traces[idx - 1].id : null,
+      nextId: idx < traces.length - 1 ? traces[idx + 1].id : null,
+    };
+  }
+
   getStageTransitions(articleId: string): StageTransition[] {
     const stmt = this.db.prepare(
       'SELECT * FROM stage_transitions WHERE article_id = ? ORDER BY transitioned_at ASC',

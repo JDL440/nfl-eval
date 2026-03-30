@@ -854,6 +854,140 @@ a:hover { text-decoration: underline; }
 .trace-json-boolean { color: #c4b5fd; }
 .trace-json-null { color: #94a3b8; font-style: italic; }
 
+/* ── Trace Enriched Headers & Badges ──────────────────────────────────────── */
+.trace-card-link {
+  display: contents;
+  text-decoration: none;
+  color: inherit;
+}
+.trace-card-link:hover .verdict-badge {
+  text-decoration: underline;
+}
+.trace-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.trace-pill-family {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: var(--color-accent);
+}
+.trace-param-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: -0.2rem 0 0.25rem;
+}
+.trace-copy-btn {
+  padding: 2px 6px !important;
+  font-size: 0.75rem !important;
+  min-width: unset;
+  line-height: 1;
+}
+.trace-teaser-text {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-left: 0.5rem;
+}
+
+/* ── Trace Internals Toggle ───────────────────────────────────────────────── */
+.trace-internals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.trace-internals-header {
+  margin-top: 0.25rem;
+}
+.trace-internals-toggle {
+  font-size: 0.78rem;
+  padding: 4px 12px;
+}
+.trace-internals-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Trace Filter Bar (Phase 3) ───────────────────────────────────────────── */
+.trace-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.trace-filter-bar select {
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.trace-filter-status-group {
+  display: flex;
+  gap: 0.3rem;
+}
+.trace-status-btn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+}
+.trace-status-btn.is-active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+.trace-filter-count {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ── Trace Stage Dividers ─────────────────────────────────────────────────── */
+.trace-stage-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  margin: 0.25rem 0;
+  border-bottom: 2px solid var(--color-border);
+}
+.trace-stage-divider-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.trace-stage-divider-count {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Trace Navigation Bar ─────────────────────────────────────────────────── */
+.trace-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.trace-nav-spacer {
+  flex: 1;
+}
+
 /* ── Footer ───────────────────────────────────────────────────────────────── */
 .site-footer {
   text-align: center;
