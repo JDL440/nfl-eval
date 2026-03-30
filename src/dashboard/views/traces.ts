@@ -565,6 +565,7 @@ export function renderArticleTraceTimelinePage(data: {
       <h1>Trace timeline</h1>
       <p class="page-subtitle">${escapeHtml(article.title)} · <span id="trace-total-count">${traces.length}</span> trace${traces.length === 1 ? '' : 's'}</p>
     </section>
+    ${renderTraceDiagnosisPanel(article.id)}
     ${traces.length > 1 ? renderFilterBar(traces) : ''}
     <section class="detail-section">
       ${renderTracesWithDividers(traces)}
@@ -612,6 +613,29 @@ export function renderStandaloneTracePage(data: {
     ${renderTracePageScripts()}`;
 
   return renderLayout(`LLM Trace — ${trace.id}`, content, config.leagueConfig.name);
+}
+
+// ── Trace Diagnosis Panel ────────────────────────────────────────────────────
+
+export function renderTraceDiagnosisPanel(articleId: string): string {
+  return `
+    <section class="detail-section trace-diagnosis-section">
+      <div class="action-bar action-group">
+        <div>
+          <h2>🔍 AI Trace Diagnosis</h2>
+          <p class="hint">Get an AI-powered summary of what happened during article production — anomalies, failures, and key decisions.</p>
+        </div>
+        <button class="btn btn-secondary"
+          hx-get="/htmx/articles/${escapeHtml(articleId)}/trace-diagnosis"
+          hx-target="#trace-diagnosis-content"
+          hx-swap="innerHTML"
+          hx-indicator="#trace-diagnosis-spinner">
+          🔍 Analyze Traces
+        </button>
+      </div>
+      <span id="trace-diagnosis-spinner" class="htmx-indicator">Analyzing traces…</span>
+      <div id="trace-diagnosis-content"></div>
+    </section>`;
 }
 
 // ── Client-Side Scripts ──────────────────────────────────────────────────────

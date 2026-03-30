@@ -66,6 +66,34 @@ function stripMarkdown(text: string): string {
 }
 
 /**
+ * Filter out false-positive "player names" that are actually section labels,
+ * scheme terms, or common phrases the regex mis-captures.
+ */
+const NON_PLAYER_WORDS = new Set([
+  'scheme', 'offensive', 'defensive', 'special', 'team', 'coverage',
+  'breakdown', 'breakthrough', 'analysis', 'overview', 'summary', 'conclusion',
+  'strength', 'weakness', 'play', 'action', 'option', 'route', 'formation',
+  'passing', 'rushing', 'scoring', 'performance', 'efficiency', 'production',
+  'ranking', 'comparison', 'projection', 'outlook', 'impact', 'grade',
+  'overall', 'final', 'total', 'average', 'season', 'career', 'weekly',
+  'league', 'division', 'conference', 'super', 'bowl', 'playoff',
+  'red', 'zone', 'third', 'fourth', 'down', 'deep', 'short', 'medium',
+  'key', 'critical', 'major', 'minor', 'quick', 'stat', 'data', 'figure',
+  'under', 'center', 'pressure', 'run', 'pass', 'target', 'snap',
+]);
+
+function isLikelyPlayerName(name: string): boolean {
+  const words = name.toLowerCase().split(/\s+/);
+  // Reject if ALL words are in the non-player set
+  if (words.every(w => NON_PLAYER_WORDS.has(w))) return false;
+  // Reject single-word "names" (real names need at least first + last)
+  if (words.length < 2) return false;
+  // Reject if first word is a common non-name prefix
+  if (NON_PLAYER_WORDS.has(words[0])) return false;
+  return true;
+}
+
+/**
  * Non-sentence-ending character pattern for use in regex strings.
  * Matches any character that isn't a sentence-ending period.
  * Allows periods in numbers (e.g. "0.12", "7.5") and abbreviations.
@@ -131,6 +159,7 @@ function extractStatClaims(text: string): StatClaim[] {
     let m: RegExpExecArray | null;
     while ((m = regex.exec(clean)) !== null) {
       const player = m[1].trim();
+      if (!isLikelyPlayerName(player)) continue;
       const value = m[2].trim();
       const key = `${player}|${metric}|${value}`;
       if (!seen.has(key)) {
@@ -169,8 +198,8 @@ function extractContractClaims(text: string): ContractClaim[] {
       // Groups depend on pattern — find the name and the detail
       const groups = m.slice(1).filter(Boolean);
       const player = groups.find(g => /^[A-Z][a-z]/.test(g))?.trim() ?? '';
+      if (!player || !isLikelyPlayerName(player)) continue;
       const detail = groups.find(g => g !== player)?.trim() ?? '';
-      if (!player) continue;
       const key = `${player}|${detail}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -218,7 +247,7 @@ function extractDraftClaims(text: string): DraftClaim[] {
           case 'year': claim.year = parseInt(val, 10); break;
         }
       }
-      if (!claim.player) continue;
+      if (!claim.player || !isLikelyPlayerName(claim.player)) continue;
       const key = `${claim.player}|${claim.round ?? ''}|${claim.pick ?? ''}|${claim.year ?? ''}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -255,6 +284,7 @@ function extractPerformanceClaims(text: string): PerformanceClaim[] {
     let m: RegExpExecArray | null;
     while ((m = regex.exec(clean)) !== null) {
       const player = m[1].trim();
+      if (!isLikelyPlayerName(player)) continue;
       const raw = m[0].trim();
       if (!seen.has(raw)) {
         seen.add(raw);

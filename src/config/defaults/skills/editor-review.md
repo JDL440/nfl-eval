@@ -12,7 +12,20 @@ tools: []
 
 Defines the Editor's review protocol for article drafts. Editor is the mandatory final gate before any article moves to publication.
 
+## Article Contract Evaluation
+
+If `article-contract.md` is present, use it as your primary evaluation rubric:
+- Does the draft answer the core question or thesis defined in the contract?
+- Are the required tensions and disagreements preserved (not smoothed over)?
+- Are the required evidence anchors referenced in the draft?
+- Does the draft follow the mandatory structure expectations?
+- Are open cautions and uncertainties acknowledged appropriately?
+
+If the contract is missing, evaluate against general editorial standards below.
+
 ## Review Checklist
+
+Before reviewing, read `article-contract.md` if it is present. Treat that artifact as the negotiated spec for the article's thesis, preserved tensions, evidence anchors, structure expectations, and open cautions.
 
 ### Fact-Checking (Non-negotiable)
 - Verify every player name against current NFL rosters
@@ -37,6 +50,7 @@ Defines the Editor's review protocol for article drafts. Editor is the mandatory
 - Check the headline — clickbait-adjacent but honest
 
 ### Structural Review
+- Confirm the draft satisfies `article-contract.md` when present: the core thesis is answered, required tensions are preserved, required evidence anchors appear, and any listed cautions are acknowledged.
 - Evaluate article flow — logical argument progression
 - Identify buried ledes
 - Assess section balance

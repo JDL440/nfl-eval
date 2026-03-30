@@ -1033,6 +1033,7 @@ describe('Repository', () => {
       repo.artifacts.put('clear-art', 'discussion-prompt.md', 'prompt content');
       repo.artifacts.put('clear-art', 'panel-composition.md', 'panel content');
       repo.artifacts.put('clear-art', 'discussion-summary.md', 'summary content');
+      repo.artifacts.put('clear-art', 'article-contract.md', 'contract content');
       repo.artifacts.put('clear-art', 'draft.md', 'draft content');
       repo.artifacts.put('clear-art', 'editor-review.md', 'review content');
 
@@ -1040,6 +1041,7 @@ describe('Repository', () => {
 
       expect(cleared).toContain('panel-composition.md');
       expect(cleared).toContain('discussion-summary.md');
+      expect(cleared).toContain('article-contract.md');
       expect(cleared).toContain('draft.md');
       expect(cleared).toContain('editor-review.md');
       expect(cleared).not.toContain('idea.md');
@@ -1071,6 +1073,7 @@ describe('Repository', () => {
       repo.artifacts.put('reg-art', 'discussion-prompt.md', 'prompt');
       repo.artifacts.put('reg-art', 'panel-composition.md', 'panel');
       repo.artifacts.put('reg-art', 'discussion-summary.md', 'summary');
+      repo.artifacts.put('reg-art', 'article-contract.md', 'contract');
       repo.artifacts.put('reg-art', 'draft.md', 'draft');
 
       repo.regressStage('reg-art', 5, 2, 'editor', 'Back to prompt');
@@ -1082,6 +1085,7 @@ describe('Repository', () => {
       // Stage 3+ artifacts cleared
       expect(repo.artifacts.get('reg-art', 'panel-composition.md')).toBeNull();
       expect(repo.artifacts.get('reg-art', 'discussion-summary.md')).toBeNull();
+      expect(repo.artifacts.get('reg-art', 'article-contract.md')).toBeNull();
       expect(repo.artifacts.get('reg-art', 'draft.md')).toBeNull();
     });
 

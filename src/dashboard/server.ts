@@ -93,6 +93,7 @@ import { ModelPolicy } from '../llm/model-policy.js';
 import { AgentRunner, separateThinking } from '../agents/runner.js';
 import { AgentMemory } from '../agents/memory.js';
 import { PipelineAuditor } from '../pipeline/audit.js';
+import { aggregatePublishIssues } from '../pipeline/issue-aggregator.js';
 import {
   buildRevisionHistoryEntries,
   getArticleConversation,
@@ -122,6 +123,38 @@ export function buildDashboardToolLoopOptions(): ConstructorParameters<typeof Ag
     enabledProviders: [...APP_TOOL_LOOP_PROVIDER_IDS],
     enableWebSearch: true,
     maxToolCalls: 12,
+  };
+}
+
+export function getAutoAdvanceArticleFlash(params: {
+  from?: string | null;
+  error?: string | null;
+  currentStage: number;
+  status: Article['status'];
+  isRunning: boolean;
+}): { flashMessage?: string; errorMessage?: string } {
+  if (params.from !== 'auto-advance') {
+    return {};
+  }
+
+  if (params.error) {
+    return { errorMessage: `Auto-advance failed: ${params.error}` };
+  }
+
+  if (params.isRunning) {
+    return {
+      flashMessage: '🚀 Auto-advance is running — live sections will refresh as each stage completes.',
+    };
+  }
+
+  if (params.currentStage === 6 && params.status === 'needs_lead_review') {
+    return {
+      flashMessage: '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.',
+    };
+  }
+
+  return {
+    flashMessage: `🚀 Auto-advance complete — article is at Stage ${params.currentStage} (${STAGE_NAMES[params.currentStage as Stage]})`,
   };
 }
 
@@ -297,7 +330,7 @@ export function createApp(
     }
   }
 
-  function buildPublishPresentation(articleId: string): {
+  function buildPublishPresentation(articleId: string, options?: { previewMode?: boolean }): {
     htmlBody: string;
     coverImageUrl: string | null;
     inlineImageUrls: string[];
@@ -309,7 +342,7 @@ export function createApp(
 
     if (rawDraft) {
       const cleanDraft = separateThinking(rawDraft).output;
-      const doc = markdownToProseMirror(cleanDraft);
+      const doc = markdownToProseMirror(cleanDraft, { previewMode: options?.previewMode });
       htmlBody = proseMirrorToHtml(doc);
       substackDoc = doc;
     }
@@ -741,19 +774,13 @@ export function createApp(
       : undefined;
 
     // Flash message from auto-advance redirect
-    const from = c.req.query('from');
-    const errorParam = c.req.query('error');
-    let flashMessage: string | undefined;
-    let errorMessage: string | undefined;
-    if (from === 'auto-advance') {
-      if (errorParam) {
-        errorMessage = `Auto-advance failed: ${errorParam}`;
-      } else if (article.current_stage === 6 && article.status === 'needs_lead_review') {
-        flashMessage = '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.';
-      } else {
-        flashMessage = `🚀 Auto-advance complete — article is at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
-      }
-    }
+    const { flashMessage, errorMessage } = getAutoAdvanceArticleFlash({
+      from: c.req.query('from'),
+      error: c.req.query('error'),
+      currentStage: article.current_stage,
+      status: article.status,
+      isRunning: activeAdvances.has(id),
+    });
 
     return c.html(
       renderArticleDetail({
@@ -796,6 +823,76 @@ export function createApp(
       trace,
       adjacent,
     }));
+  });
+
+  // AI trace diagnosis — returns compact analysis or placeholder
+  app.get('/htmx/articles/:id/trace-diagnosis', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+    const traces = repo.getArticleLlmTraces(id, 0);
+    if (traces.length === 0) {
+      return c.html('<p class="hint">No traces found for this article.</p>');
+    }
+
+    // Build a compact summary from trace data
+    const stageGroups = new Map<number, typeof traces>();
+    for (const t of traces) {
+      const stage = t.stage ?? 0;
+      if (!stageGroups.has(stage)) stageGroups.set(stage, []);
+      stageGroups.get(stage)!.push(t);
+    }
+
+    const STAGE_NAMES: Record<number, string> = {
+      0: 'Pre-pipeline', 1: 'Idea', 2: 'Prompt', 3: 'Discussion',
+      4: 'Write Draft', 5: 'Editor', 6: 'Publisher Pass', 7: 'Publish',
+    };
+
+    const summaryLines: string[] = [];
+    for (const [stage, stageTraces] of [...stageGroups.entries()].sort((a, b) => a[0] - b[0])) {
+      const name = STAGE_NAMES[stage] ?? `Stage ${stage}`;
+      const failed = stageTraces.filter((t) => t.status === 'failed');
+      const completed = stageTraces.filter((t) => t.status === 'completed');
+      const totalTokens = stageTraces.reduce((s, t) => s + (t.total_tokens ?? 0), 0);
+      const agents = [...new Set(stageTraces.map((t) => t.agent_name))];
+
+      let status = '✅';
+      if (failed.length > 0) status = `❌ ${failed.length} failed`;
+      else if (completed.length === 0) status = '⏳ in progress';
+
+      summaryLines.push(`<tr>
+        <td><strong>${escapeHtml(name)}</strong></td>
+        <td>${stageTraces.length} trace${stageTraces.length > 1 ? 's' : ''}</td>
+        <td>${escapeHtml(agents.join(', '))}</td>
+        <td>${totalTokens.toLocaleString()} tokens</td>
+        <td>${status}</td>
+      </tr>`);
+
+      // Detect anomalies
+      if (failed.length > 0) {
+        for (const f of failed) {
+          const err = f.error_message ? escapeHtml(f.error_message).slice(0, 200) : 'Unknown error';
+          summaryLines.push(`<tr class="issue-row"><td colspan="5">⚠️ <em>${escapeHtml(f.agent_name)}</em>: ${err}</td></tr>`);
+        }
+      }
+    }
+
+    const totalTokens = traces.reduce((s, t) => s + (t.total_tokens ?? 0), 0);
+    const totalDuration = traces.reduce((s, t) => s + (t.latency_ms ?? 0), 0);
+
+    return c.html(`
+      <div class="trace-diagnosis-result">
+        <div class="trace-diagnosis-summary">
+          <span class="badge">${traces.length} traces</span>
+          <span class="badge">${totalTokens.toLocaleString()} tokens</span>
+          <span class="badge">${(totalDuration / 1000).toFixed(1)}s total</span>
+        </div>
+        <table class="trace-diagnosis-table">
+          <thead><tr><th>Stage</th><th>Traces</th><th>Agents</th><th>Tokens</th><th>Status</th></tr></thead>
+          <tbody>${summaryLines.join('\n')}</tbody>
+        </table>
+      </div>`);
   });
 
   // ── htmx: inline article metadata editing ─────────────────────────────────
@@ -1541,10 +1638,19 @@ export function createApp(
       }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
+      const traceId = ideaTraceId
+        ?? (err instanceof Error && typeof (err as Error & { traceId?: unknown }).traceId === 'string'
+          ? (err as Error & { traceId?: string }).traceId ?? null
+          : null);
+      const traceUrl = traceId
+        ? (err instanceof Error && typeof (err as Error & { traceUrl?: unknown }).traceUrl === 'string'
+          ? (err as Error & { traceUrl?: string }).traceUrl ?? `/traces/${traceId}`
+          : `/traces/${traceId}`)
+        : null;
       return c.json({
         error: message,
-        traceId: ideaTraceId,
-        traceUrl: ideaTraceId ? `/traces/${ideaTraceId}` : null,
+        traceId,
+        traceUrl,
       }, 500);
     }
   });
@@ -1871,7 +1977,7 @@ export function createApp(
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
 
-    const presentation = buildPublishPresentation(id);
+    const presentation = buildPublishPresentation(id, { previewMode: true });
 
     return c.html(
       renderArticlePreview({
@@ -1890,7 +1996,8 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.notFound();
-    const presentation = buildPublishPresentation(id);
+    const presentation = buildPublishPresentation(id, { previewMode: true });
+    const issues = aggregatePublishIssues(repo, id);
 
     return c.html(
       renderPublishPreview({
@@ -1900,6 +2007,7 @@ export function createApp(
         coverImageUrl: presentation.coverImageUrl,
         inlineImageUrls: presentation.inlineImageUrls,
         substackConfigured: !!substackService,
+        issues,
       }),
     );
   });
@@ -1908,7 +2016,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-    const presentation = buildPublishPresentation(id);
+    const presentation = buildPublishPresentation(id, { previewMode: true });
     return c.html(
       renderArticlePreviewFrame({
         config,
@@ -1918,6 +2026,33 @@ export function createApp(
         inlineImageUrls: presentation.inlineImageUrls,
       }),
     );
+  });
+
+  // AI pre-publish review — returns cached artifact or placeholder
+  app.get('/htmx/articles/:id/ai-review', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+    const cachedReview = repo.artifacts.get(id, 'ai-publish-review.md');
+    if (cachedReview) {
+      const escapedReview = escapeHtml(cachedReview).replace(/\n/g, '<br>');
+      return c.html(`
+        <div class="ai-review-result">
+          <div class="ai-review-body">${escapedReview}</div>
+          <p class="hint" style="margin-top: 0.5rem;">Generated from pipeline artifacts. Re-generate if the draft has been updated.</p>
+          <button class="btn btn-secondary btn-sm"
+            hx-get="/htmx/articles/${escapeHtml(id)}/ai-review?refresh=1"
+            hx-target="#ai-review-content"
+            hx-swap="innerHTML">
+            🔄 Refresh
+          </button>
+        </div>`);
+    }
+
+    return c.html(`
+      <p class="hint">AI review generation requires running the publish-reviewer agent. This feature will be available when the agent infrastructure is connected.</p>
+      <p class="hint">In the meantime, review the <strong>Issues &amp; Advisories</strong> panel above for automated findings.</p>`);
   });
 
   app.post('/api/articles/:id/draft', async (c) => {
@@ -2488,6 +2623,7 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     const parts: string[] = [];
     if (recovery.stageRuns > 0) parts.push(`${recovery.stageRuns} stage runs`);
     if (recovery.articleRuns > 0) parts.push(`${recovery.articleRuns} article runs`);
+    if (recovery.traces > 0) parts.push(`${recovery.traces} LLM traces`);
     if (recovery.articles.length > 0) parts.push(`${recovery.articles.length} stuck articles`);
     if (parts.length > 0) {
       console.log(`[recovery] Cleaned up from previous shutdown: ${parts.join(', ')}`);

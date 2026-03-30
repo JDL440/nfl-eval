@@ -542,24 +542,75 @@ function buildValidationHint(tool: ToolDefinition): string {
   return `Arguments must be like { ${exampleShape.join(', ')} }`;
 }
 
+function buildExampleCall(tool: ToolDefinition): string {
+  const required = new Set(tool.manifest.parameters.required ?? []);
+  const exampleArgs = Object.entries(tool.manifest.parameters.properties)
+    .filter(([key]) => required.has(key))
+    .map(([key, schema]) => {
+      let val = '"<value>"';
+      switch (schema.type) {
+        case 'string':
+          if (schema.enum && schema.enum.length > 0) {
+            val = `"${schema.enum[0]}"`;
+          } else {
+            const hint = schema.description?.match(/\b[A-Z]{2,4}\b|\b[A-Z][a-z]{2,}\b/)?.[0];
+            val = hint ? `"${hint}"` : '"value"';
+          }
+          break;
+        case 'integer':
+          val = String(schema.minimum ?? 2025);
+          break;
+        case 'number':
+          val = String(schema.minimum ?? 0);
+          break;
+        case 'boolean':
+          val = 'true';
+          break;
+        case 'array':
+          val = '[]';
+          break;
+        case 'object':
+          val = '{}';
+          break;
+      }
+      return `"${key}": ${val}`;
+    });
+  return `{"type":"tool_call","toolName":"${tool.manifest.name}","args":{${exampleArgs.join(', ')}}}`;
+}
+
 export function buildToolCatalogPrompt(tools: ToolDefinition[]): string {
   if (tools.length === 0) return '';
   const lines = tools.map((tool) => {
     const required = tool.manifest.parameters.required ?? [];
     return [
-      `- ${tool.manifest.name}: ${tool.manifest.description}`,
+      `### ${tool.manifest.name}`,
+      tool.manifest.description,
       `  args: ${summarizeToolArgs(tool.manifest.parameters)}`,
       `  required: [${required.join(', ')}]`,
+      `  example: ${buildExampleCall(tool)}`,
     ].join('\n');
   });
   return [
-    'Available tools:',
+    '# Available Tools',
+    '',
+    'You have access to the following tools. Use them to gather data before writing your final answer.',
+    '',
     ...lines,
-    'When a tool is needed, respond with JSON only using:',
-    '{"type":"tool_call","toolName":"<tool>","args":{...}}',
-    'When you are done, respond with JSON only using:',
-    '{"type":"final","content":"<final answer>"}',
-    'Call at most one tool per turn.',
+    '',
+    '## Tool Calling Protocol',
+    '',
+    'When you need to call a tool, respond with ONLY this JSON (no other text):',
+    '{"type":"tool_call","toolName":"<tool_name>","args":{<required_args>}}',
+    '',
+    'When you are done and ready to give your final answer, respond with ONLY:',
+    '{"type":"final","content":"<your complete answer in markdown>"}',
+    '',
+    'Rules:',
+    '- Call exactly ONE tool per turn.',
+    '- Always include all required args. Missing args will cause a validation error.',
+    '- Do NOT wrap tool calls in markdown code fences.',
+    '- Do NOT use the tool name as the "type" field — always use "tool_call".',
+    '- After receiving tool results, you may call another tool or produce your final answer.',
   ].join('\n');
 }
 

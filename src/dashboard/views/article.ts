@@ -25,6 +25,7 @@ export const ARTIFACT_FILES = [
   'discussion-prompt.md',
   'panel-composition.md',
   'discussion-summary.md',
+  'article-contract.md',
   'draft.md',
   'editor-review.md',
 ] as const;

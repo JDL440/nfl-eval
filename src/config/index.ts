@@ -204,8 +204,19 @@ export function seedKnowledge(dataDir: string, league: string = DEFAULT_LEAGUE):
 }
 
 export const CORE_RUNTIME_PROMPT_DEFAULTS = Object.freeze({
-  charters: ['lead', 'writer', 'editor'] as const,
-  skills: ['article-discussion', 'article-lifecycle', 'idea-generation', 'substack-article'] as const,
+  charters: ['lead', 'writer', 'editor', 'panel-moderator', 'publisher'] as const,
+  skills: [
+    'article-discussion',
+    'article-lifecycle',
+    'discussion-prompt',
+    'panel-composition',
+    'fact-checking',
+    'idea-generation',
+    'substack-article',
+    'writer-fact-check',
+    'editor-review',
+    'publisher',
+  ] as const,
 });
 
 export function refreshCorePromptDefaults(

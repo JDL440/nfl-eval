@@ -197,6 +197,40 @@ describe('MCP Server', () => {
       expect(parsed.validation).toBeDefined();
     });
 
+    it('exposes repeated blocker escalation read-model data', async () => {
+      repo.createArticle({ id: 'det-lead', title: 'Lead Review Detail' });
+      repo.advanceStage('det-lead', 1, 6 as Stage, 'test');
+      repo.updateArticleStatus('det-lead', 'needs_lead_review');
+      repo.artifacts.put('det-lead', 'lead-review.md', '# Lead Review Handoff');
+      repo.getDb().prepare(
+        `INSERT INTO revision_summaries
+           (article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary, blocker_type, blocker_ids)
+         VALUES
+           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?),
+           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        'det-lead', 1, 6, 4, 'editor', 'REVISE', null, 'Missing evidence remained unresolved.', 'evidence', JSON.stringify(['stale-stat', 'missing-source']),
+        'det-lead', 2, 6, 4, 'editor', 'REVISE', null, 'Missing evidence remained unresolved again.', 'Evidence', JSON.stringify(['missing-source', ' stale-stat ']),
+      );
+
+      const { parsed } = await invokeTool('article_get', { article_id: 'det-lead' });
+
+      expect(parsed.repeated_blocker_escalation).toMatchObject({
+        repeatedBlockerDetected: true,
+        needsLeadReview: true,
+        hasLeadReviewHandoff: true,
+        isEscalated: true,
+        repeatedBlocker: {
+          previousIteration: 1,
+          currentIteration: 2,
+          blockerType: 'evidence',
+          blockerIds: ['missing-source', 'stale-stat'],
+          fingerprint: 'evidence::missing-source|stale-stat',
+          latestFeedbackSummary: 'Missing evidence remained unresolved again.',
+        },
+      });
+    });
+
     it('returns error for missing article', async () => {
       const { parsed, isError } = await invokeTool('article_get', {
         article_id: 'nonexistent',
@@ -401,6 +435,24 @@ describe('MCP Server', () => {
         article_id: 'ok1',
       });
       expect(parsed.drift_count).toBe(0);
+    });
+
+    it('treats article-contract.md as a required stage-4 artifact', async () => {
+      repo.createArticle({ id: 'stage4-contract', title: 'Stage 4 Contract' });
+      repo.advanceStage('stage4-contract', 1, 2, 'test');
+      repo.advanceStage('stage4-contract', 2, 3, 'test');
+      repo.advanceStage('stage4-contract', 3, 4, 'test');
+      repo.artifacts.put('stage4-contract', 'idea.md', 'An idea');
+      repo.artifacts.put('stage4-contract', 'discussion-prompt.md', 'A prompt');
+      repo.artifacts.put('stage4-contract', 'panel-composition.md', 'A panel');
+      repo.artifacts.put('stage4-contract', 'discussion-summary.md', 'A summary');
+
+      const { parsed } = await invokeTool('pipeline_drift', {
+        article_id: 'stage4-contract',
+      });
+
+      expect(parsed.drift_count).toBe(1);
+      expect(parsed.items[0].missing_artifacts).toContain('article-contract.md');
     });
 
     it('checks all articles when no article_id given', async () => {

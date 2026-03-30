@@ -192,7 +192,7 @@ function extractBalancedJsonCandidate(text: string): string | null {
   return null;
 }
 
-function parseStructuredJson(raw: string): unknown {
+export function parseStructuredJson(raw: string): unknown {
   const candidates: string[] = [];
   const addCandidate = (candidate: string | null | undefined): void => {
     const value = candidate?.trim();

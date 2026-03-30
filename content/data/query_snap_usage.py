@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _shared import load_cached_or_fetch
+from _shared import load_cached_or_fetch, resolve_team_abbr
 
 try:
     import polars as pl
@@ -26,6 +26,7 @@ except ImportError:
 
 def query_team_snap_usage(team: str, season: int, position_group: str | None, top: int, output_format: str):
     """Query snap counts for a team."""
+    team = resolve_team_abbr(team)
     df = load_cached_or_fetch("snap_counts", [season])
     
     # Filter to regular season only and aggregate by player

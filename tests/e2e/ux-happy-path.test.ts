@@ -187,6 +187,13 @@ describe('UX Happy Path — full user journey', () => {
     expect(await res.text()).toContain('Stage 4');
 
     expect(repo.getArticle(articleId)!.current_stage).toBe(4);
+
+    // Prepare article-contract.md for next advance (4→5 guard)
+    repo.artifacts.put(
+      articleId,
+      'article-contract.md',
+      '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n250 words',
+    );
   });
 
   /* ─── 8. Write 250-word draft.md, advance 4→5 ─────────── */
@@ -298,6 +305,7 @@ describe('UX Happy Path — full user journey', () => {
       'discussion-prompt.md',
       'panel-composition.md',
       'discussion-summary.md',
+      'article-contract.md',
       'draft.md',
       'editor-review.md',
     ]) {
@@ -330,6 +338,7 @@ describe('UX Happy Path — full user journey', () => {
     expect(repo.artifacts.exists(articleId, 'discussion-prompt.md')).toBe(true);
     expect(repo.artifacts.exists(articleId, 'panel-composition.md')).toBe(true);
     expect(repo.artifacts.exists(articleId, 'discussion-summary.md')).toBe(true);
+    expect(repo.artifacts.exists(articleId, 'article-contract.md')).toBe(true);
 
     // Publisher pass deleted (toStage 4 < 6)
     expect(repo.getPublisherPass(articleId)).toBeNull();
@@ -378,6 +387,7 @@ describe('UX Happy Path — full user journey', () => {
       'discussion-prompt.md',
       'panel-composition.md',
       'discussion-summary.md',
+      'article-contract.md',
       'draft.md',
       'editor-review.md',
     ]) {

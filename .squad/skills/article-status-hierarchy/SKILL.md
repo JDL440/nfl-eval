@@ -96,3 +96,9 @@ If a control is secondary or destructive, it should not sit in the main action s
 - `npm run v2:build`
 - `npx vitest run tests/dashboard/server.test.ts tests/dashboard/publish.test.ts tests/dashboard/runs.test.ts tests/dashboard/wave2.test.ts`
 
+
+## Additional article-page hierarchy rule
+
+- Do not default the article artifact pane to the earliest pipeline file (`idea.md`) when a later human-working artifact exists.
+- Prefer default focus in this order: `lead-review.md` when held for lead review, otherwise `draft.md`, then `editor-review.md`, then contract/brief artifacts, with early ideation/discussion files treated as background context.
+- Keep trace/thinking/debug affordances as secondary links or disclosures because `src/dashboard/views/traces.ts` is the dedicated observability surface.

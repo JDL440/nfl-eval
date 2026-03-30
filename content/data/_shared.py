@@ -18,6 +18,22 @@ except ImportError:
 CACHE_DIR = Path(__file__).parent / "cache"
 FETCH_SCRIPT = Path(__file__).parent / "fetch_nflverse.py"
 
+# Aliases for team abbreviations that differ between common usage and nflverse.
+# nflverse uses LA (not LAR) for Rams, WAS (not WSH) for Commanders, etc.
+TEAM_ALIASES: dict[str, str] = {
+    "LAR": "LA",
+    "WSH": "WAS",
+    "JAC": "JAX",
+    "OAK": "LV",
+    "STL": "LA",
+    "SD":  "LAC",
+}
+
+
+def resolve_team_abbr(abbr: str) -> str:
+    """Resolve common team abbreviation aliases to nflverse canonical form."""
+    return TEAM_ALIASES.get(abbr.upper(), abbr.upper())
+
 
 def load_cached_or_fetch(dataset: str, seasons: list[int] | None = None) -> pl.DataFrame:
     """

@@ -114,6 +114,12 @@ function advanceToStage(slug: string, targetStage: Stage): void {
   for (let s = 1; s < targetStage; s++) {
     const artifact = STAGE_ARTIFACTS[s];
     if (artifact) writeArtifact(slug, artifact.name, artifact.content);
+    
+    // After writing discussion-summary.md (stage 4), also write article-contract.md
+    if (s === 4) {
+      writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n300 words');
+    }
+    
     repo.advanceStage(slug, s, (s + 1) as Stage, 'test-setup');
   }
 
@@ -122,6 +128,11 @@ function advanceToStage(slug: string, targetStage: Stage): void {
   const currentStageArtifact = STAGE_ARTIFACTS[targetStage];
   if (currentStageArtifact) {
     writeArtifact(slug, currentStageArtifact.name, currentStageArtifact.content);
+  }
+  
+  // If at stage 4, also write article-contract.md for the next advance
+  if (targetStage === 4) {
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n300 words');
   }
 }
 
@@ -282,6 +293,7 @@ describe('Stage regression + re-advance', () => {
     writeArtifact(slug, 'discussion-prompt.md', '# Prompt');
     writeArtifact(slug, 'panel-composition.md', '# Panel');
     writeArtifact(slug, 'discussion-summary.md', '# Original Summary');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n250 words');
     writeArtifact(slug, 'draft.md', buildValidDraft(250, 'Original Draft'));
     writeArtifact(slug, 'editor-review.md', '## Verdict: APPROVED\n\nGood.');
     repo.advanceStage(slug, 1, 2, 'test');
@@ -317,12 +329,14 @@ describe('Stage regression + re-advance', () => {
 
     // Cleared (stages > 3)
     expect(repo.artifacts.exists(slug, 'discussion-summary.md')).toBe(false);
+    expect(repo.artifacts.exists(slug, 'article-contract.md')).toBe(false);
     expect(repo.artifacts.exists(slug, 'draft.md')).toBe(false);
     expect(repo.artifacts.exists(slug, 'editor-review.md')).toBe(false);
   });
 
   it('re-advances to stage 4 with fresh artifacts distinct from originals', async () => {
     writeArtifact(slug, 'discussion-summary.md', '# Fresh Summary v2\nCompletely new insights.');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract v2\n\n## Structure\n- New Introduction\n- Fresh Analysis\n- Updated Conclusion\n\n## Word Count Target\n400 words');
 
     const res = await htmxPost(`/htmx/articles/${slug}/advance`);
     expect(res.status).toBe(200);
@@ -395,8 +409,9 @@ describe('Editor REVISE verdict loop', () => {
     expect(repo.artifacts.exists(slug, 'draft.md')).toBe(false);
     expect(repo.artifacts.exists(slug, 'editor-review.md')).toBe(false);
 
-    // discussion-summary.md preserved (stage 4 artifact)
+    // discussion-summary.md and article-contract.md preserved (stage 4 artifacts)
     expect(repo.artifacts.exists(slug, 'discussion-summary.md')).toBe(true);
+    expect(repo.artifacts.exists(slug, 'article-contract.md')).toBe(true);
   });
 
   it('rewrites draft and advances back through 4→5→6', async () => {
@@ -592,7 +607,7 @@ describe('Guard failures', () => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
-  const REVISE_REVIEW = `# Editor Review\n\n## Verdict: REVISE\n\nThe draft needs stronger statistical support and clearer structure.\n\n## Issues\n- Missing EPA citations\n- Weak conclusion`;
+  const REVISE_REVIEW = `# Editor Review\n\n## Verdict: REVISE\n\nThe draft needs stronger statistical support and clearer structure.\n\n## Issues\n- [BLOCKER evidence:missing-epa] Missing EPA citations\n- [BLOCKER structure:weak-conclusion] Weak conclusion`;
   const APPROVED_REVIEW = `# Editor Review\n\n## Verdict: APPROVED\n\nStrong analytical piece. Ready for publication.\n\n## Strengths\n- Clear thesis\n- Good data support`;
 
   // The mock's detectStageContext gets confused when gathered context includes
@@ -691,14 +706,19 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     repo.createArticle({ id: slug, title: 'Auto-Advance Max Revisions' });
     writeArtifact(slug, 'idea.md', '# Idea\nTest max revisions.');
 
+    let editorIteration = 0;
+
     const result = await autoAdvanceArticle(slug, actionCtx, {
       maxStage: 7,
       maxRevisions: 2,
       onStep: (step) => {
         if (step.type === 'working') {
           if (step.from === 5) {
-            // Always REVISE — editor never approves
-            setMockForStage(5, REVISE_REVIEW);
+            editorIteration++;
+            // Always REVISE but with DIFFERENT blocker IDs each time to avoid
+            // triggering the repeated-blocker escalation detector.
+            const review = `# Editor Review\n\n## Verdict: REVISE\n\nRevision ${editorIteration} needed.\n\n## Issues\n- [BLOCKER evidence:issue-${editorIteration}] Needs more data (iteration ${editorIteration})`;
+            setMockForStage(5, review);
           } else {
             setMockForStage(step.from);
           }
@@ -769,6 +789,7 @@ describe('Auto-advance REVISE loop via autoAdvanceArticle', () => {
     writeArtifact(slug, 'discussion-prompt.md', '# Prompt\nKey question.');
     writeArtifact(slug, 'panel-composition.md', '# Panel\n- Analyst A\n- Analyst B');
     writeArtifact(slug, 'discussion-summary.md', '# Summary\nConclusion X.');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n300 words');
     writeArtifact(slug, 'draft.md', buildValidDraft(300));
     writeArtifact(slug, 'editor-review.md', '## Final Verdict: APPROVED\nGood to go.');
     writeArtifact(slug, 'publisher-pass.md', '# Publisher Pass\nAll clear.');

@@ -853,14 +853,17 @@ export function markdownToProseMirror(markdown: string, options: ConvertOptions 
       i++; continue;
     }
 
-    // Standalone image
-    const imgLine = trimmed.match(/^!\[([^\]]*)\]\(([^)"]+?)(?:\s+"([^"]*)")?\)$/);
+    // Standalone image (allow empty src for LLM-generated placeholders)
+    const imgLine = trimmed.match(/^!\[([^\]]*)\]\(([^)"]*?)(?:\s+"([^"]*)")?\)$/);
     if (imgLine) {
       const [, altRaw, rawSrc, titleAttr] = imgLine;
-      const pipeIdx = altRaw.indexOf('|');
-      const alt = pipeIdx >= 0 ? altRaw.slice(0, pipeIdx).trim() : altRaw.trim();
-      const caption = titleAttr || (pipeIdx >= 0 ? altRaw.slice(pipeIdx + 1).trim() : '');
-      content.push(buildCaptionedImage(rawSrc, alt, caption));
+      if (rawSrc) {
+        const pipeIdx = altRaw.indexOf('|');
+        const alt = pipeIdx >= 0 ? altRaw.slice(0, pipeIdx).trim() : altRaw.trim();
+        const caption = titleAttr || (pipeIdx >= 0 ? altRaw.slice(pipeIdx + 1).trim() : '');
+        content.push(buildCaptionedImage(rawSrc, alt, caption));
+      }
+      // Empty-src images (LLM placeholders) are silently skipped
       i++; continue;
     }
 
@@ -990,6 +993,9 @@ export function markdownToProseMirror(markdown: string, options: ConvertOptions 
     }
     if (paraLines.length > 0) {
       content.push({ type: 'paragraph', content: parseInline(paraLines.join(' ')) });
+    } else {
+      // Safety: if no pattern matched and paragraph collected nothing, skip line to prevent infinite loop
+      i++;
     }
   }
 

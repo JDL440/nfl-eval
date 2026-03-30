@@ -94,4 +94,43 @@ describe('local tool executor', () => {
       try { unlinkSync(dbPath); } catch {}
     }
   });
+
+  it('surfaces blocker escalation read-model data through article_get', async () => {
+    const dbPath = join(tmpdir(), `local-tools-escalation-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+    const repo = new Repository(dbPath);
+    const engine = new PipelineEngine(repo);
+    repo.createArticle({ id: 'tool-lead-review', title: 'Tool Lead Review' });
+    repo.advanceStage('tool-lead-review', 1, 6, 'test');
+    repo.updateArticleStatus('tool-lead-review', 'needs_lead_review');
+    repo.artifacts.put('tool-lead-review', 'lead-review.md', '# Lead Review Handoff');
+    repo.getDb().prepare(
+      `INSERT INTO revision_summaries
+         (article_id, iteration, from_stage, to_stage, agent_name, outcome, key_issues, feedback_summary, blocker_type, blocker_ids)
+       VALUES
+         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?),
+         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      'tool-lead-review', 1, 6, 4, 'editor', 'REVISE', null, 'Missing evidence remained unresolved.', 'evidence', JSON.stringify(['stale-stat', 'missing-source']),
+      'tool-lead-review', 2, 6, 4, 'editor', 'REVISE', null, 'Missing evidence remained unresolved again.', 'Evidence', JSON.stringify(['missing-source', ' stale-stat ']),
+    );
+
+    try {
+      const [tool] = await listAvailableTools({
+        enabled: true,
+        includePipelineTools: true,
+        requestedTools: ['article_get'],
+        allowWriteTools: false,
+        context: { repo, engine, surface: 'test-surface', agentName: 'tester' },
+      });
+
+      const result = await executeToolCall(tool, { article_id: 'tool-lead-review' }, { repo, engine });
+      expect(result.isError).not.toBe(true);
+      expect(result.text).toContain('"repeated_blocker_escalation"');
+      expect(result.text).toContain('"needsLeadReview": true');
+      expect(result.text).toContain('"fingerprint": "evidence::missing-source|stale-stat"');
+    } finally {
+      repo.close();
+      try { unlinkSync(dbPath); } catch {}
+    }
+  });
 });

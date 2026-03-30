@@ -46,7 +46,7 @@ import {
   buildEditorPreviousReviews,
   MAX_EDITOR_PREVIOUS_REVIEWS,
 } from './conversation.js';
-import type { RevisionBlockerMetadata } from './conversation.js';
+import type { RevisionBlockerMetadata, RevisionBlockerSignature } from './conversation.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +88,24 @@ interface RetrospectiveIssueSummary {
   firstIteration: number;
 }
 
+export interface ArticleEscalationStatus {
+  articleId: string;
+  title: string;
+  currentStage: number;
+  status: string;
+  escalationReason: 'repeated_blocker';
+  leadReviewArtifactName: 'lead-review.md';
+  leadReviewArtifactPresent: boolean;
+  leadReviewContent: string | null;
+  blockerSignature: RevisionBlockerSignature | null;
+  repeatedIterations: { previous: number; current: number } | null;
+  latestFeedbackSummary: string | null;
+}
+
+export interface EscalatedArticlesFilter {
+  blockerType?: string;
+}
+
 interface RetrospectiveFindingDraft {
   role: 'writer' | 'editor' | 'lead';
   findingType: 'churn_cause' | 'repeated_issue' | 'next_time_action' | 'process_improvement';
@@ -96,7 +114,97 @@ interface RetrospectiveFindingDraft {
   priority?: 'high' | 'medium' | 'low' | null;
 }
 
+const EDITOR_REVISE_BLOCKER_TAG_GUIDANCE = 'If you choose REVISE, include one or more blocking items tagged EXACTLY as [BLOCKER type:id] using only letters, numbers, underscores, or hyphens for both `type` and `id`. Example: `- [BLOCKER structure:missing-tldr] Restore the required TLDR block before another pass.`';
+const EDITOR_REVISE_BLOCKER_TAG_ERROR = 'Editor requested revisions without valid structured [BLOCKER type:id] tags.';
+
+export interface RepeatedBlockerEscalationReadModel {
+  repeatedBlockerDetected: boolean;
+  needsLeadReview: boolean;
+  hasLeadReviewHandoff: boolean;
+  isEscalated: boolean;
+  repeatedBlocker: {
+    previousIteration: number;
+    currentIteration: number;
+    blockerType: string | null;
+    blockerIds: string[];
+    fingerprint: string;
+    latestFeedbackSummary: string | null;
+  } | null;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Generate article-contract.md after discussion summary.
+ * This is a Stage 4 artifact that both Writer and Editor must honor.
+ */
+async function generateArticleContract(
+  articleId: string,
+  ctx: ActionContext,
+  options: {
+    surface?: string;
+    discussionSummary?: string | null;
+    stage?: Stage;
+  } = {},
+): Promise<void> {
+  const existing = ctx.repo.artifacts.get(articleId, 'article-contract.md');
+  if (existing && existing.trim().length > 0) {
+    return;
+  }
+
+  const article = ctx.repo.getArticle(articleId);
+  if (!article) throw new Error(`Article '${articleId}' not found`);
+
+  const discussionSummary = options.discussionSummary ?? ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
+  if (!discussionSummary) {
+    console.warn(`[generateArticleContract] No discussion-summary.md found for '${articleId}'`);
+    return;
+  }
+
+  const ideaArtifact = ctx.repo.artifacts.get(articleId, 'idea.md') || '';
+  const promptArtifact = ctx.repo.artifacts.get(articleId, 'discussion-prompt.md') || '';
+  const panelArtifact = ctx.repo.artifacts.get(articleId, 'panel-composition.md') || '';
+
+  const contractContext = [
+    '## Article Idea',
+    ideaArtifact,
+    '',
+    '## Discussion Prompt',
+    promptArtifact,
+    '',
+    '## Panel Composition',
+    panelArtifact,
+    '',
+    '## Discussion Summary',
+    discussionSummary,
+  ].join('\n');
+
+  const stage = options.stage ?? article.current_stage;
+  const surface = options.surface ?? 'runDiscussion-contract';
+  const contractResult = await runAgent(ctx, articleId, stage, surface, {
+    agentName: 'lead',
+    task: `Based on the discussion context and synthesis, create a compact article contract that both Writer and Editor must honor.
+
+The contract should capture:
+- The thesis or core question this article must answer
+- Key tensions or disagreements that must be preserved (not smoothed over)
+- Required evidence anchors (specific stats, comps, or data points the article must reference)
+- Mandatory article structure expectations (sections, flow, or framing)
+- Open cautions (gaps, uncertainties, or temporal limits the article must acknowledge)
+
+Keep it compact — 200-400 words. This is a specification, not a draft.`,
+    skills: ['article-discussion'],
+    articleContext: {
+      slug: articleId,
+      title: article.title,
+      stage,
+      content: contractContext,
+    },
+  });
+
+  writeAgentResult(ctx.repo, articleId, 'article-contract.md', contractResult);
+  recordAgentUsage(ctx, articleId, stage, surface, contractResult);
+}
 
 function readArtifact(repo: Repository, articleId: string, filename: string): string {
   const content = repo.artifacts.get(articleId, filename);
@@ -157,6 +265,37 @@ function buildLeadReviewHandoff(
   ].join('\n');
 }
 
+export function getRepeatedBlockerEscalationReadModel(
+  repo: Repository,
+  articleId: string,
+): RepeatedBlockerEscalationReadModel {
+  const article = repo.getArticle(articleId);
+  const repeatedBlocker = findConsecutiveRepeatedRevisionBlocker(getRevisionHistory(repo, articleId));
+  const needsLeadReview = article?.status === 'needs_lead_review';
+  const hasLeadReviewHandoff = repo.artifacts.get(articleId, 'lead-review.md') != null;
+
+  return {
+    repeatedBlockerDetected: repeatedBlocker != null,
+    needsLeadReview,
+    hasLeadReviewHandoff,
+    isEscalated: needsLeadReview || hasLeadReviewHandoff,
+    repeatedBlocker: repeatedBlocker == null
+      ? null
+      : {
+          previousIteration: repeatedBlocker.previous.iteration,
+          currentIteration: repeatedBlocker.current.iteration,
+          blockerType: repeatedBlocker.signature.blockerType,
+          blockerIds: repeatedBlocker.signature.blockerIds,
+          fingerprint: repeatedBlocker.signature.fingerprint,
+          latestFeedbackSummary: summarizeMarkdownLine(repeatedBlocker.current.feedback_summary, 300),
+        },
+  };
+}
+
+export function hasActiveRepeatedBlockerEscalation(repo: Repository, articleId: string): boolean {
+  return getRepeatedBlockerEscalationReadModel(repo, articleId).isEscalated;
+}
+
 function maybeEscalateRepeatedRevisionBlocker(
   repo: Repository,
   articleId: string,
@@ -176,18 +315,130 @@ function maybeEscalateRepeatedRevisionBlocker(
   };
 }
 
-function extractRevisionBlockerMetadata(reviewContent: string): RevisionBlockerMetadata | null {
-  const matches = [...reviewContent.matchAll(/\[BLOCKER\s+([a-z0-9_-]+):([a-z0-9_-]+)\]/gi)];
-  if (matches.length === 0) return null;
+function buildArticleEscalationStatus(
+  repo: Repository,
+  articleId: string,
+  repeatedBlocker: ReturnType<typeof findConsecutiveRepeatedRevisionBlocker>,
+): ArticleEscalationStatus | null {
+  const article = repo.getArticle(articleId);
+  if (!article) return null;
 
-  const blockerTypes = [...new Set(matches.map((match) => match[1]!.trim().toLowerCase()).filter(Boolean))];
-  const blockerIds = [...new Set(matches.map((match) => match[2]!.trim().toLowerCase()).filter(Boolean))];
-  if (blockerIds.length === 0) return null;
+  const leadReviewContent = repo.artifacts.get(articleId, 'lead-review.md');
+  const isEscalated = article.status === 'needs_lead_review' || leadReviewContent != null;
+  if (!isEscalated) return null;
 
   return {
-    blockerType: blockerTypes.length === 1 ? blockerTypes[0] : 'mixed',
-    blockerIds,
+    articleId: article.id,
+    title: article.title,
+    currentStage: article.current_stage,
+    status: article.status,
+    escalationReason: 'repeated_blocker',
+    leadReviewArtifactName: 'lead-review.md',
+    leadReviewArtifactPresent: leadReviewContent != null,
+    leadReviewContent,
+    blockerSignature: repeatedBlocker?.signature ?? null,
+    repeatedIterations: repeatedBlocker
+      ? {
+          previous: repeatedBlocker.previous.iteration,
+          current: repeatedBlocker.current.iteration,
+        }
+      : null,
+    latestFeedbackSummary: repeatedBlocker?.current.feedback_summary ?? null,
   };
+}
+
+export function getArticleEscalationStatus(
+  repo: Repository,
+  articleId: string,
+): ArticleEscalationStatus | null {
+  return buildArticleEscalationStatus(
+    repo,
+    articleId,
+    findConsecutiveRepeatedRevisionBlocker(getRevisionHistory(repo, articleId)),
+  );
+}
+
+export function getEscalatedArticles(
+  repo: Repository,
+  filter?: EscalatedArticlesFilter,
+): ArticleEscalationStatus[] {
+  const normalizedBlockerType = typeof filter?.blockerType === 'string'
+    ? filter.blockerType.trim().toLowerCase()
+    : null;
+
+  return repo.getAllArticles()
+    .map((article) => getArticleEscalationStatus(repo, article.id))
+    .filter((status): status is ArticleEscalationStatus => status != null)
+    .filter((status) => {
+      if (!normalizedBlockerType) return true;
+      return status.blockerSignature?.blockerType === normalizedBlockerType;
+    });
+}
+
+function extractRevisionBlockerMetadata(reviewContent: string): RevisionBlockerMetadata | null {
+  // Primary: look for structured [BLOCKER type:id] tags
+  const matches = [...reviewContent.matchAll(/\[BLOCKER\s+([a-z0-9_-]+):([a-z0-9_-]+)\]/gi)];
+  if (matches.length > 0) {
+    const blockerTypes = [...new Set(matches.map((match) => match[1]!.trim().toLowerCase()).filter(Boolean))];
+    const blockerIds = [...new Set(matches.map((match) => match[2]!.trim().toLowerCase()).filter(Boolean))];
+    if (blockerIds.length > 0) {
+      return {
+        blockerType: blockerTypes.length === 1 ? blockerTypes[0] : 'mixed',
+        blockerIds,
+      };
+    }
+  }
+
+  // Fallback: extract blockers from natural review formats.
+  // LLMs often use bold items under ERRORS/🔴 headings instead of structured tags.
+  const ids: string[] = [];
+  const types: string[] = [];
+
+  // Pattern: **Bold Error Title** or **Bold Error Title:** under an ERRORS/🔴 section
+  const errorSectionMatch = reviewContent.match(/#{1,3}\s*(?:🔴|ERRORS)[^\n]*\n([\s\S]*?)(?=\n#{1,3}\s|\n## Verdict|$)/i);
+  if (errorSectionMatch) {
+    const errorSection = errorSectionMatch[1]!;
+    const boldItems = [...errorSection.matchAll(/\*\*([^*]+)\*\*/g)];
+    for (const item of boldItems) {
+      const label = item[1]!.trim()
+        .replace(/[^a-z0-9\s-]/gi, '')  // strip special chars
+        .replace(/\s+/g, '-')
+        .toLowerCase()
+        .slice(0, 40);
+      if (label.length > 2) {
+        ids.push(label);
+        // Infer type from keywords
+        if (/evidence|source|claim|unsupported|stat/i.test(item[1]!)) {
+          types.push('evidence');
+        } else if (/structure|format|tldr|layout|section/i.test(item[1]!)) {
+          types.push('structure');
+        } else if (/temporal|date|season|year|time/i.test(item[1]!)) {
+          types.push('temporal');
+        } else {
+          types.push('editorial');
+        }
+      }
+    }
+  }
+
+  if (ids.length > 0) {
+    const uniqueTypes = [...new Set(types)];
+    return {
+      blockerType: uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed',
+      blockerIds: [...new Set(ids)],
+    };
+  }
+
+  // Last resort: if there's a REVISE verdict but no parseable blockers at all,
+  // synthesize a generic blocker so the revision loop can proceed.
+  if (/\bREVISE\b/i.test(reviewContent)) {
+    return {
+      blockerType: 'editorial',
+      blockerIds: ['unstructured-review'],
+    };
+  }
+
+  return null;
 }
 
 function summarizeMarkdownLine(text: string | null | undefined, maxLength = 180): string | null {
@@ -439,6 +690,12 @@ function buildDraftRepairInstruction(state: DraftValidationState): string {
       + state.preflight.blockingIssues.map((issue) => `- ${issue.message}`).join('\n'),
     );
   }
+  if (state.preflight.advisoryIssues.length > 0) {
+    fixes.push(
+      'The following advisory issues were noted (these will be surfaced for human review at publish time, but try to address them if you can):\n'
+      + state.preflight.advisoryIssues.map((issue) => `- ${issue.message}`).join('\n'),
+    );
+  }
   if (state.preflight.warnings.length > 0) {
     fixes.push(
       'Before you finish, also tighten these editor-facing checks where possible:\n'
@@ -558,7 +815,7 @@ function runAgent(
       includePipelineTools: params.toolCalling?.includePipelineTools ?? true,
       includeWebSearch: params.toolCalling?.includeWebSearch ?? true,
       allowWriteTools: params.toolCalling?.allowWriteTools ?? false,
-      maxToolCalls: params.toolCalling?.maxToolCalls ?? 12,
+      maxToolCalls: params.toolCalling?.maxToolCalls ?? 50,
       requestedTools: buildStageRequestedTools(surface, params.toolCalling?.requestedTools),
       context: {
         repo: ctx.repo,
@@ -809,7 +1066,7 @@ const PRODUCTION_AGENTS = new Set([
 const TEAM_ABBRS = new Set([
   'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
   'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
-  'nyj','phi','pit','sea','sf','tb','ten','wsh',
+  'nyj','phi','pit','sea','sf','tb','ten','was',
 ]);
 
 /** Build a categorized roster string from available agent charters. */
@@ -991,6 +1248,12 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
 
       writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', result);
       recordAgentUsage(ctx, articleId, article.current_stage, 'runDiscussion', result);
+
+      await generateArticleContract(articleId, ctx, {
+        surface: 'runDiscussion-contract',
+        discussionSummary: result.content,
+      });
+
       return { success: true, duration: Date.now() - start };
     }
 
@@ -1039,6 +1302,12 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
 
       writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', fallbackResult);
       recordAgentUsage(ctx, articleId, article.current_stage, 'runDiscussion-fallback', fallbackResult);
+
+      await generateArticleContract(articleId, ctx, {
+        surface: 'runDiscussion-fallback-contract',
+        discussionSummary: fallbackResult.content,
+      });
+
       return { success: true, duration: Date.now() - start };
     }
 
@@ -1072,6 +1341,11 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     writeAgentResult(ctx.repo, articleId, 'discussion-summary.md', synthesisResult);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runDiscussion-synthesis', synthesisResult);
 
+    await generateArticleContract(articleId, ctx, {
+      surface: 'runDiscussion-contract',
+      discussionSummary: synthesisResult.content,
+    });
+
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {
@@ -1088,6 +1362,17 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
   try {
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
+
+    // Recovery path only: normal runs should already have a Stage 4 contract.
+    const discussionSummary = ctx.repo.artifacts.get(articleId, 'discussion-summary.md');
+    if (discussionSummary && !ctx.repo.artifacts.get(articleId, 'article-contract.md')) {
+      console.warn(`[writeDraft] article-contract.md missing for '${articleId}' — generating as recovery`);
+      await generateArticleContract(articleId, ctx, {
+        surface: 'writeDraft-contract-recovery',
+        discussionSummary,
+        stage: 4 as Stage,
+      });
+    }
 
     // Ensure roster context is available for factcheck and writer
     const team = article.primary_team;
@@ -1243,18 +1528,24 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     let finalResult = result;
     let validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
     const initialPreflight = validation.preflight;
+    let repairAttempts = 0;
+    const MAX_SELF_HEAL_ATTEMPTS = 2;
 
-    // Self-heal: retry once when the writer misses the minimum draft contract.
-    if (needsDraftRepair(validation)) {
+    // Self-heal: retry up to MAX_SELF_HEAL_ATTEMPTS times when the writer misses the draft contract.
+    while (needsDraftRepair(validation) && repairAttempts < MAX_SELF_HEAL_ATTEMPTS) {
+      repairAttempts++;
       const repairReason = validation.wordCount < MIN_DRAFT_WORDS
         ? `draft only ${validation.wordCount} words`
         : !validation.structure.passed
           ? validation.structure.reason
           : validation.preflight.blockingIssues[0]?.message ?? 'writer preflight issue';
-      console.warn(`[writeDraft] Draft validation failed for '${articleId}' (${repairReason}), retrying with targeted repair instruction`);
-      const retryResult = await runAgent(ctx, articleId, article.current_stage, 'writeDraft-retry', {
+      const escalation = repairAttempts > 1
+        ? ' If you cannot source a claim from the supplied artifacts, REMOVE or SOFTEN the claim entirely — do not keep unsupported precise figures.'
+        : '';
+      console.warn(`[writeDraft] Draft validation failed for '${articleId}' (${repairReason}), self-heal attempt ${repairAttempts}/${MAX_SELF_HEAL_ATTEMPTS}`);
+      const retryResult = await runAgent(ctx, articleId, article.current_stage, `writeDraft-retry-${repairAttempts}`, {
         agentName: 'writer',
-        task: buildDraftRepairInstruction(validation),
+        task: buildDraftRepairInstruction(validation) + escalation,
         skills: ['substack-article', WRITER_FACTCHECK_SKILL_NAME],
         conversationContext: conversationCtx || undefined,
         articleContext: {
@@ -1265,7 +1556,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         },
       });
       writeAgentResult(ctx.repo, articleId, 'draft.md', retryResult);
-      recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft-retry', retryResult);
+      recordAgentUsage(ctx, articleId, article.current_stage, `writeDraft-retry-${repairAttempts}`, retryResult);
       addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', retryResult.content);
       finalResult = retryResult;
       validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
@@ -1282,10 +1573,10 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       }),
     );
 
-    if (needsDraftRepair(validation)) {
+     if (needsDraftRepair(validation)) {
       return {
         success: false,
-        error: `Writer draft failed validation after self-heal: ${
+        error: `Writer draft failed validation after ${repairAttempts} self-heal attempt(s): ${
           validation.wordCount < MIN_DRAFT_WORDS
             ? `Draft has ${validation.wordCount} words (minimum ${MIN_DRAFT_WORDS})`
             : !validation.structure.passed
@@ -1343,7 +1634,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     const result = await runAgent(ctx, articleId, article.current_stage, 'runEditor', {
       agentName: 'editor',
-      task: 'Review the article draft and provide editorial feedback. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If `writer-factcheck.md` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED',
+      task: `Review the article draft against the article contract and provide editorial feedback. The article contract defines the required thesis, tensions, evidence anchors, and structure expectations — use it as your evaluation rubric. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If \`writer-factcheck.md\` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED\n\n${EDITOR_REVISE_BLOCKER_TAG_GUIDANCE}`,
       skills: ['editor-review'],
       conversationContext: fullConversationCtx,
       articleContext: {
@@ -1389,13 +1680,21 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     // If editor returns REVISE, create a revision summary
     if (verdict === 'REVISE') {
+      const blockerMetadata = extractRevisionBlockerMetadata(finalReviewContent);
+      if (!blockerMetadata) {
+        return {
+          success: false,
+          error: EDITOR_REVISE_BLOCKER_TAG_ERROR,
+          duration: Date.now() - start,
+        };
+      }
       const iteration = getRevisionCount(ctx.repo, articleId) + 1;
       const feedbackPreview = finalReviewContent.slice(0, 300);
       addRevisionSummary(
         ctx.repo, articleId, iteration,
         article.current_stage, 4,  // editor → writer
         'editor', 'REVISE', null, feedbackPreview,
-        extractRevisionBlockerMetadata(finalReviewContent),
+        blockerMetadata,
       );
     }
 

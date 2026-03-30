@@ -10,7 +10,7 @@ source: "validated — runtime-cleaned reference for stages 2–4"
 
 ## Purpose
 
-Codifies the three-phase discussion workflow: writing a discussion prompt, assembling a panel, and synthesizing positions into the discussion summary Writer uses to draft the article.
+ Codifies the three-phase discussion workflow: writing a discussion prompt, assembling a panel, and synthesizing positions into the Stage 4 discussion artifacts Writer uses to draft the article.
 
 This skill is the inner loop of article production. The `article-lifecycle` skill provides the high-level 8-stage context; this skill provides the detailed playbook for Stages 2–4 specifically.
 
@@ -180,7 +180,12 @@ Write a position statement of 300–500 words. Include:
 
 ## Phase 4 — Synthesis
 
-The synthesis is the artifact Writer uses. It must be actionable.
+ The synthesis step produces the canonical Stage 4 handoff. It must leave behind both:
+
+- `discussion-summary.md` — the actionable synthesis Writer uses directly
+- `article-contract.md` — the compact negotiated spec Writer and Editor must both honor
+
+Together, these are the hard prerequisites before Stage 5 can begin.
 
 ### Required Sections
 
@@ -198,6 +203,37 @@ The synthesis is the artifact Writer uses. It must be actionable.
 - name the key tension explicitly
 - Lead takes a stance
 - open questions must be specific
+
+### Contract Rules
+
+`article-contract.md` should stay compact and operational. Capture:
+
+- the thesis or core question the article must answer
+- the disagreements/tensions that must survive into the draft
+- the evidence anchors the article must reference
+- the structural expectations Writer must satisfy
+- the open cautions or uncertainty the final piece must acknowledge
+
+### Article Contract
+
+After the discussion summary is written, generate `article-contract.md` as a second Stage 4 artifact. The article contract is the compact specification that both Writer (Stage 5) and Editor (Stage 6) must honor. It serves as the shared agreement on what the article must deliver.
+
+#### Required Elements
+
+| Element | Purpose |
+|---------|---------|
+| **Thesis or Core Question** | The central claim or question the article must answer |
+| **Key Tensions** | Disagreements or trade-offs that must be preserved (not smoothed over) |
+| **Required Evidence Anchors** | Specific stats, comps, or data points the article must reference |
+| **Mandatory Structure** | Expected sections, flow, or framing requirements |
+| **Open Cautions** | Gaps, uncertainties, or temporal limits the article must acknowledge |
+
+#### Contract Rules
+
+- Keep it compact: 200-400 words
+- This is a specification, not a draft
+- Be explicit about what Writer must deliver and what Editor will evaluate
+- Cite specific numbers and requirements from the discussion
 
 ---
 

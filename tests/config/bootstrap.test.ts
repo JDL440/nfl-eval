@@ -203,34 +203,51 @@ describe('Bootstrap init', () => {
     it('overwrites only the allowlisted core runtime prompts', () => {
       const leadPath = join(dataDir, 'agents', 'charters', 'nfl', 'lead.md');
       const writerPath = join(dataDir, 'agents', 'charters', 'nfl', 'writer.md');
+      const moderatorPath = join(dataDir, 'agents', 'charters', 'nfl', 'panel-moderator.md');
+      const publisherPath = join(dataDir, 'agents', 'charters', 'nfl', 'publisher.md');
       const nonCoreCharterPath = join(dataDir, 'agents', 'charters', 'nfl', 'cap.md');
       const substackSkillPath = join(dataDir, 'agents', 'skills', 'substack-article.md');
-      const nonCoreSkillPath = join(dataDir, 'agents', 'skills', 'editor-review.md');
+      const panelCompositionSkillPath = join(dataDir, 'agents', 'skills', 'panel-composition.md');
+      const nonCoreSkillPath = join(dataDir, 'agents', 'skills', 'image-review.md');
 
       writeFileSync(leadPath, '# Legacy lead prompt');
       writeFileSync(writerPath, '# Legacy writer prompt');
+      writeFileSync(moderatorPath, '# Legacy moderator prompt');
+      writeFileSync(publisherPath, '# Legacy publisher prompt');
       writeFileSync(nonCoreCharterPath, '# Custom cap charter');
       writeFileSync(substackSkillPath, '# Legacy substack skill');
-      writeFileSync(nonCoreSkillPath, '# Custom editor-review skill');
+      writeFileSync(panelCompositionSkillPath, '# Legacy panel composition skill');
+      writeFileSync(nonCoreSkillPath, '# Custom image-review skill');
 
       const result = refreshCorePromptDefaults(dataDir, 'nfl');
 
-      expect(result.charters).toBe(3);
-      expect(result.skills).toBe(4);
+      expect(result.charters).toBe(5);
+      expect(result.skills).toBe(10);
       expect(result.updated).toEqual([
         'charter:lead',
         'charter:writer',
         'charter:editor',
+        'charter:panel-moderator',
+        'charter:publisher',
         'skill:article-discussion',
         'skill:article-lifecycle',
+        'skill:discussion-prompt',
+        'skill:panel-composition',
+        'skill:fact-checking',
         'skill:idea-generation',
         'skill:substack-article',
+        'skill:writer-fact-check',
+        'skill:editor-review',
+        'skill:publisher',
       ]);
       expect(readFileSync(leadPath, 'utf-8')).not.toBe('# Legacy lead prompt');
       expect(readFileSync(writerPath, 'utf-8')).not.toBe('# Legacy writer prompt');
+      expect(readFileSync(moderatorPath, 'utf-8')).not.toBe('# Legacy moderator prompt');
+      expect(readFileSync(publisherPath, 'utf-8')).not.toBe('# Legacy publisher prompt');
       expect(readFileSync(substackSkillPath, 'utf-8')).not.toBe('# Legacy substack skill');
+      expect(readFileSync(panelCompositionSkillPath, 'utf-8')).not.toBe('# Legacy panel composition skill');
       expect(readFileSync(nonCoreCharterPath, 'utf-8')).toBe('# Custom cap charter');
-      expect(readFileSync(nonCoreSkillPath, 'utf-8')).toBe('# Custom editor-review skill');
+      expect(readFileSync(nonCoreSkillPath, 'utf-8')).toBe('# Custom image-review skill');
     });
 
     it('adds article-lifecycle to existing installs from defaults', () => {
@@ -255,8 +272,8 @@ describe('Bootstrap init', () => {
 
       const result = prepareRuntimeDataDir(dataDir, 'nfl');
 
-      expect(result.refreshed.charters).toBe(3);
-      expect(result.refreshed.skills).toBe(4);
+      expect(result.refreshed.charters).toBe(5);
+      expect(result.refreshed.skills).toBe(10);
       expect(readFileSync(leadPath, 'utf-8')).not.toBe('# Legacy lead prompt');
       expect(readFileSync(articleDiscussionPath, 'utf-8')).not.toBe('# Legacy article discussion');
     });

@@ -12,6 +12,7 @@ import {
   requirePrompt,
   requirePanelComposition,
   requireDiscussionSummary,
+  requireArticleContract,
   requireDraft,
   requireEditorApproval,
   requirePublisherPass,
@@ -136,6 +137,20 @@ describe('Guard functions', () => {
       repo.createArticle({ id: 'has-summary', title: 'Test' });
       repo.artifacts.put('has-summary', 'discussion-summary.md', 'summary content');
       const result = requireDiscussionSummary(repo.artifacts, 'has-summary');
+      expect(result.passed).toBe(true);
+    });
+  });
+
+  describe('requireArticleContract', () => {
+    it('fails when article-contract.md does not exist', () => {
+      const result = requireArticleContract(repo.artifacts, 'no-contract');
+      expect(result.passed).toBe(false);
+    });
+
+    it('passes when article-contract.md exists', () => {
+      repo.createArticle({ id: 'has-contract', title: 'Test' });
+      repo.artifacts.put('has-contract', 'article-contract.md', '# Contract\n\nContract content');
+      const result = requireArticleContract(repo.artifacts, 'has-contract');
       expect(result.passed).toBe(true);
     });
   });
@@ -421,12 +436,21 @@ describe('PipelineEngine', () => {
       expect(check.nextStage).toBe(4);
     });
 
-    it('allows 4→5 when discussion-summary.md exists', () => {
+    it('allows 4→5 when discussion-summary.md and article-contract.md exist', () => {
       repo.createArticle({ id: 'test-article', title: 'Test' });
       repo.artifacts.put('test-article', 'discussion-summary.md', 'summary');
+      repo.artifacts.put('test-article', 'article-contract.md', 'contract');
       const check = engine.canAdvance('test-article', 4 as Stage);
       expect(check.allowed).toBe(true);
       expect(check.nextStage).toBe(5);
+    });
+
+    it('blocks 4→5 when article-contract.md is missing', () => {
+      repo.createArticle({ id: 'test-article', title: 'Test' });
+      repo.artifacts.put('test-article', 'discussion-summary.md', 'summary');
+      const check = engine.canAdvance('test-article', 4 as Stage);
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('Article contract');
     });
 
     it('allows 5→6 when draft.md has 800+ words', () => {
@@ -549,6 +573,7 @@ ${longText(300)}`);
       repo.artifacts.put('multi', 'discussion-prompt.md', 'prompt');
       repo.artifacts.put('multi', 'panel-composition.md', 'panel');
       repo.artifacts.put('multi', 'discussion-summary.md', 'summary');
+      repo.artifacts.put('multi', 'article-contract.md', 'contract');
       repo.artifacts.put('multi', 'draft.md', validDraft(1000));
       repo.artifacts.put('multi', 'editor-review.md', '## Verdict: APPROVED');
 

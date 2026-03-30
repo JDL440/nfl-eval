@@ -129,8 +129,46 @@ export function renderIdeaSuccess(article: { id: string; title: string }): strin
         <a href="/articles/${escapeHtml(article.id)}" class="btn btn-primary">View Article</a>
         <a href="/ideas/new" class="btn btn-secondary">Submit Another</a>
         <a href="/" class="btn btn-secondary">Back to Dashboard</a>
-      </div>
-    </div>`;
+       </div>
+     </div>`;
+}
+
+export function escapeIdeaStatusHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function renderIdeaErrorStatus(details: {
+  error?: unknown;
+  traceId?: unknown;
+  traceUrl?: unknown;
+}): string {
+  const message = typeof details.error === 'string' && details.error.trim()
+    ? details.error.trim()
+    : 'Failed to create article';
+  const traceId = typeof details.traceId === 'string' ? details.traceId.trim() : '';
+  const traceUrl = typeof details.traceUrl === 'string' ? details.traceUrl.trim() : '';
+
+  if (!traceId && !traceUrl) {
+    return escapeIdeaStatusHtml(message);
+  }
+
+  const traceDetails: string[] = [];
+  if (traceId) {
+    traceDetails.push('Trace ID: <code>' + escapeIdeaStatusHtml(traceId) + '</code>');
+  }
+  if (traceUrl) {
+    traceDetails.push('<a href="' + escapeIdeaStatusHtml(traceUrl) + '">Open trace</a>');
+  }
+
+  return '<div>' + escapeIdeaStatusHtml(message) + '</div>'
+    + '<div class="form-hint" style="margin-top:0.5rem">Need the failure trace? '
+    + traceDetails.join(' · ')
+    + '</div>';
 }
 
 // ── Smart idea form ──────────────────────────────────────────────────────────
@@ -253,6 +291,9 @@ export function renderNewIdeaPage(config: {
     </div>
 
     <script>
+      const escapeIdeaStatusHtml = ${escapeIdeaStatusHtml.toString()};
+      const renderIdeaErrorStatus = ${renderIdeaErrorStatus.toString()};
+
       function surpriseMe() {
         const prompt = document.getElementById('prompt');
         const teams = Array.from(selectedTeams);
@@ -393,16 +434,14 @@ export function renderNewIdeaPage(config: {
             }
           } else {
             status.className = 'form-status error';
-            const traceLink = data.traceUrl
-              ? ' <a href="' + escapeHtmlClient(data.traceUrl) + '">View trace →</a>'
-              : '';
-            status.innerHTML = escapeHtmlClient(data.error || 'Failed to create article') + traceLink;
+            status.innerHTML = renderIdeaErrorStatus(data);
             btn.disabled = false;
             btn.textContent = 'Create Article';
           }
         } catch (err) {
           status.className = 'form-status error';
-          status.textContent = 'Network error: ' + err.message;
+          const message = err instanceof Error ? err.message : String(err);
+          status.innerHTML = renderIdeaErrorStatus({ error: 'Network error: ' + message });
           btn.disabled = false;
           btn.textContent = 'Create Article';
         }

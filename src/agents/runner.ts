@@ -13,7 +13,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { z } from 'zod';
-import { LLMGateway, type ChatMessage } from '../llm/gateway.js';
+import { LLMGateway, parseStructuredJson, type ChatMessage } from '../llm/gateway.js';
 import { AgentMemory, type MemoryEntry } from './memory.js';
 import type { Repository } from '../db/repository.js';
 import {
@@ -162,6 +162,61 @@ const ToolLoopTurnSchema = z.union([
   }),
 ]);
 
+/**
+ * Detect whether a JSON object looks like an agent persona or config envelope
+ * echoed back by the LLM (e.g. `{"name":"Lead","role":"...","model":"auto"}`).
+ * These should never become artifact content.
+ */
+export function looksLikePersonaOrConfig(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  const keys = new Set(Object.keys(obj).map((k) => k.toLowerCase()));
+  // Must have "name" plus at least one persona-like key
+  if (!keys.has('name')) return false;
+  const personaKeys = ['role', 'persona', 'model', 'identity', 'badge', 'scope'];
+  const matchCount = personaKeys.filter((k) => keys.has(k)).length;
+  if (matchCount === 0) return false;
+  // Reject if the object also has content-like keys (it may be a real response)
+  const contentKeys = ['content', 'markdown', 'prompt', 'article', 'draft', 'summary', 'analysis', 'output', 'result'];
+  if (contentKeys.some((k) => keys.has(k))) return false;
+  return true;
+}
+
+/**
+ * Detect whether a "final" content string is actually raw JSON data
+ * (e.g. a tool result the LLM echoed back) rather than prose content.
+ * Used by the tool loop to reject data payloads and re-prompt the LLM.
+ */
+export function looksLikeJsonDataPayload(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed !== 'object' || parsed === null) return false;
+
+    // Check if most values are numbers/booleans/null — typical of data payloads
+    const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    if (entries.length === 0) return false;
+
+    let dataLikeCount = 0;
+    let textLikeCount = 0;
+    for (const val of entries) {
+      if (typeof val === 'number' || typeof val === 'boolean' || val === null) {
+        dataLikeCount++;
+      } else if (typeof val === 'string' && val.length > 60) {
+        textLikeCount++;
+      } else if (typeof val === 'object') {
+        // Nested objects/arrays are data-like (e.g. tool result arrays)
+        dataLikeCount++;
+      }
+    }
+    // If >50% of top-level values are data-like and no significant text, it's a data payload
+    return dataLikeCount > textLikeCount && textLikeCount < 2;
+  } catch {
+    return false;
+  }
+}
+
 const TOOL_LOOP_RESPONSE_SCHEMA = z.object({
   type: z.enum(['final', 'tool_call']),
   content: z.string().optional(),
@@ -194,6 +249,257 @@ const TOOL_LOOP_RESPONSE_SCHEMA = z.object({
   }
 });
 
+function parseToolLoopArgsCandidate(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Ignore malformed args aliases and fall back to schema validation.
+  }
+  return undefined;
+}
+
+export function normalizeToolLoopResponse(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const rawType = typeof record['type'] === 'string' ? record['type'].trim().toLowerCase() : null;
+  const type = rawType === 'toolcall'
+    ? 'tool_call'
+    : rawType;
+
+  const renderPanelMarkdown = (items: unknown): string | null => {
+    if (!Array.isArray(items) || items.length === 0) {
+      return null;
+    }
+    const lines = items.flatMap((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return [];
+      }
+      const entry = item as Record<string, unknown>;
+      const name = ['agentName', 'agent', 'name', 'id', 'slug']
+        .map((key) => entry[key])
+        .find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
+      const role = ['role', 'focus', 'description', 'lane', 'reason']
+        .map((key) => entry[key])
+        .find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
+      if (!name || !role) {
+        return [];
+      }
+      return [`- **${name.trim()}** — ${role.trim()}`];
+    });
+    if (lines.length === 0) {
+      return null;
+    }
+    return ['## Panel', '', ...lines].join('\n');
+  };
+
+  const extractFinalContentCandidate = (candidate: unknown, depth = 0): string | null => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      return null;
+    }
+    const nested = candidate as Record<string, unknown>;
+    const stringFields = [
+      'content',
+      'message',
+      'final',
+      'output',
+      'result',
+      'markdown',
+      'discussion_prompt',
+      'discussionPrompt',
+      'prompt',
+    ];
+    for (const field of stringFields) {
+      const fieldValue = nested[field];
+      if (typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+        return fieldValue;
+      }
+    }
+    const panelCollections = [
+      nested['panel'],
+      nested['panels'],
+      nested['panelists'],
+      nested['analysts'],
+      nested['members'],
+      nested['selectedAgents'],
+      nested['selected_agents'],
+      nested['agents'],
+    ];
+    for (const collection of panelCollections) {
+      const rendered = renderPanelMarkdown(collection);
+      if (rendered) {
+        return rendered;
+      }
+    }
+    if (depth < 2) {
+      for (const value of Object.values(nested)) {
+        const renderedFromArray = renderPanelMarkdown(value);
+        if (renderedFromArray) {
+          return renderedFromArray;
+        }
+        const nestedContent = extractFinalContentCandidate(value, depth + 1);
+        if (nestedContent) {
+          return nestedContent;
+        }
+      }
+    }
+    return null;
+  };
+
+  if (type === 'message') {
+    const content = typeof record['content'] === 'string'
+      ? record['content']
+      : typeof record['message'] === 'string'
+        ? record['message']
+        : typeof record['final'] === 'string'
+          ? record['final']
+          : null;
+    if (content && content.trim().length > 0) {
+      return {
+        ...record,
+        type: 'final',
+        content,
+      };
+    }
+  }
+
+  const wrappedContent = extractFinalContentCandidate(record)
+    ?? (record['status'] === 'success' ? extractFinalContentCandidate(record['data']) : null);
+  if (wrappedContent) {
+    return {
+      ...record,
+      type: 'final',
+      content: wrappedContent,
+    };
+  }
+
+  // Alias tool-call type variants AND fix missing toolName when using alternative
+  // field names like `name`, `tool_name`, `function`, etc.
+  if (type === 'tool_call' || type === 'tool' || type === 'tool_use' || type === 'function_call') {
+    const toolName = typeof record['toolName'] === 'string'
+      ? record['toolName']
+      : typeof record['toolname'] === 'string'
+        ? record['toolname']
+      : typeof record['tool_name'] === 'string'
+        ? record['tool_name']
+      : typeof record['name'] === 'string'
+        ? record['name']
+      : typeof record['function'] === 'string'
+        ? record['function']
+      : typeof record['function_name'] === 'string'
+        ? record['function_name']
+        : null;
+    const args = parseToolLoopArgsCandidate(record['args'])
+      ?? parseToolLoopArgsCandidate(record['arguments'])
+      ?? parseToolLoopArgsCandidate(record['Arguments'])
+      ?? parseToolLoopArgsCandidate(record['input'])
+      ?? parseToolLoopArgsCandidate(record['parameters'])
+      ?? {};
+    if (toolName && toolName.trim().length > 0) {
+      return {
+        ...record,
+        type: 'tool_call',
+        toolName,
+        args,
+      };
+    }
+  }
+
+  // Handle `type: "final"` with missing or empty `content` — look for alternative
+  // content field names (text, answer, response, etc.).
+  if (type === 'final') {
+    const altContent = typeof record['content'] === 'string' && record['content'].trim().length > 0
+      ? record['content']
+      : typeof record['text'] === 'string' && (record['text'] as string).trim().length > 0
+        ? record['text']
+      : typeof record['answer'] === 'string' && (record['answer'] as string).trim().length > 0
+        ? record['answer']
+      : typeof record['response'] === 'string' && (record['response'] as string).trim().length > 0
+        ? record['response']
+      : typeof record['result'] === 'string' && (record['result'] as string).trim().length > 0
+        ? record['result']
+      : typeof record['output'] === 'string' && (record['output'] as string).trim().length > 0
+        ? record['output']
+      : typeof record['message'] === 'string' && (record['message'] as string).trim().length > 0
+        ? record['message']
+      : typeof record['markdown'] === 'string' && (record['markdown'] as string).trim().length > 0
+        ? record['markdown']
+        : null;
+    if (altContent) {
+      return { ...record, type: 'final', content: altContent };
+    }
+    // type is "final" but no recognisable content anywhere — stringify the whole object
+    const stringified = JSON.stringify(value, null, 2);
+    if (stringified.length > 2) {
+      return { type: 'final', content: stringified };
+    }
+  }
+
+  // Heuristic: the LLM used `type` as the tool name instead of using the
+  // standard envelope.  E.g. {"type":"query_player_stats","args":{…}}
+  // Detect this by checking whether the object carries `args`/`arguments`/`input`
+  // or the type value looks like a tool name (contains _ or -) and isn't a
+  // known envelope keyword.
+  const ENVELOPE_TYPES = new Set([
+    'final', 'tool_call', 'tool', 'tool_use', 'function_call',
+    'message', 'response', 'error', 'text', 'assistant',
+  ]);
+  if (type && !ENVELOPE_TYPES.has(type)) {
+    const hasArgsField = record['args'] !== undefined
+      || record['arguments'] !== undefined
+      || record['Arguments'] !== undefined
+      || record['input'] !== undefined;
+    const looksLikeToolName = /[_\-]/.test(type) || type.startsWith('query') || type.startsWith('search');
+    if (hasArgsField || looksLikeToolName) {
+      const args = parseToolLoopArgsCandidate(record['args'])
+        ?? parseToolLoopArgsCandidate(record['arguments'])
+        ?? parseToolLoopArgsCandidate(record['Arguments'])
+        ?? parseToolLoopArgsCandidate(record['input'])
+        ?? {};
+      return {
+        ...record,
+        type: 'tool_call',
+        toolName: type,
+        args,
+      };
+    }
+  }
+
+  // Guard: reject persona/config envelopes echoed back by the LLM.
+  // These look like {"name":"Lead","role":"...","model":"auto"} and should never
+  // become artifact content.  Re-prompt instead.
+  if (looksLikePersonaOrConfig(value)) {
+    return {
+      type: 'final',
+      content: '',  // empty → schema validation will reject, triggering re-prompt
+    };
+  }
+
+  // Last resort: if the response is a non-empty object without a recognized type,
+  // treat the entire payload as a final response by serialising it as markdown-safe JSON.
+  // This handles LLMs that return the idea/content directly as a JSON structure
+  // instead of wrapping it in the {"type":"final","content":"..."} envelope.
+  if (!type || (type !== 'final' && type !== 'tool_call')) {
+    const stringified = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+    if (stringified.length > 2) {
+      return { type: 'final', content: stringified };
+    }
+  }
+
+  return value;
+}
+
 function extractProviderToolCalls(providerMetadata: import('../llm/gateway.js').ProviderMetadata | undefined): ToolCallTrace[] {
   const responseEnvelope = providerMetadata?.responseEnvelope;
   if (!responseEnvelope || typeof responseEnvelope !== 'object') {
@@ -210,10 +516,10 @@ function extractProviderToolCalls(providerMetadata: import('../llm/gateway.js').
         if (!toolName) return [];
         return [{
           toolName,
-          args: {},
+          args: record['args'] && typeof record['args'] === 'object' ? record['args'] as Record<string, unknown> : {},
           source: typeof record['source'] === 'string' ? record['source'] : 'provider',
           isError: record['isError'] === true,
-          resultText: '',
+          resultText: typeof record['output'] === 'string' ? record['output'] : '',
         }];
       });
     }
@@ -680,7 +986,7 @@ export class AgentRunner {
     return { userMessage: baseUserMessage, traceParts };
   }
 
-  private async buildToolLoopPromptPart(): Promise<PromptTracePart | null> {
+  private async buildToolLoopPromptPart(maxToolCalls: number): Promise<PromptTracePart | null> {
     const tools = await getSafeLocalToolCatalog({ includeWebSearch: this.toolLoopWebSearchEnabled });
     if (tools.length === 0) return null;
 
@@ -697,7 +1003,7 @@ export class AgentRunner {
       label: 'Tool Loop',
       content: [
         '## Tool Use Contract',
-        `You may ask for up to ${this.maxToolCalls} tool calls.`,
+        `You may ask for up to ${maxToolCalls} tool calls.`,
         'If you need a tool, respond with valid JSON only in this shape:',
         '{"type":"tool_call","toolName":"<allowed tool>","args":{}}',
         'When you are ready to answer, respond with valid JSON only in this shape:',
@@ -708,7 +1014,7 @@ export class AgentRunner {
         ...toolBlocks,
       ].join('\n\n'),
       metadata: {
-        maxToolCalls: this.maxToolCalls,
+        maxToolCalls,
         webSearchEnabled: this.toolLoopWebSearchEnabled,
         tools: tools.map((tool) => tool.name),
       },
@@ -724,6 +1030,7 @@ export class AgentRunner {
     providerMetadata: import('../llm/gateway.js').ProviderMetadata | undefined,
     toolEvents: LegacyToolExecutionResult[],
     route: { providerId: string; model: string } | null,
+    maxToolCalls: number,
   ): import('../llm/gateway.js').ProviderMetadata | undefined {
     if (toolEvents.length === 0 && !providerMetadata) {
       return undefined;
@@ -740,7 +1047,7 @@ export class AgentRunner {
           enabled: true,
           provider: route?.providerId ?? null,
           model: route?.model ?? null,
-          maxToolCalls: this.maxToolCalls,
+          maxToolCalls,
           toolNames: toolEvents.map((event) => event.tool.name),
         },
       },
@@ -749,6 +1056,8 @@ export class AgentRunner {
         toolLoop: {
           calls: toolEvents.map((event) => ({
             toolName: event.tool.name,
+            args: event.args,
+            output: event.output,
             source: event.source,
             isError: event.isError,
           })),
@@ -767,14 +1076,20 @@ export class AgentRunner {
     taskFamily?: string;
     providerContext?: import('../llm/gateway.js').ProviderContext;
     route: { providerId: string; model: string };
+    availableTools?: ToolDefinition[];
+    toolContext?: import('../tools/catalog-types.js').ToolExecutionContext;
+    maxToolCalls: number;
   }): Promise<import('../llm/gateway.js').ChatResponse> {
     const messages = [...params.messages];
     const toolEvents: LegacyToolExecutionResult[] = [];
     const toolResultCache = new Map<string, LegacyToolExecutionResult>();
     let aggregatedUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let finalResponse: import('../llm/gateway.js').ChatResponse | null = null;
+    let lastCallKey = '';
+    let consecutiveDupes = 0;
+    const MAX_CONSECUTIVE_DUPES = 3;
 
-    for (let attempt = 0; attempt <= this.maxToolCalls; attempt += 1) {
+    for (let attempt = 0; attempt <= params.maxToolCalls; attempt += 1) {
       const response = await this._gateway.chat({
         messages,
         model: params.model,
@@ -797,14 +1112,46 @@ export class AgentRunner {
       try {
         raw = JSON.parse(response.content);
       } catch {
+        // Re-prompt once for invalid JSON before throwing
+        if (attempt < params.maxToolCalls) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: 'Your response was not valid JSON. Please respond with valid JSON in this format: {"type":"final","content":"your full answer here"}',
+          });
+          continue;
+        }
         throw new Error(`Tool loop response was not valid JSON: ${response.content.slice(0, 200)}`);
       }
-      const parsed = ToolLoopTurnSchema.safeParse(raw);
+      const parsed = ToolLoopTurnSchema.safeParse(normalizeToolLoopResponse(raw));
       if (!parsed.success) {
+        // Re-prompt once for schema failures (e.g. empty content) before throwing
+        if (attempt < params.maxToolCalls) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: 'Your response did not match the required format. The "content" field must be a non-empty string. Please respond with: {"type":"final","content":"your full answer here"}',
+          });
+          continue;
+        }
         throw new Error(`Tool loop response did not match the required JSON contract: ${parsed.error.message}`);
       }
 
       if (parsed.data.type === 'final') {
+        // Guard: if the "final" content is actually raw JSON data (e.g. a tool
+        // result the LLM echoed back), reject it and re-prompt for a real answer.
+        if (attempt < params.maxToolCalls && looksLikeJsonDataPayload(parsed.data.content)) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: [
+              'Your response appears to contain raw data rather than a completed answer.',
+              'Please use the data you gathered to write a proper response.',
+              'Respond with {"type":"final","content":"your full answer here"} only.',
+            ].join('\n\n'),
+          });
+          continue;
+        }
         finalResponse = {
           ...response,
           content: parsed.data.content,
@@ -812,17 +1159,63 @@ export class AgentRunner {
         break;
       }
 
-      if (attempt >= this.maxToolCalls) {
-        throw new Error(`Tool loop exceeded the max of ${this.maxToolCalls} tool calls without a final answer.`);
+      if (attempt >= params.maxToolCalls) {
+        const err = new Error(`Tool loop exceeded the max of ${params.maxToolCalls} tool calls without a final answer.`);
+        (err as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents = toolEvents;
+        throw err;
       }
 
       const toolCall = parsed.data;
       const normalizedArgs = normalizeToolCallArgs(toolCall.args);
       const cacheKey = stableToolCallKey(toolCall.toolName, normalizedArgs);
+
+      // Track consecutive identical tool calls to break infinite loops
+      if (cacheKey === lastCallKey) {
+        consecutiveDupes++;
+      } else {
+        consecutiveDupes = 1;
+        lastCallKey = cacheKey;
+      }
+
+      if (consecutiveDupes > MAX_CONSECUTIVE_DUPES) {
+        // LLM is stuck in a loop — force it to produce a final answer
+        messages.push({ role: 'assistant', content: response.content });
+        messages.push({
+          role: 'user',
+          content: [
+            `You have called ${toolCall.toolName} with the same arguments ${consecutiveDupes} times in a row.`,
+            'You already have the data you need. STOP calling tools.',
+            'Respond with {"type":"final","content":"your complete answer here"} using the data you have gathered so far.',
+          ].join('\n\n'),
+        });
+        continue;
+      }
+
+      const structuredTool = params.availableTools?.find((candidate) => candidate.manifest.name === toolCall.toolName);
       const toolResult = toolResultCache.has(cacheKey)
         ? toolResultCache.get(cacheKey)!
         : await (async () => {
           try {
+            if (structuredTool) {
+              const structuredResult = await executeToolCall(structuredTool, normalizedArgs, params.toolContext);
+              return {
+                tool: {
+                  name: structuredTool.manifest.name,
+                  description: structuredTool.manifest.description,
+                  category: structuredTool.source,
+                  sideEffects: structuredTool.safety.writesState ? 'writes_state' : 'none',
+                  readOnlyHint: structuredTool.safety.readOnly,
+                  destructiveHint: structuredTool.safety.destructive ?? false,
+                  idempotentHint: structuredTool.safety.idempotent ?? false,
+                  openWorldHint: structuredTool.safety.externalSideEffects ?? false,
+                  inputSchema: structuredTool.manifest.parameters,
+                },
+                args: normalizedArgs,
+                output: structuredResult.text,
+                isError: structuredResult.isError,
+                source: structuredTool.source === 'web' ? 'web' : 'local',
+              } satisfies LegacyToolExecutionResult;
+            }
             return await executeToolCall(toolCall.toolName, normalizedArgs, {
               includeWebSearch: this.toolLoopWebSearchEnabled,
             });
@@ -859,13 +1252,20 @@ export class AgentRunner {
     }
 
     if (!finalResponse) {
-      throw new Error('Tool loop ended without a final response.');
+      const err = new Error('Tool loop ended without a final response.');
+      (err as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents = toolEvents;
+      throw err;
     }
 
     return {
       ...finalResponse,
       usage: aggregatedUsage.totalTokens > 0 ? aggregatedUsage : undefined,
-      providerMetadata: this.mergeToolLoopMetadata(finalResponse.providerMetadata, toolEvents, params.route),
+      providerMetadata: this.mergeToolLoopMetadata(
+        finalResponse.providerMetadata,
+        toolEvents,
+        params.route,
+        params.maxToolCalls,
+      ),
     };
   }
 
@@ -913,9 +1313,10 @@ export class AgentRunner {
       stageKey: model ? undefined : stageKey,
       taskFamily,
     });
-    const toolLoopEnabled = params.toolCalling?.enabled === true
-      ? false
-      : this.shouldUseToolLoop(route.providerId, responseFormat);
+    const useStructuredToolCalling = params.toolCalling?.enabled === true && route.providerId !== 'lmstudio';
+    const toolLoopEnabled = (params.toolCalling?.enabled === true && route.providerId === 'lmstudio')
+      || (!useStructuredToolCalling && this.shouldUseToolLoop(route.providerId, responseFormat));
+    const effectiveToolCallBudget = Math.max(1, params.toolCalling?.maxToolCalls ?? this.maxToolCalls);
     const requestedTools = Array.from(new Set([
       ...(params.toolCalling?.requestedTools ?? []),
       ...skills.flatMap((skill) => skill.tools),
@@ -936,13 +1337,12 @@ export class AgentRunner {
     // 4. Compose system prompt
     const systemParts = this.buildSystemPromptParts(charter, skills, memories, params.rosterContext);
     if (toolLoopEnabled) {
-      const toolLoopPart = await this.buildToolLoopPromptPart();
+      const toolLoopPart = await this.buildToolLoopPromptPart(effectiveToolCallBudget);
       if (toolLoopPart) {
         systemParts.push(toolLoopPart);
       }
     }
-    const useNativeLmstudioTools = params.toolCalling?.enabled === true && route.providerId === 'lmstudio';
-    if (availableTools.length > 0 && !useNativeLmstudioTools) {
+    if (availableTools.length > 0 && !useStructuredToolCalling) {
       const toolPrompt = buildToolCatalogPrompt(availableTools);
       systemParts.push({
         channel: 'system',
@@ -1018,11 +1418,11 @@ export class AgentRunner {
         surface: params.trace?.surface ?? null,
         traceId: traceId ?? null,
       };
-      if (availableTools.length > 0 && responseFormat !== 'json' && route.providerId !== 'copilot-cli') {
+      if (availableTools.length > 0 && responseFormat !== 'json' && route.providerId !== 'copilot-cli' && useStructuredToolCalling) {
         const toolConversation: ChatMessage[] = [...messages];
         const seenCalls = new Set<string>();
         const priorToolResults = new Map<string, StructuredToolExecutionResult>();
-        const maxToolCalls = Math.max(1, params.toolCalling?.maxToolCalls ?? 4);
+        const maxToolCalls = effectiveToolCallBudget;
         let aggregatedUsage: {
           promptTokens: number;
           completionTokens: number;
@@ -1031,41 +1431,45 @@ export class AgentRunner {
         let finalResponse: import('../llm/gateway.js').ChatResponse | undefined;
 
         for (let attempt = 0; attempt < maxToolCalls; attempt += 1) {
-          const structured = await this._gateway.chatStructuredWithResponse(
-            {
-              messages: toolConversation,
-              tools: route.providerId === 'lmstudio' ? buildNativeToolDefinitions(availableTools) : undefined,
-              provider,
-              model,
-              temperature,
-              maxTokens,
-              stageKey: model ? undefined : stageKey,
-              taskFamily,
-              disallowedProviderIds: ['copilot-cli'],
-              providerContext,
-            },
-            TOOL_LOOP_RESPONSE_SCHEMA,
-          );
-          lastProviderMetadata = structured.response.providerMetadata;
-          lastProviderId = structured.response.provider;
-          lastModelId = structured.response.model;
+          const structuredResponse = await this._gateway.chat({
+            messages: toolConversation,
+            provider,
+            model,
+            temperature,
+            maxTokens,
+            responseFormat: 'json',
+            stageKey: model ? undefined : stageKey,
+            taskFamily,
+            disallowedProviderIds: ['copilot-cli'],
+            providerContext,
+          });
+          lastProviderMetadata = structuredResponse.providerMetadata;
+          lastProviderId = structuredResponse.provider;
+          lastModelId = structuredResponse.model;
 
-          if (structured.response.usage) {
+          if (structuredResponse.usage) {
             aggregatedUsage = aggregatedUsage ?? {
               promptTokens: 0,
               completionTokens: 0,
               totalTokens: 0,
             };
-            aggregatedUsage.promptTokens += structured.response.usage.promptTokens;
-            aggregatedUsage.completionTokens += structured.response.usage.completionTokens;
-            aggregatedUsage.totalTokens += structured.response.usage.totalTokens;
+            aggregatedUsage.promptTokens += structuredResponse.usage.promptTokens;
+            aggregatedUsage.completionTokens += structuredResponse.usage.completionTokens;
+            aggregatedUsage.totalTokens += structuredResponse.usage.totalTokens;
+          }
+
+          const structured = TOOL_LOOP_RESPONSE_SCHEMA.safeParse(
+            normalizeToolLoopResponse(parseStructuredJson(structuredResponse.content)),
+          );
+          if (!structured.success) {
+            throw new Error(`LLM response does not match schema: ${structured.error.message}`);
           }
 
           if (structured.data.type === 'final') {
             finalResponse = {
-              ...structured.response,
+              ...structuredResponse,
               content: structured.data.content ?? '',
-              usage: aggregatedUsage ?? structured.response.usage,
+              usage: aggregatedUsage ?? structuredResponse.usage,
             };
             break;
           }
@@ -1140,6 +1544,9 @@ export class AgentRunner {
             taskFamily,
             providerContext,
             route,
+            availableTools,
+            toolContext,
+            maxToolCalls: effectiveToolCallBudget,
           })
           : await this._gateway.chat({
             messages,
@@ -1160,18 +1567,30 @@ export class AgentRunner {
           ? (error as Error & { providerMetadata?: import('../llm/gateway.js').ProviderMetadata }).providerMetadata
           : undefined;
         const traceProviderMetadata = providerMetadata ?? lastProviderMetadata;
-        const failedTraceMetadata = availableTools.length > 0 || toolCalls.length > 0
+        // Recover tool events from runWithToolLoop errors so they appear in the trace
+        const legacyToolEvents = error instanceof Error
+          ? (error as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents ?? []
+          : [];
+        const recoveredToolCalls: ToolCallTrace[] = legacyToolEvents.map((event) => ({
+          toolName: event.tool.name,
+          args: event.args ?? {},
+          source: event.source ?? 'unknown',
+          isError: event.isError === true,
+          resultText: event.output ?? '',
+        }));
+        const allToolCalls = [...toolCalls, ...recoveredToolCalls];
+        const failedTraceMetadata = availableTools.length > 0 || allToolCalls.length > 0
           ? {
             ...(availableTools.length > 0
               ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
               : {}),
             ...(params.toolCalling?.enabled === true
-              ? {
-                toolCallCount: toolCalls.length,
-                toolCallBudget: Math.max(1, params.toolCalling?.maxToolCalls ?? 4),
-              }
+                ? {
+                  toolCallCount: allToolCalls.length,
+                  toolCallBudget: effectiveToolCallBudget,
+                }
               : {}),
-            ...(toolCalls.length > 0 ? { toolCalls } : {}),
+            ...(allToolCalls.length > 0 ? { toolCalls: allToolCalls } : {}),
           }
           : null;
         params.trace?.repo.failLlmTrace(traceId, {
@@ -1188,6 +1607,15 @@ export class AgentRunner {
           providerResponse: traceProviderMetadata?.responseEnvelope,
         });
       }
+      if (traceId && error instanceof Error) {
+        const tracedError = error as Error & { traceId?: string; traceUrl?: string };
+        if (!tracedError.traceId) {
+          tracedError.traceId = traceId;
+        }
+        if (!tracedError.traceUrl) {
+          tracedError.traceUrl = `/traces/${traceId}`;
+        }
+      }
       throw error;
     }
 
@@ -1201,10 +1629,10 @@ export class AgentRunner {
             ? { availableTools: availableTools.map((tool) => tool.manifest.name) }
             : {}),
           ...(params.toolCalling?.enabled === true
-            ? {
-              toolCallCount: toolCalls.length + providerToolCalls.length,
-              toolCallBudget: Math.max(1, params.toolCalling?.maxToolCalls ?? 4),
-            }
+              ? {
+                toolCallCount: toolCalls.length + providerToolCalls.length,
+                toolCallBudget: effectiveToolCallBudget,
+              }
             : {}),
           ...((toolCalls.length > 0 || providerToolCalls.length > 0)
             ? { toolCalls: [...toolCalls, ...providerToolCalls] }
