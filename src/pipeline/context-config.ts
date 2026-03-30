@@ -27,8 +27,8 @@ export const CONTEXT_CONFIG: Record<string, StageContextEntry> = {
   generatePrompt:   { primary: 'idea.md',               include: [] },
   composePanel:     { primary: 'discussion-prompt.md',  include: ['idea.md'] },
   runDiscussion:    { primary: 'discussion-prompt.md',  include: [] },  // panel-composition injected separately
-  writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
-  runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+  writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'article-contract.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+  runEditor:        { primary: 'draft.md',              include: ['idea.md', 'article-contract.md', 'discussion-summary.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
   runPublisherPass: { primary: 'draft.md',              include: ['editor-review.md', 'roster-context.md'] },
 };
 
@@ -38,8 +38,8 @@ export const CONTEXT_CONFIG_PRESETS: Record<ContextPreset, Record<string, StageC
     generatePrompt:   { primary: 'idea.md',               include: ['roster-context.md'] },
     composePanel:     { primary: 'discussion-prompt.md',  include: ['idea.md', 'roster-context.md'] },
     runDiscussion:    { primary: 'discussion-prompt.md',  include: ['idea.md', 'panel-composition.md', 'roster-context.md'] },
-    writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
-    runEditor:        { primary: 'draft.md',              include: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+    writeDraft:       { primary: 'discussion-summary.md', include: ['idea.md', 'article-contract.md', 'discussion-prompt.md', 'panel-composition.md', 'editor-review.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
+    runEditor:        { primary: 'draft.md',              include: ['idea.md', 'article-contract.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'panel-factcheck.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
     runPublisherPass: { primary: 'draft.md',              include: ['idea.md', 'discussion-summary.md', 'editor-review.md', 'roster-context.md', 'fact-check-context.md', 'writer-factcheck.md'] },
   },
 };

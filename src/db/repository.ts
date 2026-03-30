@@ -1110,6 +1110,7 @@ export class Repository {
       { pattern: /^panel-composition\.md$/, stage: 3 },
       { pattern: /^panel-.*\.md$/, stage: 4 },           // individual panelist contributions
       { pattern: /^discussion-summary\.md$/, stage: 4 },
+      { pattern: /^article-contract\.md$/, stage: 4 },
       { pattern: /^draft\.md$/, stage: 5 },
       { pattern: /^writer-factcheck\.md$/, stage: 5 },
       { pattern: /^editor-review(-\d+)?\.md$/, stage: 6 }, // numbered reviews too

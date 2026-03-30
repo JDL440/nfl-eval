@@ -357,6 +357,9 @@ describe('E2E: Full Pipeline', () => {
     expect(f.repo.artifacts.get(slug, 'discussion-summary.md')).toBeTruthy();
     expect(f.repo.getArticle(slug)!.current_stage).toBe(4);
 
+    // Write article-contract.md after discussion-summary for 4→5 guard
+    writeArticleFile(f, slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n800 words');
+
     // ── Stage 4→5: writeDraft ──
     mock.setStage(4);
     const r4 = await executeTransition(slug, 4 as Stage, f.ctx);
@@ -400,9 +403,12 @@ describe('E2E: Full Pipeline', () => {
     const transitions = f.repo.getStageTransitions(slug);
     expect(transitions.length).toBeGreaterThanOrEqual(8);
 
-    // ── Verify memory was stored ──
+    // ── Memory: auto-store is deprecated; runner no longer promotes generic
+    //    model output into memory. The system still works but requires explicit
+    //    store calls from surfaces that have curated content.
+    // Verify memory infrastructure is wired up (stats returns empty array, not error)
     const stats = f.memory.stats();
-    expect(stats.length).toBeGreaterThan(0);
+    expect(Array.isArray(stats)).toBe(true);
   });
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -574,12 +580,18 @@ describe('E2E: Full Pipeline', () => {
 
     // 3. Test the 800-word draft guard at stage 5
     // Fast-forward to stage 5 via direct DB manipulation
-    f.repo.advanceStage(slug, 2, 3 as Stage, 'test');
-    f.repo.advanceStage(slug, 3, 4 as Stage, 'test');
-    f.repo.advanceStage(slug, 4, 5 as Stage, 'test');
     writeArticleFile(f, slug, 'discussion-prompt.md', '# Prompt');
     writeArticleFile(f, slug, 'panel-composition.md', '# Panel');
     writeArticleFile(f, slug, 'discussion-summary.md', '# Summary');
+    writeArticleFile(
+      f,
+      slug,
+      'article-contract.md',
+      '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n900 words',
+    );
+    f.repo.advanceStage(slug, 2, 3 as Stage, 'test');
+    f.repo.advanceStage(slug, 3, 4 as Stage, 'test');
+    f.repo.advanceStage(slug, 4, 5 as Stage, 'test');
 
     // Short draft — guard should fail
     writeArticleFile(f, slug, 'draft.md', 'Only a few words here.');
@@ -695,19 +707,30 @@ describe('E2E: Full Pipeline', () => {
   // 8. Agent memory persistence
   // ────────────────────────────────────────────────────────────────────────────
 
-  it('should persist agent memories across pipeline runs', async () => {
+  it('should have working memory infrastructure across pipeline runs', async () => {
     const slug = 'memory-test';
     f.repo.createArticle({ id: slug, title: 'Memory Persistence Test' });
     writeArticleFile(f, slug, 'idea.md', '# Memory Test\nTest idea for memory.');
 
-    // Run a stage transition — runner stores a learning memory
+    // Run a stage transition
     await executeTransition(slug, 1 as Stage, f.ctx);
 
-    // Check that memory was stored for the lead agent
+    // Runner no longer auto-stores memories (deprecated). Verify that the
+    // memory infrastructure is wired up and callable without errors.
     const leadMemories = f.memory.recall('lead');
-    expect(leadMemories.length).toBeGreaterThan(0);
-    expect(leadMemories.some(m => m.category === 'learning')).toBe(true);
-    expect(leadMemories.some(m => m.content.includes('memory-test'))).toBe(true);
+    expect(Array.isArray(leadMemories)).toBe(true);
+
+    // Manually store a memory to verify the store → recall round-trip works
+    f.memory.store({
+      agentName: 'lead',
+      category: 'learning',
+      content: `Learned from memory-test pipeline run`,
+    });
+
+    const afterStore = f.memory.recall('lead');
+    expect(afterStore.length).toBeGreaterThan(0);
+    expect(afterStore.some(m => m.category === 'learning')).toBe(true);
+    expect(afterStore.some(m => m.content.includes('memory-test'))).toBe(true);
   });
 
   // ────────────────────────────────────────────────────────────────────────────

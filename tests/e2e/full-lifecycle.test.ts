@@ -166,6 +166,7 @@ describe('Full lifecycle: Stage 1 → 8', () => {
 
   it('advances 4→5 after writing discussion-summary.md', async () => {
     writeArtifact(slug, 'discussion-summary.md', '# Summary\n\nThe panel concluded...');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n800 words');
 
     const res = await htmxAdvance(slug);
     expect(res.status).toBe(200);
@@ -292,6 +293,7 @@ describe('Editor review variants', () => {
     writeArtifact(slug, 'panel-composition.md', '# Panel');
     repo.advanceStage(slug, 3, 4, 'test');
     writeArtifact(slug, 'discussion-summary.md', '# Summary');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n900 words');
     repo.advanceStage(slug, 4, 5, 'test');
     writeArtifact(slug, 'draft.md', buildValidDraft(900, 'Draft'));
     repo.advanceStage(slug, 5, 6, 'test');
@@ -379,6 +381,7 @@ describe('JSON API advance: full lifecycle', () => {
 
     // 4→5
     writeArtifact(slug, 'discussion-summary.md', '# Summary');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n1000 words');
     res = await postJson(`/api/articles/${slug}/advance`, { to_stage: 5 });
     expect(res.status).toBe(200);
 
@@ -416,6 +419,7 @@ describe('Draft word count boundary', () => {
     writeArtifact(slug, 'panel-composition.md', '# Panel');
     repo.advanceStage(slug, 3, 4, 'test');
     writeArtifact(slug, 'discussion-summary.md', '# Summary');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n200 words');
     repo.advanceStage(slug, 4, 5, 'test');
   });
 
@@ -448,6 +452,7 @@ describe('Publisher pass artifact guard', () => {
     writeArtifact(slug, 'panel-composition.md', '# Panel');
     repo.advanceStage(slug, 3, 4, 'test');
     writeArtifact(slug, 'discussion-summary.md', '# Summary');
+    writeArtifact(slug, 'article-contract.md', '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n850 words');
     repo.advanceStage(slug, 4, 5, 'test');
     writeArtifact(slug, 'draft.md', buildValidDraft(850, 'Draft'));
     repo.advanceStage(slug, 5, 6, 'test');

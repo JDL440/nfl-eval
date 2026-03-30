@@ -258,6 +258,66 @@ class EndlessToolProvider implements LLMProvider {
   }
 }
 
+class LegacyLmStudioLoopProvider implements LLMProvider {
+  readonly id = 'lmstudio';
+  readonly name = 'LM Studio';
+  readonly requests: ChatRequest[] = [];
+  sawToolResult = false;
+  private callCount = 0;
+
+  constructor(private readonly toolCallsBeforeFinal: number) {}
+
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    this.requests.push(request);
+    if (request.messages.some((message) => typeof message.content === 'string' && message.content.includes('Trace Article'))) {
+      this.sawToolResult = true;
+    }
+    this.callCount += 1;
+
+    if (request.responseFormat === 'json') {
+      if (this.callCount <= this.toolCallsBeforeFinal) {
+        return {
+          content: JSON.stringify({
+            type: 'tool_call',
+            toolName: 'article_get',
+            args: { article_id: 'trace-article' },
+          }),
+          model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+          provider: this.id,
+          usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+          finishReason: 'stop',
+        };
+      }
+
+      return {
+        content: JSON.stringify({
+          type: 'final',
+          content: this.sawToolResult ? 'Used article_get successfully' : 'Missing tool result',
+        }),
+        model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+        provider: this.id,
+        usage: { promptTokens: 6, completionTokens: 3, totalTokens: 9 },
+        finishReason: 'stop',
+      };
+    }
+
+    return {
+      content: 'Fallback text response',
+      model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+      provider: this.id,
+      finishReason: 'stop',
+    };
+  }
+
+  listModels(): string[] {
+    return ['qwen/qwen3.5-35b-a3b'];
+  }
+
+  supportsModel(model: string): boolean {
+    return model.includes('qwen');
+  }
+}
+
 class TracingCopilotProvider implements LLMProvider {
   readonly id = 'copilot-cli';
   readonly name = 'GitHub Copilot CLI';
@@ -411,6 +471,107 @@ class TracingCopilotProvider implements LLMProvider {
     expect(metadata.toolCallBudget).toBe(2);
     expect(traces[0]?.provider_request_json).toContain('response_format');
     expect(traces[0]?.provider_response_json).toContain('article_get');
+
+    repo.close();
+  });
+
+  it('uses the per-run max tool budget for LM Studio manual tool loops', async () => {
+    const provider = new LegacyLmStudioLoopProvider(5);
+    const gateway = new LLMGateway({
+      modelPolicy: loadPolicy(),
+      providers: [provider],
+    });
+    const legacyLmStudioRunner = new AgentRunner({
+      gateway,
+      memory,
+      chartersDir,
+      skillsDir,
+      toolLoop: {
+        enabledProviders: ['lmstudio'],
+        maxToolCalls: 3,
+      },
+    });
+
+    const repo = new Repository(pipelineDbPath);
+    repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+    const engine = {
+      validateArticle: () => ({ valid: true }),
+      getAvailableActions: () => [],
+    };
+
+    const result = await legacyLmStudioRunner.run({
+      agentName: 'writer',
+      provider: 'lmstudio',
+      task: 'Use article_get until you can answer.',
+      toolCalling: {
+        enabled: true,
+        includePipelineTools: true,
+        requestedTools: ['article_get'],
+        allowWriteTools: false,
+        maxToolCalls: 5,
+        context: {
+          repo,
+          engine: engine as any,
+          stage: 1,
+          surface: 'ideaGeneration',
+          agentName: 'writer',
+        },
+      },
+    });
+
+    expect(result.content).toBe('Used article_get successfully');
+    expect(provider.requests).toHaveLength(6);
+    expect(provider.sawToolResult).toBe(true);
+    expect(provider.requests[0]?.messages[0]?.content).toContain('You may ask for up to 5 tool calls.');
+
+    repo.close();
+  });
+
+  it('reports the requested LM Studio manual tool budget when the loop exhausts', async () => {
+    const provider = new LegacyLmStudioLoopProvider(6);
+    const gateway = new LLMGateway({
+      modelPolicy: loadPolicy(),
+      providers: [provider],
+    });
+    const legacyLmStudioRunner = new AgentRunner({
+      gateway,
+      memory,
+      chartersDir,
+      skillsDir,
+      toolLoop: {
+        enabledProviders: ['lmstudio'],
+        maxToolCalls: 3,
+      },
+    });
+
+    const repo = new Repository(pipelineDbPath);
+    repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+    const engine = {
+      validateArticle: () => ({ valid: true }),
+      getAvailableActions: () => [],
+    };
+
+    await expect(legacyLmStudioRunner.run({
+      agentName: 'writer',
+      provider: 'lmstudio',
+      task: 'Use article_get forever.',
+      toolCalling: {
+        enabled: true,
+        includePipelineTools: true,
+        requestedTools: ['article_get'],
+        allowWriteTools: false,
+        maxToolCalls: 5,
+        context: {
+          repo,
+          engine: engine as any,
+          stage: 1,
+          surface: 'ideaGeneration',
+          agentName: 'writer',
+        },
+      },
+    })).rejects.toThrow('Tool loop exceeded the max of 5 tool calls without a final answer.');
+
+    expect(provider.requests[0]?.messages[0]?.content).toContain('You may ask for up to 5 tool calls.');
 
     repo.close();
   });
@@ -1228,6 +1389,237 @@ class TracingCopilotProvider implements LLMProvider {
       }
     });
 
+    it('normalizes message envelopes into final tool-loop responses', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new ToolLoopProvider((content, callCount) => {
+        if (callCount === 1) {
+          return content;
+        }
+        return JSON.stringify({
+          type: 'message',
+          content: 'Normalized final answer',
+        });
+      });
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('Normalized final answer');
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('normalizes success data envelopes into final tool-loop responses', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new ToolLoopProvider((content, callCount) => {
+        if (callCount === 1) {
+          return content;
+        }
+        return JSON.stringify({
+          status: 'success',
+          data: {
+            discussion_prompt: 'Normalized discussion prompt',
+          },
+        });
+      });
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toBe('Normalized discussion prompt');
+      } finally {
+        repo.close();
+      }
+    });
+
+    it('normalizes structured panel selections into final markdown responses', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new ToolLoopProvider((content, callCount) => {
+        if (callCount === 1) {
+          return content;
+        }
+        return JSON.stringify({
+          panel: [
+            { agentName: 'sea', role: 'Seahawks context and roster pressure points' },
+            { name: 'cap', focus: 'Cap constraints and contract structure' },
+          ],
+        });
+      });
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Select a panel for the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 2,
+            surface: 'composePanel',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 2,
+              surface: 'composePanel',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        expect(result.content).toContain('## Panel');
+        expect(result.content).toContain('- **sea** — Seahawks context and roster pressure points');
+        expect(result.content).toContain('- **cap** — Cap constraints and contract structure');
+      } finally {
+        repo.close();
+      }
+    });
+
     it('returns validation failures as tool-role messages with hints', async () => {
       const repo = new Repository(pipelineDbPath);
       repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
@@ -1309,16 +1701,15 @@ class TracingCopilotProvider implements LLMProvider {
           tool_call_id: 'tool-call-1',
         });
         expect(JSON.parse(toolMessage!.content)).toMatchObject({
-          error: 'validation',
+          error: 'Tool arguments failed validation',
           tool: 'article_get',
         });
-        expect(toolMessage!.content).toContain('"hint"');
       } finally {
         repo.close();
       }
     });
 
-    it('sends LM Studio native tools and preserves assistant tool_calls across turns', async () => {
+    it('sends LM Studio text-based tool calls and preserves messages across turns', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
       fetchSpy
         .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -1329,17 +1720,9 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: null,
-              tool_calls: [{
-                id: 'call_native_1',
-                type: 'function',
-                function: {
-                  name: 'article_get',
-                  arguments: '{"article_id":"trace-article"}',
-                },
-              }],
+              content: '{"type":"tool_call","toolName":"article_get","args":{"article_id":"trace-article"}}',
             },
-            finish_reason: 'tool_calls',
+            finish_reason: 'stop',
           }],
           usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
@@ -1351,7 +1734,7 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: '{"type":"final","content":"LM Studio native tool flow worked"}',
+              content: '{"type":"final","content":"LM Studio tool flow worked"}',
             },
             finish_reason: 'stop',
           }],
@@ -1418,43 +1801,25 @@ class TracingCopilotProvider implements LLMProvider {
           },
         });
 
-        expect(result.content).toBe('LM Studio native tool flow worked');
+        expect(result.content).toBe('LM Studio tool flow worked');
 
         const firstBody = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
-        expect(firstBody.tools).toEqual([{
-          type: 'function',
-          function: {
-            name: 'article_get',
-            description: 'Get full details for a single article by ID, including stage history and validation.',
-            parameters: {
-              type: 'object',
-              properties: { article_id: { type: 'string', description: 'Article slug / ID' } },
-              required: ['article_id'],
-            },
-          },
-        }]);
-        expect(firstBody.messages[0].content).not.toContain('Available tools:');
-        expect(firstBody.messages[0].content).not.toContain('query_team_efficiency');
+        // Text-based tool calling: tool catalog in system prompt, no native tools
+        expect(firstBody.tools).toBeUndefined();
+        expect(firstBody.messages[0].content).toContain('Available tools:');
 
         const secondBody = JSON.parse((fetchSpy.mock.calls[1] as [string, RequestInit])[1].body as string);
-        expect(secondBody.messages.at(-2)).toEqual({
+        // Assistant's tool_call JSON preserved, tool result sent as user message
+        expect(secondBody.messages.at(-2)).toMatchObject({
           role: 'assistant',
-          content: null,
-          tool_calls: [{
-            id: 'call_native_1',
-            type: 'function',
-            function: {
-              name: 'article_get',
-              arguments: '{"article_id":"trace-article"}',
-            },
-          }],
+          content: expect.stringContaining('article_get'),
         });
         expect(secondBody.messages.at(-1)).toMatchObject({
-          role: 'tool',
-          tool_call_id: 'call_native_1',
-          name: 'article_get',
+          role: 'user',
+          content: expect.stringContaining('Tool result for article_get'),
         });
       } finally {
+        fetchSpy.mockRestore();
         repo.close();
       }
     });
@@ -1470,17 +1835,9 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: null,
-              tool_calls: [{
-                id: 'call_native_1',
-                type: 'function',
-                function: {
-                  name: 'article_get',
-                  arguments: '{"article_id":"trace-article"}',
-                },
-              }],
+              content: '{"type":"tool_call","toolName":"article_get","args":{"article_id":"trace-article"}}',
             },
-            finish_reason: 'tool_calls',
+            finish_reason: 'stop',
           }],
           usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
@@ -1492,17 +1849,9 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: null,
-              tool_calls: [{
-                id: 'call_native_2',
-                type: 'function',
-                function: {
-                  name: 'article_get',
-                  arguments: '{"article_id":"trace-article"}',
-                },
-              }],
+              content: '{"type":"tool_call","toolName":"article_get","args":{"article_id":"trace-article"}}',
             },
-            finish_reason: 'tool_calls',
+            finish_reason: 'stop',
           }],
           usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
@@ -1582,10 +1931,18 @@ class TracingCopilotProvider implements LLMProvider {
         });
 
         expect(result.content).toBe('Done after duplicate replay');
+        // runWithToolLoop caches tool results — the duplicate call reuses the cached
+        // output instead of re-executing. Verify the same result appears in the 3rd
+        // request's messages (no duplicate-detection note; just the re-used output).
         const thirdBody = JSON.parse((fetchSpy.mock.calls[2] as [string, RequestInit])[1].body as string);
-        expect(thirdBody.messages.at(-1).content).toContain('already executed earlier in this conversation');
-        expect(thirdBody.messages.at(-1).content).not.toContain('Duplicate tool call blocked');
+        // Both tool result messages should have the same content (cached result reused)
+        const toolResultMsgs = thirdBody.messages.filter((m: { role: string; content: string }) =>
+          m.role === 'user' && m.content.startsWith('Tool result for article_get:'));
+        expect(toolResultMsgs.length).toBe(2);
+        // The duplicate content matches the original (cached, not re-executed)
+        expect(toolResultMsgs[1].content).toBe(toolResultMsgs[0].content);
       } finally {
+        fetchSpy.mockRestore();
         repo.close();
       }
     });

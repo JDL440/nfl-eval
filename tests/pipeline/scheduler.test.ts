@@ -85,6 +85,7 @@ describe('PipelineScheduler', () => {
       repo.artifacts.put('published', 'panel-composition.md', 'panel');
       engine.advance('published', 3 as Stage);
       repo.artifacts.put('published', 'discussion-summary.md', 'summary');
+      repo.artifacts.put('published', 'article-contract.md', 'contract');
       engine.advance('published', 4 as Stage);
       repo.artifacts.put('published', 'draft.md', buildValidDraft(900));
       engine.advance('published', 5 as Stage);

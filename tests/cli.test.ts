@@ -123,7 +123,7 @@ describe('CLI', () => {
       initDataDir(tmpDir);
       mkdirSync(join(tmpDir, 'agents', 'charters', 'nfl'), { recursive: true });
       writeFileSync(join(tmpDir, 'agents', 'charters', 'nfl', 'lead.md'), '# Legacy lead prompt');
-      writeFileSync(join(tmpDir, 'agents', 'skills', 'editor-review.md'), '# Custom non-core skill');
+      writeFileSync(join(tmpDir, 'agents', 'skills', 'my-custom-skill.md'), '# Custom non-core skill');
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await handleRefreshPrompts();
@@ -132,7 +132,7 @@ describe('CLI', () => {
       expect(allOutput).toContain('Core runtime prompts refreshed');
       expect(allOutput).toContain('Updated:');
       expect(readFileSync(join(tmpDir, 'agents', 'charters', 'nfl', 'lead.md'), 'utf-8')).not.toBe('# Legacy lead prompt');
-      expect(readFileSync(join(tmpDir, 'agents', 'skills', 'editor-review.md'), 'utf-8')).toBe('# Custom non-core skill');
+      expect(readFileSync(join(tmpDir, 'agents', 'skills', 'my-custom-skill.md'), 'utf-8')).toBe('# Custom non-core skill');
       logSpy.mockRestore();
     });
 

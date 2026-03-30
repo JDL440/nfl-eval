@@ -44,6 +44,7 @@ describe('exportArticle', () => {
     const repo = new Repository(dbPath);
     repo.createArticle({ id: 'test-export', title: 'Export Test', subtitle: 'Sub' });
     repo.artifacts.put('test-export', 'idea.md', '# My Idea');
+    repo.artifacts.put('test-export', 'article-contract.md', '# Contract');
     repo.artifacts.put('test-export', 'draft.md', '# My Draft');
     repo.close();
 
@@ -51,6 +52,7 @@ describe('exportArticle', () => {
 
     expect(result.exported).toContain('metadata.json');
     expect(result.exported).toContain('idea.md');
+    expect(result.exported).toContain('article-contract.md');
     expect(result.exported).toContain('draft.md');
 
     // Verify metadata contents
@@ -60,6 +62,7 @@ describe('exportArticle', () => {
 
     // Verify artifact contents
     expect(readFileSync(join(outputDir, 'idea.md'), 'utf-8')).toBe('# My Idea');
+    expect(readFileSync(join(outputDir, 'article-contract.md'), 'utf-8')).toBe('# Contract');
     expect(readFileSync(join(outputDir, 'draft.md'), 'utf-8')).toBe('# My Draft');
   });
 

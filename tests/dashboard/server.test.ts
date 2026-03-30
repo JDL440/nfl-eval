@@ -7,6 +7,7 @@ import {
   APP_TOOL_LOOP_PROVIDER_IDS,
   buildDashboardToolLoopOptions,
   createApp,
+  getAutoAdvanceArticleFlash,
 } from '../../src/dashboard/server.js';
 import type { AppConfig } from '../../src/config/index.js';
 import { addConversationTurn, addRevisionSummary } from '../../src/pipeline/conversation.js';
@@ -72,6 +73,53 @@ describe('Dashboard Server', () => {
     expect(APP_TOOL_LOOP_PROVIDER_IDS).toContain('lmstudio');
     expect(APP_TOOL_LOOP_PROVIDER_IDS).toContain('copilot');
     expect(APP_TOOL_LOOP_PROVIDER_IDS).not.toContain('copilot-cli');
+  });
+
+  describe('auto-advance detail banner', () => {
+    it('shows an in-progress message while background auto-advance is still running', () => {
+      expect(getAutoAdvanceArticleFlash({
+        from: 'auto-advance',
+        currentStage: 1,
+        status: 'proposed',
+        isRunning: true,
+      })).toEqual({
+        flashMessage: '🚀 Auto-advance is running — live sections will refresh as each stage completes.',
+      });
+    });
+
+    it('shows a completion message only after the background run finishes', () => {
+      expect(getAutoAdvanceArticleFlash({
+        from: 'auto-advance',
+        currentStage: 7,
+        status: 'review',
+        isRunning: false,
+      })).toEqual({
+        flashMessage: '🚀 Auto-advance complete — article is at Stage 7 (Publisher Pass)',
+      });
+    });
+
+    it('shows the lead-review pause message after auto-advance stops there', () => {
+      expect(getAutoAdvanceArticleFlash({
+        from: 'auto-advance',
+        currentStage: 6,
+        status: 'needs_lead_review',
+        isRunning: false,
+      })).toEqual({
+        flashMessage: '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.',
+      });
+    });
+
+    it('surfaces explicit auto-advance failures from the query string', () => {
+      expect(getAutoAdvanceArticleFlash({
+        from: 'auto-advance',
+        error: 'Guard failed',
+        currentStage: 3,
+        status: 'drafting',
+        isRunning: false,
+      })).toEqual({
+        errorMessage: 'Auto-advance failed: Guard failed',
+      });
+    });
   });
 
   function seedOlderCopilotUsage(articleId: string): void {
@@ -895,12 +943,14 @@ describe('Dashboard Server', () => {
     it('renders artifact tabs with htmx attributes', async () => {
       repo.createArticle({ id: 'tabs-test', title: 'Tabs Test' });
       repo.artifacts.put('tabs-test', 'idea.thinking.md', 'Persisted planning trace');
+      repo.artifacts.put('tabs-test', 'article-contract.md', '# Contract\n\nKeep the evidence anchors explicit.');
 
       const res = await app.request('/articles/tabs-test');
       const html = await res.text();
       expect(html).toContain('tab-bar');
       expect(html).toContain('tab-btn');
       expect(html).toContain('hx-get="/htmx/articles/tabs-test/artifact/idea.md"');
+      expect(html).toContain('hx-get="/htmx/articles/tabs-test/artifact/article-contract.md"');
       expect(html).toContain('artifact-trace-badge');
       expect(html).toContain('Artifacts');
     });
@@ -958,8 +1008,9 @@ describe('Dashboard Server', () => {
       repo.startStageRun({
         articleId: 'no-runs-ui',
         stage: 2,
-        status: 'running',
-        startedBy: 'tester',
+        surface: 'generatePrompt',
+        actor: 'tester',
+        status: 'started',
       });
 
       const res = await app.request('/articles/no-runs-ui');

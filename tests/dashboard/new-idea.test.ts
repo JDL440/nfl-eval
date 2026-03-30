@@ -9,6 +9,7 @@ import {
   renderIdeaSuccess,
   generateSlug,
   extractTitleFromIdea,
+  renderIdeaErrorStatus,
   renderNewIdeaPage,
 } from '../../src/dashboard/views/new-idea.js';
 
@@ -165,6 +166,48 @@ describe('renderNewIdeaPage', () => {
     expect(html).toContain('saved on the article and reused for later LLM stages');
     expect(html).toContain('<strong>copilot</strong> = GitHub Copilot Pro+ via GitHub Models API');
     expect(html).toContain('<strong>copilot-cli</strong> = GitHub Copilot CLI agent');
+  });
+
+  it('embeds trace-aware error rendering for failed idea creation', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
+    expect(html).toContain('const renderIdeaErrorStatus =');
+    expect(html).toContain('status.innerHTML = renderIdeaErrorStatus(data);');
+    expect(html).toContain('Need the failure trace?');
+  });
+
+  it('embeds the auto-advance handoff for the created article detail page', () => {
+    const html = renderNewIdeaPage({ labName: 'NFL Lab' });
+    expect(html).toContain("const articleUrl = '/articles/' + data.id + (data.autoAdvance ? '?from=auto-advance' : '');");
+    expect(html).toContain('Running auto-advance pipeline…');
+    expect(html).toContain("fetch('/api/articles/' + data.id + '/auto-advance', { method: 'POST' }).catch(() => {});");
+  });
+});
+
+describe('renderIdeaErrorStatus', () => {
+  it('includes trace details when the API returns them', () => {
+    const html = renderIdeaErrorStatus({
+      error: 'Schema validation failed',
+      traceId: 'trace-123',
+      traceUrl: '/traces/trace-123',
+    });
+
+    expect(html).toContain('Schema validation failed');
+    expect(html).toContain('Trace ID: <code>trace-123</code>');
+    expect(html).toContain('href="/traces/trace-123"');
+    expect(html).toContain('Open trace');
+  });
+
+  it('escapes error and trace values before rendering', () => {
+    const html = renderIdeaErrorStatus({
+      error: 'boom <script>alert(1)</script>',
+      traceId: 'trace-<bad>',
+      traceUrl: '/traces/"bad"',
+    });
+
+    expect(html).toContain('boom &lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).toContain('Trace ID: <code>trace-&lt;bad&gt;</code>');
+    expect(html).toContain('href="/traces/&quot;bad&quot;"');
+    expect(html).not.toContain('<script>alert(1)</script>');
   });
 });
 
@@ -615,6 +658,119 @@ Trace content.`,
       expect(traces[0].stage_run_id).toBe(stageRuns[0].id);
       expect(usageEvents[0]?.stage_run_id).toBe(stageRuns[0].id);
     });
+
+    it('returns trace metadata when idea creation fails after the trace starts', async () => {
+      const mockTraceId = repo.startLlmTrace({
+        stage: 1,
+        surface: 'ideaGeneration',
+        agentName: 'lead',
+        requestedModel: 'mock-model',
+        systemPrompt: 'Idea system prompt',
+        userMessage: 'Idea user prompt',
+      });
+
+      const failingRunner = {
+        gateway: {
+          listProviders: () => [],
+          getProvider: () => undefined,
+        },
+        listAgents: () => [],
+        run: async () => ({
+          content: `# Article Idea: Broken Persist
+
+## Working Title
+Broken Persist
+
+## Angle / Tension
+Trace should still be surfaced.`,
+          model: 'mock-model',
+          provider: 'mock',
+          agentName: 'lead',
+          memoriesUsed: 0,
+          traceId: mockTraceId,
+        }),
+      };
+      const mockActionContext = {
+        repo,
+        engine: {} as any,
+        runner: failingRunner as any,
+        auditor: {} as any,
+        config: makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+      };
+      const traceApp = createApp(
+        repo,
+        makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+        { actionContext: mockActionContext },
+      );
+      const createSpy = vi.spyOn(repo, 'createArticle').mockImplementation(() => {
+        throw new Error('database write failed');
+      });
+
+      try {
+        const res = await traceApp.request('/api/ideas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: 'Create an idea, then fail after the trace starts',
+            teams: ['SEA'],
+            depthLevel: 2,
+          }),
+        });
+
+        expect(res.status).toBe(500);
+        const body = await res.json() as { error: string; traceId: string | null; traceUrl: string | null };
+        expect(body.error).toContain('database write failed');
+        expect(body.traceId).toBe(mockTraceId);
+        expect(body.traceUrl).toBe(`/traces/${mockTraceId}`);
+      } finally {
+        createSpy.mockRestore();
+      }
+    });
+
+    it('returns trace metadata when the runner throws after creating a trace', async () => {
+      const failingRunner = {
+        gateway: {
+          listProviders: () => [],
+          getProvider: () => undefined,
+        },
+        listAgents: () => [],
+        run: async () => {
+          const error = new Error('tool loop blew up');
+          (error as Error & { traceId?: string; traceUrl?: string }).traceId = 'trace-runner-failure';
+          (error as Error & { traceId?: string; traceUrl?: string }).traceUrl = '/traces/trace-runner-failure';
+          throw error;
+        },
+      };
+      const mockActionContext = {
+        repo,
+        engine: {} as any,
+        runner: failingRunner as any,
+        auditor: {} as any,
+        config: makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+      };
+      const traceApp = createApp(
+        repo,
+        makeTestConfig({ dbPath: join(tempDir, 'test.db'), articlesDir, dataDir: tempDir }),
+        { actionContext: mockActionContext },
+      );
+
+      const res = await traceApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Create an idea and fail during generation',
+          teams: ['SEA'],
+          depthLevel: 2,
+        }),
+      });
+
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toMatchObject({
+        error: 'tool loop blew up',
+        traceId: 'trace-runner-failure',
+        traceUrl: '/traces/trace-runner-failure',
+      });
+    });
   });
 
   // ── Auto-advance ─────────────────────────────────────────────────────────
@@ -649,6 +805,7 @@ Trace content.`,
       repo.artifacts.put(slug, 'discussion-prompt.md', 'Prompt content');
       repo.artifacts.put(slug, 'panel-composition.md', 'Panel: writer, editor');
       repo.artifacts.put(slug, 'discussion-summary.md', 'Discussion summary');
+      repo.artifacts.put(slug, 'article-contract.md', 'Contract summary');
       repo.artifacts.put(slug, 'draft.md', validDraft(850));
       repo.artifacts.put(slug, 'editor-review.md', '## Verdict: APPROVED\nLooks great.');
 
@@ -684,6 +841,7 @@ Trace content.`,
       repo.artifacts.put(slug, 'discussion-prompt.md', 'Prompt');
       repo.artifacts.put(slug, 'panel-composition.md', 'Panel');
       repo.artifacts.put(slug, 'discussion-summary.md', 'Summary');
+      repo.artifacts.put(slug, 'article-contract.md', 'Contract');
       repo.artifacts.put(slug, 'draft.md', validDraft(850));
       repo.artifacts.put(slug, 'editor-review.md', '## Verdict: APPROVED\nGood.');
       // Even with publisher pass, auto-advance should stop at 7

@@ -96,6 +96,27 @@ export function requireDiscussionSummary(store: ArtifactStore, articleId: string
   return { passed: true, reason: 'Discussion summary ready' };
 }
 
+export function requireArticleContract(store: ArtifactStore, articleId: string): GuardResult {
+  if (!store.exists(articleId, 'article-contract.md')) {
+    return { passed: false, reason: 'Article contract has not been generated yet' };
+  }
+  const content = store.get(articleId, 'article-contract.md');
+  if (!content || content.trim().length === 0) {
+    return { passed: false, reason: 'Article contract is empty' };
+  }
+  return { passed: true, reason: 'Article contract ready' };
+}
+
+export function requireDiscussionComplete(store: ArtifactStore, articleId: string): GuardResult {
+  const summaryResult = requireDiscussionSummary(store, articleId);
+  if (!summaryResult.passed) return summaryResult;
+  
+  const contractResult = requireArticleContract(store, articleId);
+  if (!contractResult.passed) return contractResult;
+  
+  return { passed: true, reason: 'Discussion summary and article contract ready' };
+}
+
 export const MIN_DRAFT_WORDS = 200;
 const REQUIRED_TLDR_BULLETS = 4;
 const MAX_NON_EMPTY_LINES_BEFORE_TLDR = 8;
@@ -323,7 +344,7 @@ export const TRANSITION_MAP: TransitionDef[] = [
     from: 4 as Stage,
     to: 5 as Stage,
     action: 'writeDraft',
-    guard: (store, id) => requireDiscussionSummary(store, id),
+    guard: (store, id) => requireDiscussionComplete(store, id),
   },
   {
     from: 5 as Stage,

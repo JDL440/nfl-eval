@@ -28,6 +28,10 @@ import {
   STAGE_ACTIONS,
   executeTransition,
   autoAdvanceArticle,
+  getArticleEscalationStatus,
+  getEscalatedArticles,
+  getRepeatedBlockerEscalationReadModel,
+  hasActiveRepeatedBlockerEscalation,
   resetContextConfigCache,
   recordAgentUsage,
   parsePanelComposition,
@@ -205,11 +209,13 @@ class RecordingProvider implements LLMProvider {
   readonly id = 'recording';
   readonly name = 'Recording Provider';
   lastRequest: ChatRequest | null = null;
+  requests: ChatRequest[] = [];
 
   constructor(private readonly responses: string[]) {}
 
   chat(request: ChatRequest): Promise<ChatResponse> {
     this.lastRequest = request;
+    this.requests.push(request);
     const content = this.responses.shift() ?? validDraft();
     return Promise.resolve({
       content,
@@ -256,6 +262,8 @@ class PipelineTestProvider implements LLMProvider {
       content = '# Panel Composition\n\n- cap - Cap analysis';
     } else if (lowered.includes('moderate the panel discussion')) {
       content = '# Summary\n\nPanel discussion summary.';
+    } else if (lowered.includes('create a compact article contract')) {
+      content = '# Contract\n\nArticle contract content.';
     }
 
     return Promise.resolve({
@@ -369,8 +377,16 @@ function createArticleWithStage(
   files: Record<string, string> = {},
 ): void {
   fixtures.repo.createArticle({ id: slug, title: `Test: ${slug}` });
+  const normalizedFiles = { ...files };
+  if (
+    stage >= 4
+    && normalizedFiles['discussion-summary.md']
+    && !normalizedFiles['article-contract.md']
+  ) {
+    normalizedFiles['article-contract.md'] = '# Contract\n\nDefault test contract.';
+  }
 
-  for (const [name, content] of Object.entries(files)) {
+  for (const [name, content] of Object.entries(normalizedFiles)) {
     fixtures.repo.artifacts.put(slug, name, content);
   }
 
@@ -464,6 +480,19 @@ describe('STAGE_ACTIONS', () => {
       expect(traces[0].surface).toBe('generatePrompt');
       expect(traces[0].article_id).toBe('test-gp-trace');
     });
+
+    it('requests a 50-call tool budget for stage agent runs', async () => {
+      createArticleWithStage(fixtures, 'test-gp-budget', 1 as Stage, {
+        'idea.md': '# Great Idea\nAnalyze the Seahawks secondary.',
+      });
+      const runSpy = vi.spyOn(fixtures.runner, 'run');
+
+      const result = await STAGE_ACTIONS.generatePrompt('test-gp-budget', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(runSpy).toHaveBeenCalled();
+      expect(runSpy.mock.calls[0]?.[0]?.toolCalling?.maxToolCalls).toBe(50);
+    });
   });
 
   // ── composePanel (2→3) ───────────────────────────────────────────────────
@@ -496,6 +525,7 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-rd', 'discussion-summary.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd', 'article-contract.md')).toBeTruthy();
       // No panel-*.md artifacts saved in fallback mode
       expect(fixtures.repo.artifacts.get('test-rd', 'panel-sea.md')).toBeNull();
     });
@@ -521,6 +551,7 @@ describe('STAGE_ACTIONS', () => {
       expect(fixtures.repo.artifacts.get('test-rd-parallel', 'panel-cap.md')).toBeTruthy();
       // Synthesis saved as discussion-summary.md
       expect(fixtures.repo.artifacts.get('test-rd-parallel', 'discussion-summary.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-parallel', 'article-contract.md')).toBeTruthy();
     });
 
     it('succeeds when one panelist fails but others succeed', async () => {
@@ -543,6 +574,7 @@ describe('STAGE_ACTIONS', () => {
       expect(fixtures.repo.artifacts.get('test-rd-partial', 'panel-badagent.md')).toBeNull();
       // Synthesis still produced
       expect(fixtures.repo.artifacts.get('test-rd-partial', 'discussion-summary.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-partial', 'article-contract.md')).toBeTruthy();
     });
 
     it('falls back to single-moderator when all panelists fail', async () => {
@@ -558,6 +590,7 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       // discussion-summary.md should still be produced via fallback
       expect(fixtures.repo.artifacts.get('test-rd-allfail', 'discussion-summary.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-allfail', 'article-contract.md')).toBeTruthy();
     });
 
     it('saves thinking traces for panelist artifacts', async () => {
@@ -575,6 +608,7 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-rd-think', 'panel-sea.md')).toBeTruthy();
       expect(fixtures.repo.artifacts.get('test-rd-think', 'discussion-summary.md')).toBeTruthy();
+      expect(fixtures.repo.artifacts.get('test-rd-think', 'article-contract.md')).toBeTruthy();
     });
   });
 
@@ -640,6 +674,29 @@ describe('STAGE_ACTIONS', () => {
 
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-wd', 'draft.md')).toBeTruthy();
+    });
+
+    it('recovers article-contract.md in writeDraft when the stage-4 artifact is missing', async () => {
+      const provider = new RecordingProvider([
+        '# Contract\n\nPreserve the disagreement and cite two evidence anchors.',
+        PANEL_FACTCHECK_OK,
+        validDraft(),
+      ]);
+      setRunnerProvider(fixtures, provider);
+      fixtures.repo.createArticle({ id: 'test-wd-generate-contract', title: 'Test: test-wd-generate-contract' });
+      fixtures.repo.artifacts.put('test-wd-generate-contract', 'idea.md', '# Idea');
+      fixtures.repo.artifacts.put('test-wd-generate-contract', 'discussion-prompt.md', '# Prompt');
+      fixtures.repo.artifacts.put('test-wd-generate-contract', 'panel-composition.md', '# Panel');
+      fixtures.repo.artifacts.put('test-wd-generate-contract', 'discussion-summary.md', '# Summary\nKey takeaways from panel discussion.');
+      fixtures.repo.advanceStage('test-wd-generate-contract', 1 as Stage, 2 as Stage, 'test-setup');
+      fixtures.repo.advanceStage('test-wd-generate-contract', 2 as Stage, 3 as Stage, 'test-setup');
+      fixtures.repo.advanceStage('test-wd-generate-contract', 3 as Stage, 4 as Stage, 'test-setup');
+
+      const result = await STAGE_ACTIONS.writeDraft('test-wd-generate-contract', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      expect(fixtures.repo.artifacts.get('test-wd-generate-contract', 'article-contract.md')).toContain('two evidence anchors');
+      expect(fixtures.repo.artifacts.get('test-wd-generate-contract', 'draft.md')).toBeTruthy();
     });
 
     it('passes the canonical TLDR contract to the writer via the substack-article skill', async () => {
@@ -1012,6 +1069,56 @@ REVISE`,
       expect(history[0]?.blocker_ids).toBe(JSON.stringify(['missing-tldr', 'stale-stat']));
     });
 
+    it('fails explicitly when the editor returns REVISE without valid blocker tags', async () => {
+      setRunnerProvider(fixtures, new RecordingProvider([
+        `# Editor Review
+
+Need a stronger lead before publish.
+
+## Verdict
+REVISE`,
+      ]));
+      createArticleWithStage(fixtures, 'test-re-revise-missing-blockers', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': validDraft(1000),
+      });
+
+      const result = await STAGE_ACTIONS.runEditor('test-re-revise-missing-blockers', fixtures.ctx);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Editor requested revisions without valid structured [BLOCKER type:id] tags.');
+      expect(getRevisionHistory(fixtures.repo, 'test-re-revise-missing-blockers')).toEqual([]);
+      expect(fixtures.repo.artifacts.get('test-re-revise-missing-blockers', 'editor-review.md')).toContain('## Verdict');
+    });
+
+    it('fails explicitly when the editor returns REVISE with malformed blocker tags', async () => {
+      setRunnerProvider(fixtures, new RecordingProvider([
+        `# Editor Review
+
+## 🔴 ERRORS (Must Fix Before Publish)
+- [BLOCKER structure] Restore the required TLDR block near the top before another pass.
+
+## Verdict
+REVISE`,
+      ]));
+      createArticleWithStage(fixtures, 'test-re-revise-malformed-blockers', 5 as Stage, {
+        'idea.md': '# Idea',
+        'discussion-prompt.md': '# Prompt',
+        'panel-composition.md': '# Panel',
+        'discussion-summary.md': '# Summary',
+        'draft.md': validDraft(1000),
+      });
+
+      const result = await STAGE_ACTIONS.runEditor('test-re-revise-malformed-blockers', fixtures.ctx);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Editor requested revisions without valid structured [BLOCKER type:id] tags.');
+      expect(getRevisionHistory(fixtures.repo, 'test-re-revise-malformed-blockers')).toEqual([]);
+    });
+
     it('passes writer-factcheck.md to editor as advisory context', async () => {
       const provider = new RecordingProvider([
         `# Editor Review
@@ -1041,6 +1148,8 @@ APPROVED`,
       expect(userPrompt).toContain('## Upstream Context: writer-factcheck.md');
       expect(userPrompt).toContain('## Verified Facts Used in Draft');
       expect(userPrompt).toContain('treat it as an advisory Stage 5 ledger');
+      expect(userPrompt).toContain('If you choose REVISE, include one or more blocking items tagged EXACTLY as [BLOCKER type:id]');
+      expect(userPrompt).toContain('[BLOCKER structure:missing-tldr]');
     });
   });
 
@@ -1351,6 +1460,36 @@ ${longText(450)}`,
     expect(result.error).toContain('Writer draft failed validation after self-heal');
   });
 
+  it('stops with an explicit error when runEditor returns REVISE without valid blocker tags', async () => {
+    setRunnerProvider(fixtures, new RecordingProvider([
+      `# Editor Review
+
+Need fresher support for the lede.
+
+## Verdict
+REVISE`,
+    ]));
+    createArticleWithStage(fixtures, 'test-auto-editor-revise-missing-blockers', 5 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+    });
+
+    const result = await autoAdvanceArticle('test-auto-editor-revise-missing-blockers', fixtures.ctx, {
+      maxStage: 6,
+      maxRevisions: 1,
+    });
+
+    expect(result.error).toBe('Editor requested revisions without valid structured [BLOCKER type:id] tags.');
+    expect(result.steps.some((step) => step.type === 'regress')).toBe(false);
+    expect(result.revisionCount).toBe(0);
+    expect(result.finalStage).toBe(5);
+    expect(fixtures.repo.getArticle('test-auto-editor-revise-missing-blockers')!.current_stage).toBe(5);
+    expect(getRevisionHistory(fixtures.repo, 'test-auto-editor-revise-missing-blockers')).toEqual([]);
+  });
+
   it('escalates repeated blocker signatures to lead review instead of regressing again', async () => {
     setRunnerProvider(fixtures, new RecordingProvider([
       `# Editor Review
@@ -1401,7 +1540,150 @@ REVISE`,
     expect(handoff).toContain('Repeated Blocker Fingerprint');
     expect(handoff).toContain('blocker_type: evidence');
     expect(handoff).toContain('missing-source, stale-stat');
+    const escalation = getRepeatedBlockerEscalationReadModel(fixtures.repo, 'test-auto-lead-review');
+    expect(escalation).toMatchObject({
+      repeatedBlockerDetected: true,
+      needsLeadReview: true,
+      hasLeadReviewHandoff: true,
+      isEscalated: true,
+      repeatedBlocker: {
+        previousIteration: 1,
+        currentIteration: 2,
+        blockerType: 'evidence',
+        blockerIds: ['missing-source', 'stale-stat'],
+        fingerprint: 'evidence::missing-source|stale-stat',
+      },
+    });
+    expect(escalation.repeatedBlocker?.latestFeedbackSummary).toContain('missing source');
+    expect(hasActiveRepeatedBlockerEscalation(fixtures.repo, 'test-auto-lead-review')).toBe(true);
     expect(fixtures.repo.artifacts.get('test-auto-lead-review', 'editor-review.md')).not.toContain('Auto-approved after');
+  });
+
+  it('reports repeated blocker detection separately from active escalation state', () => {
+    createArticleWithStage(fixtures, 'test-auto-lead-readmodel', 6 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+      'editor-review.md': '# Editor Review\n\n## Verdict\nREVISE',
+    });
+    addRevisionSummary(
+      fixtures.repo,
+      'test-auto-lead-readmodel',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      null,
+      'Missing evidence remained unresolved.',
+      {
+        blockerType: 'evidence',
+        blockerIds: ['stale-stat', 'missing-source'],
+      },
+    );
+    addRevisionSummary(
+      fixtures.repo,
+      'test-auto-lead-readmodel',
+      2,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      null,
+      'Missing evidence remained unresolved again.',
+      {
+        blockerType: 'evidence',
+        blockerIds: ['missing-source', 'stale-stat'],
+      },
+    );
+
+    const escalation = getRepeatedBlockerEscalationReadModel(fixtures.repo, 'test-auto-lead-readmodel');
+    expect(escalation).toMatchObject({
+      repeatedBlockerDetected: true,
+      needsLeadReview: false,
+      hasLeadReviewHandoff: false,
+      isEscalated: false,
+      repeatedBlocker: {
+        previousIteration: 1,
+        currentIteration: 2,
+        blockerType: 'evidence',
+        blockerIds: ['missing-source', 'stale-stat'],
+        fingerprint: 'evidence::missing-source|stale-stat',
+      },
+    });
+    expect(escalation.repeatedBlocker?.latestFeedbackSummary).toContain('Missing evidence remained unresolved again.');
+    expect(getArticleEscalationStatus(fixtures.repo, 'test-auto-lead-readmodel')).toBeNull();
+    expect(hasActiveRepeatedBlockerEscalation(fixtures.repo, 'test-auto-lead-readmodel')).toBe(false);
+  });
+
+  it('returns public escalation query helpers for active repeated-blocker handoffs', () => {
+    createArticleWithStage(fixtures, 'test-auto-lead-query', 6 as Stage, {
+      'idea.md': '# Idea',
+      'discussion-prompt.md': '# Prompt',
+      'panel-composition.md': '# Panel',
+      'discussion-summary.md': '# Summary',
+      'draft.md': validDraft(400),
+      'editor-review.md': '# Editor Review\n\n## Verdict\nREVISE',
+      'lead-review.md': '# Lead Review Handoff\n\nEscalated after repeated blocker.',
+    });
+    fixtures.repo.updateArticleStatus('test-auto-lead-query', 'needs_lead_review');
+    addRevisionSummary(
+      fixtures.repo,
+      'test-auto-lead-query',
+      1,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      null,
+      'Missing evidence remained unresolved.',
+      {
+        blockerType: 'evidence',
+        blockerIds: ['stale-stat', 'missing-source'],
+      },
+    );
+    addRevisionSummary(
+      fixtures.repo,
+      'test-auto-lead-query',
+      2,
+      6,
+      4,
+      'editor',
+      'REVISE',
+      null,
+      'Missing evidence remained unresolved again.',
+      {
+        blockerType: 'Evidence',
+        blockerIds: ['missing-source', ' stale-stat '],
+      },
+    );
+
+    expect(getArticleEscalationStatus(fixtures.repo, 'test-auto-lead-query')).toMatchObject({
+      articleId: 'test-auto-lead-query',
+      escalationReason: 'repeated_blocker',
+      leadReviewArtifactName: 'lead-review.md',
+      leadReviewArtifactPresent: true,
+      blockerSignature: {
+        blockerType: 'evidence',
+        blockerIds: ['missing-source', 'stale-stat'],
+        fingerprint: 'evidence::missing-source|stale-stat',
+      },
+      repeatedIterations: {
+        previous: 1,
+        current: 2,
+      },
+      latestFeedbackSummary: 'Missing evidence remained unresolved again.',
+    });
+    expect(getEscalatedArticles(fixtures.repo)).toEqual([
+      expect.objectContaining({
+        articleId: 'test-auto-lead-query',
+        escalationReason: 'repeated_blocker',
+      }),
+    ]);
+    expect(getEscalatedArticles(fixtures.repo, { blockerType: 'evidence' })).toHaveLength(1);
+    expect(getEscalatedArticles(fixtures.repo, { blockerType: 'structure' })).toEqual([]);
   });
 
   it('holds stage-6 needs_lead_review articles without force-approving or regressing', async () => {
@@ -1643,7 +1925,10 @@ describe('Configurable upstream context', () => {
   });
 
   it('runDiscussion respects pipeline-context.json overrides during moderator fallback', async () => {
-    const provider = new RecordingProvider(['# Summary\n\nPanel discussion summary.']);
+    const provider = new RecordingProvider([
+      '# Summary\n\nPanel discussion summary.',
+      '# Contract\n\nArticle contract.',
+    ]);
     setRunnerProvider(fixtures, provider);
     const configDir = join(fixtures.tempDir, 'config');
     mkdirSync(configDir, { recursive: true });
@@ -1660,7 +1945,7 @@ describe('Configurable upstream context', () => {
     const result = await STAGE_ACTIONS.runDiscussion('test-ctx-rd', fixtures.ctx);
     expect(result.success).toBe(true);
 
-    const userPrompt = provider.lastRequest?.messages.find((message) => message.role === 'user')?.content ?? '';
+    const userPrompt = provider.requests[0]?.messages.find((message) => message.role === 'user')?.content ?? '';
     expect(userPrompt).toContain('DISAGREEMENT ANGLE');
     expect(userPrompt).toContain('panel-composition.md');
   });

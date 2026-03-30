@@ -120,6 +120,38 @@ export function buildDashboardToolLoopOptions(): ConstructorParameters<typeof Ag
   };
 }
 
+export function getAutoAdvanceArticleFlash(params: {
+  from?: string | null;
+  error?: string | null;
+  currentStage: number;
+  status: Article['status'];
+  isRunning: boolean;
+}): { flashMessage?: string; errorMessage?: string } {
+  if (params.from !== 'auto-advance') {
+    return {};
+  }
+
+  if (params.error) {
+    return { errorMessage: `Auto-advance failed: ${params.error}` };
+  }
+
+  if (params.isRunning) {
+    return {
+      flashMessage: '🚀 Auto-advance is running — live sections will refresh as each stage completes.',
+    };
+  }
+
+  if (params.currentStage === 6 && params.status === 'needs_lead_review') {
+    return {
+      flashMessage: '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.',
+    };
+  }
+
+  return {
+    flashMessage: `🚀 Auto-advance complete — article is at Stage ${params.currentStage} (${STAGE_NAMES[params.currentStage as Stage]})`,
+  };
+}
+
 // ── Title/slug generation from freeform prompt ──────────────────────────────
 
 /**
@@ -736,19 +768,13 @@ export function createApp(
       : undefined;
 
     // Flash message from auto-advance redirect
-    const from = c.req.query('from');
-    const errorParam = c.req.query('error');
-    let flashMessage: string | undefined;
-    let errorMessage: string | undefined;
-    if (from === 'auto-advance') {
-      if (errorParam) {
-        errorMessage = `Auto-advance failed: ${errorParam}`;
-      } else if (article.current_stage === 6 && article.status === 'needs_lead_review') {
-        flashMessage = '⏸ Auto-advance paused at Lead review — repeated editor blocker detected at Stage 6.';
-      } else {
-        flashMessage = `🚀 Auto-advance complete — article is at Stage ${article.current_stage} (${STAGE_NAMES[article.current_stage as Stage]})`;
-      }
-    }
+    const { flashMessage, errorMessage } = getAutoAdvanceArticleFlash({
+      from: c.req.query('from'),
+      error: c.req.query('error'),
+      currentStage: article.current_stage,
+      status: article.status,
+      isRunning: activeAdvances.has(id),
+    });
 
     return c.html(
       renderArticleDetail({
@@ -1371,10 +1397,19 @@ export function createApp(
       }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
+      const traceId = ideaTraceId
+        ?? (err instanceof Error && typeof (err as Error & { traceId?: unknown }).traceId === 'string'
+          ? (err as Error & { traceId?: string }).traceId ?? null
+          : null);
+      const traceUrl = traceId
+        ? (err instanceof Error && typeof (err as Error & { traceUrl?: unknown }).traceUrl === 'string'
+          ? (err as Error & { traceUrl?: string }).traceUrl ?? `/traces/${traceId}`
+          : `/traces/${traceId}`)
+        : null;
       return c.json({
         error: message,
-        traceId: ideaTraceId,
-        traceUrl: ideaTraceId ? `/traces/${ideaTraceId}` : null,
+        traceId,
+        traceUrl,
       }, 500);
     }
   });

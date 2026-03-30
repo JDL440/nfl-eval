@@ -2,7 +2,10 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Article, Stage } from '../types.js';
 import { STAGE_NAMES, VALID_STAGES } from '../types.js';
-import { autoAdvanceArticle } from '../pipeline/actions.js';
+import {
+  autoAdvanceArticle,
+  getRepeatedBlockerEscalationReadModel,
+} from '../pipeline/actions.js';
 import type { ToolDefinition, ToolExecutionContext } from './catalog-types.js';
 
 function textResult(data: unknown) {
@@ -28,11 +31,11 @@ function summariseArticle(a: Article) {
 const EXPECTED_ARTIFACTS: Record<number, string[]> = {
   2: ['idea.md'],
   3: ['idea.md', 'discussion-prompt.md'],
-  4: ['idea.md', 'discussion-prompt.md', 'panel-composition.md'],
-  5: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md'],
-  6: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'draft.md'],
-  7: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'draft.md'],
-  8: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'draft.md'],
+  4: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'article-contract.md'],
+  5: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'article-contract.md'],
+  6: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'article-contract.md', 'draft.md'],
+  7: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'article-contract.md', 'draft.md'],
+  8: ['idea.md', 'discussion-prompt.md', 'panel-composition.md', 'discussion-summary.md', 'article-contract.md', 'draft.md'],
 };
 
 function requireRepo(context: ToolExecutionContext) {
@@ -108,6 +111,7 @@ export const PIPELINE_TOOL_DEFINITIONS: ToolDefinition[] = [
         transitions: repo.getStageTransitions(articleId),
         validation: engine.validateArticle(articleId),
         available_actions: engine.getAvailableActions(articleId).map((a) => a.action),
+        repeated_blocker_escalation: getRepeatedBlockerEscalationReadModel(repo, articleId),
       });
     },
   },
