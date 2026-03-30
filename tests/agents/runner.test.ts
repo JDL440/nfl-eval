@@ -2104,10 +2104,35 @@ describe('normalizeToolLoopResponse', () => {
   });
 
   it('wraps an object with an unrecognized type field as a final response', () => {
-    const input = { type: 'response', data: 'some content' };
+    // 'greeting' is not an envelope type and doesn't look like a tool name
+    const input = { type: 'greeting', data: 'some content' };
     const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
     expect(result.type).toBe('final');
     expect(typeof result.content).toBe('string');
+  });
+
+  it('recognises tool call where type is the tool name with args', () => {
+    // LLMs sometimes use type as the tool name instead of the standard envelope
+    const input = { type: 'query_player_stats', args: { player: 'Brady Cook', season: 2025 } };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('tool_call');
+    expect(result.toolName).toBe('query_player_stats');
+    expect(result.args).toEqual({ player: 'Brady Cook', season: 2025 });
+  });
+
+  it('recognises tool call where type is a hyphenated tool name', () => {
+    const input = { type: 'web-search', arguments: { query: 'NFL draft' } };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('tool_call');
+    expect(result.toolName).toBe('web-search');
+    expect(result.args).toEqual({ query: 'NFL draft' });
+  });
+
+  it('recognises bare tool call where type is the tool name without args', () => {
+    const input = { type: 'panel_composition' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('tool_call');
+    expect(result.toolName).toBe('panel_composition');
   });
 
   it('extracts content from a known nested field', () => {

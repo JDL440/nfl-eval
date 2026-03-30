@@ -352,6 +352,36 @@ export function normalizeToolLoopResponse(value: unknown): unknown {
     }
   }
 
+  // Heuristic: the LLM used `type` as the tool name instead of using the
+  // standard envelope.  E.g. {"type":"query_player_stats","args":{…}}
+  // Detect this by checking whether the object carries `args`/`arguments`/`input`
+  // or the type value looks like a tool name (contains _ or -) and isn't a
+  // known envelope keyword.
+  const ENVELOPE_TYPES = new Set([
+    'final', 'tool_call', 'tool', 'tool_use', 'function_call',
+    'message', 'response', 'error', 'text', 'assistant',
+  ]);
+  if (type && !ENVELOPE_TYPES.has(type)) {
+    const hasArgsField = record['args'] !== undefined
+      || record['arguments'] !== undefined
+      || record['Arguments'] !== undefined
+      || record['input'] !== undefined;
+    const looksLikeToolName = /[_\-]/.test(type) || type.startsWith('query') || type.startsWith('search');
+    if (hasArgsField || looksLikeToolName) {
+      const args = parseToolLoopArgsCandidate(record['args'])
+        ?? parseToolLoopArgsCandidate(record['arguments'])
+        ?? parseToolLoopArgsCandidate(record['Arguments'])
+        ?? parseToolLoopArgsCandidate(record['input'])
+        ?? {};
+      return {
+        ...record,
+        type: 'tool_call',
+        toolName: type,
+        args,
+      };
+    }
+  }
+
   // Last resort: if the response is a non-empty object without a recognized type,
   // treat the entire payload as a final response by serialising it as markdown-safe JSON.
   // This handles LLMs that return the idea/content directly as a JSON structure
