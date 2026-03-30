@@ -46,6 +46,7 @@ NFL_TEAMS = {
     "KC":  ["chiefs", "kansas city"],
     "LAC": ["chargers", "los angeles chargers", "la chargers"],
     "LAR": ["rams", "los angeles rams", "la rams"],
+    "LA":  ["rams", "los angeles rams", "la rams"],
     "LV":  ["raiders", "las vegas"],
     "MIA": ["dolphins", "miami"],
     "MIN": ["vikings", "minnesota"],
@@ -60,6 +61,7 @@ NFL_TEAMS = {
     "TB":  ["buccaneers", "bucs", "tampa bay", "tampa"],
     "TEN": ["titans", "tennessee"],
     "WAS": ["commanders", "washington"],
+    "WSH": ["commanders", "washington"],
 }
 
 # Keyword groups for market type classification

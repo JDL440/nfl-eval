@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _shared import load_cached_or_fetch
+from _shared import load_cached_or_fetch, resolve_team_abbr
 
 try:
     import polars as pl
@@ -37,6 +37,7 @@ STATUS_LABELS = {
 
 def query_team_roster(team: str, season: int, status_filter: str | None, output_format: str):
     """Query official roster for a team at the latest available week."""
+    team = resolve_team_abbr(team)
     df = load_cached_or_fetch("rosters", [season])
 
     team_df = df.filter(

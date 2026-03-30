@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _shared import load_cached_or_fetch
+from _shared import load_cached_or_fetch, resolve_team_abbr
 
 try:
     import polars as pl
@@ -364,7 +364,7 @@ def query_team_defense(team: str, season: int, top: int = 20, output_format: str
     totals = _build_season_totals(df)
     totals = _join_positions(totals, season)
 
-    team_upper = team.upper()
+    team_upper = resolve_team_abbr(team)
     team_df = totals.filter(pl.col("team").str.to_uppercase() == team_upper)
 
     if len(team_df) == 0:

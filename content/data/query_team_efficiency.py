@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Import shared auto-fetch helper
 sys.path.insert(0, str(Path(__file__).parent))
-from _shared import load_cached_or_fetch
+from _shared import load_cached_or_fetch, resolve_team_abbr
 
 try:
     import polars as pl
@@ -26,6 +26,7 @@ except ImportError:
 
 def query_team_efficiency(team_abbr: str, season: int, output_format: str = "markdown"):
     """Query team offensive and defensive efficiency."""
+    team_abbr = resolve_team_abbr(team_abbr)
     team_stats = load_cached_or_fetch("team_stats", [season])
     pbp = load_cached_or_fetch("pbp", [season])
     
