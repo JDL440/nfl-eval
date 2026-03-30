@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   AgentRunner,
+  normalizeToolLoopResponse,
   type AgentCharter,
   type AgentSkill,
   type AgentRunParams,
@@ -2070,5 +2071,59 @@ class TracingCopilotProvider implements LLMProvider {
         repo.close();
       }
     });
+  });
+});
+
+describe('normalizeToolLoopResponse', () => {
+  it('passes through a valid final envelope', () => {
+    const input = { type: 'final', content: 'hello world' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('final');
+    expect(result.content).toBe('hello world');
+  });
+
+  it('passes through a valid tool_call envelope', () => {
+    const input = { type: 'tool_call', toolName: 'web_search', args: { q: 'test' } };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('tool_call');
+    expect(result.toolName).toBe('web_search');
+  });
+
+  it('wraps a raw object without a type field as a final response', () => {
+    // This simulates an LLM returning idea content directly as JSON
+    const input = {
+      'Working Title': 'Why the Seahawks Will Win the Super Bowl',
+      'Angle': 'Statistical analysis of defensive improvements',
+      'Key Points': ['Point 1', 'Point 2'],
+    };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('final');
+    expect(typeof result.content).toBe('string');
+    expect(result.content).toContain('Working Title');
+    expect(result.content).toContain('Seahawks');
+  });
+
+  it('wraps an object with an unrecognized type field as a final response', () => {
+    const input = { type: 'response', data: 'some content' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('final');
+    expect(typeof result.content).toBe('string');
+  });
+
+  it('extracts content from a known nested field', () => {
+    const input = { content: '# My Article Idea\n\nThis is the idea.' };
+    const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
+    expect(result.type).toBe('final');
+    expect(result.content).toBe('# My Article Idea\n\nThis is the idea.');
+  });
+
+  it('handles string input by returning it as-is', () => {
+    const result = normalizeToolLoopResponse('just a string');
+    expect(result).toBe('just a string');
+  });
+
+  it('handles null/undefined input', () => {
+    expect(normalizeToolLoopResponse(null)).toBeNull();
+    expect(normalizeToolLoopResponse(undefined)).toBeUndefined();
   });
 });

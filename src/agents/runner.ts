@@ -212,7 +212,7 @@ function parseToolLoopArgsCandidate(value: unknown): Record<string, unknown> | u
   return undefined;
 }
 
-function normalizeToolLoopResponse(value: unknown): unknown {
+export function normalizeToolLoopResponse(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return value;
   }
@@ -349,6 +349,17 @@ function normalizeToolLoopResponse(value: unknown): unknown {
         toolName,
         args,
       };
+    }
+  }
+
+  // Last resort: if the response is a non-empty object without a recognized type,
+  // treat the entire payload as a final response by serialising it as markdown-safe JSON.
+  // This handles LLMs that return the idea/content directly as a JSON structure
+  // instead of wrapping it in the {"type":"final","content":"..."} envelope.
+  if (!type || (type !== 'final' && type !== 'tool_call')) {
+    const stringified = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+    if (stringified.length > 2) {
+      return { type: 'final', content: stringified };
     }
   }
 
