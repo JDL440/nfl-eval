@@ -201,6 +201,8 @@ export const FOOTER_PARAGRAPH_PATTERNS: RegExp[] = [
   /\bvirtual front office\b/i,
   /\bWelcome to the (?:War Room|Lab)\b/i,
   /\bwant us to break down\b/i,
+  /\bAnalysis based on\b.*\bseason data\b/i,
+  /\bverified against official sources\b/i,
 ];
 
 export const PANEL_ROLLCALL_RE = /^(?:[A-Z][A-Za-z]+|[A-Z]{2,})(?:\s*[·•]\s*(?:[A-Z][A-Za-z]+|[A-Z]{2,}))+$/;

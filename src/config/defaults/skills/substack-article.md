@@ -181,6 +181,7 @@ Before a piece is considered publish-ready, Editor should verify:
 - ❌ vague teasers for a nonexistent next article
 - ❌ repeating the same point across multiple expert sections
 - ❌ pretending the model itself generated images, saved files, committed code, or published the piece
+- ❌ data-source disclaimers after the boilerplate (e.g. "Analysis based on season data from nflverse", "Verified against official sources")
 
 ## Notes
 

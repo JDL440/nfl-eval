@@ -48,7 +48,7 @@ Generate the idea using this format:
 
 ```
 ## Working Title
-{Specific, tension-based title — not generic}
+{Specific, tension-based title — not generic. Do NOT include character count.}
 
 ## Angle / Tension
 {The single most interesting question facing this team in 2026}

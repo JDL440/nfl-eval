@@ -1587,6 +1587,14 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       };
     }
 
+    // Extract and persist subtitle from the draft if not already set
+    if (!article.subtitle && finalResult.content) {
+      const subtitleMatch = finalResult.content.match(/^\*(.+)\*$/m);
+      if (subtitleMatch) {
+        ctx.repo.updateArticle(articleId, { subtitle: subtitleMatch[1].trim() });
+      }
+    }
+
     return { success: true, duration: Date.now() - start };
   } catch (err) {
     return {

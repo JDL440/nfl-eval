@@ -61,24 +61,29 @@ export function generateSlug(title: string): string {
 
 // ── Title extraction from idea markdown ──────────────────────────────────────
 
+/** Strip trailing parenthetical character counts like "(78 characters)" or "(65 chars)". */
+function stripCharCount(title: string): string {
+  return title.replace(/\s*\(\d+\s*char(?:acter)?s?\)\s*$/i, '').trim();
+}
+
 export function extractTitleFromIdea(ideaMarkdown: string): string {
   // 1. Look for ## Working Title\n{title}
   const workingTitleMatch = ideaMarkdown.match(/^## Working Title\s*\n+(.+)/m);
   if (workingTitleMatch) {
-    return workingTitleMatch[1].trim();
+    return stripCharCount(workingTitleMatch[1].trim());
   }
 
   // 2. Fall back to # Article Idea: {title}
   const h1Match = ideaMarkdown.match(/^# Article Idea:\s*(.+)/m);
   if (h1Match) {
-    return h1Match[1].trim();
+    return stripCharCount(h1Match[1].trim());
   }
 
   // 3. Fall back to first non-empty line
   const lines = ideaMarkdown.split('\n');
   for (const line of lines) {
     const trimmed = line.replace(/^#+\s*/, '').trim();
-    if (trimmed) return trimmed;
+    if (trimmed) return stripCharCount(trimmed);
   }
 
   return 'Untitled Idea';
@@ -89,7 +94,7 @@ export function extractTitleFromIdea(ideaMarkdown: string): string {
 export const IDEA_TEMPLATE = `# Article Idea: {Generated Title}
 
 ## Working Title
-{Clickbait-adjacent but honest title, 60-80 characters}
+{Clickbait-adjacent but honest title, 60-80 characters. Do NOT include the character count in the title.}
 
 ## Angle / Tension
 {The core question or conflict — 1-3 paragraphs}

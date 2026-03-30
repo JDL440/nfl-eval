@@ -75,6 +75,7 @@ import {
 import {
   buildCaptionedImage,
   createSubscribeWidget,
+  extractMetaFromMarkdown,
   isFooterParagraph,
   markdownToProseMirror,
   validateProseMirrorBody,
@@ -335,16 +336,22 @@ export function createApp(
     coverImageUrl: string | null;
     inlineImageUrls: string[];
     substackDoc: ProseMirrorDoc | null;
+    extractedSubtitle: string | null;
   } {
     const rawDraft = repo.artifacts.get(articleId, 'draft.md');
     let htmlBody = '<p class="empty-state">No article draft found yet. Re-run drafting or send the article back to editing.</p>';
     let substackDoc: ProseMirrorDoc | null = null;
+    let extractedSubtitle: string | null = null;
 
     if (rawDraft) {
       const cleanDraft = separateThinking(rawDraft).output;
-      const doc = markdownToProseMirror(cleanDraft, { previewMode: options?.previewMode });
+      // Strip title/subtitle from body — they are sent as Substack API metadata,
+      // not as part of the article body.
+      const { bodyMarkdown, subtitle: draftSubtitle } = extractMetaFromMarkdown(cleanDraft);
+      const doc = markdownToProseMirror(bodyMarkdown, { previewMode: options?.previewMode });
       htmlBody = proseMirrorToHtml(doc);
       substackDoc = doc;
+      extractedSubtitle = draftSubtitle;
     }
 
     let coverImageUrl: string | null = null;
@@ -356,7 +363,7 @@ export function createApp(
       inlineImageUrls = parsed.inlines;
     }
 
-    return { htmlBody, coverImageUrl, inlineImageUrls, substackDoc };
+    return { htmlBody, coverImageUrl, inlineImageUrls, substackDoc, extractedSubtitle };
   }
 
   /**
@@ -480,23 +487,29 @@ export function createApp(
     articleId: string
   ): Promise<ProseMirrorDoc> {
     const enrichedContent = [...baseDoc.content];
-    const hasEmbeddedImages = enrichedContent.some((node) => node.type === 'captionedImage');
-    if (!hasEmbeddedImages) {
-      const fallbackImages: ProseMirrorNode[] = [];
-      if (coverImagePath) {
-        fallbackImages.push(buildCaptionedImage(coverImagePath, 'Cover image'));
-      }
-      fallbackImages.push(
-        ...inlineImagePaths.map((imagePath, index) =>
-          buildCaptionedImage(imagePath, `Inline image ${index + 1}`),
-        ),
-      );
+    const hasManifestImages = !!(coverImagePath || inlineImagePaths.length > 0);
 
-      if (fallbackImages.length > 0) {
-        const [coverNode, ...inlineNodes] = fallbackImages;
-        if (coverNode) {
-          enrichedContent.unshift(coverNode);
+    if (hasManifestImages) {
+      // When a manifest exists, strip placeholder images (e.g. Unsplash URLs added by the
+      // writer) and replace them with the real generated images from the manifest.
+      const placeholderIndices: number[] = [];
+      for (let i = 0; i < enrichedContent.length; i++) {
+        if (enrichedContent[i].type === 'captionedImage') {
+          placeholderIndices.push(i);
         }
+      }
+      // Remove placeholders in reverse order to preserve indices
+      for (let j = placeholderIndices.length - 1; j >= 0; j--) {
+        enrichedContent.splice(placeholderIndices[j], 1);
+      }
+
+      if (coverImagePath) {
+        enrichedContent.unshift(buildCaptionedImage(coverImagePath, 'Cover image'));
+      }
+      if (inlineImagePaths.length > 0) {
+        const inlineNodes = inlineImagePaths.map((imagePath, index) =>
+          buildCaptionedImage(imagePath, `Inline image ${index + 1}`),
+        );
         intersperseImagesInDoc(enrichedContent, inlineNodes);
       }
     }
@@ -537,6 +550,13 @@ export function createApp(
       throw new Error('No article draft found yet. Re-run drafting or send the article back to editing before publishing.');
     }
 
+    // Backfill subtitle from the draft markdown if the DB subtitle is missing
+    let effectiveSubtitle = article.subtitle;
+    if (!effectiveSubtitle && presentation.extractedSubtitle) {
+      effectiveSubtitle = presentation.extractedSubtitle;
+      repo.updateArticle(article.id, { subtitle: effectiveSubtitle });
+    }
+
     // Enrich the ProseMirror document with uploaded images, subscribe CTA, and footer
     const enrichedDoc = await enrichSubstackDoc(
       presentation.substackDoc,
@@ -553,12 +573,12 @@ export function createApp(
       ? await substackService.updateDraft({
           draftId: existingDraftId,
           title: article.title,
-          subtitle: article.subtitle ?? undefined,
+          subtitle: effectiveSubtitle ?? undefined,
           bodyHtml: bodyJson,
         })
       : await substackService.createDraft({
           title: article.title,
-          subtitle: article.subtitle ?? undefined,
+          subtitle: effectiveSubtitle ?? undefined,
           bodyHtml: bodyJson,
         });
 

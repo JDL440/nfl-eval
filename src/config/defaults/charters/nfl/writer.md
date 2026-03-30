@@ -132,6 +132,8 @@ Writer sits between the experts and the editor. Experts provide the substance. W
 **Next from the panel:** {A cliffhanger tease for the next real article in the pipeline. This should create curiosity, not just announce a topic.}
 ```
 
+**Do NOT add** data-source disclaimers (e.g. "Analysis based on 2025 season data from nflverse" or "Verified against official sources"). The article should end with the boilerplate above — no attribution footers below it.
+
 ## Data Sources
 - Writer reads from expert agent output (provided in spawn prompt)
 - Writer reads `content/article-ideas.md` for pipeline context
