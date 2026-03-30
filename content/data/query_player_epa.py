@@ -85,7 +85,7 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
     agg_exprs = []
     
     # Common counting stats
-    count_cols = ["completions", "attempts", "passing_yards", "passing_tds", "interceptions",
+    count_cols = ["completions", "attempts", "passing_yards", "passing_tds", "passing_interceptions",
                   "carries", "rushing_yards", "rushing_tds", "targets", "receptions", 
                   "receiving_yards", "receiving_tds"]
     for col in count_cols:
@@ -151,7 +151,7 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
             "attempts": player["attempts"][0] if "attempts" in player.columns else 0,
             "passing_yards": player["passing_yards"][0] if "passing_yards" in player.columns else 0,
             "passing_tds": player["passing_tds"][0] if "passing_tds" in player.columns else 0,
-            "interceptions": player["interceptions"][0] if "interceptions" in player.columns else 0,
+            "interceptions": player["passing_interceptions"][0] if "passing_interceptions" in player.columns else 0,
             "passing_epa": round(player["passing_epa"][0], 3) if "passing_epa" in player.columns else None,
             "cpoe": round(player["cpoe"][0], 3) if "cpoe" in player.columns else None,
             "dakota": round(player["dakota"][0], 3) if "dakota" in player.columns else None,

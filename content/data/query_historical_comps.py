@@ -32,11 +32,11 @@ except ImportError:
 POSITION_CONFIGS = {
     "QB": {
         "metrics": ["completions", "attempts", "passing_yards", "passing_tds",
-                     "interceptions", "passing_epa", "cpoe", "dakota"],
+                     "passing_interceptions", "passing_epa", "cpoe", "dakota"],
         "min_volume_col": "attempts",
         "min_volume": 200,
         "count_cols": ["completions", "attempts", "passing_yards", "passing_tds",
-                       "interceptions"],
+                       "passing_interceptions"],
         "sum_cols": ["passing_epa"],
         "rate_cols": ["cpoe", "dakota"],
         "key_stats": lambda r: (
