@@ -114,11 +114,55 @@ System does NOT automatically extract learnings from agent execution. Memory cre
 - 2026-03-29 — New spawn batch queued Research to split the app kickoff into actionable slices after branch sync, with outputs intended to hand directly to Code for implementation start.
 
 
+## 2026-03-30: Debug/Trace Surface Exposure Audit
+
+### Request
+Audit debug/trace surfaces and machine-facing detail exposure. Identify how much session/CWD/request-envelope detail is currently exposed to operators vs. relegated to dedicated diagnostics areas.
+
+### Key Findings
+
+**Trace internals (mostly isolated):**
+1. Dedicated trace pages (`src/dashboard/views/traces.ts`) provide structured observability for providers, tool-use, thinking, and errors
+2. New-idea trace integration (Code agent) properly surfaces trace links on errors; approved as UX-safe
+3. Existing trace infrastructure is solid; good home for debug material
+
+**Machine-facing detail remaining exposed:**
+1. Session/CWD/request-envelope details in article-detail chrome
+2. Pipeline activity data and stageRun metadata exposed in artifact tabs
+3. Provider envelopes mixed into article workflow surfaces
+4. Raw system terms (status chips like `needs_lead_review`) in header
+
+**Article detail hierarchy issues:**
+1. Defaults to `idea.md` (intermediate pipeline artifact, not editorial artifact)
+2. Exposes raw filenames + `💭 trace` badges as tab labels
+3. Token usage, provider breakdowns, revision history occupy prime space
+4. No plain-language workflow sentence or editorial context
+
+**Recommendations:**
+1. De-emphasize machine terms on article detail (remove raw status chips)
+2. Reorder artifact tabs to lead with human-facing artifacts (draft, review, contract)
+3. Push token/usage/provider data to collapsed secondary area or off-page
+4. Preserve trace link access but move out of main action cluster
+5. Add plain-language workflow sentence (e.g., "Draft ready for editor review")
+
+### Alignment with UX Findings
+
+Both audits converge: article detail should be editorial-first. Existing trace infrastructure is good; the issue is layout and navigation hierarchy, not trace isolation or observability design.
+
+### Validation Points
+
+- Artifact relabeling covers all stage transitions
+- Workflow sentence accuracy across Stages 1-6
+- Token/usage/provider data remains accessible (just collapsed/moved)
+- Trace links still discoverable but de-emphasized from main flow
+
+### Next Steps
+
+- Coordinate with UX agent on artifact relabeling and workflow sentence copy
+- Code agent to implement hierarchy changes with focused view tests
+- DevOps to extend e2e fixtures for article-detail state validation
+
 ## Learnings
 
-- 2026-03-29 — Anthropic harness follow-up work should be split into two implementation tracks: **app/runtime/product** and **engineering-system/Squad-Ralph workflow**. They have different owners, insertion points, validation loops, and failure modes.
-- App/runtime follow-up centers on `src\pipeline\actions.ts` (`runDiscussion`, `writeDraft`, `runEditor`), `src\pipeline\context-config.ts`, `src\pipeline\engine.ts`, `src\dashboard\server.ts` (`buildPublishPresentation`, `enrichSubstackDoc`), and `src\agents\runner.ts` / `src\db\repository.ts` for long-running handoffs and trace metadata.
-- Engineering-system follow-up centers on `.squad\agents\lead\charter.md`, `.squad\agents\ralph\charter.md`, `.squad\ceremonies.md`, `.squad\skills\github-project-board\SKILL.md`, `.github\agents\squad.agent.md`, `ralph-watch.ps1`, and `.github\workflows\squad-heartbeat.yml`.
-- 2026-03-29 — The recommended first app slice is contract-first article generation: create `article-contract.md` after `runDiscussion`, pass it through `context-config.ts`, and make Editor score against it before adding render-QA or reset mechanics.
-- 2026-03-29 — The recommended first engineering-system slice is documentation/prompt alignment before automation: require issue contracts in Lead + Squad instructions, then teach Ralph to escalate contractless work instead of starting implementation immediately.
+- 2026-03-30 — Debug/trace surfaces are well-segregated; the issue is article-detail hierarchy, not trace isolation. Article page mixes machine metadata with editorial context; moving debug content to secondary areas aligns with existing trace-page strategy. No new trace infrastructure needed; just hierarchy/copy fixes.
 

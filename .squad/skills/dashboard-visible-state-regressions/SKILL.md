@@ -27,11 +27,15 @@ tools: [view, rg, vitest]
 4. Preserve conditional maintenance seams in tests.
    - If a maintenance action depends on injected services, assert the section shell and result target regardless.
    - Only assert the action button when the test setup enables the required dependencies.
+5. Keep query-driven workflow banners honest about background work.
+   - If a route uses `?from=...` or similar handoff params after starting background work, distinguish **running**, **paused**, **failed**, and **complete** states.
+   - Do not let a detail page claim completion just because the redirect/query param exists; check the live run state first.
 
 ## Current seam map
 
 - `src\dashboard\views\config.ts` conditionally renders the refresh-all form but always renders the maintenance section and `#knowledge-refresh-result`.
 - `src\dashboard\views\article.ts` renders metadata badges and the edit button on the default article page; `Edit Article Metadata` belongs to the HTMX edit form, not the initial full-page HTML.
+- `src\dashboard\server.ts` resolves `?from=auto-advance` banners for article detail and must not report completion while `activeAdvances` still contains the article id.
 - `tests\dashboard\config.test.ts` and `tests\dashboard\server.test.ts` are the focused regression seams for this cleanup.
 
 ## Recommendation
@@ -42,3 +46,4 @@ For this repo, prefer test updates that follow the current operator-visible shel
 
 - On `/config`, assert `Services &amp; Maintenance`, `Knowledge refresh`, the empty-state copy when runner/memory are absent, and `id="knowledge-refresh-result"`.
 - On `/articles/:id`, assert `id="article-meta"`, the metadata badges, and the edit-button affordance (`title="Edit metadata"` and `hx-get="/htmx/articles/:id/edit-meta"`), while not expecting `Edit Article Metadata` in the full-page response.
+- On `/articles/:id?from=auto-advance`, assert the banner text matches the real run state: in-progress while the background run is active, paused at Lead review when escalation stops Stage 6, error when `error=` is present, and complete only after the background run has finished.
