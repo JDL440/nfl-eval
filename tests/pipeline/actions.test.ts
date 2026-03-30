@@ -874,11 +874,10 @@ ${longText(460)}`,
       runSpy.mockRestore();
     });
 
-    it('retries when the draft uses unsupported precise contract/date/stat language', async () => {
+    it('records unsourced claim issues as advisories without triggering a retry', async () => {
       const provider = new RecordingProvider([
         PANEL_FACTCHECK_OK,
         draftWithUnsupportedPreciseClaims(),
-        validDraft(500),
       ]);
       setRunnerProvider(fixtures, provider);
       createArticleWithStage(fixtures, 'test-wd-precise-claim-preflight', 4 as Stage, {
@@ -893,11 +892,11 @@ ${longText(460)}`,
       const result = await STAGE_ACTIONS.writeDraft('test-wd-precise-claim-preflight', fixtures.ctx);
 
       expect(result.success).toBe(true);
-      expect(runSpy).toHaveBeenCalledTimes(3);
-      const retryCall = runSpy.mock.calls[2]?.[0];
-      expect(retryCall?.task).toContain('unsupported precise contract language');
-      expect(retryCall?.task).toContain('March 14, 2026');
-      expect(retryCall?.task).toContain('4,320 passing yards');
+      // No retry — claims are advisory, not blocking
+      expect(runSpy).toHaveBeenCalledTimes(2);
+      const preflightArtifact = fixtures.repo.artifacts.get('test-wd-precise-claim-preflight', 'writer-preflight.md') ?? '';
+      expect(preflightArtifact).toContain('passed with advisories');
+      expect(preflightArtifact).toContain('[unsourced-contract-claim]');
       runSpy.mockRestore();
     });
 

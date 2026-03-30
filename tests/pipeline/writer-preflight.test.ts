@@ -38,7 +38,7 @@ describe('writer preflight', () => {
     expect(state.blockingIssues.some((issue) => issue.message.includes('cowboys'))).toBe(false);
   });
 
-  it('flags unsupported precise claims but allows supported local claims through', () => {
+  it('flags unsupported precise claims as advisory, allows supported local claims through', () => {
     const unsupported = runWriterPreflight({
       draft: '**Geno Smith** has a $32 million extension lined up after his 4,320 passing yards in 2026.',
       sourceArtifacts: [
@@ -46,8 +46,9 @@ describe('writer preflight', () => {
       ],
     });
 
-    expect(unsupported.blockingIssues.some((issue) => issue.code === 'unsourced-contract-claim')).toBe(true);
-    expect(unsupported.blockingIssues.some((issue) => issue.code === 'unsourced-stat-claim')).toBe(true);
+    expect(unsupported.advisoryIssues.some((issue) => issue.code === 'unsourced-contract-claim')).toBe(true);
+    expect(unsupported.advisoryIssues.some((issue) => issue.code === 'unsourced-stat-claim')).toBe(true);
+    expect(unsupported.blockingIssues).toHaveLength(0);
 
     const supported = runWriterPreflight({
       draft: '**Geno Smith** is playing on a $32 million extension after his 4,320 passing yards in 2026.',
@@ -57,6 +58,7 @@ describe('writer preflight', () => {
     });
 
     expect(supported.blockingIssues).toHaveLength(0);
+    expect(supported.advisoryIssues).toHaveLength(0);
   });
 
   it('flags placeholder leakage and can render a bounded artifact summary', () => {
@@ -72,7 +74,7 @@ describe('writer preflight', () => {
 
     const artifact = buildWriterPreflightArtifact({
       initialState: initial,
-      finalState: { blockingIssues: [], warnings: [] },
+      finalState: { blockingIssues: [], advisoryIssues: [], warnings: [] },
       repairTriggered: true,
     });
 
@@ -90,6 +92,7 @@ describe('writer preflight', () => {
     });
 
     expect(state.blockingIssues.some((issue) => issue.code === 'unsourced-date-claim')).toBe(false);
+    expect(state.advisoryIssues.some((issue) => issue.code === 'unsourced-date-claim')).toBe(false);
   });
 
   it('ignores byline boilerplate when checking supported contract claims', () => {
@@ -112,6 +115,7 @@ describe('writer preflight', () => {
     });
 
     expect(state.blockingIssues).toHaveLength(0);
+    expect(state.advisoryIssues).toHaveLength(0);
   });
 
   it('does not flag generic historical season framing as an unsupported date claim', () => {
@@ -123,6 +127,7 @@ describe('writer preflight', () => {
     });
 
     expect(state.blockingIssues.some((issue) => issue.code === 'unsourced-date-claim')).toBe(false);
+    expect(state.advisoryIssues.some((issue) => issue.code === 'unsourced-date-claim')).toBe(false);
   });
 
   it('accepts paraphrased supported timeline claims with the same dated event details', () => {
@@ -134,5 +139,75 @@ describe('writer preflight', () => {
     });
 
     expect(state.blockingIssues.some((issue) => issue.code === 'unsourced-date-claim')).toBe(false);
+    expect(state.advisoryIssues.some((issue) => issue.code === 'unsourced-date-claim')).toBe(false);
+  });
+
+  it('classifies unsourced contract claims as advisory, not blocking', () => {
+    const state = runWriterPreflight({
+      draft: '**Geno Smith** should get a $25M AAV extension to compete in 2026.',
+      sourceArtifacts: [
+        { name: 'discussion-summary.md', content: 'The panel discussed whether the team should pursue a veteran quarterback.' },
+      ],
+    });
+
+    expect(state.blockingIssues).toHaveLength(0);
+    expect(state.advisoryIssues.some((issue) => issue.code === 'unsourced-contract-claim')).toBe(true);
+    expect(state.advisoryIssues[0]?.severity).toBe('advisory');
+  });
+
+  it('keeps placeholder leakage as blocking even though claims are advisory', () => {
+    const state = runWriterPreflight({
+      draft: 'TODO: finish lede. Also **Geno Smith** signed a $40M extension.',
+      sourceArtifacts: [
+        { name: 'discussion-summary.md', content: 'Write about the quarterback situation.' },
+      ],
+    });
+
+    expect(state.blockingIssues.some((issue) => issue.code === 'placeholder-leakage')).toBe(true);
+    expect(state.advisoryIssues.some((issue) => issue.code === 'unsourced-contract-claim')).toBe(true);
+  });
+
+  it('does not extract role titles like "Defense Analyst" as player names', () => {
+    const state = runWriterPreflight({
+      draft: 'Defense Analyst argues the secondary needs a $15M cornerback.',
+      sourceArtifacts: [
+        { name: 'discussion-summary.md', content: 'Defense Analyst argues the secondary needs investment.' },
+      ],
+    });
+
+    // Should not flag "Defense Analyst" as a name consistency issue
+    expect(state.warnings.some((w) => w.message.includes('Defense Analyst'))).toBe(false);
+  });
+
+  it('matches fuzzy support when source contains "trade" keyword', () => {
+    const state = runWriterPreflight({
+      draft: 'A trade for a veteran QB at $25M would reshape the cap.',
+      sourceArtifacts: [
+        { name: 'discussion-summary.md', content: 'A trade for a veteran QB at $25M would reshape the cap structure going forward.' },
+      ],
+    });
+
+    expect(state.blockingIssues).toHaveLength(0);
+    expect(state.advisoryIssues).toHaveLength(0);
+  });
+
+  it('includes advisory issues section in the preflight artifact', () => {
+    const artifact = buildWriterPreflightArtifact({
+      initialState: { blockingIssues: [], advisoryIssues: [], warnings: [] },
+      finalState: {
+        blockingIssues: [],
+        advisoryIssues: [{
+          severity: 'advisory',
+          code: 'unsourced-contract-claim',
+          message: 'Draft includes "$30M" contract figure',
+        }],
+        warnings: [],
+      },
+      repairTriggered: false,
+    });
+
+    expect(artifact).toContain('passed with advisories');
+    expect(artifact).toContain('Advisory Issues (for human review at publish time)');
+    expect(artifact).toContain('[unsourced-contract-claim]');
   });
 });

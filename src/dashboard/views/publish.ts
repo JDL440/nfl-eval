@@ -10,6 +10,7 @@ import { renderLayout, escapeHtml } from './layout.js';
 import type { Article, PublisherPass } from '../../types.js';
 import type { ProseMirrorNode, ProseMirrorDoc } from '../../services/prosemirror.js';
 import type { AppConfig } from '../../config/index.js';
+import type { PublishIssue } from '../../pipeline/issue-aggregator.js';
 import { renderArticlePreviewFrame } from './preview.js';
 
 // ── ProseMirror JSON → HTML renderer ─────────────────────────────────────────
@@ -125,6 +126,7 @@ export interface PublishPreviewData {
   coverImageUrl: string | null;
   inlineImageUrls: string[];
   substackConfigured?: boolean;
+  issues?: PublishIssue[];
 }
 
 export function renderPublishPreview(data: PublishPreviewData): string {
@@ -135,6 +137,7 @@ export function renderPublishPreview(data: PublishPreviewData): string {
     coverImageUrl,
     inlineImageUrls,
     substackConfigured = true,
+    issues = [],
   } = data;
 
   const content = `
@@ -173,6 +176,10 @@ export function renderPublishPreview(data: PublishPreviewData): string {
 
         <div class="detail-sidebar mobile-secondary-column publish-sidebar-stack">
           ${renderPublishWorkflow({ article, substackConfigured })}
+
+          ${renderIssueTracker(issues, article.id)}
+
+          ${renderAiReviewPanel(article.id)}
 
           ${renderNoteComposer(article)}
           ${renderTweetComposer(article)}
@@ -523,6 +530,94 @@ export function renderPublishAll(articleId: string, substackConfigured: boolean 
         }
       }
     </script>`;
+}
+
+// ── Issue Tracker section ────────────────────────────────────────────────────
+
+export function renderIssueTracker(issues: PublishIssue[], articleId: string): string {
+  if (issues.length === 0) {
+    return `
+      <section class="detail-section publish-support-section">
+        <p class="section-kicker">Pre-publish review</p>
+        <h2>✅ No Issues Found</h2>
+        <p class="hint">No advisories or validation issues were detected during article production.</p>
+      </section>`;
+  }
+
+  const errors = issues.filter((i) => i.severity === 'error');
+  const warnings = issues.filter((i) => i.severity === 'warning');
+  const infos = issues.filter((i) => i.severity === 'info');
+
+  const badges = [
+    errors.length > 0 ? `<span class="badge badge-error">${errors.length} error${errors.length > 1 ? 's' : ''}</span>` : '',
+    warnings.length > 0 ? `<span class="badge badge-warning">${warnings.length} advisory</span>` : '',
+    infos.length > 0 ? `<span class="badge badge-info">${infos.length} info</span>` : '',
+  ].filter(Boolean).join(' ');
+
+  // Group issues by source
+  const groups = new Map<string, PublishIssue[]>();
+  for (const issue of issues) {
+    const key = issue.source;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(issue);
+  }
+
+  const groupHtml = [...groups.entries()].map(([source, items]) => {
+    const label = SOURCE_LABELS[source as PublishIssue['source']] ?? source;
+    const open = items.some((i) => i.severity === 'error') ? ' open' : '';
+    const itemsHtml = items.map((item) => {
+      const icon = item.severity === 'error' ? '🔴' : item.severity === 'warning' ? '⚠️' : 'ℹ️';
+      return `<div class="issue-item issue-${escapeHtml(item.severity)}">
+        <span class="issue-icon">${icon}</span>
+        <div class="issue-body">
+          <span class="issue-category">${escapeHtml(item.category)}</span>
+          <span class="issue-text">${escapeHtml(item.message)}</span>
+        </div>
+      </div>`;
+    }).join('\n');
+
+    return `<details class="issue-group"${open}>
+      <summary>${escapeHtml(label)} (${items.length})</summary>
+      ${itemsHtml}
+    </details>`;
+  }).join('\n');
+
+  return `
+    <section class="detail-section publish-support-section publish-issues-section">
+      <p class="section-kicker">Pre-publish review</p>
+      <h2>⚠️ Issues & Advisories</h2>
+      <div class="issue-summary-badges">${badges}</div>
+      ${groupHtml}
+    </section>`;
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  'writer-preflight': 'Claim Verification',
+  'roster-validation': 'Roster Check',
+  'fact-validation': 'Fact Check',
+  'pipeline-history': 'Pipeline History',
+  'editor-review': 'Editor Review',
+};
+
+// ── AI Review Panel ─────────────────────────────────────────────────────────
+
+export function renderAiReviewPanel(articleId: string): string {
+  return `
+    <section class="detail-section publish-support-section ai-review-section">
+      <p class="section-kicker">AI-assisted review</p>
+      <h2>🤖 AI Pre-Publish Review</h2>
+      <div id="ai-review-content">
+        <p class="hint">Generate an AI-powered review that analyzes the article against its source artifacts and surfaces concerns for human review.</p>
+        <button class="btn btn-secondary"
+          hx-get="/htmx/articles/${escapeHtml(articleId)}/ai-review"
+          hx-target="#ai-review-content"
+          hx-swap="innerHTML"
+          hx-indicator="#ai-review-spinner">
+          🤖 Generate AI Review
+        </button>
+        <span id="ai-review-spinner" class="htmx-indicator">Analyzing…</span>
+      </div>
+    </section>`;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -1,13 +1,14 @@
 import { extractClaims, type ContractClaim, type DraftClaim, type ExtractedClaims, type StatClaim } from './claim-extractor.js';
 
 export interface WriterPreflightIssue {
-  severity: 'blocking' | 'warning';
+  severity: 'blocking' | 'advisory' | 'warning';
   code: string;
   message: string;
 }
 
 export interface WriterPreflightState {
   blockingIssues: WriterPreflightIssue[];
+  advisoryIssues: WriterPreflightIssue[];
   warnings: WriterPreflightIssue[];
 }
 
@@ -37,7 +38,7 @@ const RISK_KEYWORDS = [
   'contract', 'extension', 'deal', 'aav', 'guaranteed', 'guarantee', 'guarantees', 'cap hit', 'dead money', 'bonus',
   'yards', 'yard', 'touchdown', 'touchdowns', 'td', 'tds', 'epa', 'cpoe', 'completion', 'rating', 'sacks', 'sack',
   'targets', 'target share', 'snaps', 'success rate', 'pick', 'round', 'overall', 'signed', 'injured', 'returned',
-  'traded', 'released', 'announced', 'week', 'season', 'drafted',
+  'traded', 'trade', 'released', 'announced', 'week', 'season', 'drafted',
 ] as const;
 const DATE_RISK_KEYWORDS = [
   'signed', 'injured', 'returned', 'traded', 'trade', 'released', 'announced',
@@ -67,9 +68,11 @@ const BANNED_FIRST_TOKENS = new Set([
   'The', 'This', 'That', 'These', 'Those', 'Next', 'Current', 'Latest', 'Official', 'Primary', 'Upstream', 'Why',
   'Should', 'By', 'First', 'Second', 'Third', 'Fourth',
   'Writer', 'Editor', 'Panel', 'Draft', 'Article', 'Summary', 'Budget', 'Stage', 'NFL', 'Lab',
+  'Defense', 'Offense', 'Special', 'Cap', 'Contract', 'Roster', 'Salary', 'Head', 'Assistant',
 ]);
 const BANNED_LAST_TOKENS = new Set([
   'Panel', 'Check', 'Fact', 'Context', 'Summary', 'Prompt', 'Review', 'Input', 'Budget', 'Article', 'Verdict',
+  'Analyst', 'Expert', 'Specialist', 'Coordinator', 'Strategist', 'Evaluator', 'Observer',
   'Cardinals', 'Falcons', 'Ravens', 'Bills', 'Panthers', 'Bears', 'Bengals', 'Browns', 'Cowboys', 'Broncos',
   'Lions', 'Packers', 'Texans', 'Colts', 'Jaguars', 'Chiefs', 'Raiders', 'Chargers', 'Rams', 'Dolphins',
   'Vikings', 'Patriots', 'Saints', 'Giants', 'Jets', 'Eagles', 'Steelers', '49ers', 'Seahawks', 'Buccaneers',
@@ -86,15 +89,24 @@ export function buildWriterPreflightArtifact(params: {
   repairTriggered: boolean;
 }): string {
   const { initialState, finalState, repairTriggered } = params;
+  const allClear = finalState.blockingIssues.length === 0 && finalState.advisoryIssues.length === 0;
   const lines = [
     '# Writer Preflight',
     '',
-    `**Status:** ${finalState.blockingIssues.length === 0 ? 'passed' : 'blocking issues remain'}`,
+    `**Status:** ${finalState.blockingIssues.length === 0 ? (finalState.advisoryIssues.length === 0 ? 'passed' : 'passed with advisories') : 'blocking issues remain'}`,
     `**Repair triggered:** ${repairTriggered ? 'yes' : 'no'}`,
     '',
     '## Final Blocking Issues',
     ...renderIssueLines(finalState.blockingIssues, 'No deterministic writer-preflight issues found.'),
   ];
+
+  if (finalState.advisoryIssues.length > 0) {
+    lines.push(
+      '',
+      '## Advisory Issues (for human review at publish time)',
+      ...renderIssueLines(finalState.advisoryIssues, 'No advisory issues.'),
+    );
+  }
 
   if (repairTriggered) {
     lines.push(
@@ -127,20 +139,23 @@ export function runWriterPreflight(params: {
   const draftText = stripPreflightBoilerplate(params.draft);
 
   if (sourceText.trim().length === 0) {
-    return { blockingIssues: [], warnings: [] };
+    return { blockingIssues: [], advisoryIssues: [], warnings: [] };
   }
 
-  const blockingIssues = dedupeIssues([
+  const allIssues = dedupeIssues([
     ...findPlaceholderLeakageIssues(params.draft),
     ...findUnsourcedClaimIssues(draftText, sourceText),
     ...findUnsourcedDateIssues(draftText, sourceText),
-  ]).slice(0, BLOCKING_ISSUE_LIMIT);
+  ]);
+  const blockingIssues = allIssues.filter((i) => i.severity === 'blocking').slice(0, BLOCKING_ISSUE_LIMIT);
+  const advisoryIssues = allIssues.filter((i) => i.severity === 'advisory');
   const warnings = dedupeIssues([
     ...findNameConsistencyIssues(draftText, sourceText),
   ]);
 
   return {
     blockingIssues,
+    advisoryIssues,
     warnings,
   };
 }
@@ -222,7 +237,7 @@ function findUnsourcedClaimIssues(draft: string, sourceText: string): WriterPref
     if (claimHasSupport(claim.raw, sourceText)) continue;
     if (contractClaimHasSupport(claim, sourceClaims, sourceText)) continue;
     issues.push({
-      severity: 'blocking',
+      severity: 'advisory',
       code: 'unsourced-contract-claim',
       message: `Draft includes unsupported precise contract language ("${claim.raw}"). Keep exact figures only when supplied artifacts support them; otherwise attribute, soften, or cut the claim.`,
     });
@@ -233,7 +248,7 @@ function findUnsourcedClaimIssues(draft: string, sourceText: string): WriterPref
     if (claimHasSupport(claim.raw, sourceText)) continue;
     if (statClaimHasSupport(claim, sourceClaims, sourceText)) continue;
     issues.push({
-      severity: 'blocking',
+      severity: 'advisory',
       code: 'unsourced-stat-claim',
       message: `Draft includes unsupported precise stat language ("${claim.raw}"). Keep exact stats only when the supplied artifacts or bounded writer fact-check support them; otherwise attribute, soften, or cut the claim.`,
     });
@@ -244,7 +259,7 @@ function findUnsourcedClaimIssues(draft: string, sourceText: string): WriterPref
     if (claimHasSupport(claim.raw, sourceText)) continue;
     if (draftClaimHasSupport(claim, sourceClaims, sourceText)) continue;
     issues.push({
-      severity: 'blocking',
+      severity: 'advisory',
       code: 'unsourced-draft-claim',
       message: `Draft includes unsupported precise draft language ("${claim.raw}"). Keep exact draft details only when supplied artifacts support them; otherwise attribute, soften, or cut the claim.`,
     });
@@ -261,7 +276,7 @@ function findUnsourcedDateIssues(draft: string, sourceText: string): WriterPrefl
     if (!DATE_PATTERN.test(unit) || !isBlockingDateUnit(unit)) continue;
     if (dateClaimHasSupport(unit, sourceText)) continue;
     issues.push({
-      severity: 'blocking',
+      severity: 'advisory',
       code: 'unsourced-date-claim',
       message: `Draft includes unsupported precise date or timeline language ("${unit}"). Keep exact dates only when supplied artifacts support them; otherwise attribute, soften, or cut the claim.`,
     });

@@ -690,6 +690,12 @@ function buildDraftRepairInstruction(state: DraftValidationState): string {
       + state.preflight.blockingIssues.map((issue) => `- ${issue.message}`).join('\n'),
     );
   }
+  if (state.preflight.advisoryIssues.length > 0) {
+    fixes.push(
+      'The following advisory issues were noted (these will be surfaced for human review at publish time, but try to address them if you can):\n'
+      + state.preflight.advisoryIssues.map((issue) => `- ${issue.message}`).join('\n'),
+    );
+  }
   if (state.preflight.warnings.length > 0) {
     fixes.push(
       'Before you finish, also tighten these editor-facing checks where possible:\n'
