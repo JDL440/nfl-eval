@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import {
   AgentRunner,
   normalizeToolLoopResponse,
+  looksLikeJsonDataPayload,
   type AgentCharter,
   type AgentSkill,
   type AgentRunParams,
@@ -317,6 +318,75 @@ class LegacyLmStudioLoopProvider implements LLMProvider {
   supportsModel(model: string): boolean {
     return model.includes('qwen');
   }
+}
+
+/**
+ * Provider that returns raw data JSON on first "final" attempt, then a real
+ * final answer after re-prompt.  Simulates LLMs echoing tool results.
+ */
+class DataPayloadProvider implements LLMProvider {
+  readonly id = 'lmstudio';
+  readonly name = 'Data Payload Provider';
+  readonly requests: ChatRequest[] = [];
+  private callCount = 0;
+
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    this.requests.push(request);
+    this.callCount += 1;
+
+    if (request.responseFormat === 'json') {
+      if (this.callCount === 1) {
+        // First call: return a tool call
+        return {
+          content: JSON.stringify({
+            type: 'tool_call',
+            toolName: 'article_get',
+            args: { article_id: 'trace-article' },
+          }),
+          model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+          provider: this.id,
+          usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+          finishReason: 'stop',
+        };
+      }
+      if (this.callCount === 2) {
+        // Second call: return raw data payload masquerading as final
+        return {
+          content: JSON.stringify({
+            type: 'final',
+            content: JSON.stringify({
+              team: 'DEN', season: 2025, offensive_epa_play: 0.046,
+              defensive_epa_play: -0.037, total_yards: 5949,
+            }),
+          }),
+          model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+          provider: this.id,
+          usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+          finishReason: 'stop',
+        };
+      }
+      // Third call: return a proper final answer after re-prompt
+      return {
+        content: JSON.stringify({
+          type: 'final',
+          content: 'Denver had an elite offense and mediocre defense in 2025.',
+        }),
+        model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+        provider: this.id,
+        usage: { promptTokens: 6, completionTokens: 3, totalTokens: 9 },
+        finishReason: 'stop',
+      };
+    }
+    return {
+      content: 'Fallback text response',
+      model: request.model ?? 'qwen/qwen3.5-35b-a3b',
+      provider: this.id,
+      finishReason: 'stop',
+    };
+  }
+
+  listModels(): string[] { return ['qwen/qwen3.5-35b-a3b', 'gpt-5.4', 'gpt-5-mini']; }
+  supportsModel(model: string): boolean { return model.includes('qwen') || model.startsWith('gpt-5'); }
 }
 
 class TracingCopilotProvider implements LLMProvider {
@@ -1710,6 +1780,80 @@ class TracingCopilotProvider implements LLMProvider {
       }
     });
 
+    it('rejects raw JSON data payloads and re-prompts for a real answer', async () => {
+      const repo = new Repository(pipelineDbPath);
+      repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
+      const provider = new DataPayloadProvider();
+      const toolGateway = new LLMGateway({
+        modelPolicy: loadPolicy(),
+        providers: [provider],
+      });
+      const toolRunner = new AgentRunner({
+        gateway: toolGateway,
+        memory,
+        chartersDir,
+        skillsDir,
+      });
+
+      try {
+        const result = await toolRunner.run({
+          agentName: 'writer',
+          task: 'Summarize the tracked article',
+          trace: {
+            repo,
+            articleId: 'trace-article',
+            stage: 5,
+            surface: 'writeDraft',
+          },
+          toolCalling: {
+            enabled: true,
+            includePipelineTools: true,
+            requestedTools: ['article_get'],
+            context: {
+              repo,
+              engine: new (await import('../../src/pipeline/engine.js')).PipelineEngine(repo),
+              config: {
+                dataDir: tempDir,
+                league: 'nfl',
+                leagueConfig: {
+                  name: 'NFL Lab',
+                  panelName: 'The NFL Lab Expert Panel',
+                  dataSource: 'nflverse',
+                  positions: [],
+                  substackConfig: { labName: 'NFL Lab', subscribeCaption: '', footerPatterns: [] },
+                },
+                dbPath: pipelineDbPath,
+                articlesDir: tempDir,
+                imagesDir: tempDir,
+                chartersDir,
+                skillsDir,
+                memoryDbPath: dbPath,
+                logsDir: tempDir,
+                cacheDir: tempDir,
+                port: 3456,
+                env: 'development',
+              },
+              articleId: 'trace-article',
+              stage: 5,
+              surface: 'writeDraft',
+              agentName: 'writer',
+            },
+          },
+        });
+
+        // Should get the proper prose answer, not the data payload
+        expect(result.content).toBe('Denver had an elite offense and mediocre defense in 2025.');
+        // Provider should have been called 3 times: tool_call, data payload (rejected), final
+        expect(provider.requests).toHaveLength(3);
+        // The re-prompt message should mention "raw data"
+        const rePromptMessage = provider.requests[2].messages.at(-1);
+        expect(rePromptMessage?.role).toBe('user');
+        expect(rePromptMessage?.content).toContain('raw data');
+      } finally {
+        repo.close();
+      }
+    });
+
     it('sends LM Studio text-based tool calls and preserves messages across turns', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
       fetchSpy
@@ -2194,5 +2338,46 @@ describe('normalizeToolLoopResponse', () => {
     expect(result['type']).toBe('final');
     expect(typeof result['content']).toBe('string');
     expect(result['content']).toContain('"score": 42');
+  });
+});
+
+describe('looksLikeJsonDataPayload', () => {
+  it('detects a numeric data payload object', () => {
+    const data = JSON.stringify({
+      team: 'DEN', season: 2025, offensive_epa_play: 0.046,
+      defensive_epa_play: -0.037, total_yards: 5949,
+      third_down_pct: 42.2, turnovers_lost: 15,
+    }, null, 2);
+    expect(looksLikeJsonDataPayload(data)).toBe(true);
+  });
+
+  it('detects an array data payload', () => {
+    const data = JSON.stringify([
+      { player: 'Bo Nix', yards: 4200, tds: 30 },
+      { player: 'Courtland Sutton', yards: 1100, tds: 8 },
+    ], null, 2);
+    expect(looksLikeJsonDataPayload(data)).toBe(true);
+  });
+
+  it('rejects prose content (markdown article)', () => {
+    const prose = '# Article Idea: The Denver Paradox\n\nWhen a team boasts an elite QB but mediocre defense...';
+    expect(looksLikeJsonDataPayload(prose)).toBe(false);
+  });
+
+  it('rejects a proper final response with long text content', () => {
+    const response = JSON.stringify({
+      title: 'The Denver Paradox',
+      content: 'A really long article about the Broncos and their 2025 season that goes into great detail about offensive efficiency and defensive shortcomings.',
+    }, null, 2);
+    expect(looksLikeJsonDataPayload(response)).toBe(false);
+  });
+
+  it('rejects plain strings', () => {
+    expect(looksLikeJsonDataPayload('Hello world')).toBe(false);
+    expect(looksLikeJsonDataPayload('')).toBe(false);
+  });
+
+  it('rejects non-JSON strings starting with {', () => {
+    expect(looksLikeJsonDataPayload('{not valid json')).toBe(false);
   });
 });

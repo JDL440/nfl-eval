@@ -162,6 +162,41 @@ const ToolLoopTurnSchema = z.union([
   }),
 ]);
 
+/**
+ * Detect whether a "final" content string is actually raw JSON data
+ * (e.g. a tool result the LLM echoed back) rather than prose content.
+ * Used by the tool loop to reject data payloads and re-prompt the LLM.
+ */
+export function looksLikeJsonDataPayload(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed !== 'object' || parsed === null) return false;
+
+    // Check if most values are numbers/booleans/null — typical of data payloads
+    const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    if (entries.length === 0) return false;
+
+    let dataLikeCount = 0;
+    let textLikeCount = 0;
+    for (const val of entries) {
+      if (typeof val === 'number' || typeof val === 'boolean' || val === null) {
+        dataLikeCount++;
+      } else if (typeof val === 'string' && val.length > 60) {
+        textLikeCount++;
+      } else if (typeof val === 'object') {
+        // Nested objects/arrays are data-like (e.g. tool result arrays)
+        dataLikeCount++;
+      }
+    }
+    // If >50% of top-level values are data-like and no significant text, it's a data payload
+    return dataLikeCount > textLikeCount && textLikeCount < 2;
+  } catch {
+    return false;
+  }
+}
+
 const TOOL_LOOP_RESPONSE_SCHEMA = z.object({
   type: z.enum(['final', 'tool_call']),
   content: z.string().optional(),
@@ -1052,6 +1087,20 @@ export class AgentRunner {
       }
 
       if (parsed.data.type === 'final') {
+        // Guard: if the "final" content is actually raw JSON data (e.g. a tool
+        // result the LLM echoed back), reject it and re-prompt for a real answer.
+        if (attempt < params.maxToolCalls && looksLikeJsonDataPayload(parsed.data.content)) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: [
+              'Your response appears to contain raw data rather than a completed answer.',
+              'Please use the data you gathered to write a proper response.',
+              'Respond with {"type":"final","content":"your full answer here"} only.',
+            ].join('\n\n'),
+          });
+          continue;
+        }
         finalResponse = {
           ...response,
           content: parsed.data.content,
