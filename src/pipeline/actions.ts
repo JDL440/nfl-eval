@@ -855,6 +855,7 @@ export function recordAgentUsage(
       eventType: 'completed',
       promptTokens: result.tokensUsed.prompt,
       outputTokens: result.tokensUsed.completion,
+      cachedTokens: result.tokensUsed.cached ?? null,
       costUsdEstimate: cost > 0 ? cost : null,
       metadata: result.traceId ? { traceId: result.traceId } : null,
     });

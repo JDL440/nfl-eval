@@ -56,6 +56,7 @@ interface OpenAIResponse {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
+    prompt_tokens_details?: { cached_tokens?: number };
   };
 }
 
@@ -122,6 +123,7 @@ export class OpenAIProvider implements LLMProvider {
             promptTokens: data.usage.prompt_tokens,
             completionTokens: data.usage.completion_tokens,
             totalTokens: data.usage.total_tokens,
+            cachedTokens: data.usage.prompt_tokens_details?.cached_tokens ?? undefined,
           }
         : undefined,
       finishReason: choice?.finish_reason ?? undefined,

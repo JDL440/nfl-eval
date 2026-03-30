@@ -122,7 +122,7 @@ export interface AgentRunResult {
   provider: string;
   agentName: string;
   memoriesUsed: number;
-  tokensUsed?: { prompt: number; completion: number };
+  tokensUsed?: { prompt: number; completion: number; cached?: number };
   traceId?: string;
 }
 
@@ -1676,7 +1676,7 @@ export class AgentRunner {
       agentName,
       memoriesUsed: memories.length,
       tokensUsed: response.usage
-        ? { prompt: response.usage.promptTokens, completion: response.usage.completionTokens }
+        ? { prompt: response.usage.promptTokens, completion: response.usage.completionTokens, cached: response.usage.cachedTokens }
         : undefined,
       traceId: traceId ?? undefined,
     };

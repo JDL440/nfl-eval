@@ -36,6 +36,8 @@ interface AnthropicResponse {
   usage: {
     input_tokens: number;
     output_tokens: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
   };
 }
 
@@ -106,6 +108,9 @@ export class AnthropicProvider implements LLMProvider {
         promptTokens: data.usage.input_tokens,
         completionTokens: data.usage.output_tokens,
         totalTokens: data.usage.input_tokens + data.usage.output_tokens,
+        cachedTokens: (data.usage.cache_read_input_tokens ?? 0) > 0
+          ? data.usage.cache_read_input_tokens
+          : undefined,
       },
       finishReason: data.stop_reason ?? undefined,
     };

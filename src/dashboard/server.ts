@@ -54,6 +54,7 @@ import {
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
+import { estimateImageCost } from '../llm/pricing.js';
 import { escapeHtml } from './views/layout.js';
 import {
   renderNewIdeaPage,
@@ -325,6 +326,23 @@ export function createApp(
       if (results.cover) manifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
       for (const img of results.inline) manifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
       repo.artifacts.put(articleId, 'images.json', JSON.stringify(manifest, null, 2));
+
+      // Record image generation token usage
+      if (results.totalUsage) {
+        repo.recordUsageEvent({
+          articleId,
+          stage: art.current_stage,
+          surface: 'imageGeneration',
+          provider: 'gemini',
+          modelOrTool: 'gemini-3-pro-image-preview',
+          eventType: 'completed',
+          promptTokens: results.totalUsage.promptTokens,
+          outputTokens: results.totalUsage.completionTokens,
+          imageCount: manifest.length,
+          costUsdEstimate: estimateImageCost(results.totalUsage.promptTokens, results.totalUsage.completionTokens),
+        });
+      }
+
       console.log(`[images] Generated ${manifest.length} images for ${articleId}`);
     } catch (err) {
       console.warn(`[images] Generation failed (non-fatal): ${err instanceof Error ? err.message : err}`);
@@ -2384,6 +2402,22 @@ export function createApp(
 
       repo.artifacts.put(id, 'images.json', JSON.stringify(imageManifest, null, 2));
 
+      // Record image generation token usage
+      if (results.totalUsage) {
+        repo.recordUsageEvent({
+          articleId: id,
+          stage: article.current_stage,
+          surface: 'imageGeneration',
+          provider: 'gemini',
+          modelOrTool: 'gemini-3-pro-image-preview',
+          eventType: 'completed',
+          promptTokens: results.totalUsage.promptTokens,
+          outputTokens: results.totalUsage.completionTokens,
+          imageCount: imageManifest.length,
+          costUsdEstimate: estimateImageCost(results.totalUsage.promptTokens, results.totalUsage.completionTokens),
+        });
+      }
+
       return c.json({ success: true, count: imageManifest.length });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -2420,6 +2454,23 @@ export function createApp(
       if (results.cover) manifest.push({ type: 'cover', path: results.cover.path, prompt: results.cover.prompt });
       for (const img of results.inline) manifest.push({ type: 'inline', path: img.path, prompt: img.prompt });
       repo.artifacts.put(id, 'images.json', JSON.stringify(manifest, null, 2));
+
+      // Record image generation token usage
+      if (results.totalUsage) {
+        repo.recordUsageEvent({
+          articleId: id,
+          stage: article.current_stage,
+          surface: 'imageGeneration',
+          provider: 'gemini',
+          modelOrTool: 'gemini-3-pro-image-preview',
+          eventType: 'completed',
+          promptTokens: results.totalUsage.promptTokens,
+          outputTokens: results.totalUsage.completionTokens,
+          imageCount: manifest.length,
+          costUsdEstimate: estimateImageCost(results.totalUsage.promptTokens, results.totalUsage.completionTokens),
+        });
+      }
+
       return c.html(
         `<div class="advance-result advance-success">\u2705 Generated ${manifest.length} image(s)</div>
          ${renderImageGallery(manifest)}`,

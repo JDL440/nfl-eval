@@ -38,6 +38,7 @@ interface GeminiResponse {
     promptTokenCount: number;
     candidatesTokenCount: number;
     totalTokenCount: number;
+    cachedContentTokenCount?: number;
   };
 }
 
@@ -119,6 +120,7 @@ export class GeminiProvider implements LLMProvider {
             promptTokens: data.usageMetadata.promptTokenCount,
             completionTokens: data.usageMetadata.candidatesTokenCount,
             totalTokens: data.usageMetadata.totalTokenCount,
+            cachedTokens: data.usageMetadata.cachedContentTokenCount ?? undefined,
           }
         : undefined,
       finishReason: candidate?.finishReason ?? undefined,

@@ -33,6 +33,11 @@ export interface ImageResult {
   height: number;
   prompt: string;
   provider: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 export interface ImageProvider {
@@ -199,6 +204,7 @@ export class GeminiImageProvider implements ImageProvider {
 
     const json = (await res.json()) as {
       candidates?: { content?: { parts?: { inlineData?: { data: string; mimeType?: string }; text?: string }[] } }[];
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
     };
 
     const parts = json.candidates?.[0]?.content?.parts ?? [];
@@ -222,6 +228,13 @@ export class GeminiImageProvider implements ImageProvider {
       height: dims.height,
       prompt: promptText,
       provider: this.id,
+      usage: json.usageMetadata
+        ? {
+            promptTokens: json.usageMetadata.promptTokenCount ?? 0,
+            completionTokens: json.usageMetadata.candidatesTokenCount ?? 0,
+            totalTokens: json.usageMetadata.totalTokenCount ?? 0,
+          }
+        : undefined,
     };
   }
 }
@@ -284,7 +297,7 @@ export class ImageService {
   async generateArticleImages(
     articleSlug: string,
     prompts: { cover?: ImagePrompt; inline?: ImagePrompt[] },
-  ): Promise<{ cover?: ImageResult; inline: ImageResult[] }> {
+  ): Promise<{ cover?: ImageResult; inline: ImageResult[]; totalUsage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
     let cover: ImageResult | undefined;
     if (prompts.cover) {
       cover = await this.generateCover(articleSlug, prompts.cover);
@@ -298,6 +311,17 @@ export class ImageService {
       }
     }
 
-    return { cover, inline };
+    // Aggregate token usage across all image generation calls
+    const allResults = [cover, ...inline].filter(Boolean) as ImageResult[];
+    const withUsage = allResults.filter((r) => r.usage);
+    const totalUsage = withUsage.length > 0
+      ? {
+          promptTokens: withUsage.reduce((sum, r) => sum + (r.usage?.promptTokens ?? 0), 0),
+          completionTokens: withUsage.reduce((sum, r) => sum + (r.usage?.completionTokens ?? 0), 0),
+          totalTokens: withUsage.reduce((sum, r) => sum + (r.usage?.totalTokens ?? 0), 0),
+        }
+      : undefined;
+
+    return { cover, inline, totalUsage };
   }
 }

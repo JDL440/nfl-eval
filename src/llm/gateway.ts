@@ -89,6 +89,7 @@ export interface ChatResponse {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    cachedTokens?: number;
   };
   finishReason?: string;
   providerMetadata?: ProviderMetadata;
