@@ -252,6 +252,7 @@ function renderProvidersTab(data: ConfigPageData): string {
           <select id="provider-id" name="providerId" required>
             <option value="copilot-cli">copilot-cli</option>
             <option value="copilot-api">copilot-api</option>
+            <option value="gemini">gemini</option>
             <option value="lmstudio">lmstudio</option>
             <option value="mock">mock</option>
           </select>
