@@ -1106,6 +1106,8 @@ export class AgentRunner {
     availableTools?: ToolDefinition[];
     toolContext?: import('../tools/catalog-types.js').ToolExecutionContext;
     maxToolCalls: number;
+    /** Original requested budget for trace display (before inflation). */
+    displayBudget?: number;
   }): Promise<import('../llm/gateway.js').ChatResponse> {
     const messages = [...params.messages];
     const toolEvents: LegacyToolExecutionResult[] = [];
@@ -1187,7 +1189,8 @@ export class AgentRunner {
       }
 
       if (attempt >= params.maxToolCalls) {
-        const err = new Error(`Tool loop exceeded the max of ${params.maxToolCalls} tool calls without a final answer.`);
+        const displayMax = params.displayBudget ?? params.maxToolCalls;
+        const err = new Error(`Tool loop exceeded the max of ${displayMax} tool calls without a final answer.`);
         (err as Error & { toolEvents?: LegacyToolExecutionResult[] }).toolEvents = toolEvents;
         throw err;
       }
@@ -1291,7 +1294,7 @@ export class AgentRunner {
         finalResponse.providerMetadata,
         toolEvents,
         params.route,
-        params.maxToolCalls,
+        params.displayBudget ?? params.maxToolCalls,
       ),
     };
   }
@@ -1573,7 +1576,13 @@ export class AgentRunner {
             route,
             availableTools,
             toolContext,
-            maxToolCalls: effectiveToolCallBudget,
+            // LMStudio legacy tool loop: every round-trip (including re-prompts
+            // for invalid JSON / schema errors) counts against the budget, so
+            // allow 4x headroom above the requested tool-call count.
+            maxToolCalls: route.providerId === 'lmstudio'
+              ? Math.max(effectiveToolCallBudget * 4, 200)
+              : effectiveToolCallBudget,
+            displayBudget: effectiveToolCallBudget,
           })
           : await this._gateway.chat({
             messages,

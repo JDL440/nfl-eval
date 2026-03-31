@@ -648,7 +648,10 @@ class TracingCopilotProvider implements LLMProvider {
     repo.close();
   });
 
-  it('reports the requested LM Studio manual tool budget when the loop exhausts', async () => {
+  it('LM Studio tool loop gets headroom beyond the requested budget', async () => {
+    // Provider makes 6 tool calls then returns final.
+    // Budget is 5, but LMStudio gets 4× headroom (max(20,200)=200),
+    // so 6 calls should succeed without exhausting the loop.
     const provider = new LegacyLmStudioLoopProvider(6);
     const gateway = new LLMGateway({
       modelPolicy: loadPolicy(),
@@ -672,7 +675,7 @@ class TracingCopilotProvider implements LLMProvider {
       getAvailableActions: () => [],
     };
 
-    await expect(legacyLmStudioRunner.run({
+    const result = await legacyLmStudioRunner.run({
       agentName: 'writer',
       provider: 'lmstudio',
       task: 'Use article_get forever.',
@@ -690,8 +693,11 @@ class TracingCopilotProvider implements LLMProvider {
           agentName: 'writer',
         },
       },
-    })).rejects.toThrow('Tool loop exceeded the max of 5 tool calls without a final answer.');
+    });
 
+    // Should succeed despite exceeding the requested 5-call budget
+    expect(result.content).toBe('Used article_get successfully');
+    // Prompt still tells the LLM the original requested budget
     expect(provider.requests[0]?.messages[0]?.content).toContain('You may ask for up to 5 tool calls.');
 
     repo.close();
