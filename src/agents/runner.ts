@@ -13,7 +13,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { z } from 'zod';
-import { LLMGateway, parseStructuredJson, type ChatMessage } from '../llm/gateway.js';
+import { LLMGateway, parseStructuredJson, StructuredOutputError, type ChatMessage } from '../llm/gateway.js';
 import { AgentMemory, type MemoryEntry } from './memory.js';
 import type { Repository } from '../db/repository.js';
 import {
@@ -1497,9 +1497,24 @@ export class AgentRunner {
             aggregatedUsage.totalTokens += structuredResponse.usage.totalTokens;
           }
 
-          const structured = TOOL_LOOP_RESPONSE_SCHEMA.safeParse(
-            normalizeToolLoopResponse(parseStructuredJson(structuredResponse.content)),
-          );
+          let structured;
+          try {
+            structured = TOOL_LOOP_RESPONSE_SCHEMA.safeParse(
+              normalizeToolLoopResponse(parseStructuredJson(structuredResponse.content)),
+            );
+          } catch (e) {
+            if (e instanceof StructuredOutputError) {
+              // Model returned non-JSON text (e.g. thinking + prose).
+              // Treat the raw content as the final answer rather than crashing.
+              finalResponse = {
+                ...structuredResponse,
+                content: structuredResponse.content,
+                usage: aggregatedUsage ?? structuredResponse.usage,
+              };
+              break;
+            }
+            throw e;
+          }
           if (!structured.success) {
             throw new Error(`LLM response does not match schema: ${structured.error.message}`);
           }

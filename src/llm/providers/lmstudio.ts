@@ -119,7 +119,13 @@ function normalizeStructuredFinalContent(content: string, request: ChatRequest):
   }
   const normalized = stripStructuredDecorators(content);
   if (looksLikeJsonObject(normalized)) {
-    return normalized;
+    try {
+      JSON.parse(normalized);
+      return normalized;
+    } catch {
+      // Looks like JSON but malformed (e.g. raw newlines in string values).
+      // Fall through to safe wrapping below.
+    }
   }
   return JSON.stringify({
     type: 'final',

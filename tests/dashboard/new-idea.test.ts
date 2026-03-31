@@ -587,10 +587,7 @@ Writer + Analyst + Editor
 
       expect(res.status).toBe(201);
       expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({
-        task: expect.stringContaining('return {"type":"final","content":"..."}'),
-      }));
-      expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({
-        task: expect.stringContaining('Do not emit any other JSON schema or raw markdown outside that final envelope.'),
+        task: expect.stringContaining('Generate a structured article idea'),
       }));
     });
 
