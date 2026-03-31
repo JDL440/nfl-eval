@@ -50,8 +50,8 @@ export function renderLayout(title: string, content: string, labName: string): s
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>${escapeHtml(title)} — ${escapeHtml(labName)} Dashboard</title>
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/sse.js"></script>
 </head>
 <body class="app-shell page-${escapeHtml(pageKey)}" hx-ext="sse" sse-connect="/events">
   <header class="site-header shared-mobile-header">

@@ -257,6 +257,14 @@ export function createApp(
   assertPipelineConfigValid();
 
   const app = new Hono();
+
+  // Security headers — applied to all responses
+  app.use('*', async (c, next) => {
+    await next();
+    c.header('X-Frame-Options', 'DENY');
+    c.header('X-Content-Type-Options', 'nosniff');
+  });
+
   const dashboardAuth = resolveDashboardAuthConfig(config.env, config.dashboardAuth);
   const substackService = deps?.substackService;
   const twitterService = deps?.twitterService;
@@ -3053,8 +3061,38 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     twitterService,
   });
 
-  serve({ fetch: app.fetch, port: config.port }, (info) => {
-    console.log(`NFL Lab Dashboard running at http://localhost:${info.port}`);
+  // Preflight: block dangerous production configurations
+  if (config.env === 'production') {
+    const issues: string[] = [];
+    if (config.dashboardAuth?.mode === 'off') {
+      issues.push('DASHBOARD_AUTH_MODE=off is not allowed in production');
+    }
+    if (!config.dashboardAuth?.username || !config.dashboardAuth?.password) {
+      issues.push('Auth credentials not configured');
+    }
+    if (config.dataDir.includes('-dev') || config.dataDir.includes('-test')) {
+      issues.push(`Data directory looks like a non-prod path: ${config.dataDir}`);
+    }
+    if (issues.length > 0) {
+      console.error('[PREFLIGHT FAILED]');
+      issues.forEach((i) => console.error(`  ✗ ${i}`));
+      process.exit(1);
+    }
+    console.log('[preflight] All checks passed');
+  }
+
+  // Startup environment banner
+  console.log(`[startup] ════════════════════════════════════════`);
+  console.log(`[startup] Environment : ${config.env}`);
+  console.log(`[startup] Data dir    : ${config.dataDir}`);
+  console.log(`[startup] Auth mode   : ${config.dashboardAuth?.mode ?? 'off'}`);
+  console.log(`[startup] Port        : ${config.port}`);
+  console.log(`[startup] ════════════════════════════════════════`);
+
+  // Bind to localhost only in production to prevent direct port access
+  const hostname = config.env === 'production' ? '127.0.0.1' : '0.0.0.0';
+  serve({ fetch: app.fetch, port: config.port, hostname }, (info) => {
+    console.log(`NFL Lab Dashboard running at http://${hostname}:${info.port}`);
   });
 }
 

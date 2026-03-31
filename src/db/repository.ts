@@ -298,9 +298,13 @@ export class Repository {
   public readonly artifacts: ArtifactStore;
 
   constructor(dbPath: string) {
+    if (process.env.NODE_ENV === 'test' && dbPath.includes('.nfl-lab-prod')) {
+      throw new Error('SAFETY: Test code attempted to open production database');
+    }
     this.db = new DatabaseSync(dbPath);
     this.db.exec('PRAGMA journal_mode = WAL');
     this.db.exec('PRAGMA foreign_keys = ON');
+    this.db.exec('PRAGMA busy_timeout = 5000');
     this.initSchema();
     this.artifacts = new ArtifactStore(this.db);
   }

@@ -5,6 +5,14 @@ param(
     [switch]$WithMcp
 )
 
+# Default to dev environment — isolated from production data
+if (-not $env:NFL_DATA_DIR) {
+    $env:NFL_DATA_DIR = "$env:USERPROFILE\.nfl-lab-dev"
+}
+if (-not $env:NODE_ENV) {
+    $env:NODE_ENV = 'development'
+}
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null

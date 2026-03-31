@@ -28,7 +28,7 @@ export interface AppConfig {
   logsDir: string;
   cacheDir: string;
   port: number;
-  env: 'development' | 'production';
+  env: 'development' | 'production' | 'test';
   dashboardAuth?: DashboardAuthConfig;
   contextPreset?: ContextPreset;
 }
@@ -271,7 +271,7 @@ export function prepareRuntimeDataDir(
  * Load application configuration from environment and data directory.
  */
 export function resolveDashboardAuthConfig(
-  env: 'development' | 'production',
+  env: 'development' | 'production' | 'test',
   overrides?: Partial<DashboardAuthConfig>,
 ): DashboardAuthConfig {
   const rawMode = (overrides?.mode ?? process.env.DASHBOARD_AUTH_MODE ?? 'off').trim().toLowerCase();
@@ -321,7 +321,7 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
   }
 
   const port = overrides?.port ?? parseInt(process.env.NFL_PORT ?? String(DEFAULT_PORT), 10);
-  const env = (overrides?.env ?? process.env.NODE_ENV ?? 'development') as 'development' | 'production';
+  const env = (overrides?.env ?? process.env.NODE_ENV ?? 'development') as 'development' | 'production' | 'test';
   const dashboardAuth = resolveDashboardAuthConfig(env, overrides?.dashboardAuth);
   const contextPreset = overrides?.contextPreset ?? normalizeContextPreset(process.env.NFL_CONTEXT_PRESET);
 
