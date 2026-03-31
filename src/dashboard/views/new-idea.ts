@@ -67,20 +67,32 @@ function stripCharCount(title: string): string {
 }
 
 export function extractTitleFromIdea(ideaMarkdown: string): string {
+  // Safety net: unwrap JSON envelope if the LLM response leaked through
+  let md = ideaMarkdown;
+  const trimmed = md.trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object' && typeof parsed.content === 'string') {
+        md = parsed.content;
+      }
+    } catch { /* not JSON — continue with original */ }
+  }
+
   // 1. Look for ## Working Title\n{title}
-  const workingTitleMatch = ideaMarkdown.match(/^## Working Title\s*\n+(.+)/m);
+  const workingTitleMatch = md.match(/^## Working Title\s*\n+(.+)/m);
   if (workingTitleMatch) {
     return stripCharCount(workingTitleMatch[1].trim());
   }
 
   // 2. Fall back to # Article Idea: {title}
-  const h1Match = ideaMarkdown.match(/^# Article Idea:\s*(.+)/m);
+  const h1Match = md.match(/^# Article Idea:\s*(.+)/m);
   if (h1Match) {
     return stripCharCount(h1Match[1].trim());
   }
 
   // 3. Fall back to first non-empty line
-  const lines = ideaMarkdown.split('\n');
+  const lines = md.split('\n');
   for (const line of lines) {
     const trimmed = line.replace(/^#+\s*/, '').trim();
     if (trimmed) return stripCharCount(trimmed);

@@ -7,6 +7,7 @@ import {
   normalizeToolLoopResponse,
   looksLikeJsonDataPayload,
   looksLikePersonaOrConfig,
+  unwrapFinalEnvelope,
   type AgentCharter,
   type AgentSkill,
   type AgentRunParams,
@@ -2562,5 +2563,46 @@ describe('normalizeToolLoopResponse — persona guard', () => {
     const result = normalizeToolLoopResponse(input) as Record<string, unknown>;
     expect(result['type']).toBe('final');
     expect(result['content']).toContain('Cowboys Win');
+  });
+});
+
+describe('unwrapFinalEnvelope', () => {
+  it('unwraps a standard final envelope', () => {
+    const json = JSON.stringify({ type: 'final', content: '# Article Idea: The Falcons Problem\n\n## Working Title\nKirk Cousins Is Broken' });
+    expect(unwrapFinalEnvelope(json)).toBe('# Article Idea: The Falcons Problem\n\n## Working Title\nKirk Cousins Is Broken');
+  });
+
+  it('unwraps case-insensitive type', () => {
+    const json = JSON.stringify({ type: 'Final', content: 'Some content' });
+    expect(unwrapFinalEnvelope(json)).toBe('Some content');
+  });
+
+  it('returns original text when not JSON', () => {
+    const text = '# Just Markdown\n\nNo JSON here.';
+    expect(unwrapFinalEnvelope(text)).toBe(text);
+  });
+
+  it('returns original text for non-final JSON', () => {
+    const json = JSON.stringify({ type: 'tool_call', toolName: 'query_player_stats', args: {} });
+    expect(unwrapFinalEnvelope(json)).toBe(json);
+  });
+
+  it('returns original text when content is empty', () => {
+    const json = JSON.stringify({ type: 'final', content: '' });
+    expect(unwrapFinalEnvelope(json)).toBe(json);
+  });
+
+  it('returns original text when content is missing', () => {
+    const json = JSON.stringify({ type: 'final', answer: 'wrong field' });
+    expect(unwrapFinalEnvelope(json)).toBe(json);
+  });
+
+  it('returns original text for non-object JSON', () => {
+    expect(unwrapFinalEnvelope('[1,2,3]')).toBe('[1,2,3]');
+  });
+
+  it('preserves leading whitespace but still detects envelope', () => {
+    const json = '  ' + JSON.stringify({ type: 'final', content: 'Unwrapped!' });
+    expect(unwrapFinalEnvelope(json)).toBe('Unwrapped!');
   });
 });

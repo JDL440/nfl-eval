@@ -127,6 +127,22 @@ The Actual Title Here
 ## Next Section`;
     expect(extractTitleFromIdea(md)).toBe('The Actual Title Here');
   });
+
+  it('unwraps JSON envelope and extracts title from inner content', () => {
+    const json = JSON.stringify({
+      type: 'final',
+      content: '# Article Idea: The Falcons\' $180M QB Problem\n\n## Working Title\nKirk Cousins Is Dragging Elite Talent Down a Black Hole\n\n## Angle',
+    });
+    expect(extractTitleFromIdea(json)).toBe('Kirk Cousins Is Dragging Elite Talent Down a Black Hole');
+  });
+
+  it('unwraps JSON envelope and falls back to h1 when no Working Title', () => {
+    const json = JSON.stringify({
+      type: 'final',
+      content: '# Article Idea: Why the Rams Need Help\n\nSome angle text here.',
+    });
+    expect(extractTitleFromIdea(json)).toBe('Why the Rams Need Help');
+  });
 });
 
 // ── View rendering tests ────────────────────────────────────────────────────

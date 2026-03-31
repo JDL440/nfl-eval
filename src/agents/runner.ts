@@ -91,6 +91,33 @@ const AGENT_STAGE_KEY: Record<string, string> = {
 };
 
 /** Separate thinking/reasoning tokens from LLM output. */
+/**
+ * Safety-net: if the LLM returned a raw JSON envelope (e.g. because the
+ * provider was copilot-cli and bypassed the tool-loop), unwrap the inner
+ * content so callers never see `{"type":"final","content":"..."}`.
+ */
+export function unwrapFinalEnvelope(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('{')) return text;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      !Array.isArray(parsed) &&
+      typeof parsed.type === 'string' &&
+      parsed.type.toLowerCase() === 'final' &&
+      typeof parsed.content === 'string' &&
+      parsed.content.trim().length > 0
+    ) {
+      return parsed.content;
+    }
+  } catch {
+    // Not valid JSON — return as-is
+  }
+  return text;
+}
+
 export function separateThinking(content: string): { thinking: string | null; output: string } {
   const thinkParts: string[] = [];
 
@@ -1620,7 +1647,10 @@ export class AgentRunner {
     }
 
     // 8. Separate thinking tokens from output (Qwen, DeepSeek, etc.)
-    const { thinking, output: cleanContent } = separateThinking(response.content);
+    //    Then unwrap any lingering JSON envelope (e.g. copilot-cli bypasses the
+    //    tool-loop parser but the LLM still follows the envelope instructions).
+    const { thinking, output: rawContent } = separateThinking(response.content);
+    const cleanContent = unwrapFinalEnvelope(rawContent);
     if (traceId) {
       const providerToolCalls = extractProviderToolCalls(response.providerMetadata);
       const metadata = availableTools.length > 0 || toolCalls.length > 0 || providerToolCalls.length > 0
