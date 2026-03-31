@@ -60,6 +60,19 @@ $consecutiveFailures = 0
 $maxLogEntries = 500
 $maxLogBytes = 1048576  # 1MB
 
+# Ralph runs in a separate worktree to avoid disrupting main checkout
+$ralphDir = "C:\github\nfl-eval-ralph"
+if (-not (Test-Path $ralphDir)) {
+    Write-Host "ERROR: Ralph worktree not found at $ralphDir" -ForegroundColor Red
+    Write-Host "Create it with: git worktree add $ralphDir v2" -ForegroundColor Yellow
+    exit 1
+}
+Set-Location $ralphDir
+
+# Ralph uses the dev data directory, never prod
+$env:NFL_DATA_DIR = "$env:USERPROFILE\.nfl-lab-dev"
+$env:NODE_ENV = "development"
+
 $prompt = @'
 Ralph, Go!
 

@@ -6,6 +6,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Resolve sqlite3 (winget install path or PATH)
+$sqlite3 = Get-Command sqlite3 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+if (-not $sqlite3) {
+    $sqlite3 = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\*sqlite*" -Recurse -Filter "sqlite3.exe" -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+if (-not $sqlite3) {
+    Write-Host "ERROR: sqlite3 not found. Install with: winget install SQLite.SQLite" -ForegroundColor Red
+    exit 1
+}
+
 $dbPath = Join-Path $DataDir "pipeline.db"
 $backupDir = Join-Path $DataDir "backups"
 $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
@@ -21,14 +32,14 @@ if (-not (Test-Path $backupDir)) {
 }
 
 # Use SQLite's backup API (safe for WAL mode — includes WAL/SHM state)
-sqlite3 $dbPath ".backup '$backupPath'"
+& $sqlite3 $dbPath ".backup '$backupPath'"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Backup failed" -ForegroundColor Red
     exit 1
 }
 
 # Verify the backup
-$check = sqlite3 $backupPath "PRAGMA integrity_check;"
+$check = & $sqlite3 $backupPath "PRAGMA integrity_check;"
 if ($check -ne "ok") {
     Write-Host "WARNING: Backup integrity check returned: $check" -ForegroundColor Yellow
 }
