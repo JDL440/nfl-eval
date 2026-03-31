@@ -46,6 +46,7 @@ export interface ArticleDetailData {
   artifactNames?: string[];
   flashMessage?: string;
   errorMessage?: string;
+  isAdvancing?: boolean;
 }
 
 function parseTeams(raw: string | null): string[] {
@@ -157,7 +158,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, reviews, revisionHistory, advanceCheck, usageEvents, artifactNames, flashMessage, errorMessage } = data;
+  const { config, article, reviews, revisionHistory, advanceCheck, usageEvents, artifactNames, flashMessage, errorMessage, isAdvancing } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -185,7 +186,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
 
       <div class="detail-grid mobile-detail-layout">
         <div class="detail-main mobile-primary-column">
-          ${renderActionPanel(article, advanceCheck)}
+          ${renderActionPanel(article, advanceCheck, isAdvancing)}
           ${(revisionHistory?.length ?? 0) > 0 ? renderRevisionHistory(revisionHistory ?? []) : ''}
           ${article.current_stage >= 5 ? renderImageSection(article, artifactNames) : ''}
           <div id="live-artifacts"
@@ -198,7 +199,8 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           ${renderUsagePanel(usageEvents ?? [])}
         </div>
       </div>
-    </div>`;
+    </div>
+    ${renderAutoAdvanceScript(eid)}`;
 
   return renderLayout(article.title, content, config.leagueConfig.name);
 }
@@ -417,7 +419,7 @@ export function extractThinking(content: string): { thinking: string | null; out
 
 // ── Action Panel ─────────────────────────────────────────────────────────────
 
-function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): string {
+function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, isAdvancing?: boolean): string {
   // Preview button for articles with a draft (stage >= 5)
   const previewLink = article.current_stage >= 5
     ? `<a href="/articles/${escapeHtml(article.id)}/preview" class="btn btn-secondary">👁 Preview</a>`
@@ -445,15 +447,22 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
   const canAdvance = advanceCheck?.allowed ?? false;
   const guardReason = advanceCheck?.reason ?? '';
 
-  const retryButton = `
-    <button class="btn btn-retry"
-      hx-post="/htmx/articles/${escapeHtml(article.id)}/auto-advance"
-      hx-target="#retry-result-${escapeHtml(article.id)}"
-      hx-swap="innerHTML"
-      hx-indicator="#retry-spinner-${escapeHtml(article.id)}">
-      🔄 Retry Auto-Advance
-    </button>
-    <span id="retry-spinner-${escapeHtml(article.id)}" class="htmx-indicator" style="margin-left:0.5rem">⏳ Running…</span>`;
+  const eid = escapeHtml(article.id);
+
+  // Auto-advance toggle replaces the old Advance + Retry buttons.
+  // data-state is rendered from server-known isAdvancing; the client-side
+  // script hydrates it further from localStorage.
+  // data-running lets the CSS show/hide the spinner independently from on/off.
+  const autoAdvanceToggle = `
+    <label class="auto-advance-toggle${isAdvancing ? ' is-running' : ''}"
+      data-state="${isAdvancing ? 'on' : 'off'}"
+      data-article-id="${eid}"
+      data-running="${isAdvancing ? 'true' : 'false'}"
+      title="Toggle auto-advance: continuously advance this article through the pipeline">
+      <span class="toggle-track"></span>
+      <span class="toggle-label">Auto-Advance</span>
+      <span class="toggle-spinner"></span>
+    </label>`;
 
   if (article.current_stage === 6 && article.status === 'needs_lead_review') {
     return `
@@ -540,7 +549,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
       </section>`;
   }
 
-  // Other stages — advance flow + retry button
+  // Other stages — advance flow with toggle
   const canRegress = article.current_stage > 1;
   const regressOptions = canRegress
     ? Array.from({ length: article.current_stage - 1 }, (_, i) => {
@@ -551,7 +560,7 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
 
   return `
     <section class="detail-section action-panel"
-      hx-get="/articles/${escapeHtml(article.id)}"
+      hx-get="/articles/${eid}"
       hx-trigger="sse:stage_changed, sse:pipeline_complete"
       hx-select=".action-panel"
       hx-target="this"
@@ -563,19 +572,13 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
           : ''}
         ${previewLink}
         ${traceTimelineLink}
-        <button class="btn btn-primary"
-          hx-post="/htmx/articles/${escapeHtml(article.id)}/auto-advance"
-          hx-target="#advance-result-${escapeHtml(article.id)}"
-          hx-swap="innerHTML">
-          Advance ▶ Stage ${nextStage}
-        </button>
-        ${retryButton}
+        ${autoAdvanceToggle}
         ${canRegress ? `
           <details class="send-back-dropdown">
             <summary class="btn btn-danger-outline">↩ Send Back</summary>
             <form class="send-back-form"
-              hx-post="/htmx/articles/${escapeHtml(article.id)}/regress"
-              hx-target="#advance-result-${escapeHtml(article.id)}"
+              hx-post="/htmx/articles/${eid}/regress"
+              hx-target="#advance-result-${eid}"
               hx-swap="innerHTML"
               hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
               hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
@@ -588,10 +591,121 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck): strin
           </details>` : ''}
       </div>
       ${renderGuardStatus(canAdvance, guardReason)}
-      <div id="advance-result-${escapeHtml(article.id)}"></div>
-      <div id="retry-result-${escapeHtml(article.id)}" class="retry-result"></div>
+      <div id="advance-result-${eid}"></div>
       ${renderDangerZone(article)}
     </section>`;
+}
+
+/**
+ * Page-level script that drives the auto-advance toggle.
+ * Lives OUTSIDE the .action-panel so it survives HTMX outerHTML swaps.
+ * On each swap it re-hydrates the toggle from localStorage.
+ */
+function renderAutoAdvanceScript(articleId: string): string {
+  return `<script>
+(function() {
+  var AID = ${JSON.stringify(articleId)};
+  var KEY = 'nfl-lab-auto-advance-' + AID;
+
+  function isOn() { return localStorage.getItem(KEY) === 'true'; }
+
+  function hydrate() {
+    var el = document.querySelector('.auto-advance-toggle[data-article-id="' + AID + '"]');
+    if (!el) return;
+    var on = isOn();
+    var running = el.getAttribute('data-running') === 'true';
+    el.setAttribute('data-state', (on || running) ? 'on' : 'off');
+    if (running) el.classList.add('is-running');
+    else el.classList.remove('is-running');
+  }
+
+  function fireAdvance() {
+    fetch('/api/articles/' + AID + '/auto-advance', { method: 'POST' })
+      .then(function(r) {
+        if (r.status === 409) return; // already running — fine
+        if (!r.ok) console.warn('auto-advance fire failed', r.status);
+      })
+      .catch(function(e) { console.warn('auto-advance fetch error', e); });
+  }
+
+  function onToggleClick(e) {
+    var el = e.currentTarget;
+    if (el.getAttribute('data-state') === 'disabled') return;
+    var nowOn = !isOn();
+    localStorage.setItem(KEY, String(nowOn));
+    el.setAttribute('data-state', nowOn ? 'on' : 'off');
+    if (nowOn) {
+      el.classList.add('is-running');
+      fireAdvance();
+    }
+  }
+
+  function attachClick() {
+    var el = document.querySelector('.auto-advance-toggle[data-article-id="' + AID + '"]');
+    if (el && !el._aabound) {
+      el._aabound = true;
+      el.addEventListener('click', onToggleClick);
+    }
+  }
+
+  // SSE: when pipeline_complete arrives, re-trigger if toggle ON
+  function onSSE(evt) {
+    if (!isOn()) return;
+    try {
+      var d = JSON.parse(evt.data || '{}');
+      if (d.articleId && d.articleId !== AID) return;
+    } catch(_) {}
+    // Wait for the HTMX panel swap to settle, then re-fire
+    setTimeout(function() {
+      hydrate();
+      attachClick();
+      var el = document.querySelector('.auto-advance-toggle[data-article-id="' + AID + '"]');
+      if (el && el.getAttribute('data-state') !== 'disabled') {
+        el.classList.add('is-running');
+        fireAdvance();
+      }
+    }, 1500);
+  }
+
+  // SSE: mark toggle running when advance starts working
+  function onSSEWorking(evt) {
+    try {
+      var d = JSON.parse(evt.data || '{}');
+      if (d.articleId && d.articleId !== AID) return;
+    } catch(_) {}
+    var el = document.querySelector('.auto-advance-toggle[data-article-id="' + AID + '"]');
+    if (el) el.classList.add('is-running');
+  }
+
+  // Re-hydrate after any HTMX swap (panel refresh)
+  document.body.addEventListener('htmx:afterSettle', function() {
+    hydrate();
+    attachClick();
+  });
+
+  // Listen for SSE events
+  document.body.addEventListener('sse:pipeline_complete', onSSE);
+  document.body.addEventListener('sse:stage_working', onSSEWorking);
+
+  // Cross-tab sync
+  window.addEventListener('storage', function(e) {
+    if (e.key === KEY) hydrate();
+  });
+
+  // Initial hydration
+  hydrate();
+  attachClick();
+
+  // If toggle was ON when page loaded and nothing is running, kick it off
+  if (isOn()) {
+    var el = document.querySelector('.auto-advance-toggle[data-article-id="' + AID + '"]');
+    if (el && el.getAttribute('data-running') !== 'true') {
+      el.classList.add('is-running');
+      fireAdvance();
+    }
+  }
+})();
+</script>`;
 }
 
 function renderGuardStatus(canAdvance: boolean, reason: string): string {

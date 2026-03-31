@@ -980,7 +980,8 @@ describe('Dashboard Server', () => {
       const res = await app.request('/articles/action-test');
       const html = await res.text();
       expect(html).toContain('action-panel');
-      expect(html).toContain('Advance ▶');
+      expect(html).toContain('auto-advance-toggle');
+      expect(html).toContain('Auto-Advance');
       expect(html).toContain('guard-status');
     });
 

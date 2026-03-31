@@ -447,6 +447,7 @@ export function renderNewIdeaPage(config: {
               + (data.autoAdvance ? ' Running auto-advance pipeline…' : '')
               + ' <a href="' + articleUrl + '" class="btn btn-primary btn-sm" style="margin-left:0.5rem">View Article →</a>';
             if (data.autoAdvance) {
+              localStorage.setItem('nfl-lab-auto-advance-' + data.id, 'true');
               fetch('/api/articles/' + data.id + '/auto-advance', { method: 'POST' }).catch(() => {});
             }
           } else {

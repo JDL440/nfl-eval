@@ -834,6 +834,7 @@ export function createApp(
         artifactNames: repo.artifacts.list(id).map(a => a.name),
         flashMessage,
         errorMessage,
+        isAdvancing: activeAdvances.has(id),
       }),
     );
   });
