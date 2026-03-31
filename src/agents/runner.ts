@@ -1343,8 +1343,10 @@ export class AgentRunner {
       stageKey: model ? undefined : stageKey,
       taskFamily,
     });
-    const useStructuredToolCalling = params.toolCalling?.enabled === true && route.providerId !== 'lmstudio';
-    const toolLoopEnabled = (params.toolCalling?.enabled === true && route.providerId === 'lmstudio')
+    const useLegacyLmStudioLoop = route.providerId === 'lmstudio'
+      && process.env.LMSTUDIO_LEGACY_TOOLS === 'true';
+    const useStructuredToolCalling = params.toolCalling?.enabled === true && !useLegacyLmStudioLoop;
+    const toolLoopEnabled = (params.toolCalling?.enabled === true && useLegacyLmStudioLoop)
       || (!useStructuredToolCalling && this.shouldUseToolLoop(route.providerId, responseFormat));
     const effectiveToolCallBudget = Math.max(1, params.toolCalling?.maxToolCalls ?? this.maxToolCalls);
     const requestedTools = Array.from(new Set([
@@ -1461,13 +1463,20 @@ export class AgentRunner {
         let finalResponse: import('../llm/gateway.js').ChatResponse | undefined;
 
         for (let attempt = 0; attempt < maxToolCalls; attempt += 1) {
+          const nativeTools = buildNativeToolDefinitions(availableTools);
           const structuredResponse = await this._gateway.chat({
             messages: toolConversation,
+            tools: nativeTools.length > 0 ? nativeTools : undefined,
             provider,
             model,
             temperature,
             maxTokens,
-            responseFormat: 'json',
+            // When native tools are provided to a provider that supports them
+            // (e.g. LMStudio), omit responseFormat so the provider can decide
+            // how to constrain the output.  Other providers still use JSON mode
+            // alongside native tools.
+            responseFormat: nativeTools.length > 0 && route.providerId === 'lmstudio'
+              ? undefined : 'json',
             stageKey: model ? undefined : stageKey,
             taskFamily,
             disallowedProviderIds: ['copilot-cli'],
@@ -1576,10 +1585,10 @@ export class AgentRunner {
             route,
             availableTools,
             toolContext,
-            // LMStudio legacy tool loop: every round-trip (including re-prompts
-            // for invalid JSON / schema errors) counts against the budget, so
-            // allow 4x headroom above the requested tool-call count.
-            maxToolCalls: route.providerId === 'lmstudio'
+            // Legacy tool loop: when LMSTUDIO_LEGACY_TOOLS=true, every
+            // round-trip (including re-prompts for invalid JSON / schema errors)
+            // counts against the budget, so allow 4x headroom.
+            maxToolCalls: useLegacyLmStudioLoop
               ? Math.max(effectiveToolCallBudget * 4, 200)
               : effectiveToolCallBudget,
             displayBudget: effectiveToolCallBudget,

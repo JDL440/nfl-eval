@@ -597,6 +597,9 @@ class TracingCopilotProvider implements LLMProvider {
   });
 
   it('uses the per-run max tool budget for LM Studio manual tool loops', async () => {
+    // Force legacy tool loop for this test (budget enforcement is a legacy-only behavior)
+    process.env.LMSTUDIO_LEGACY_TOOLS = 'true';
+    try {
     const provider = new LegacyLmStudioLoopProvider(5);
     const gateway = new LLMGateway({
       modelPolicy: loadPolicy(),
@@ -646,9 +649,15 @@ class TracingCopilotProvider implements LLMProvider {
     expect(provider.requests[0]?.messages[0]?.content).toContain('You may ask for up to 5 tool calls.');
 
     repo.close();
+    } finally {
+      delete process.env.LMSTUDIO_LEGACY_TOOLS;
+    }
   });
 
   it('LM Studio tool loop gets headroom beyond the requested budget', async () => {
+    // Force legacy tool loop for this test (headroom inflation is a legacy-only behavior)
+    process.env.LMSTUDIO_LEGACY_TOOLS = 'true';
+    try {
     // Provider makes 6 tool calls then returns final.
     // Budget is 5, but LMStudio gets 4× headroom (max(20,200)=200),
     // so 6 calls should succeed without exhausting the loop.
@@ -701,6 +710,9 @@ class TracingCopilotProvider implements LLMProvider {
     expect(provider.requests[0]?.messages[0]?.content).toContain('You may ask for up to 5 tool calls.');
 
     repo.close();
+    } finally {
+      delete process.env.LMSTUDIO_LEGACY_TOOLS;
+    }
   });
 
   afterEach(() => {
@@ -1837,6 +1849,8 @@ class TracingCopilotProvider implements LLMProvider {
     });
 
     it('rejects raw JSON data payloads and re-prompts for a real answer', async () => {
+      // Force legacy tool loop for this test (data-payload rejection is a legacy-only feature)
+      process.env.LMSTUDIO_LEGACY_TOOLS = 'true';
       const repo = new Repository(pipelineDbPath);
       repo.createArticle({ id: 'trace-article', title: 'Trace Article' });
       const provider = new DataPayloadProvider();
@@ -1907,10 +1921,13 @@ class TracingCopilotProvider implements LLMProvider {
         expect(rePromptMessage?.content).toContain('raw data');
       } finally {
         repo.close();
+        delete process.env.LMSTUDIO_LEGACY_TOOLS;
       }
     });
 
     it('breaks consecutive duplicate tool calls after 3 repetitions', async () => {
+      // Force legacy tool loop (dupe-breaker re-prompt is a legacy-only feature)
+      process.env.LMSTUDIO_LEGACY_TOOLS = 'true';
       const repo = new Repository(pipelineDbPath);
       repo.createArticle({ id: 'dupe-article', title: 'Dupe Article' });
       const provider = new RepetitiveToolCallProvider();
@@ -1984,12 +2001,14 @@ class TracingCopilotProvider implements LLMProvider {
         expect(breakerRequest).toBeDefined();
       } finally {
         repo.close();
+        delete process.env.LMSTUDIO_LEGACY_TOOLS;
       }
     });
 
-    it('sends LM Studio text-based tool calls and preserves messages across turns', async () => {
+    it('sends LM Studio native tool calls and preserves messages across turns', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
       fetchSpy
+        // First response: native tool_call (OpenAI format)
         .mockResolvedValueOnce(new Response(JSON.stringify({
           id: 'chatcmpl-1',
           object: 'chat.completion',
@@ -1998,12 +2017,21 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: '{"type":"tool_call","toolName":"article_get","args":{"article_id":"trace-article"}}',
+              content: null,
+              tool_calls: [{
+                id: 'call_1',
+                type: 'function',
+                function: {
+                  name: 'article_get',
+                  arguments: '{"article_id":"trace-article"}',
+                },
+              }],
             },
-            finish_reason: 'stop',
+            finish_reason: 'tool_calls',
           }],
           usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+        // Second response: final answer (plain text, no tool_calls)
         .mockResolvedValueOnce(new Response(JSON.stringify({
           id: 'chatcmpl-2',
           object: 'chat.completion',
@@ -2012,7 +2040,7 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: '{"type":"final","content":"LM Studio tool flow worked"}',
+              content: 'LM Studio native tool flow worked',
             },
             finish_reason: 'stop',
           }],
@@ -2079,23 +2107,20 @@ class TracingCopilotProvider implements LLMProvider {
           },
         });
 
-        expect(result.content).toBe('LM Studio tool flow worked');
+        expect(result.content).toBe('LM Studio native tool flow worked');
 
         const firstBody = JSON.parse((fetchSpy.mock.calls[0] as [string, RequestInit])[1].body as string);
-        // Text-based tool calling: tool catalog in system prompt, no native tools
-        expect(firstBody.tools).toBeUndefined();
-        expect(firstBody.messages[0].content).toContain('# Available Tools');
+        // Native tool calling: tools array in request, no JSON response_format
+        expect(firstBody.tools).toBeDefined();
+        expect(firstBody.tools[0].function.name).toBe('article_get');
+        expect(firstBody.response_format).toBeUndefined();
 
         const secondBody = JSON.parse((fetchSpy.mock.calls[1] as [string, RequestInit])[1].body as string);
-        // Assistant's tool_call JSON preserved, tool result sent as user message
-        expect(secondBody.messages.at(-2)).toMatchObject({
-          role: 'assistant',
-          content: expect.stringContaining('article_get'),
-        });
-        expect(secondBody.messages.at(-1)).toMatchObject({
-          role: 'user',
-          content: expect.stringContaining('Tool result for article_get'),
-        });
+        // Tool result sent as role:'tool' message (OpenAI structured format)
+        const toolMsg = secondBody.messages.find((m: { role: string }) => m.role === 'tool');
+        expect(toolMsg).toBeDefined();
+        expect(toolMsg.tool_call_id).toBe('call_1');
+        expect(toolMsg.name).toBe('article_get');
       } finally {
         fetchSpy.mockRestore();
         repo.close();
@@ -2105,6 +2130,7 @@ class TracingCopilotProvider implements LLMProvider {
     it('reuses the prior tool result when LM Studio repeats an identical tool call', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
       fetchSpy
+        // First response: native tool_call
         .mockResolvedValueOnce(new Response(JSON.stringify({
           id: 'chatcmpl-1',
           object: 'chat.completion',
@@ -2113,12 +2139,18 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: '{"type":"tool_call","toolName":"article_get","args":{"article_id":"trace-article"}}',
+              content: null,
+              tool_calls: [{
+                id: 'call_1',
+                type: 'function',
+                function: { name: 'article_get', arguments: '{"article_id":"trace-article"}' },
+              }],
             },
-            finish_reason: 'stop',
+            finish_reason: 'tool_calls',
           }],
           usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+        // Second response: same tool_call again (duplicate)
         .mockResolvedValueOnce(new Response(JSON.stringify({
           id: 'chatcmpl-2',
           object: 'chat.completion',
@@ -2127,12 +2159,18 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: '{"type":"tool_call","toolName":"article_get","args":{"article_id":"trace-article"}}',
+              content: null,
+              tool_calls: [{
+                id: 'call_2',
+                type: 'function',
+                function: { name: 'article_get', arguments: '{"article_id":"trace-article"}' },
+              }],
             },
-            finish_reason: 'stop',
+            finish_reason: 'tool_calls',
           }],
           usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+        // Third response: final answer
         .mockResolvedValueOnce(new Response(JSON.stringify({
           id: 'chatcmpl-3',
           object: 'chat.completion',
@@ -2141,7 +2179,7 @@ class TracingCopilotProvider implements LLMProvider {
             index: 0,
             message: {
               role: 'assistant',
-              content: '{"type":"final","content":"Done after duplicate replay"}',
+              content: 'Done after duplicate replay',
             },
             finish_reason: 'stop',
           }],
@@ -2209,16 +2247,14 @@ class TracingCopilotProvider implements LLMProvider {
         });
 
         expect(result.content).toBe('Done after duplicate replay');
-        // runWithToolLoop caches tool results — the duplicate call reuses the cached
-        // output instead of re-executing. Verify the same result appears in the 3rd
-        // request's messages (no duplicate-detection note; just the re-used output).
+        // Structured tool calling uses Set-based dedup.  Both tool results
+        // are sent as role:'tool' messages; the duplicate returns a cached stub.
         const thirdBody = JSON.parse((fetchSpy.mock.calls[2] as [string, RequestInit])[1].body as string);
-        // Both tool result messages should have the same content (cached result reused)
-        const toolResultMsgs = thirdBody.messages.filter((m: { role: string; content: string }) =>
-          m.role === 'user' && m.content.startsWith('Tool result for article_get:'));
-        expect(toolResultMsgs.length).toBe(2);
-        // The duplicate content matches the original (cached, not re-executed)
-        expect(toolResultMsgs[1].content).toBe(toolResultMsgs[0].content);
+        const toolMsgs = thirdBody.messages.filter((m: { role: string }) => m.role === 'tool');
+        // Two tool results: original + cached duplicate
+        expect(toolMsgs.length).toBe(2);
+        // The duplicate result references the repeat
+        expect(toolMsgs[1].content).toContain('already executed earlier');
       } finally {
         fetchSpy.mockRestore();
         repo.close();

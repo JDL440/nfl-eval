@@ -114,7 +114,7 @@ function looksLikeJsonObject(value: string): boolean {
 }
 
 function normalizeStructuredFinalContent(content: string, request: ChatRequest): string {
-  if (request.responseFormat !== 'json' || !request.tools || request.tools.length === 0) {
+  if (!request.tools || request.tools.length === 0) {
     return content;
   }
   const normalized = stripStructuredDecorators(content);
