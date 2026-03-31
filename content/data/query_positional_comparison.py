@@ -28,10 +28,10 @@ CACHE_DIR = Path(__file__).parent / "cache"
 
 # Position -> available metrics mapping
 POSITION_METRICS = {
-    "QB": ["passing_epa", "passing_yards", "passing_tds", "completions", "attempts", "passing_cpoe"],
-    "RB": ["rushing_epa", "rushing_yards", "rushing_tds", "carries", "receiving_yards", "receptions", "targets"],
-    "WR": ["receiving_epa", "receiving_yards", "receiving_tds", "receptions", "targets", "target_share", "air_yards_share", "racr"],
-    "TE": ["receiving_epa", "receiving_yards", "receiving_tds", "receptions", "targets", "target_share", "air_yards_share"],
+    "QB": ["passing_epa", "passing_yards", "passing_tds", "completions", "attempts", "passing_cpoe", "fantasy_points", "fantasy_points_ppr"],
+    "RB": ["rushing_epa", "rushing_yards", "rushing_tds", "carries", "receiving_yards", "receptions", "targets", "fantasy_points", "fantasy_points_ppr"],
+    "WR": ["receiving_epa", "receiving_yards", "receiving_tds", "receptions", "targets", "target_share", "air_yards_share", "racr", "fantasy_points", "fantasy_points_ppr"],
+    "TE": ["receiving_epa", "receiving_yards", "receiving_tds", "receptions", "targets", "target_share", "air_yards_share", "fantasy_points", "fantasy_points_ppr"],
 }
 
 
@@ -82,7 +82,8 @@ def query_positional_comparison(position: str, metric: str, season: int, top_n: 
     
     # Sum counting stats
     count_cols = ["attempts", "completions", "passing_yards", "passing_tds", "carries", 
-                  "rushing_yards", "rushing_tds", "targets", "receptions", "receiving_yards", "receiving_tds"]
+                  "rushing_yards", "rushing_tds", "targets", "receptions", "receiving_yards", "receiving_tds",
+                  "fantasy_points", "fantasy_points_ppr", "fantasy_points_half_ppr"]
     for col in count_cols:
         if col in position_df.columns:
             agg_exprs.append(pl.col(col).sum().alias(col))

@@ -21,6 +21,7 @@
 | UX | UX Engineer | Dashboard UI, HTMX views, SSE, user experience, frontend | ⚛️ UX |
 | Ralph | Work Monitor | Issue queue scanning, project board automation, heartbeat | 🔄 Monitor |
 | Scribe | Session Logger | Memory, decisions, session logs, cross-agent context sharing | 📋 Scribe |
+| Fantasy | Fantasy Football Expert | Fantasy football analysis, rankings, dynasty/redraft evaluation, scoring impact | 🏈 Fantasy |
 
 ## Human Members
 

@@ -104,6 +104,12 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
         if col in player_df.columns:
             agg_exprs.append(pl.col(col).mean().alias(col))
     
+    # Fantasy scoring (sum across weeks)
+    fantasy_cols = ["fantasy_points", "fantasy_points_ppr", "fantasy_points_half_ppr"]
+    for col in fantasy_cols:
+        if col in player_df.columns:
+            agg_exprs.append(pl.col(col).sum().alias(col))
+    
     player = player_df.select(agg_exprs)
     
     # Calculate position rank for primary metric
@@ -155,6 +161,8 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
             "passing_epa": round(player["passing_epa"][0], 3) if "passing_epa" in player.columns else None,
             "cpoe": round(player["passing_cpoe"][0], 3) if "passing_cpoe" in player.columns else None,
             "dakota": None,  # removed from nflverse
+            "fantasy_points": round(player["fantasy_points"][0], 1) if "fantasy_points" in player.columns else None,
+            "fantasy_points_ppr": round(player["fantasy_points_ppr"][0], 1) if "fantasy_points_ppr" in player.columns else None,
             "position_rank": position_rank,
         }
     elif position == "RB":
@@ -171,6 +179,8 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
             "receptions": player["receptions"][0] if "receptions" in player.columns else 0,
             "receiving_yards": player["receiving_yards"][0] if "receiving_yards" in player.columns else 0,
             "receiving_tds": player["receiving_tds"][0] if "receiving_tds" in player.columns else 0,
+            "fantasy_points": round(player["fantasy_points"][0], 1) if "fantasy_points" in player.columns else None,
+            "fantasy_points_ppr": round(player["fantasy_points_ppr"][0], 1) if "fantasy_points_ppr" in player.columns else None,
             "position_rank": position_rank,
         }
     elif position in ["WR", "TE"]:
@@ -187,6 +197,8 @@ def query_player_epa(player_name: str, season: int, output_format: str = "markdo
             "racr": round(player["racr"][0], 3) if "racr" in player.columns else None,
             "target_share": round(player["target_share"][0], 3) if "target_share" in player.columns else None,
             "air_yards_share": round(player["air_yards_share"][0], 3) if "air_yards_share" in player.columns else None,
+            "fantasy_points": round(player["fantasy_points"][0], 1) if "fantasy_points" in player.columns else None,
+            "fantasy_points_ppr": round(player["fantasy_points_ppr"][0], 1) if "fantasy_points_ppr" in player.columns else None,
             "position_rank": position_rank,
         }
     else:

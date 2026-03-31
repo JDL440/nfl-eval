@@ -41,6 +41,8 @@ import {
     handleQueryHistoricalComps,
     queryRostersTool,
     handleQueryRosters,
+    queryFantasyStatsTool,
+    handleQueryFantasyStats,
     refreshNflverseCacheTool,
     handleRefreshNflverseCache,
 } from "../.github/extensions/nflverse-query/tool.mjs";
@@ -60,6 +62,7 @@ export const SAFE_READ_ONLY_TOOL_NAMES = Object.freeze([
     "query_pfr_defense",
     "query_historical_comps",
     "query_rosters",
+    "query_fantasy_stats",
 ]);
 
 export const BLOCKED_TOOL_NAMES = Object.freeze([
@@ -302,6 +305,27 @@ const BASE_TOOL_METADATA = {
             },
         ],
     },
+    query_fantasy_stats: {
+        category: "data",
+        sideEffects: "none (read-only local nflverse lookup)",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        examples: [
+            {
+                player: "Amon-Ra St. Brown",
+                season: 2025,
+                scoring: "ppr",
+            },
+            {
+                position: "RB",
+                season: 2025,
+                scoring: "half_ppr",
+                top: 10,
+            },
+        ],
+    },
     refresh_nflverse_cache: {
         category: "data",
         sideEffects: "refreshes local cached nflverse datasets on disk",
@@ -345,6 +369,7 @@ const BASE_LOCAL_TOOL_ENTRIES = [
     buildToolEntry(queryPfrDefenseTool, handleQueryPfrDefense, BASE_TOOL_METADATA.query_pfr_defense),
     buildToolEntry(queryHistoricalCompsTool, handleQueryHistoricalComps, BASE_TOOL_METADATA.query_historical_comps),
     buildToolEntry(queryRostersTool, handleQueryRosters, BASE_TOOL_METADATA.query_rosters),
+    buildToolEntry(queryFantasyStatsTool, handleQueryFantasyStats, BASE_TOOL_METADATA.query_fantasy_stats),
     buildToolEntry(refreshNflverseCacheTool, handleRefreshNflverseCache, BASE_TOOL_METADATA.refresh_nflverse_cache),
 ];
 

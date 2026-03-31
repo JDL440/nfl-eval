@@ -533,7 +533,66 @@ export async function handleQueryRosters(args) {
     );
 }
 
-// ─── Tool 11: refresh_nflverse_cache ──────────────────────────────────────────
+// ─── Tool 11: query_fantasy_stats ─────────────────────────────────────────────
+
+export const queryFantasyStatsTool = {
+    name: "query_fantasy_stats",
+    description:
+        "Query fantasy football scoring and opportunity metrics. Supports individual player profiles (PPG, consistency, floor/ceiling) and positional rankings. Use for fantasy-specific analysis.",
+    parameters: {
+        type: "object",
+        properties: {
+            player: {
+                type: "string",
+                description: 'Player name for individual fantasy profile (e.g., "Amon-Ra St. Brown").',
+            },
+            position: {
+                type: "string",
+                description: "Position for fantasy rankings (QB, RB, WR, TE). Ignored if player is specified.",
+            },
+            season: {
+                type: "integer",
+                description: "Season year (e.g., 2025).",
+            },
+            scoring: {
+                type: "string",
+                description: "Scoring format: standard, ppr, half_ppr (default: ppr).",
+            },
+            top: {
+                type: "integer",
+                description: "Number of results for positional rankings (default: 20).",
+            },
+        },
+        required: ["season"],
+    },
+};
+
+export async function handleQueryFantasyStats(args) {
+    const { player, position, season, scoring, top } = args;
+    if (!player && !position) {
+        return { textResultForLlm: "❌ Must specify --player or --position", resultType: "failure" };
+    }
+    const cmdArgs = ["--season", String(season)];
+    if (player) {
+        cmdArgs.push("--player", player);
+    } else {
+        cmdArgs.push("--position", position);
+    }
+    if (scoring) cmdArgs.push("--scoring", scoring);
+    if (top) cmdArgs.push("--top", String(top));
+
+    const scoringLabel = (scoring || "ppr").toUpperCase();
+    const cacheKey = `fantasy:${player || position}:${season}:${scoring || "ppr"}:${top || 20}`;
+    const title = player
+        ? `${player} — ${season} Fantasy Profile (${scoringLabel})`
+        : `Top ${top || 20} ${position} Fantasy Rankings — ${season} (${scoringLabel})`;
+    return cachedQuery(cacheKey, TTL.playerStats,
+        () => runPythonQuery("query_fantasy_stats.py", cmdArgs),
+        (data) => ({ textResultForLlm: jsonToMarkdown(data, title), resultType: "success" }),
+    );
+}
+
+// ─── Tool 12: refresh_nflverse_cache ──────────────────────────────────────────
 
 export const refreshNflverseCacheTool = {
     name: "refresh_nflverse_cache",

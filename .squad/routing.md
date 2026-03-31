@@ -12,6 +12,7 @@
 | Dashboard, UI, HTMX, SSE, frontend, views, user experience, CSS | UX | Dashboard and frontend |
 | Architecture, triage, cross-functional, design decision, scope | Lead | Coordination and architecture |
 | Issue queue, backlog, board, monitoring, heartbeat | Ralph | Work queue management |
+| Fantasy football, rankings, start/sit, waiver wire, dynasty, redraft, PPR, scoring impact | Fantasy | Fantasy football analysis |
 
 ## Multi-Domain Routing
 
@@ -23,6 +24,8 @@
 | New MCP tool | DevOps (infra) + Code (integration) | DevOps leads setup |
 | Publishing workflow | Publisher (flow) + Code (integration) | Publisher leads |
 | Data + visualization | Data (queries) + UX (charts) | Data leads |
+| Fantasy content | Fantasy (analysis) + Data (queries) + Publisher (distribution) | Fantasy leads, Data supports metrics |
+| Player evaluation article | Fantasy (scoring impact) + Data (EPA/efficiency) | Dual-lens: fantasy + analytics |
 
 ## Review Routing
 
@@ -33,6 +36,7 @@
 | Dashboard UI | UX | UX quality |
 | CI/CD workflows | DevOps | Infrastructure correctness |
 | Published content | Publisher | Content quality |
+| Fantasy analysis / rankings | Fantasy | Fantasy accuracy + scoring correctness |
 
 ## Escalation
 
