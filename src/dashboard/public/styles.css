@@ -2993,6 +2993,58 @@ body.nav-open {
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.06), transparent 55%), var(--color-surface);
 }
 
+/* ── AI Review Panel ─────────────────────────────────────────────────── */
+
+.ai-review-section {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.06), transparent 55%), var(--color-surface);
+}
+
+.ai-review-body {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.ai-review-body h2 {
+  font-size: 1rem;
+  margin: 1rem 0 0.4rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ai-review-body h2:first-child {
+  margin-top: 0;
+}
+
+.ai-review-body ul, .ai-review-body ol {
+  padding-left: 1.25rem;
+  margin: 0.35rem 0;
+}
+
+.ai-review-body li {
+  margin-bottom: 0.25rem;
+}
+
+.ai-review-body p {
+  margin: 0.4rem 0;
+}
+
+.ai-review-body strong {
+  color: var(--color-text);
+}
+
+.ai-review-body blockquote {
+  border-left: 3px solid var(--color-accent, #3b82f6);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.ai-review-result .hint {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
 .action-bar {
   gap: 0.75rem;
 }

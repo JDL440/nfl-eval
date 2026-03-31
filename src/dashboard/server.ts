@@ -54,7 +54,7 @@ import {
 import type { ArtifactName } from './views/article.js';
 import { ImageService } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
-import { estimateImageCost } from '../llm/pricing.js';
+import { estimateImageCost, estimateCost } from '../llm/pricing.js';
 import { escapeHtml } from './views/layout.js';
 import {
   renderNewIdeaPage,
@@ -158,6 +158,24 @@ export function getAutoAdvanceArticleFlash(params: {
   return {
     flashMessage: `🚀 Auto-advance complete — article is at Stage ${params.currentStage} (${STAGE_NAMES[params.currentStage as Stage]})`,
   };
+}
+
+/** Render the AI review result panel with markdown → HTML, refresh button, and spinner. */
+function renderAiReviewResult(escapedId: string, markdown: string): string {
+  const htmlBody = markdownToHtml(markdown);
+  return `
+    <div class="ai-review-result">
+      <div class="ai-review-body">${htmlBody}</div>
+      <p class="hint" style="margin-top: 0.5rem;">Generated from pipeline artifacts. Re-generate if the draft has been updated.</p>
+      <button class="btn btn-secondary btn-sm"
+        hx-get="/htmx/articles/${escapedId}/ai-review?refresh=1"
+        hx-target="#ai-review-content"
+        hx-swap="innerHTML"
+        hx-indicator="#ai-review-spinner">
+        🔄 Refresh
+      </button>
+      <span id="ai-review-spinner" class="htmx-indicator">Analyzing…</span>
+    </div>`;
 }
 
 // ── Title/slug generation from freeform prompt ──────────────────────────────
@@ -2067,31 +2085,120 @@ export function createApp(
     );
   });
 
-  // AI pre-publish review — returns cached artifact or placeholder
-  app.get('/htmx/articles/:id/ai-review', (c) => {
+  // AI pre-publish review — runs LLM analysis on the article draft + artifacts
+  app.get('/htmx/articles/:id/ai-review', async (c) => {
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
 
-    const cachedReview = repo.artifacts.get(id, 'ai-publish-review.md');
-    if (cachedReview) {
-      const escapedReview = escapeHtml(cachedReview).replace(/\n/g, '<br>');
-      return c.html(`
-        <div class="ai-review-result">
-          <div class="ai-review-body">${escapedReview}</div>
-          <p class="hint" style="margin-top: 0.5rem;">Generated from pipeline artifacts. Re-generate if the draft has been updated.</p>
-          <button class="btn btn-secondary btn-sm"
-            hx-get="/htmx/articles/${escapeHtml(id)}/ai-review?refresh=1"
-            hx-target="#ai-review-content"
-            hx-swap="innerHTML">
-            🔄 Refresh
-          </button>
-        </div>`);
+    const refresh = c.req.query('refresh') === '1';
+    const eid = escapeHtml(id);
+
+    // Return cached review unless refresh requested
+    if (!refresh) {
+      const cachedReview = repo.artifacts.get(id, 'ai-publish-review.md');
+      if (cachedReview) {
+        return c.html(renderAiReviewResult(eid, cachedReview));
+      }
     }
 
-    return c.html(`
-      <p class="hint">AI review generation requires running the publish-reviewer agent. This feature will be available when the agent infrastructure is connected.</p>
-      <p class="hint">In the meantime, review the <strong>Issues &amp; Advisories</strong> panel above for automated findings.</p>`);
+    // Need actionContext (runner) to generate a review
+    const actionContext = deps?.actionContext;
+    if (!actionContext) {
+      return c.html(`
+        <p class="hint">AI review requires an LLM provider to be configured. Check your .env settings.</p>
+        <p class="hint">In the meantime, review the <strong>Issues &amp; Advisories</strong> panel above for automated findings.</p>`);
+    }
+
+    // Gather article context: draft + key pipeline artifacts
+    const draft = repo.artifacts.get(id, 'draft.md') ?? '';
+    const contextParts: string[] = [];
+    if (draft) contextParts.push(`## Draft\n${draft}`);
+
+    for (const name of ['article-contract.md', 'editor-review.md', 'publisher-pass.md', 'roster-validation.md', 'fact-validation.md', 'writer-preflight.md']) {
+      const content = repo.artifacts.get(id, name);
+      if (content) contextParts.push(`## ${name}\n${content}`);
+    }
+
+    const articleContext = contextParts.join('\n\n---\n\n');
+
+    const task = [
+      'You are a senior editorial quality reviewer performing a final pre-publish check.',
+      'Analyze the article draft against its editorial contract, editor review, and validation artifacts.',
+      '',
+      'Produce a structured review covering:',
+      '## 🔴 Blocking Issues',
+      'Critical problems that must be fixed before publishing (factual errors, broken structure, missing required sections).',
+      '',
+      '## 🟡 Warnings',
+      'Notable concerns the editor should review (weak claims, tone issues, stale references, unclear phrasing).',
+      '',
+      '## 🟢 Strengths',
+      'What the article does well (2-3 points).',
+      '',
+      '## 📋 Publish Readiness',
+      'A one-line verdict: READY, NEEDS REVIEW, or NOT READY — with a brief rationale.',
+      '',
+      'Be concise and specific. Reference exact quotes or sections when flagging issues.',
+      'If no blocking issues exist, say so explicitly.',
+      '',
+      `Article: "${article.title}"`,
+      article.subtitle ? `Subtitle: "${article.subtitle}"` : '',
+      article.primary_team ? `Team: ${article.primary_team}` : '',
+      '',
+      articleContext,
+    ].filter(Boolean).join('\n');
+
+    try {
+      const result = await actionContext.runner.run({
+        agentName: 'publisher',
+        task,
+        skills: ['publisher'],
+        trace: {
+          repo,
+          stage: article.current_stage,
+          surface: 'aiPublishReview',
+        },
+      });
+
+      // Cache the review as an artifact
+      repo.artifacts.put(id, 'ai-publish-review.md', result.content);
+
+      // Record usage
+      if (result.tokensUsed) {
+        const cost = estimateCost(result.model, result.tokensUsed.prompt, result.tokensUsed.completion);
+        repo.recordUsageEvent({
+          articleId: id,
+          stage: article.current_stage,
+          surface: 'aiPublishReview',
+          stageRunId: null,
+          provider: result.provider,
+          modelOrTool: result.model,
+          eventType: 'completed',
+          promptTokens: result.tokensUsed.prompt,
+          outputTokens: result.tokensUsed.completion,
+          cachedTokens: result.tokensUsed.cached ?? null,
+          costUsdEstimate: cost > 0 ? cost : null,
+          metadata: result.traceId ? { traceId: result.traceId } : null,
+        });
+      }
+
+      return c.html(renderAiReviewResult(eid, result.content));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return c.html(`
+        <div class="ai-review-result">
+          <p class="flash-banner flash-error">❌ AI review failed: ${escapeHtml(message)}</p>
+          <button class="btn btn-secondary btn-sm"
+            hx-get="/htmx/articles/${eid}/ai-review?refresh=1"
+            hx-target="#ai-review-content"
+            hx-swap="innerHTML"
+            hx-indicator="#ai-review-spinner">
+            🔄 Retry
+          </button>
+          <span id="ai-review-spinner" class="htmx-indicator">Analyzing…</span>
+        </div>`);
+    }
   });
 
   app.post('/api/articles/:id/draft', async (c) => {
