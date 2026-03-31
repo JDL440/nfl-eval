@@ -1419,6 +1419,76 @@ a:hover { text-decoration: underline; }
   background: var(--color-table-stripe);
 }
 
+/* ── Trace Diagnosis table ───────────────────────────────────────────────── */
+
+.trace-diagnosis-result { margin-top: 0.75rem; }
+
+.trace-diagnosis-summary {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.trace-diagnosis-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.88rem;
+  table-layout: fixed;
+}
+
+.trace-diagnosis-table th,
+.trace-diagnosis-table td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trace-diagnosis-table th {
+  background: var(--color-surface);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.trace-diagnosis-table th:nth-child(1) { width: 20%; }  /* Stage */
+.trace-diagnosis-table th:nth-child(2) { width: 12%; }  /* Traces */
+.trace-diagnosis-table th:nth-child(3) { width: 30%; }  /* Agents */
+.trace-diagnosis-table th:nth-child(4) { width: 18%; }  /* Tokens */
+.trace-diagnosis-table th:nth-child(5) { width: 20%; }  /* Status */
+
+.trace-diagnosis-table td:nth-child(2),
+.trace-diagnosis-table td:nth-child(4) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-diagnosis-table tr:nth-child(even):not(.issue-row) {
+  background: var(--color-table-stripe);
+}
+
+.trace-diagnosis-table .issue-row td {
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 8%, transparent);
+  font-size: 0.82rem;
+  color: var(--color-text-muted, #64748b);
+  padding: 0.35rem 0.75rem;
+  border-top: none;
+}
+
+.trace-diagnosis-section > .action-bar {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.trace-diagnosis-section > .action-bar h2 { margin-bottom: 0.25rem; }
+.trace-diagnosis-section > .action-bar .hint { margin-bottom: 0; }
+
 /* ── Wave 2: Token usage panel ───────────────────────────────────────────── */
 
 .usage-summary {
