@@ -3089,8 +3089,8 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
   console.log(`[startup] Port        : ${config.port}`);
   console.log(`[startup] ════════════════════════════════════════`);
 
-  // Bind to localhost only in production to prevent direct port access
-  const hostname = config.env === 'production' ? '127.0.0.1' : '0.0.0.0';
+  // Public-facing: bind all interfaces. Auth + security headers are the protection layer.
+  const hostname = '0.0.0.0';
   serve({ fetch: app.fetch, port: config.port, hostname }, (info) => {
     console.log(`NFL Lab Dashboard running at http://${hostname}:${info.port}`);
   });
