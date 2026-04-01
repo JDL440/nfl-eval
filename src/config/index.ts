@@ -20,10 +20,17 @@ export interface TlsConfig {
   keyPath: string;
 }
 
+export interface TeamEntry {
+  abbr: string;
+  name: string;
+  city: string;
+}
+
 export interface AppConfig {
   dataDir: string;
   league: string;
   leagueConfig: LeagueConfig;
+  teams: TeamEntry[];
   dbPath: string;
   articlesDir: string;
   imagesDir: string;
@@ -105,6 +112,22 @@ function loadLeagueConfigs(dataDir: string): Record<string, LeagueConfig> {
 }
 
 /**
+ * Load team list for a league from {dataDir}/config/teams/{league}.json,
+ * falling back to the bundled default in src/config/defaults/teams/{league}.json.
+ */
+export function loadTeams(dataDir: string, league: string): TeamEntry[] {
+  const userPath = join(dataDir, 'config', 'teams', `${league}.json`);
+  if (existsSync(userPath)) {
+    return JSON.parse(readFileSync(userPath, 'utf-8'));
+  }
+  const defaultPath = join(__dirname, 'defaults', 'teams', `${league}.json`);
+  if (existsSync(defaultPath)) {
+    return JSON.parse(readFileSync(defaultPath, 'utf-8'));
+  }
+  return [];
+}
+
+/**
  * Initialize data directory structure. Creates directories and copies seed configs.
  * Does NOT seed charters/skills/memory — use seedKnowledge() for that.
  */
@@ -112,6 +135,7 @@ export function initDataDir(dataDir: string, league: string = DEFAULT_LEAGUE): v
   const dirs = [
     '',
     'config',
+    join('config', 'teams'),
     'logs',
     join('leagues', league, 'articles'),
     join('leagues', league, 'images'),
@@ -138,6 +162,19 @@ export function initDataDir(dataDir: string, league: string = DEFAULT_LEAGUE): v
     const source = join(seedDir, file);
     if (!existsSync(target) && existsSync(source)) {
       cpSync(source, target);
+    }
+  }
+
+  // Copy default team files if they don't exist
+  const teamSeedDir = join(seedDir, 'teams');
+  if (existsSync(teamSeedDir)) {
+    const teamsDestDir = join(configDir, 'teams');
+    for (const file of readdirSync(teamSeedDir)) {
+      if (!file.endsWith('.json')) continue;
+      const target = join(teamsDestDir, file);
+      if (!existsSync(target)) {
+        cpSync(join(teamSeedDir, file), target);
+      }
     }
   }
 }
@@ -337,10 +374,13 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
   const tlsKey = overrides?.tls?.keyPath ?? process.env.NFL_TLS_KEY;
   const tls = (tlsCert && tlsKey) ? { certPath: resolve(tlsCert), keyPath: resolve(tlsKey) } : undefined;
 
+  const teams = overrides?.teams ?? loadTeams(dataDir, league);
+
   return {
     dataDir,
     league,
     leagueConfig,
+    teams,
     dbPath: join(dataDir, 'pipeline.db'),
     articlesDir: join(dataDir, 'leagues', league, 'articles'),
     imagesDir: join(dataDir, 'leagues', league, 'images'),

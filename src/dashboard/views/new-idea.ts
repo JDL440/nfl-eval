@@ -3,49 +3,13 @@
  */
 
 import { renderLayout, escapeHtml } from './layout.js';
+import type { TeamEntry } from '../../config/index.js';
 
 interface NewIdeaProviderOption {
   id: string;
   name: string;
   default?: boolean;
 }
-
-// ── NFL teams with abbreviations ─────────────────────────────────────────────
-
-export const NFL_TEAMS = [
-  { abbr: 'ARI', name: 'Cardinals', city: 'Arizona' },
-  { abbr: 'ATL', name: 'Falcons', city: 'Atlanta' },
-  { abbr: 'BAL', name: 'Ravens', city: 'Baltimore' },
-  { abbr: 'BUF', name: 'Bills', city: 'Buffalo' },
-  { abbr: 'CAR', name: 'Panthers', city: 'Carolina' },
-  { abbr: 'CHI', name: 'Bears', city: 'Chicago' },
-  { abbr: 'CIN', name: 'Bengals', city: 'Cincinnati' },
-  { abbr: 'CLE', name: 'Browns', city: 'Cleveland' },
-  { abbr: 'DAL', name: 'Cowboys', city: 'Dallas' },
-  { abbr: 'DEN', name: 'Broncos', city: 'Denver' },
-  { abbr: 'DET', name: 'Lions', city: 'Detroit' },
-  { abbr: 'GB', name: 'Packers', city: 'Green Bay' },
-  { abbr: 'HOU', name: 'Texans', city: 'Houston' },
-  { abbr: 'IND', name: 'Colts', city: 'Indianapolis' },
-  { abbr: 'JAX', name: 'Jaguars', city: 'Jacksonville' },
-  { abbr: 'KC', name: 'Chiefs', city: 'Kansas City' },
-  { abbr: 'LAC', name: 'Chargers', city: 'Los Angeles' },
-  { abbr: 'LAR', name: 'Rams', city: 'Los Angeles' },
-  { abbr: 'LV', name: 'Raiders', city: 'Las Vegas' },
-  { abbr: 'MIA', name: 'Dolphins', city: 'Miami' },
-  { abbr: 'MIN', name: 'Vikings', city: 'Minnesota' },
-  { abbr: 'NE', name: 'Patriots', city: 'New England' },
-  { abbr: 'NO', name: 'Saints', city: 'New Orleans' },
-  { abbr: 'NYG', name: 'Giants', city: 'New York' },
-  { abbr: 'NYJ', name: 'Jets', city: 'New York' },
-  { abbr: 'PHI', name: 'Eagles', city: 'Philadelphia' },
-  { abbr: 'PIT', name: 'Steelers', city: 'Pittsburgh' },
-  { abbr: 'SEA', name: 'Seahawks', city: 'Seattle' },
-  { abbr: 'SF', name: '49ers', city: 'San Francisco' },
-  { abbr: 'TB', name: 'Buccaneers', city: 'Tampa Bay' },
-  { abbr: 'TEN', name: 'Titans', city: 'Tennessee' },
-  { abbr: 'WAS', name: 'Commanders', city: 'Washington' },
-];
 
 // ── Slug generation ──────────────────────────────────────────────────────────
 
@@ -192,9 +156,11 @@ export function renderIdeaErrorStatus(details: {
 
 export function renderNewIdeaPage(config: {
   labName: string;
+  teams?: TeamEntry[];
   expertAgents?: string[];
   llmProviders?: NewIdeaProviderOption[];
 }): string {
+  const teams = config.teams ?? [];
   const agents = config.expertAgents ?? [];
   const llmProviders = config.llmProviders ?? [];
   const agentChips = agents.length > 0 ? agents.map(a => `
@@ -257,7 +223,7 @@ export function renderNewIdeaPage(config: {
             <label>Teams <span class="form-hint">(click to select)</span></label>
             <div id="selected-teams" class="team-chips"></div>
             <div class="team-grid">
-              ${NFL_TEAMS.map(t => `
+              ${teams.map(t => `
                 <button type="button" class="team-badge" data-team="${t.abbr}"
                   onclick="toggleTeam(this, '${t.abbr}')">
                   ${t.abbr}

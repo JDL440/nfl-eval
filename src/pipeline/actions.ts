@@ -1075,7 +1075,7 @@ const PRODUCTION_AGENTS = new Set([
 
 /** Build a categorized roster string from available agent charters. */
 function buildAgentRoster(runner: AgentRunner, config: AppConfig): string {
-  const teamAbbrs = new Set(config.teams.map(t => t.abbr.toLowerCase()));
+  const teamAbbrs = new Set((config.teams ?? []).map(t => t.abbr.toLowerCase()));
   const agents = runner.listAgents();
   const specialists: string[] = [];
   const teamAgents: string[] = [];

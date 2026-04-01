@@ -64,7 +64,6 @@ import {
   generateSlug,
   extractTitleFromIdea,
   IDEA_TEMPLATE,
-  NFL_TEAMS,
 } from './views/new-idea.js';
 import {
   renderPublishPreview,
@@ -89,7 +88,7 @@ import { markdownToHtml } from '../services/markdown.js';
 import { renderArticlePreview, renderArticlePreviewFrame, parseImageManifest } from './views/preview.js';
 import { SubstackService } from '../services/substack.js';
 import { TwitterService } from '../services/twitter.js';
-import { executeTransition, autoAdvanceArticle, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
+import { executeTransition, autoAdvanceArticle, getLeagueDataTool, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
 import { buildTeamRosterContext } from '../pipeline/roster-context.js';
 import { LLMGateway } from '../llm/gateway.js';
@@ -1029,18 +1028,14 @@ export function createApp(
     const runner = deps?.actionContext?.runner;
     if (runner) {
       const PROD = new Set(['lead', 'writer', 'editor', 'scribe', 'coordinator', 'panel-moderator', 'publisher']);
-      const TEAMS = new Set([
-        'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
-        'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
-        'nyj','phi','pit','sea','sf','tb','ten','wsh',
-        ]);
+      const TEAMS = new Set((config.teams ?? []).map(t => t.abbr.toLowerCase()));
       expertAgents = runner.listAgents().filter(a => !PROD.has(a) && !TEAMS.has(a));
       llmProviders = runner.gateway.listProviders().map((provider, index) => ({
         ...provider,
         default: index === 0,
       }));
     }
-    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, expertAgents, llmProviders }));
+    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, teams: config.teams ?? [], expertAgents, llmProviders }));
   });
 
   app.get('/config', (c) => {
@@ -1560,7 +1555,7 @@ export function createApp(
         // Build team context for the task
         const teamContext = teams.length > 0
           ? teams.map(abbr => {
-              const t = NFL_TEAMS.find(x => x.abbr === abbr);
+              const t = (config.teams ?? []).find(x => x.abbr === abbr);
               return t ? `${t.abbr} — ${t.city} ${t.name}` : abbr;
             }).join(', ')
           : 'No specific team';
@@ -1597,7 +1592,7 @@ export function createApp(
             includeLocalExtensions: true,
             includeWebSearch: true,
             allowWriteTools: false,
-            requestedTools: ['nflverse-data', 'prediction-markets', 'web_search'],
+            requestedTools: [getLeagueDataTool(config.league), 'prediction-markets', 'web_search'],
             maxToolCalls: 50,
             context: {
               repo,
@@ -2619,22 +2614,19 @@ export function createApp(
 
   // ── Refresh Knowledge ────────────────────────────────────────────────────
 
-  const TEAM_ABBRS_SET = new Set([
-    'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
-    'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
-    'nyj','phi','pit','sf','sea','tb','ten','was',
-  ]);
+  const teamAbbrsSet = new Set((config.teams ?? []).map((t) => t.abbr.toLowerCase()));
+  const leagueDataTool = getLeagueDataTool(config.league);
 
   function knowledgeSkillsFor(agentName: string): string[] {
-    if (TEAM_ABBRS_SET.has(agentName)) return ['nflverse-data'];
+    if (teamAbbrsSet.has(agentName)) return [leagueDataTool];
     switch (agentName) {
       case 'analytics':
       case 'cap-analyst':
-        return ['nflverse-data'];
+        return [leagueDataTool];
       case 'draft-analyst':
-        return ['nflverse-data'];
+        return [leagueDataTool];
       case 'defense-analyst':
-        return ['nflverse-data'];
+        return [leagueDataTool];
       default:
         return [];
     }
@@ -2647,7 +2639,7 @@ export function createApp(
 
   function knowledgePromptFor(agentName: string): string {
     let base: string;
-    if (TEAM_ABBRS_SET.has(agentName)) {
+    if (teamAbbrsSet.has(agentName)) {
       base = `Review and update your domain knowledge for the ${agentName.toUpperCase()} team. Summarize the most important current facts, figures, and developments you need to track. Focus on verifiable data: cap numbers, roster moves, coaching changes, key statistics, and recent transactions. Format as a structured knowledge brief with dates and sources where possible.`;
     } else {
       switch (agentName) {
