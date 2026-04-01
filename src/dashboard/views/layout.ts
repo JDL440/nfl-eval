@@ -65,6 +65,7 @@ export function renderLayout(title: string, content: string, labName: string): s
         <a href="/ideas/new" class="btn btn-header header-nav-link${activeNav === 'new-idea' ? ' is-active' : ''}">New Idea</a>
         <a href="/config" class="btn btn-header header-nav-link${activeNav === 'settings' ? ' is-active' : ''}">Settings</a>
       </nav>
+      <div id="nav-backdrop" class="nav-backdrop" aria-hidden="true"></div>
       <div class="header-meta">
         <!-- TODO: receive NODE_ENV via template param instead of direct process.env read -->
         <span class="env-badge header-env-badge">${escapeHtml(process.env.NODE_ENV || 'development')}</span>
@@ -109,18 +110,34 @@ export function renderLayout(title: string, content: string, labName: string): s
     (function() {
       var navToggle = document.getElementById('nav-toggle');
       var nav = document.getElementById('primary-nav');
+      var backdrop = document.getElementById('nav-backdrop');
       if (!navToggle || !nav) return;
+      function setNavHidden(hidden) {
+        if (hidden) {
+          nav.setAttribute('aria-hidden', 'true');
+          nav.setAttribute('inert', '');
+          if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
+        } else {
+          nav.removeAttribute('aria-hidden');
+          nav.removeAttribute('inert');
+          if (backdrop) backdrop.removeAttribute('aria-hidden');
+        }
+      }
+      setNavHidden(true);
       function closeNav() {
         nav.classList.remove('is-open');
         document.body.classList.remove('nav-open');
         navToggle.setAttribute('aria-expanded', 'false');
+        setNavHidden(true);
       }
       navToggle.addEventListener('click', function() {
         var nextOpen = !nav.classList.contains('is-open');
         nav.classList.toggle('is-open', nextOpen);
         document.body.classList.toggle('nav-open', nextOpen);
         navToggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+        setNavHidden(!nextOpen);
       });
+      if (backdrop) backdrop.addEventListener('click', closeNav);
       nav.querySelectorAll('a').forEach(function(link) {
         link.addEventListener('click', function() {
           if (window.innerWidth < 768) closeNav();
