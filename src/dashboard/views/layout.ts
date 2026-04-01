@@ -123,12 +123,13 @@ export function renderLayout(title: string, content: string, labName: string): s
           if (backdrop) backdrop.removeAttribute('aria-hidden');
         }
       }
-      setNavHidden(true);
+      // Only hide nav at mobile widths — desktop nav must stay interactive
+      if (window.innerWidth < 768) setNavHidden(true);
       function closeNav() {
         nav.classList.remove('is-open');
         document.body.classList.remove('nav-open');
         navToggle.setAttribute('aria-expanded', 'false');
-        setNavHidden(true);
+        if (window.innerWidth < 768) setNavHidden(true);
       }
       navToggle.addEventListener('click', function() {
         var nextOpen = !nav.classList.contains('is-open');
@@ -154,7 +155,15 @@ export function renderLayout(title: string, content: string, labName: string): s
         if (event.key === 'Escape') closeNav();
       });
       window.addEventListener('resize', function() {
-        if (window.innerWidth >= 768) closeNav();
+        if (window.innerWidth >= 768) {
+          // Transitioning to desktop — ensure nav is interactive
+          nav.classList.remove('is-open');
+          document.body.classList.remove('nav-open');
+          navToggle.setAttribute('aria-expanded', 'false');
+          setNavHidden(false);
+        } else if (!nav.classList.contains('is-open')) {
+          setNavHidden(true);
+        }
       });
     })();
   </script>
