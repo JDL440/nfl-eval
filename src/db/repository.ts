@@ -2070,7 +2070,12 @@ export class Repository {
       this.artifacts.delete(articleId, artifact.name);
     }
 
-    // Delete from all related tables (no ON DELETE CASCADE in schema)
+    // Delete from all related tables in FK-safe order (no ON DELETE CASCADE)
+    this.db.prepare('DELETE FROM article_retrospective_findings WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM article_retrospectives WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM revision_summaries WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM article_conversations WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM llm_traces WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM usage_events WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM stage_runs WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM article_runs WHERE article_id = ?').run(articleId);
@@ -2080,6 +2085,7 @@ export class Repository {
     this.db.prepare('DELETE FROM article_panels WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM notes WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM discussion_prompts WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM artifacts WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM articles WHERE id = ?').run(articleId);
 
     return { deleted: true };
