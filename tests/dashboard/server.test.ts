@@ -343,6 +343,7 @@ describe('Dashboard Server', () => {
       const html = await res.text();
       expect(html).toContain('Detail Test Article');
       expect(html).toContain('mobile-detail-layout');
+      expect(html).toContain('article-detail-single');
       expect(html).toContain('Stage 1');
       expect(html).toContain('Token Usage');
       expect(html).toContain('/articles/detail-test/traces');

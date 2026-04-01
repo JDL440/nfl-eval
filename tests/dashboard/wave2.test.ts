@@ -256,6 +256,7 @@ describe('shared mobile dashboard shell', () => {
     expect(css).toContain('grid-column: 1 / -1;');
     expect(css).toContain('.responsive-table');
     expect(css).toContain('.mobile-detail-layout');
+    expect(css).toContain('.detail-grid.article-detail-single');
     expect(css).toContain('.mobile-primary-column');
     expect(css).toContain('.mobile-secondary-column');
     expect(css).toContain('.artifact-rendered table');
@@ -263,6 +264,9 @@ describe('shared mobile dashboard shell', () => {
     expect(css).toContain('.thinking-content');
     expect(css).toContain('.publish-status-badge');
     expect(css).toContain('body.nav-open');
+    expect(css).toContain('pointer-events: auto;');
+    expect(css).toContain('background: rgba(248, 250, 252, 0.96);');
+    expect(css).toContain('color: #0f172a !important;');
     expect(css).toContain('overflow-wrap: anywhere;');
     expect(css).toContain('top: calc(var(--safe-area-top) + 5rem);');
     expect(css).not.toContain('.tab-btn-thinking');
