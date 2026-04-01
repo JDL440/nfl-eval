@@ -35,31 +35,93 @@ npm run v2:serve
 
 Open `http://localhost:3456`.
 
-Use `npm run v2:serve` for source-mode development and `npm run v2:start` only after `npm run v2:build` has produced `dist/`.
+## Environments
 
-On Windows, `.\dev.ps1` defaults to source-mode startup (`npm run v2:serve`), so you do not need to rebuild first. If you specifically want the built path, run `.\dev.ps1 -Built`; it will run `npm run v2:build` immediately before `npm run v2:start`. If you want to inspect the two repo-local MCP stdio servers during local development, use:
+The project uses three isolated environments. Each has its own data directory, database, and configuration to prevent test artifacts from polluting production and to ensure auth can't be accidentally disabled on the live site.
+
+| Environment | Data directory | Auth | Port | Launch |
+|-------------|---------------|------|------|--------|
+| **Development** | `~/.nfl-lab-dev` | off | 3457 | `.\dev.ps1` |
+| **Test** | auto-created tmpdir | off | — | `npm run v2:test` |
+| **Production** | `~/.nfl-lab-prod` | local (required) | 3456 | `.\prod.ps1` or NSSM service |
+
+### Development
 
 ```powershell
-.\dev.ps1 -WithMcp
+.\dev.ps1              # source-mode via tsx — no build needed
+.\dev.ps1 -Built       # builds first, then runs from dist/
+.\dev.ps1 -WithMcp     # opens MCP debug windows alongside the dashboard
+.\dev.ps1 -Port 3500   # override the default port
 ```
 
-That opens separate PowerShell windows for `npm run mcp:server` and `npm run v2:mcp` while the dashboard stays in your current shell. Leave `-WithMcp` off for normal work: Copilot and other repo-local MCP clients should still launch those stdio servers on demand from `.copilot\mcp-config.json` / `.mcp.json`.
+- Uses `~/.nfl-lab-dev` with its own `config/.env` (auth off, port 3457)
+- Source mode (`npm run v2:serve`) is the default — no rebuild required
+- `-WithMcp` opens separate PowerShell windows for `npm run mcp:server` and `npm run v2:mcp`; leave it off for normal work
 
-### Production-style run
+### Testing
 
 ```bash
-npm install
-npm run v2:build
-npm run v2:start
+npm run v2:test                          # full test suite (1600+ tests)
+npm run v2:test -- tests/dashboard/      # run a specific directory
+npm run v2:test -- -t "search filter"    # run tests matching a pattern
 ```
+
+- Tests automatically create a temporary data directory and force `NODE_ENV=test`
+- Each test gets a fresh SQLite database — no shared state, no cleanup needed
+- The production database has a safety check that refuses to open if the path looks like a test directory
+
+### Production
+
+**Option A — Manual start:**
+
+```powershell
+.\prod.ps1             # builds and starts from dist/
+.\prod.ps1 -NoBuild    # skip build, start from existing dist/
+```
+
+**Option B — Windows service (recommended):**
+
+The production server runs as an NSSM service named `NFL-Lab-Prod`:
+
+```powershell
+nssm start NFL-Lab-Prod    # start the service
+nssm stop NFL-Lab-Prod     # stop the service
+nssm restart NFL-Lab-Prod  # restart after config changes
+```
+
+Service configuration:
+
+| Setting | Value |
+|---------|-------|
+| Path | `C:\Program Files\nodejs\node.exe` |
+| Arguments | `dist\cli.js serve` |
+| Startup directory | `C:\github\nfl-eval` |
+| Environment | `NFL_DATA_DIR=~/.nfl-lab-prod`, `NODE_ENV=production`, `NFL_PORT=3456` |
+| Logs | `~/.nfl-lab-prod/logs/service-stdout.log` (rotate at 1 MB) |
+
+Production requires:
+- `DASHBOARD_AUTH_MODE=local` with credentials set (preflight check will block startup otherwise)
+- A separate data directory from dev/test
+- Credentials stored only in `~/.nfl-lab-prod/config/.env` (not in the repo)
+
+### Backups
+
+```powershell
+.\backup-db.ps1                   # back up the production database
+.\restore-test.ps1                # verify the latest backup is valid
+```
+
+- Uses SQLite's `.backup` API for safe online backups (not file copy)
+- Backups are stored in `~/.nfl-lab-prod/backups/` with 30-day retention
+- Schedule daily backups via Windows Task Scheduler
 
 ### Common environment variables
 
-Copy `.env.sample` to `.env` and fill in only the integrations you need.
+Each environment stores its `.env` in `{dataDir}/config/.env`. The app loads `.env` from the data directory first, then falls back to the repo root.
 
 Core runtime:
 
-- `NFL_DATA_DIR` — overrides the default data directory (`~/.nfl-lab`)
+- `NFL_DATA_DIR` — data directory (`~/.nfl-lab-dev`, `~/.nfl-lab-prod`, etc.)
 - `NFL_PORT` — dashboard port (default `3456`)
 - `NFL_LEAGUE` — league code (default `nfl`)
 - `NFL_CONTEXT_PRESET` — article context preset: `rich` (default) or `balanced`
@@ -90,21 +152,28 @@ Dashboard auth:
 - `DASHBOARD_AUTH_PASSWORD` — required when `DASHBOARD_AUTH_MODE=local`
 - `DASHBOARD_SESSION_COOKIE` — optional cookie name override
 - `DASHBOARD_SESSION_TTL_HOURS` — session lifetime, default `24`
+- `DASHBOARD_SECURE_COOKIES` — set to `true` to add the `Secure` flag to cookies (enable when using TLS)
 
-The app loads `.env` from both the repo root and `~/.nfl-lab/config/.env`.
+TLS (optional — enables HTTPS):
+
+- `NFL_TLS_CERT` — path to TLS certificate PEM file
+- `NFL_TLS_KEY` — path to TLS private key PEM file
+- `NFL_HTTP_PORT` — port for the HTTP→HTTPS redirect server (default `80`)
+
+When both `NFL_TLS_CERT` and `NFL_TLS_KEY` are set, the server starts in HTTPS mode and launches a secondary HTTP listener that 301-redirects all traffic to HTTPS. Enable `DASHBOARD_SECURE_COOKIES=true` when using TLS.
 
 ### Dashboard auth
 
-The dashboard stays open by default so existing tests and solo local development continue to work. For any shared box or public deployment, enable:
+The dashboard stays open by default so existing tests and solo local development continue to work. Production mode enforces auth — the server refuses to start with `DASHBOARD_AUTH_MODE=off` when `NODE_ENV=production`.
 
-```bash
-DASHBOARD_AUTH_MODE=local
-DASHBOARD_AUTH_USERNAME=operator
-DASHBOARD_AUTH_PASSWORD=change-me
-NODE_ENV=production
-```
+Auth switches the dashboard to a simple local login flow backed by SQLite sessions and an `httpOnly` cookie. Protected dashboard pages, HTMX endpoints, JSON APIs, SSE, and unpublished image routes require a valid session. Static assets, `/login`, and published image URLs remain public.
 
-That switches the dashboard to a simple local login flow backed by SQLite sessions and an `httpOnly` cookie. Protected dashboard pages, HTMX endpoints, JSON APIs, SSE, and unpublished image routes require a valid session. Static assets, `/login`, and published image URLs remain public.
+### Security headers
+
+All responses include:
+
+- `X-Frame-Options: DENY` — prevents clickjacking
+- `X-Content-Type-Options: nosniff` — prevents MIME-type sniffing
 
 ## Architecture
 
@@ -217,7 +286,11 @@ src/
 .squad/         Squad team config, agent charters, decisions, skills
 mcp/            Legacy/local MCP entrypoints and smoke tests
 tests/          Unit, integration, and e2e coverage
-ralph-watch.ps1 Local Ralph outer loop (PowerShell)
+dev.ps1         Development server launcher (source-mode, isolated data dir)
+prod.ps1        Production server launcher (builds first, enforces auth)
+backup-db.ps1   SQLite online backup with 30-day retention
+restore-test.ps1  Backup verification and integrity check
+ralph-watch.ps1   Local Ralph outer loop (PowerShell)
 ```
 
 ## Services and MCP Tools

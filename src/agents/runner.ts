@@ -1235,15 +1235,15 @@ export class AgentRunner {
                   category: structuredTool.source,
                   sideEffects: structuredTool.safety.writesState ? 'writes_state' : 'none',
                   readOnlyHint: structuredTool.safety.readOnly,
-                  destructiveHint: structuredTool.safety.destructive ?? false,
-                  idempotentHint: structuredTool.safety.idempotent ?? false,
+                  destructiveHint: false,
+                  idempotentHint: false,
                   openWorldHint: structuredTool.safety.externalSideEffects ?? false,
                   inputSchema: structuredTool.manifest.parameters,
                 },
                 args: normalizedArgs,
                 output: structuredResult.text,
-                isError: structuredResult.isError,
-                source: structuredTool.source === 'web' ? 'web' : 'local',
+                isError: structuredResult.isError ?? false,
+                source: 'local',
               } satisfies LegacyToolExecutionResult;
             }
             return await executeToolCall(toolCall.toolName, normalizedArgs, {
