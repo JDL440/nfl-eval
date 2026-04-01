@@ -13,7 +13,7 @@
     "dashboard:dev": "echo 'v1 dashboard archived — use v2:dev instead'",
     "mcp:server": "node mcp/server.mjs",
     "mcp:smoke": "node mcp/smoke-test.mjs",
-    "v2:build": "tsc",
+    "v2:build": "tsc && node -e \"const{cpSync}=require('fs');cpSync('src/config/defaults','dist/config/defaults',{recursive:true})\"",
     "v2:dev": "tsx watch src/cli.ts serve",
     "v2:start": "node dist/cli.js serve",
     "v2:serve": "tsx src/cli.ts serve",

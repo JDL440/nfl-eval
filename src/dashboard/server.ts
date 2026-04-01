@@ -1029,7 +1029,7 @@ export function createApp(
     if (runner) {
       const PROD = new Set(['lead', 'writer', 'editor', 'scribe', 'coordinator', 'panel-moderator', 'publisher']);
       const TEAMS = new Set((config.teams ?? []).map(t => t.abbr.toLowerCase()));
-      expertAgents = runner.listAgents().filter(a => !PROD.has(a) && !TEAMS.has(a));
+      expertAgents = runner.listAgents().filter(a => !PROD.has(a) && !TEAMS.has(a.toLowerCase()));
       llmProviders = runner.gateway.listProviders().map((provider, index) => ({
         ...provider,
         default: index === 0,
