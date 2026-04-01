@@ -1477,10 +1477,10 @@ export class AgentRunner {
             temperature,
             maxTokens,
             // When native tools are provided to a provider that supports them
-            // (e.g. LMStudio), omit responseFormat so the provider can decide
-            // how to constrain the output.  Other providers still use JSON mode
-            // alongside native tools.
-            responseFormat: nativeTools.length > 0 && route.providerId === 'lmstudio'
+            // (e.g. LMStudio, Gemini), omit responseFormat so the provider can
+            // decide how to constrain the output.  Other providers still use
+            // JSON mode alongside native tools.
+            responseFormat: nativeTools.length > 0 && (route.providerId === 'lmstudio' || route.providerId === 'gemini')
               ? undefined : 'json',
             stageKey: model ? undefined : stageKey,
             taskFamily,
