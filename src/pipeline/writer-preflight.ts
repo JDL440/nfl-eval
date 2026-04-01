@@ -62,12 +62,11 @@ const BANNED_EXACT_NAMES = new Set([
   'Current Team',
   'Official Team',
   'Local Runtime',
-  'The NFL',
 ]);
 const BANNED_FIRST_TOKENS = new Set([
   'The', 'This', 'That', 'These', 'Those', 'Next', 'Current', 'Latest', 'Official', 'Primary', 'Upstream', 'Why',
   'Should', 'By', 'First', 'Second', 'Third', 'Fourth',
-  'Writer', 'Editor', 'Panel', 'Draft', 'Article', 'Summary', 'Budget', 'Stage', 'NFL', 'Lab',
+  'Writer', 'Editor', 'Panel', 'Draft', 'Article', 'Summary', 'Budget', 'Stage', 'Lab',
   'Defense', 'Offense', 'Special', 'Cap', 'Contract', 'Roster', 'Salary', 'Head', 'Assistant',
 ]);
 const BANNED_LAST_TOKENS = new Set([
@@ -78,6 +77,15 @@ const BANNED_LAST_TOKENS = new Set([
   'Vikings', 'Patriots', 'Saints', 'Giants', 'Jets', 'Eagles', 'Steelers', '49ers', 'Seahawks', 'Buccaneers',
   'Titans', 'Commanders',
 ]);
+
+function getLeagueBannedTokens(league: string): { exactNames: Set<string>; firstTokens: Set<string> } {
+  const leagueUpper = league.toUpperCase();
+  const exactNames = new Set(BANNED_EXACT_NAMES);
+  exactNames.add(`The ${leagueUpper}`);
+  const firstTokens = new Set(BANNED_FIRST_TOKENS);
+  firstTokens.add(leagueUpper);
+  return { exactNames, firstTokens };
+}
 
 export function buildWriterPreflightChecklist(): string {
   return [WRITER_PREFLIGHT_HEADER, ...WRITER_PREFLIGHT_CHECKS].join('\n');
@@ -130,7 +138,9 @@ export function buildWriterPreflightArtifact(params: {
 export function runWriterPreflight(params: {
   draft: string;
   sourceArtifacts: WriterPreflightSourceArtifact[];
+  league?: string;
 }): WriterPreflightState {
+  const league = params.league ?? 'nfl';
   const sourceText = params.sourceArtifacts
     .map((artifact) => artifact.content?.trim())
     .filter((content): content is string => Boolean(content))
@@ -150,7 +160,7 @@ export function runWriterPreflight(params: {
   const blockingIssues = allIssues.filter((i) => i.severity === 'blocking').slice(0, BLOCKING_ISSUE_LIMIT);
   const advisoryIssues = allIssues.filter((i) => i.severity === 'advisory');
   const warnings = dedupeIssues([
-    ...findNameConsistencyIssues(draftText, sourceText),
+    ...findNameConsistencyIssues(draftText, sourceText, league),
   ]);
 
   return {
@@ -183,8 +193,8 @@ function findPlaceholderLeakageIssues(draft: string): WriterPreflightIssue[] {
   return issues;
 }
 
-function findNameConsistencyIssues(draft: string, sourceText: string): WriterPreflightIssue[] {
-  const sourceNames = extractSupportedNames(sourceText);
+function findNameConsistencyIssues(draft: string, sourceText: string, league: string = 'nfl'): WriterPreflightIssue[] {
+  const sourceNames = extractSupportedNames(sourceText, league);
   const sourceNameSet = new Set(sourceNames.map((name) => normalizeName(name)));
   const sourceLastNameMap = new Map<string, Set<string>>();
 
@@ -197,7 +207,7 @@ function findNameConsistencyIssues(draft: string, sourceText: string): WriterPre
   }
 
   const issues: WriterPreflightIssue[] = [];
-  for (const draftName of extractSupportedNames(draft)) {
+  for (const draftName of extractSupportedNames(draft, league)) {
     const normalizedDraftName = normalizeName(draftName);
     if (sourceNameSet.has(normalizedDraftName)) continue;
 
@@ -351,9 +361,10 @@ function claimHasSupport(unit: string, sourceText: string): boolean {
   return normalizeText(sourceText).includes(normalizeText(unit));
 }
 
-function extractSupportedNames(text: string): string[] {
+function extractSupportedNames(text: string, league: string = 'nfl'): string[] {
   const stripped = stripMarkdown(text);
   const names = new Set<string>();
+  const { exactNames, firstTokens } = getLeagueBannedTokens(league);
 
   let match: RegExpExecArray | null;
   NAME_PATTERN.lastIndex = 0;
@@ -366,8 +377,8 @@ function extractSupportedNames(text: string): string[] {
     const last = parts[parts.length - 1] ?? '';
     if (
       parts.length < 2
-      || BANNED_EXACT_NAMES.has(name)
-      || BANNED_FIRST_TOKENS.has(first)
+      || exactNames.has(name)
+      || firstTokens.has(first)
       || BANNED_LAST_TOKENS.has(last)
     ) {
       continue;

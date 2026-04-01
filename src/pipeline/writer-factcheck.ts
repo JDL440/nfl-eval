@@ -7,15 +7,26 @@ import type {
   WriterFactCheckSourceClass,
   WriterFactCheckUsage,
 } from '../types.js';
+import { dataSourceName } from './league-helpers.js';
 
 export const WRITER_FACTCHECK_ARTIFACT_NAME = 'writer-factcheck.md' as const;
 export const WRITER_FACTCHECK_SKILL_NAME = 'writer-fact-check' as const;
 
-const WRITER_FACTCHECK_SOURCE_LABELS: Record<WriterFactCheckSourceClass, string> = {
-  local_runtime: 'Local/runtime artifacts + nflverse helpers',
-  official_primary: 'Official primary sources',
-  trusted_reference: 'Trusted reference sources',
-};
+function localRuntimeSourceLabel(league: string): string {
+  switch (league) {
+    case 'mlb': return 'Local/runtime artifacts + Statcast helpers';
+    case 'nba': return 'Local/runtime artifacts + NBA.com helpers';
+    default: return 'Local/runtime artifacts + nflverse helpers';
+  }
+}
+
+function getSourceLabels(league: string): Record<WriterFactCheckSourceClass, string> {
+  return {
+    local_runtime: localRuntimeSourceLabel(league),
+    official_primary: 'Official primary sources',
+    trusted_reference: 'Trusted reference sources',
+  };
+}
 
 export const WRITER_FACTCHECK_POLICY: WriterFactCheckPolicy = {
   artifactName: WRITER_FACTCHECK_ARTIFACT_NAME,
@@ -92,26 +103,13 @@ function matchesApprovedHost(hostname: string, approvedHosts: Set<string>): bool
   return false;
 }
 
-const APPROVED_SOURCE_RULES: Array<{
+interface ApprovedSourceRule {
   sourceClass: Exclude<WriterFactCheckSourceClass, 'local_runtime'>;
   label: string;
   matches: (hostname: string) => boolean;
-}> = [
-  {
-    sourceClass: 'official_primary',
-    label: 'Official NFL source',
-    matches: hostname => hostname === 'nfl.com' || hostname.endsWith('.nfl.com'),
-  },
-  {
-    sourceClass: 'official_primary',
-    label: 'Official team source',
-    matches: hostname => matchesApprovedHost(hostname, OFFICIAL_TEAM_PRIMARY_HOSTS),
-  },
-  {
-    sourceClass: 'trusted_reference',
-    label: 'OverTheCap',
-    matches: hostname => hostname === 'overthecap.com' || hostname.endsWith('.overthecap.com'),
-  },
+}
+
+const COMMON_APPROVED_SOURCE_RULES: ApprovedSourceRule[] = [
   {
     sourceClass: 'trusted_reference',
     label: 'Spotrac',
@@ -119,16 +117,69 @@ const APPROVED_SOURCE_RULES: Array<{
   },
   {
     sourceClass: 'trusted_reference',
-    label: 'Pro Football Reference',
-    matches: hostname =>
-      hostname === 'pro-football-reference.com' || hostname.endsWith('.pro-football-reference.com'),
-  },
-  {
-    sourceClass: 'trusted_reference',
     label: 'ESPN',
     matches: hostname => hostname === 'espn.com' || hostname.endsWith('.espn.com'),
   },
 ];
+
+function getLeagueApprovedSourceRules(league: string): ApprovedSourceRule[] {
+  switch (league) {
+    case 'mlb':
+      return [
+        ...COMMON_APPROVED_SOURCE_RULES,
+        {
+          sourceClass: 'official_primary',
+          label: 'Official MLB source',
+          matches: h => h === 'mlb.com' || h.endsWith('.mlb.com')
+            || h === 'baseballsavant.mlb.com' || h === 'fangraphs.com' || h.endsWith('.fangraphs.com'),
+        },
+        {
+          sourceClass: 'trusted_reference',
+          label: 'Baseball Reference',
+          matches: h => h === 'baseball-reference.com' || h.endsWith('.baseball-reference.com'),
+        },
+      ];
+    case 'nba':
+      return [
+        ...COMMON_APPROVED_SOURCE_RULES,
+        {
+          sourceClass: 'official_primary',
+          label: 'Official NBA source',
+          matches: h => h === 'nba.com' || h.endsWith('.nba.com'),
+        },
+        {
+          sourceClass: 'trusted_reference',
+          label: 'Basketball Reference',
+          matches: h => h === 'basketball-reference.com' || h.endsWith('.basketball-reference.com'),
+        },
+      ];
+    default:
+      return [
+        ...COMMON_APPROVED_SOURCE_RULES,
+        {
+          sourceClass: 'official_primary',
+          label: 'Official NFL source',
+          matches: hostname => hostname === 'nfl.com' || hostname.endsWith('.nfl.com'),
+        },
+        {
+          sourceClass: 'official_primary',
+          label: 'Official team source',
+          matches: hostname => matchesApprovedHost(hostname, OFFICIAL_TEAM_PRIMARY_HOSTS),
+        },
+        {
+          sourceClass: 'trusted_reference',
+          label: 'OverTheCap',
+          matches: hostname => hostname === 'overthecap.com' || hostname.endsWith('.overthecap.com'),
+        },
+        {
+          sourceClass: 'trusted_reference',
+          label: 'Pro Football Reference',
+          matches: hostname =>
+            hostname === 'pro-football-reference.com' || hostname.endsWith('.pro-football-reference.com'),
+        },
+      ];
+  }
+}
 
 export interface ApprovedSourceCandidate {
   url: string;
@@ -163,6 +214,7 @@ export interface ExecuteWriterFactCheckPassOptions {
   factCheckContext?: string | null;
   contractClaims?: string[];
   urlEvidence?: WriterFactCheckUrlEvidence[];
+  league?: string;
   fetchImpl?: typeof fetch;
   now?: () => Date;
 }
@@ -223,11 +275,21 @@ function readSection(markdown: string | null | undefined, heading: string): stri
   return body ? body : null;
 }
 
-function buildLocalRuntimeEntries(factCheckContext: string | null | undefined): Pick<WriterFactCheckReport, 'verifiedFacts' | 'omittedClaims'> {
+function getArtifactPatterns(league: string) {
+  const sourceName = dataSourceName(league);
+  return {
+    verified: new RegExp(`\\*\\*${escapeRegExp(sourceName)} data\\*\\*\\s*\\(([^)]+)\\):`),
+    missing: new RegExp(`\\*No data found in ${escapeRegExp(sourceName)} \\(([^)]+)\\)\\*`),
+  };
+}
+
+function buildLocalRuntimeEntries(factCheckContext: string | null | undefined, league: string = 'nfl'): Pick<WriterFactCheckReport, 'verifiedFacts' | 'omittedClaims'> {
   if (!factCheckContext) {
     return { verifiedFacts: [], omittedClaims: [] };
   }
 
+  const sourceName = dataSourceName(league);
+  const patterns = getArtifactPatterns(league);
   const verifiedFacts: WriterFactCheckEntry[] = [];
   const omittedClaims: WriterFactCheckEntry[] = [];
   const claimBlocks = factCheckContext.split(/\r?\n\*\*Claim:\*\*\s*/).slice(1);
@@ -237,15 +299,15 @@ function buildLocalRuntimeEntries(factCheckContext: string | null | undefined): 
     if (!trimmedBlock) continue;
     const [claimLine] = trimmedBlock.split(/\r?\n/, 1);
     const claim = claimLine.trim();
-    const verifiedMatch = trimmedBlock.match(/\*\*nflverse data\*\*\s*\(([^)]+)\):/);
-    const missingMatch = trimmedBlock.match(/\*No data found in nflverse \(([^)]+)\)\*/);
+    const verifiedMatch = trimmedBlock.match(patterns.verified);
+    const missingMatch = trimmedBlock.match(patterns.missing);
 
     if (verifiedMatch) {
       verifiedFacts.push({
         claim,
         status: 'verified',
         sourceClass: 'local_runtime',
-        sourceLabel: `nflverse helper (${verifiedMatch[1]})`,
+        sourceLabel: `${sourceName} helper (${verifiedMatch[1]})`,
         sourceUrl: null,
         domain: null,
         note: 'Resolved in local deterministic fact-check context.',
@@ -260,7 +322,7 @@ function buildLocalRuntimeEntries(factCheckContext: string | null | undefined): 
         claim,
         status: 'omitted',
         sourceClass: 'local_runtime',
-        sourceLabel: `nflverse helper (${missingMatch[1]})`,
+        sourceLabel: `${sourceName} helper (${missingMatch[1]})`,
         sourceUrl: null,
         domain: null,
         note: 'No local deterministic data was returned for this claim.',
@@ -292,7 +354,7 @@ function extractHtmlTitle(body: string): string | null {
   return match?.[1]?.replace(/\s+/g, ' ').trim() || null;
 }
 
-export function resolveApprovedSource(url: string): ApprovedSourceCandidate | null {
+export function resolveApprovedSource(url: string, league: string = 'nfl'): ApprovedSourceCandidate | null {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -305,7 +367,8 @@ export function resolveApprovedSource(url: string): ApprovedSourceCandidate | nu
   }
 
   const hostname = normalizeApprovedHostname(parsed.hostname);
-  const rule = APPROVED_SOURCE_RULES.find(candidate => candidate.matches(hostname));
+  const rules = getLeagueApprovedSourceRules(league);
+  const rule = rules.find(candidate => candidate.matches(hostname));
   if (!rule) return null;
 
   return {
@@ -319,13 +382,14 @@ export function resolveApprovedSource(url: string): ApprovedSourceCandidate | nu
 export async function fetchApprovedSource(
   url: string,
   options: {
+    league?: string;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
     remainingWallClockMs?: number;
     now?: () => Date;
   } = {},
 ): Promise<ApprovedSourceFetchResult> {
-  const candidate = resolveApprovedSource(url);
+  const candidate = resolveApprovedSource(url, options.league ?? 'nfl');
   const now = options.now ?? (() => new Date());
   const asOf = now().toISOString().slice(0, 10);
 
@@ -466,6 +530,7 @@ export function extractUrlEvidence(artifacts: Array<{ name: string; content: str
 export async function executeWriterFactCheckPass(
   options: ExecuteWriterFactCheckPassOptions,
 ): Promise<WriterFactCheckReport> {
+  const league = options.league ?? 'nfl';
   const now = options.now ?? (() => new Date());
   const startedAt = now().getTime();
   const budget = getBudgetForMode(options.mode);
@@ -479,7 +544,7 @@ export async function executeWriterFactCheckPass(
   let blockedSourceCount = 0;
   let fetchFailureCount = 0;
 
-  const localEntries = buildLocalRuntimeEntries(options.factCheckContext);
+  const localEntries = buildLocalRuntimeEntries(options.factCheckContext, league);
   if (localEntries.verifiedFacts.length > 0 || localEntries.omittedClaims.length > 0) {
     localDeterministicPassesUsed = 1;
     verifiedFacts.push(...localEntries.verifiedFacts);
@@ -497,7 +562,7 @@ export async function executeWriterFactCheckPass(
   const urlEvidence = options.urlEvidence ?? [];
   let timeBudgetHit = false;
   for (const evidence of urlEvidence) {
-    const resolved = resolveApprovedSource(evidence.url);
+    const resolved = resolveApprovedSource(evidence.url, league);
     if (!resolved) {
       let domain: string | null = null;
       try {
@@ -538,6 +603,7 @@ export async function executeWriterFactCheckPass(
     const elapsedMs = now().getTime() - startedAt;
     const remainingBudgetMs = wallClockBudgetMs - elapsedMs;
     const fetchResult = await fetchApprovedSource(resolved.url, {
+      league,
       fetchImpl: options.fetchImpl,
       remainingWallClockMs: remainingBudgetMs,
       now,
@@ -625,8 +691,11 @@ export function buildWriterFactCheckArtifact(params: {
   availableArtifacts: string[];
   existingArtifact?: string | null;
   report?: WriterFactCheckReport | null;
+  league?: string;
 }): string {
   const { articleTitle, mode, availableArtifacts, existingArtifact, report } = params;
+  const league = params.league ?? 'nfl';
+  const sourceLabels = getSourceLabels(league);
   const budget = getBudgetForMode(mode);
   const availableArtifactSet = new Set(availableArtifacts);
   const availableEvidence = WRITER_FACTCHECK_LOCAL_ARTIFACTS
@@ -665,9 +734,9 @@ export function buildWriterFactCheckArtifact(params: {
 - Writer gets **bounded Stage 5 verification access**, not open-ended research autonomy.
 - Writer verifies **specific risky claims only** and does not replace Editor.
 - Approved source ladder:
-  1. ${WRITER_FACTCHECK_SOURCE_LABELS.local_runtime}
-  2. ${WRITER_FACTCHECK_SOURCE_LABELS.official_primary}
-  3. ${WRITER_FACTCHECK_SOURCE_LABELS.trusted_reference}
+  1. ${sourceLabels.local_runtime}
+  2. ${sourceLabels.official_primary}
+  3. ${sourceLabels.trusted_reference}
 - Raw web search is **not allowed** in v1.
 - Volatile facts must be attributed, softened, or omitted when unresolved.
 - Revision mode must reuse the existing writer fact-check artifact before spending any new external check budget.

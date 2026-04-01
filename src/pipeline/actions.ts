@@ -718,11 +718,12 @@ function buildWriterTask(isRevision: boolean): string {
 function validateDraftOutput(
   sourceArtifacts: WriterPreflightSourceArtifact[],
   content: string,
+  league: string = 'nfl',
 ): DraftValidationState {
   return {
     wordCount: content.split(/\s+/).filter(Boolean).length,
     structure: inspectDraftStructure(content),
-    preflight: runWriterPreflight({ draft: content, sourceArtifacts }),
+    preflight: runWriterPreflight({ draft: content, sourceArtifacts, league }),
   };
 }
 
@@ -1453,6 +1454,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         { name: 'panel-factcheck.md', content: ctx.repo.artifacts.get(articleId, 'panel-factcheck.md') },
         { name: 'fact-check-context.md', content: factCheckCtxArtifact },
       ]),
+      league: ctx.config.league,
     });
     ctx.repo.artifacts.put(
       articleId,
@@ -1463,6 +1465,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         availableArtifacts: ctx.repo.artifacts.list(articleId).map((artifact) => artifact.name),
         existingArtifact: existingWriterFactCheck,
         report: writerFactCheckReport,
+        league: ctx.config.league,
       }),
     );
     recordWriterFactCheckUsage(ctx, articleId, article.current_stage, writerFactCheckReport);
@@ -1531,7 +1534,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', result.content);
 
     let finalResult = result;
-    let validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
+    let validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '', ctx.config.league);
     const initialPreflight = validation.preflight;
     let repairAttempts = 0;
     const MAX_SELF_HEAL_ATTEMPTS = 2;
@@ -1564,7 +1567,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       recordAgentUsage(ctx, articleId, article.current_stage, `writeDraft-retry-${repairAttempts}`, retryResult);
       addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', retryResult.content);
       finalResult = retryResult;
-      validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '');
+      validation = validateDraftOutput(writerPreflightSources, finalResult.content ?? '', ctx.config.league);
     }
 
     writeArtifact(

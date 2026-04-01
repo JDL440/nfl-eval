@@ -1035,7 +1035,7 @@ export function createApp(
         default: index === 0,
       }));
     }
-    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, teams: config.teams ?? [], expertAgents, llmProviders }));
+    return c.html(renderNewIdeaPage({ labName: config.leagueConfig.name, leagueName: config.league.toUpperCase(), teams: config.teams ?? [], expertAgents, llmProviders }));
   });
 
   app.get('/config', (c) => {

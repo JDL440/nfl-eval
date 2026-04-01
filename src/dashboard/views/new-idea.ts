@@ -156,10 +156,12 @@ export function renderIdeaErrorStatus(details: {
 
 export function renderNewIdeaPage(config: {
   labName: string;
+  leagueName?: string;
   teams?: TeamEntry[];
   expertAgents?: string[];
   llmProviders?: NewIdeaProviderOption[];
 }): string {
+  const leagueName = config.leagueName ?? 'NFL';
   const teams = config.teams ?? [];
   const agents = config.expertAgents ?? [];
   const llmProviders = config.llmProviders ?? [];
@@ -216,7 +218,7 @@ export function renderNewIdeaPage(config: {
           <div class="form-group">
             <label for="prompt">What's the idea?</label>
             <textarea id="prompt" name="prompt" rows="5" required
-              placeholder="Analyze the Seahawks' defensive secondary heading into 2025, focusing on Devon Witherspoon's development and the safety room depth..."></textarea>
+              placeholder="Enter your article idea — describe the topic, team, and angle you want to explore..."></textarea>
           </div>
 
           <div class="form-group">
@@ -280,7 +282,7 @@ export function renderNewIdeaPage(config: {
       function surpriseMe() {
         const prompt = document.getElementById('prompt');
         const teams = Array.from(selectedTeams);
-        let text = 'Generate a surprising, timely NFL article idea.';
+        let text = 'Generate a surprising, timely ${escapeHtml(leagueName)} article idea.';
         if (teams.length > 0) {
           text += ' Focus on the ' + teams.join(', ') + '.';
         } else {

@@ -1,17 +1,19 @@
 ---
 name: "idea-generation"
-description: "How to generate the best article idea for an NFL team from supplied current context without stale or invented live-research claims."
+description: "How to generate the best article idea for a team from supplied current context without stale or invented live-research claims."
 domain: "content-production"
 confidence: "high"
 source: "manual — designed by Joe Robinson & Lead; updated 2026-03-14 to fix stale-angle problem"
 tools: [nflverse-data, prediction-markets]
+# NOTE: tools listed above are NFL defaults. For other leagues (e.g. mlb → statcast-data),
+# the runtime adds the correct league data tool via buildStageRequestedTools().
 ---
 
 # Idea Generation — Skill
 
 ## Purpose
 
-Generate the single most pressing or interesting offseason question facing an NFL franchise, grounded in the current-season context supplied in the task.
+Generate the single most pressing or interesting offseason question facing a franchise, grounded in the current-season context supplied in the task.
 
 This skill is for article ideation inside the current runtime. It should sharpen the angle before discussion and drafting begin.
 
