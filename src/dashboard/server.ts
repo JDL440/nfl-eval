@@ -2934,16 +2934,17 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
 
     const registerGeminiProvider = async (): Promise<void> => {
       if (gateway.getProvider('gemini')) return;
-      const apiKey = process.env['GEMINI_API_KEY'];
-      if (explicitProvider !== 'gemini' && !apiKey) return;
+      const geminiKey = process.env['GEMINI_API_KEY'];
+      if (!geminiKey) {
+        console.log('Gemini LLM provider skipped — GEMINI_API_KEY not set');
+        return;
+      }
       try {
-        const gemini = new GeminiProvider(apiKey);
-        // Verify the key works by calling apiKey getter (throws if missing)
-        gemini.listModels();
+        const gemini = new GeminiProvider(geminiKey);
         gateway.registerProvider(gemini);
-        console.log(`Gemini provider registered (models: ${gemini.listModels().join(', ')})`);
+        console.log('Gemini LLM provider registered (Google Gemini API)');
       } catch (err) {
-        console.log(`Gemini provider not available: ${err instanceof Error ? err.message : err}`);
+        console.log(`Gemini LLM provider not available: ${err instanceof Error ? err.message : err}`);
       }
     };
 
