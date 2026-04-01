@@ -41,19 +41,19 @@ export interface FactCheckContext {
 // Script execution (mirrors roster-context.ts)
 // ---------------------------------------------------------------------------
 
-function findScriptDir(league: string = 'nfl'): string {
+function findScriptDir(baseScriptsDir: string, league: string = 'nfl'): string {
   const candidates = [
-    join(process.cwd(), 'content', 'data', league),
-    join(process.cwd(), 'content', 'data'),
+    join(baseScriptsDir, league),
+    baseScriptsDir,
   ];
   for (const dir of candidates) {
     if (existsSync(join(dir, 'query_player_epa.py'))) return dir;
   }
-  return join(process.cwd(), 'content', 'data');
+  return baseScriptsDir;
 }
 
-function runPythonQuery(scriptName: string, args: string[], league: string = 'nfl'): string | null {
-  const scriptDir = findScriptDir(league);
+function runPythonQuery(scriptName: string, args: string[], baseScriptsDir: string, league: string = 'nfl'): string | null {
+  const scriptDir = findScriptDir(baseScriptsDir, league);
   const scriptPath = join(scriptDir, scriptName);
 
   if (!existsSync(scriptPath)) {
@@ -78,7 +78,7 @@ function runPythonQuery(scriptName: string, args: string[], league: string = 'nf
 // ---------------------------------------------------------------------------
 
 /** Look up player stats from nflverse. */
-function lookupPlayerStats(player: string, season: number, league: string = 'nfl'): string | null {
+function lookupPlayerStats(player: string, season: number, scriptsDir: string, league: string = 'nfl'): string | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
   // validators.ts shares this cache key but stores parsed objects;
@@ -90,7 +90,7 @@ function lookupPlayerStats(player: string, season: number, league: string = 'nfl
   const raw = runPythonQuery('query_player_epa.py', [
     '--player', player,
     '--season', String(season),
-  ], league);
+  ], scriptsDir, league);
   if (raw != null) {
     cache.set(key, raw, { ttlSeconds: DEFAULT_TTL.playerStats });
   }
@@ -98,7 +98,7 @@ function lookupPlayerStats(player: string, season: number, league: string = 'nfl
 }
 
 /** Look up draft history for a player. */
-function lookupDraftHistory(player: string, league: string = 'nfl'): string | null {
+function lookupDraftHistory(player: string, scriptsDir: string, league: string = 'nfl'): string | null {
   const cache = getGlobalCache();
   const key = draftHistoryCacheKey([player.toLowerCase()]);
   // validators.ts shares this cache key but stores parsed objects;
@@ -109,7 +109,7 @@ function lookupDraftHistory(player: string, league: string = 'nfl'): string | nu
   }
   const raw = runPythonQuery('query_draft_value.py', [
     '--player', player,
-  ], league);
+  ], scriptsDir, league);
   if (raw != null) {
     cache.set(key, raw, { ttlSeconds: DEFAULT_TTL.draftHistory });
   }
@@ -120,7 +120,7 @@ function lookupDraftHistory(player: string, league: string = 'nfl'): string | nu
 // Build lookups for each claim type
 // ---------------------------------------------------------------------------
 
-function buildStatLookups(claims: StatClaim[], season: number, league: string = 'nfl'): FactCheckLookup[] {
+function buildStatLookups(claims: StatClaim[], season: number, scriptsDir: string, league: string = 'nfl'): FactCheckLookup[] {
   const lookups: FactCheckLookup[] = [];
   const queriedPlayers = new Set<string>();
 
@@ -128,7 +128,7 @@ function buildStatLookups(claims: StatClaim[], season: number, league: string = 
     if (queriedPlayers.has(claim.player)) continue;
     queriedPlayers.add(claim.player);
 
-    const data = lookupPlayerStats(claim.player, season, league);
+    const data = lookupPlayerStats(claim.player, season, scriptsDir, league);
     lookups.push({
       claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
       leagueData: data,
@@ -139,7 +139,7 @@ function buildStatLookups(claims: StatClaim[], season: number, league: string = 
   return lookups;
 }
 
-function buildDraftLookups(claims: DraftClaim[], league: string = 'nfl'): FactCheckLookup[] {
+function buildDraftLookups(claims: DraftClaim[], scriptsDir: string, league: string = 'nfl'): FactCheckLookup[] {
   const lookups: FactCheckLookup[] = [];
   const queriedPlayers = new Set<string>();
 
@@ -147,7 +147,7 @@ function buildDraftLookups(claims: DraftClaim[], league: string = 'nfl'): FactCh
     if (queriedPlayers.has(claim.player)) continue;
     queriedPlayers.add(claim.player);
 
-    const data = lookupDraftHistory(claim.player, league);
+    const data = lookupDraftHistory(claim.player, scriptsDir, league);
     const claimParts = [`${claim.player}`];
     if (claim.round) claimParts.push(`round ${claim.round}`);
     if (claim.pick) claimParts.push(`pick ${claim.pick}`);
@@ -163,7 +163,7 @@ function buildDraftLookups(claims: DraftClaim[], league: string = 'nfl'): FactCh
   return lookups;
 }
 
-function buildPerformanceLookups(claims: PerformanceClaim[], season: number, league: string = 'nfl'): FactCheckLookup[] {
+function buildPerformanceLookups(claims: PerformanceClaim[], season: number, scriptsDir: string, league: string = 'nfl'): FactCheckLookup[] {
   const lookups: FactCheckLookup[] = [];
   const queriedPlayers = new Set<string>();
 
@@ -171,7 +171,7 @@ function buildPerformanceLookups(claims: PerformanceClaim[], season: number, lea
     if (queriedPlayers.has(claim.player)) continue;
     queriedPlayers.add(claim.player);
 
-    const data = lookupPlayerStats(claim.player, season, league);
+    const data = lookupPlayerStats(claim.player, season, scriptsDir, league);
     lookups.push({
       claim: claim.claim,
       leagueData: data,
@@ -222,13 +222,13 @@ function formatLookupSection(title: string, lookups: FactCheckLookup[], sourceNa
  *
  * Returns null if no claims could be verified (graceful degradation).
  */
-export function buildFactCheckContext(claims: ExtractedClaims, league: string = 'nfl'): FactCheckContext | null {
+export function buildFactCheckContext(claims: ExtractedClaims, scriptsDir: string, league: string = 'nfl'): FactCheckContext | null {
   const season = currentSeason(league);
   const sourceName = dataSourceName(league);
 
-  const statLookups = buildStatLookups(claims.statClaims, season, league);
-  const draftLookups = buildDraftLookups(claims.draftClaims, league);
-  const performanceLookups = buildPerformanceLookups(claims.performanceClaims, season, league);
+  const statLookups = buildStatLookups(claims.statClaims, season, scriptsDir, league);
+  const draftLookups = buildDraftLookups(claims.draftClaims, scriptsDir, league);
+  const performanceLookups = buildPerformanceLookups(claims.performanceClaims, season, scriptsDir, league);
 
   const totalLookups = statLookups.length + draftLookups.length + performanceLookups.length;
   if (totalLookups === 0) {
@@ -275,6 +275,7 @@ export function ensureFactCheckContext(
   claims: ExtractedClaims,
   forceRefresh = false,
   league: string = 'nfl',
+  scriptsDir: string = join(process.cwd(), 'content', 'data'),
 ): FactCheckContext | null {
   const ARTIFACT_NAME = 'fact-check-context.md';
 
@@ -285,7 +286,7 @@ export function ensureFactCheckContext(
     }
   }
 
-  const context = buildFactCheckContext(claims, league);
+  const context = buildFactCheckContext(claims, scriptsDir, league);
   if (context) {
     repo.artifacts.put(articleId, ARTIFACT_NAME, context.raw);
   }

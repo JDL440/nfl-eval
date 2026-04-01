@@ -39,6 +39,7 @@ export interface AppConfig {
   memoryDbPath: string;
   logsDir: string;
   cacheDir: string;
+  scriptsDir: string;
   port: number;
   env: 'development' | 'production' | 'test';
   dashboardAuth?: DashboardAuthConfig;
@@ -107,6 +108,11 @@ function loadLeagueConfigs(dataDir: string): Record<string, LeagueConfig> {
   const configPath = join(dataDir, 'config', 'leagues.json');
   if (existsSync(configPath)) {
     return JSON.parse(readFileSync(configPath, 'utf-8'));
+  }
+  // Fall back to bundled defaults
+  const defaultPath = join(__dirname, 'defaults', 'leagues.json');
+  if (existsSync(defaultPath)) {
+    return JSON.parse(readFileSync(defaultPath, 'utf-8'));
   }
   return { nfl: DEFAULT_NFL_CONFIG };
 }
@@ -364,6 +370,10 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
     throw new Error(`Unknown league "${league}". Available: ${Object.keys(leagueConfigs).join(', ')}`);
   }
 
+  const scriptsDir = resolve(
+    overrides?.scriptsDir ?? process.env.NFL_SCRIPTS_DIR ?? join(process.cwd(), 'content', 'data'),
+  );
+
   const port = overrides?.port ?? parseInt(process.env.NFL_PORT ?? String(DEFAULT_PORT), 10);
   const env = (overrides?.env ?? process.env.NODE_ENV ?? 'development') as 'development' | 'production' | 'test';
   const dashboardAuth = resolveDashboardAuthConfig(env, overrides?.dashboardAuth);
@@ -389,6 +399,7 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
     memoryDbPath: join(dataDir, 'agents', 'memory.db'),
     logsDir: join(dataDir, 'logs'),
     cacheDir: join(dataDir, 'leagues', league, 'data-cache'),
+    scriptsDir,
     port,
     env,
     contextPreset,

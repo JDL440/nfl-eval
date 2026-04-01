@@ -1569,7 +1569,7 @@ export function createApp(
 
         // Use AgentRunner with Lead charter + idea-generation skill
         // Inject roster context so the LLM doesn't reference stale player data
-        const rosterCtx = teams.length > 0 ? buildTeamRosterContext(teams[0]) : null;
+        const rosterCtx = teams.length > 0 ? buildTeamRosterContext(teams[0], config.league, config.scriptsDir) : null;
 
         const task = [
           'Generate a structured article idea from the following prompt.',
@@ -1899,7 +1899,7 @@ export function createApp(
   // ── Roster panel (htmx) ──────────────────────────────────────────────────
   app.get('/htmx/roster/:team', (c) => {
     const team = c.req.param('team').toUpperCase();
-    const rosterCtx = buildTeamRosterContext(team);
+    const rosterCtx = buildTeamRosterContext(team, config.league, config.scriptsDir);
     if (!rosterCtx) {
       return c.html('<p class="empty-state">Roster data unavailable</p>');
     }

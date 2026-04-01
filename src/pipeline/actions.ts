@@ -1115,7 +1115,7 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const team = article.primary_team;
     if (team) {
-      ensureRosterContext(ctx.repo, articleId, team, false, ctx.config.league);
+      ensureRosterContext(ctx.repo, articleId, team, false, ctx.config.league, ctx.config.scriptsDir);
     }
 
     const ideaWithRoster = gatherContext(ctx.repo, articleId, 'generatePrompt', ctx.config);
@@ -1228,7 +1228,7 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
 
     // Inject roster context for panel discussion accuracy
     const rosterCtx = article.primary_team
-      ? ensureRosterContext(ctx.repo, articleId, article.primary_team, false, ctx.config.league)
+      ? ensureRosterContext(ctx.repo, articleId, article.primary_team, false, ctx.config.league, ctx.config.scriptsDir)
       : null;
     const discussionContext = gatherContext(ctx.repo, articleId, 'runDiscussion', ctx.config);
 
@@ -1384,7 +1384,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
     const team = article.primary_team;
     let rosterCtx: string | null = null;
     if (team) {
-      rosterCtx = ensureRosterContext(ctx.repo, articleId, team, false, ctx.config.league);
+      rosterCtx = ensureRosterContext(ctx.repo, articleId, team, false, ctx.config.league, ctx.config.scriptsDir);
     }
 
     // Run lightweight fact-check on panel discussion output (if available)
@@ -1413,7 +1413,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
 
       // Build enriched fact-check context from nflverse if claims found
       if (totalClaimCount(claims) > 0) {
-        const fctx = ensureFactCheckContext(ctx.repo, articleId, claims, false, ctx.config.league);
+        const fctx = ensureFactCheckContext(ctx.repo, articleId, claims, false, ctx.config.league, ctx.config.scriptsDir);
         if (fctx) factCheckCtxArtifact = fctx.raw;
       }
 
@@ -1625,7 +1625,7 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     // Inject current roster data for fact-checking player-team assignments
     const team = article.primary_team;
     if (team) {
-      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team, false, ctx.config.league);
+      const rosterCtx = ensureRosterContext(ctx.repo, articleId, team, false, ctx.config.league, ctx.config.scriptsDir);
       if (rosterCtx) {
         content = content + '\n\n---\n\n' + rosterCtx;
       }
@@ -1739,7 +1739,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     // Inject roster context for publisher agent
     const rosterCtx = article.primary_team
-      ? ensureRosterContext(ctx.repo, articleId, article.primary_team, false, ctx.config.league)
+      ? ensureRosterContext(ctx.repo, articleId, article.primary_team, false, ctx.config.league, ctx.config.scriptsDir)
       : null;
 
     // Publisher only needs the shared handoff, not the raw editorial transcript.
@@ -1764,7 +1764,7 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
     if (article.primary_team) {
       const draftContent = ctx.repo.artifacts.get(articleId, 'draft.md');
       if (draftContent) {
-        const mentions = validatePlayerMentions(draftContent, article.primary_team, ctx.config.league);
+        const mentions = validatePlayerMentions(draftContent, article.primary_team, ctx.config.league, ctx.config.scriptsDir);
         const issues = mentions.filter(m => m.status !== 'confirmed');
         if (issues.length > 0) {
           const warnings = issues.map(m => {
@@ -1778,8 +1778,8 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
         // Run deterministic stat and draft claim validation
         const claims = extractClaims(draftContent, article.league);
         if (totalClaimCount(claims) > 0) {
-          const statResults = validateStatClaims(claims, article.league);
-          const draftResults = validateDraftClaims(claims, article.league);
+          const statResults = validateStatClaims(claims, article.league, ctx.config.scriptsDir);
+          const draftResults = validateDraftClaims(claims, article.league, ctx.config.scriptsDir);
           const report = buildValidationReport(statResults, draftResults, article.league);
           ctx.repo.artifacts.put(articleId, 'fact-validation.md', report);
         }

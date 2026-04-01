@@ -34,19 +34,19 @@ export interface ValidationResult {
 // Script execution (mirrors roster-context.ts)
 // ---------------------------------------------------------------------------
 
-function findScriptDir(league: string = 'nfl'): string {
+function findScriptDir(baseScriptsDir: string, league: string = 'nfl'): string {
   const candidates = [
-    join(process.cwd(), 'content', 'data', league),
-    join(process.cwd(), 'content', 'data'),
+    join(baseScriptsDir, league),
+    baseScriptsDir,
   ];
   for (const dir of candidates) {
     if (existsSync(join(dir, 'query_player_epa.py'))) return dir;
   }
-  return join(process.cwd(), 'content', 'data');
+  return baseScriptsDir;
 }
 
-function runPythonQuery(scriptName: string, args: string[], league: string = 'nfl'): string | null {
-  const scriptDir = findScriptDir(league);
+function runPythonQuery(scriptName: string, args: string[], baseScriptsDir: string, league: string = 'nfl'): string | null {
+  const scriptDir = findScriptDir(baseScriptsDir, league);
   const scriptPath = join(scriptDir, scriptName);
 
   if (!existsSync(scriptPath)) {
@@ -90,14 +90,14 @@ interface PlayerStatData {
   [key: string]: unknown;
 }
 
-function lookupPlayerStatsJson(player: string, season: number, league: string = 'nfl'): PlayerStatData | null {
+function lookupPlayerStatsJson(player: string, season: number, scriptsDir: string, league: string = 'nfl'): PlayerStatData | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
   return cache.getOrFetch<PlayerStatData>(key, () => {
     const raw = runPythonQuery('query_player_epa.py', [
       '--player', player,
       '--season', String(season),
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -155,14 +155,14 @@ function getMetricMap(league: string): Record<string, (d: PlayerStatData) => num
  * Cross-reference statistical claims against league data source.
  * Returns a validation result for each claim where data is available.
  */
-export function validateStatClaims(claims: ExtractedClaims, league: string = 'nfl'): ValidationResult[] {
+export function validateStatClaims(claims: ExtractedClaims, league: string = 'nfl', scriptsDir: string = join(process.cwd(), 'content', 'data')): ValidationResult[] {
   const season = currentSeason(league);
   const sourceName = dataSourceName(league);
   const metricMap = getMetricMap(league);
   const results: ValidationResult[] = [];
 
   for (const claim of claims.statClaims) {
-    const stats = lookupPlayerStatsJson(claim.player, season, league);
+    const stats = lookupPlayerStatsJson(claim.player, season, scriptsDir, league);
     if (!stats) {
       results.push({
         claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
@@ -224,13 +224,13 @@ interface DraftData {
   [key: string]: unknown;
 }
 
-function lookupDraftData(player: string, league: string = 'nfl'): DraftData | null {
+function lookupDraftData(player: string, scriptsDir: string, league: string = 'nfl'): DraftData | null {
   const cache = getGlobalCache();
   const key = draftHistoryCacheKey([player.toLowerCase()]);
   return cache.getOrFetch<DraftData>(key, () => {
     const raw = runPythonQuery('query_draft_value.py', [
       '--player', player,
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -245,12 +245,12 @@ function lookupDraftData(player: string, league: string = 'nfl'): DraftData | nu
 /**
  * Verify draft claims (pick number, round, year) against draft history data.
  */
-export function validateDraftClaims(claims: ExtractedClaims, league: string = 'nfl'): ValidationResult[] {
+export function validateDraftClaims(claims: ExtractedClaims, league: string = 'nfl', scriptsDir: string = join(process.cwd(), 'content', 'data')): ValidationResult[] {
   const sourceName = dataSourceName(league);
   const results: ValidationResult[] = [];
 
   for (const claim of claims.draftClaims) {
-    const draft = lookupDraftData(claim.player, league);
+    const draft = lookupDraftData(claim.player, scriptsDir, league);
     if (!draft) {
       results.push({
         claim: claim.raw,

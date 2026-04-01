@@ -92,7 +92,7 @@ export class DataService {
 
   constructor(config?: DataServiceConfig) {
     this.scriptsDir =
-      config?.scriptsDir ?? join(process.cwd(), 'content', 'data');
+      config?.scriptsDir ?? process.env.NFL_SCRIPTS_DIR ?? join(process.cwd(), 'content', 'data');
     this.pythonCmd = config?.pythonCmd ?? 'python';
     this.baseUrl = (config?.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
     this.mode = config?.mode ?? (resolveEnvMode() || 'scripts');

@@ -50,23 +50,23 @@ interface SnapPlayer {
 // Script paths (relative to repo root)
 // ---------------------------------------------------------------------------
 
-function findScriptDir(league: string = 'nfl'): string {
+function findScriptDir(baseScriptsDir: string, league: string = 'nfl'): string {
   const candidates = [
-    join(process.cwd(), 'content', 'data', league),
-    join(process.cwd(), 'content', 'data'),
+    join(baseScriptsDir, league),
+    baseScriptsDir,
   ];
   for (const dir of candidates) {
     if (existsSync(join(dir, 'query_snap_usage.py'))) return dir;
   }
-  return join(process.cwd(), 'content', 'data');
+  return baseScriptsDir;
 }
 
 // ---------------------------------------------------------------------------
 // Data fetching
 // ---------------------------------------------------------------------------
 
-function runPythonQuery(scriptName: string, args: string[], league: string = 'nfl'): string | null {
-  const scriptDir = findScriptDir(league);
+function runPythonQuery(scriptName: string, args: string[], baseScriptsDir: string, league: string = 'nfl'): string | null {
+  const scriptDir = findScriptDir(baseScriptsDir, league);
   const scriptPath = join(scriptDir, scriptName);
 
   if (!existsSync(scriptPath)) {
@@ -87,14 +87,14 @@ function runPythonQuery(scriptName: string, args: string[], league: string = 'nf
 }
 
 /** Query the official nflverse roster for a team. */
-function queryRoster(team: string, season: number, league: string = 'nfl'): RosterPlayer[] {
+function queryRoster(team: string, season: number, scriptsDir: string, league: string = 'nfl'): RosterPlayer[] {
   const cache = getGlobalCache();
   const key = rosterCacheKey(team, season);
   return cache.getOrFetch<RosterPlayer[]>(key, () => {
     const raw = runPythonQuery('query_rosters.py', [
       '--team', team,
       '--season', String(season),
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as RosterPlayer[];
@@ -105,7 +105,7 @@ function queryRoster(team: string, season: number, league: string = 'nfl'): Rost
 }
 
 /** Query snap counts for supplementary usage data. */
-function querySnaps(team: string, season: number, group: string, top: number, league: string = 'nfl'): SnapPlayer[] {
+function querySnaps(team: string, season: number, group: string, top: number, scriptsDir: string, league: string = 'nfl'): SnapPlayer[] {
   const cache = getGlobalCache();
   const key = snapsCacheKey(team, season, group, top);
   return cache.getOrFetch<SnapPlayer[]>(key, () => {
@@ -114,7 +114,7 @@ function querySnaps(team: string, season: number, group: string, top: number, le
       '--season', String(season),
       '--position-group', group,
       '--top', String(top),
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as SnapPlayer[];
@@ -169,14 +169,14 @@ interface TeamEfficiency {
 }
 
 /** Query player stats from nflverse — returns parsed object or null. */
-function queryPlayerStats(player: string, season: number, league: string = 'nfl'): PlayerStats | null {
+function queryPlayerStats(player: string, season: number, scriptsDir: string, league: string = 'nfl'): PlayerStats | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
   return cache.getOrFetch<PlayerStats>(key, () => {
     const raw = runPythonQuery('query_player_epa.py', [
       '--player', player,
       '--season', String(season),
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -189,14 +189,14 @@ function queryPlayerStats(player: string, season: number, league: string = 'nfl'
 }
 
 /** Query team efficiency metrics from nflverse. */
-function queryTeamEfficiency(team: string, season: number, league: string = 'nfl'): TeamEfficiency | null {
+function queryTeamEfficiency(team: string, season: number, scriptsDir: string, league: string = 'nfl'): TeamEfficiency | null {
   const cache = getGlobalCache();
   const key = teamEfficiencyCacheKey(team, season);
   return cache.getOrFetch<TeamEfficiency>(key, () => {
     const raw = runPythonQuery('query_team_efficiency.py', [
       '--team', team,
       '--season', String(season),
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as TeamEfficiency;
@@ -218,6 +218,7 @@ function buildKeyStatsSection(
   snapPct: Map<string, number>,
   team: string,
   season: number,
+  scriptsDir: string,
   league: string = 'nfl',
 ): string | null {
   // Identify high-snap skill players
@@ -241,7 +242,7 @@ function buildKeyStatsSection(
     if (Date.now() - wallStart > MAX_STATS_WALL_TIME_MS) break; // avoid blocking event loop
     let stats: PlayerStats | null;
     try {
-      stats = queryPlayerStats(p.full_name, season, league);
+      stats = queryPlayerStats(p.full_name, season, scriptsDir, league);
     } catch { continue; }
     if (!stats) continue;
 
@@ -277,7 +278,7 @@ function buildKeyStatsSection(
   // Also add team efficiency (skip if already over time budget)
   if (Date.now() - wallStart < MAX_STATS_WALL_TIME_MS) {
     try {
-      const teamStats = queryTeamEfficiency(team, season, league);
+      const teamStats = queryTeamEfficiency(team, season, scriptsDir, league);
       if (teamStats) {
         lines.push('');
         lines.push(`**${team} Team Totals:** `
@@ -301,16 +302,16 @@ function buildKeyStatsSection(
  *
  * Uses the official nflverse roster (primary) + snap counts (supplementary).
  */
-export function buildTeamRosterContext(team: string, league: string = 'nfl'): string | null {
+export function buildTeamRosterContext(team: string, league: string = 'nfl', scriptsDir: string = join(process.cwd(), 'content', 'data')): string | null {
   const season = currentSeason(league);
   const teamUpper = team.toUpperCase();
 
   // Primary: official roster
-  const roster = queryRoster(teamUpper, season, league);
+  const roster = queryRoster(teamUpper, season, scriptsDir, league);
 
   // Supplementary: snap counts for usage context
-  const offSnaps = querySnaps(teamUpper, season, 'offense', 20, league);
-  const defSnaps = querySnaps(teamUpper, season, 'defense', 20, league);
+  const offSnaps = querySnaps(teamUpper, season, 'offense', 20, scriptsDir, league);
+  const defSnaps = querySnaps(teamUpper, season, 'defense', 20, scriptsDir, league);
 
   // Build snap lookup: player name → pct
   const snapPct = new Map<string, number>();
@@ -384,7 +385,7 @@ export function buildTeamRosterContext(team: string, league: string = 'nfl'): st
 
   // Key player statistics — verified data to prevent LLM fabrication
   try {
-    const statsSection = buildKeyStatsSection(roster, snapPct, teamUpper, season, league);
+    const statsSection = buildKeyStatsSection(roster, snapPct, teamUpper, season, scriptsDir, league);
     if (statsSection) {
       parts.push('');
       parts.push(statsSection);
@@ -455,6 +456,7 @@ export function ensureRosterContext(
   team: string,
   forceRefresh = false,
   league: string = 'nfl',
+  scriptsDir: string = join(process.cwd(), 'content', 'data'),
 ): string | null {
   const ARTIFACT_NAME = 'roster-context.md';
 
@@ -464,7 +466,7 @@ export function ensureRosterContext(
     if (cached) return cached;
   }
 
-  const context = buildTeamRosterContext(team, league);
+  const context = buildTeamRosterContext(team, league, scriptsDir);
   if (context) {
     repo.artifacts.put(articleId, ARTIFACT_NAME, context);
   }
@@ -517,12 +519,13 @@ export function validatePlayerMentions(
   articleText: string,
   team: string,
   league: string = 'nfl',
+  scriptsDir: string = join(process.cwd(), 'content', 'data'),
 ): PlayerMention[] {
   const season = currentSeason(league);
   const teamUpper = team.toUpperCase();
 
   // Get roster for the target team
-  const roster = queryRoster(teamUpper, season, league);
+  const roster = queryRoster(teamUpper, season, scriptsDir, league);
   if (roster.length === 0) return []; // Can't validate without data
 
   const teamNames = new Set(roster.map(p => p.full_name.toLowerCase()));
@@ -542,7 +545,7 @@ export function validatePlayerMentions(
     }
 
     // Check if this player is on a DIFFERENT team (strong signal of error)
-    const allTeams = queryPlayerTeam(name, season, league);
+    const allTeams = queryPlayerTeam(name, season, scriptsDir, league);
     if (allTeams) {
       results.push({
         name,
@@ -588,14 +591,14 @@ function extractPlayerNames(text: string): Set<string> {
 }
 
 /** Look up which team a player is on (if any). Returns team abbreviation or null. */
-function queryPlayerTeam(playerName: string, season: number, league: string = 'nfl'): string | null {
+function queryPlayerTeam(playerName: string, season: number, scriptsDir: string, league: string = 'nfl'): string | null {
   const cache = getGlobalCache();
   const key = pythonQueryCacheKey('query_rosters_player', [playerName.toLowerCase(), String(season)]);
   return cache.getOrFetch<string>(key, () => {
     const raw = runPythonQuery('query_rosters.py', [
       '--player', playerName,
       '--season', String(season),
-    ], league);
+    ], scriptsDir, league);
     if (!raw) return null;
     try {
       const data = JSON.parse(raw) as RosterPlayer[];
@@ -640,10 +643,11 @@ export function bootstrapRosterKnowledge(
   teams: string[],
   agentNames: string[] = ['lead'],
   league: string = 'nfl',
+  scriptsDir: string = join(process.cwd(), 'content', 'data'),
 ): number {
   let count = 0;
   for (const team of teams) {
-    const ctx = buildTeamRosterContext(team, league);
+    const ctx = buildTeamRosterContext(team, league, scriptsDir);
     if (!ctx) continue;
 
     // Build a compact summary (first 20 players) to keep memory entries small
