@@ -57,6 +57,14 @@
 - 2026-03-31 — File write audit revealed hardcoded `process.cwd()/content/data` paths in pipeline/validators.ts, pipeline/roster-context.ts, pipeline/fact-check-context.ts, and services/data.ts that break NFL_DATA_DIR isolation; all pipeline artifacts write to DB-backed ArtifactStore (safe), image service writes to config.imagesDir (safe), cache writes to config.cacheDir (safe), but Python data script paths still resolve relative to checkout instead of data directory.
 - 2026-03-31 — scriptsDir config fix complete: `AppConfig.scriptsDir` resolves from `NFL_SCRIPTS_DIR` env var (default: `join(process.cwd(), 'content', 'data')`). All 4 files (fact-check-context.ts, roster-context.ts, validators.ts, services/data.ts) now use config-provided `scriptsDir` instead of hardcoded `process.cwd()` paths. For prod NSSM, set `NFL_SCRIPTS_DIR=C:\github\nfl-eval\content\data`. All public functions accept `scriptsDir` as a trailing optional parameter with backward-compatible defaults.
 
+## Cross-Agent Context Updates (2026-04-01T08:37:38Z)
+
+### Gemini Native Tool Calling Complete
+- **Feature:** Implemented provider-owned conversation continuity for Gemini native tool calling via opaque `providerState` blob.
+- **Files changed:** `src/llm/gateway.ts` (expose providerState on requests/responses), `src/agents/runner.ts` (thread through tool loops), `src/llm/providers/gemini.ts` (store/reuse raw contents + thoughtSignature), `tests/llm/providers.test.ts` (test state round-trip), `test-gemini.ts` (manual smoke test).
+- **Validation:** `npm run v2:build` ✅; `npm run v2:test -- tests/llm/providers.test.ts tests/agents/runner.test.ts` ✅; full suite has pre-existing dashboard/publish failures (unrelated).
+- **Decision merged:** Gemini native-tools decision from inbox to `decisions.md`. Inbox file deleted.
+
 ## Cross-Agent Context Updates (2026-03-29T23:21:31Z)
 
 ### Dashboard Cleanup Completion
