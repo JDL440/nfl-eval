@@ -46,6 +46,7 @@ interface GeminiPart {
   text?: string;
   functionCall?: GeminiFunctionCall;
   functionResponse?: GeminiFunctionResponse;
+  thoughtSignature?: string;
 }
 
 interface GeminiContent {
@@ -159,7 +160,10 @@ export class GeminiProvider implements LLMProvider {
     const fnCallPart = parts.find((p) => p.functionCall);
     let content: string;
     if (fnCallPart?.functionCall) {
-      content = this.serializeFunctionCall(fnCallPart.functionCall);
+      content = this.serializeFunctionCall(
+        fnCallPart.functionCall,
+        fnCallPart.thoughtSignature,
+      );
     } else {
       content = parts
         .filter((p) => p.text !== undefined)
@@ -213,24 +217,41 @@ export class GeminiProvider implements LLMProvider {
 
   /**
    * Serialize a Gemini native functionCall into the text-based tool_call
-   * envelope that the agent runner expects:
-   *   {"type":"tool_call","toolName":"...","args":{...}}
+   * envelope that the agent runner expects.
+   * Embeds thoughtSignature so it survives the text round-trip and can be
+   * reconstructed in mapMessages on the next turn.
    */
-  private serializeFunctionCall(fc: GeminiFunctionCall): string {
-    return JSON.stringify({
+  private serializeFunctionCall(
+    fc: GeminiFunctionCall,
+    thoughtSignature?: string,
+  ): string {
+    const envelope: Record<string, unknown> = {
       type: 'tool_call',
       toolName: fc.name,
       args: fc.args ?? {},
-    });
+    };
+    if (thoughtSignature) {
+      envelope['thoughtSignature'] = thoughtSignature;
+    }
+    return JSON.stringify(envelope);
   }
 
-  /** Map ChatMessage[] → Gemini contents format, including tool results. */
+  /**
+   * Map ChatMessage[] → Gemini contents format.
+   *
+   * The text-based tool loop sends tool calls as assistant text messages
+   * (serialized JSON) and tool results as user text messages. We detect
+   * these patterns and reconstruct native functionCall / functionResponse
+   * parts so Gemini's thought_signature chain stays intact.
+   */
   private mapMessages(messages: ChatMessage[]): GeminiContent[] {
     const contents: GeminiContent[] = [];
 
-    for (const m of messages) {
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+
       if (m.role === 'tool') {
-        // Tool results map to functionResponse parts
+        // OpenAI-style tool result → Gemini functionResponse
         let resultObj: Record<string, unknown>;
         try {
           resultObj = JSON.parse(m.content);
@@ -250,27 +271,53 @@ export class GeminiProvider implements LLMProvider {
           }],
         });
       } else if (m.role === 'assistant') {
-        // Check if the assistant message contains a serialized tool call
-        // (from a previous turn in the conversation)
+        // Check for OpenAI-style tool_calls first
         const toolCalls = 'tool_calls' in m ? m.tool_calls : undefined;
         if (toolCalls && toolCalls.length > 0) {
           const tc = toolCalls[0];
           let args: Record<string, unknown> = {};
           try { args = JSON.parse(tc.function.arguments); } catch { /* keep empty */ }
-          contents.push({
-            role: 'model',
-            parts: [{
-              functionCall: {
-                name: tc.function.name,
-                args,
-              },
-            }],
-          });
+          const part: GeminiPart = {
+            functionCall: { name: tc.function.name, args },
+          };
+          contents.push({ role: 'model', parts: [part] });
         } else {
-          contents.push({
-            role: 'model',
-            parts: [{ text: m.content }],
-          });
+          // Check if the text content is a serialized tool_call with thoughtSignature
+          const parsed = this.tryParseToolCallEnvelope(m.content);
+          if (parsed) {
+            const part: GeminiPart = {
+              functionCall: { name: parsed.toolName, args: parsed.args },
+            };
+            if (parsed.thoughtSignature) {
+              part.thoughtSignature = parsed.thoughtSignature;
+            }
+            contents.push({ role: 'model', parts: [part] });
+
+            // Check if the next message is a text-based tool result from the runner
+            // Pattern: "Tool result for <name>:\n<result>\n..."
+            const next = messages[i + 1];
+            if (next && next.role === 'user') {
+              const toolResult = this.tryParseTextToolResult(next.content);
+              if (toolResult) {
+                contents.push({
+                  role: 'user',
+                  parts: [{
+                    functionResponse: {
+                      name: parsed.toolName,
+                      response: { result: toolResult },
+                    },
+                  }],
+                });
+                i++; // skip the next message since we consumed it
+                continue;
+              }
+            }
+          } else {
+            contents.push({
+              role: 'model',
+              parts: [{ text: m.content }],
+            });
+          }
         }
       } else {
         // user messages
@@ -282,5 +329,42 @@ export class GeminiProvider implements LLMProvider {
     }
 
     return contents;
+  }
+
+  /**
+   * Try to parse an assistant message as a serialized tool_call envelope
+   * that we produced in serializeFunctionCall.
+   */
+  private tryParseToolCallEnvelope(
+    text: string,
+  ): { toolName: string; args: Record<string, unknown>; thoughtSignature?: string } | null {
+    try {
+      const obj = JSON.parse(text);
+      if (
+        obj &&
+        typeof obj === 'object' &&
+        (obj.type === 'tool_call' || obj.type === 'function_call' || obj.type === 'tool_use') &&
+        typeof obj.toolName === 'string'
+      ) {
+        return {
+          toolName: obj.toolName,
+          args: obj.args && typeof obj.args === 'object' ? obj.args : {},
+          thoughtSignature: typeof obj.thoughtSignature === 'string'
+            ? obj.thoughtSignature
+            : undefined,
+        };
+      }
+    } catch { /* not JSON */ }
+    return null;
+  }
+
+  /**
+   * Detect the runner's text-based tool result format:
+   *   "Tool result for <name>:\n<result>\n\nIf you need another tool..."
+   * Returns the result text, or null if not a tool result.
+   */
+  private tryParseTextToolResult(text: string): string | null {
+    const match = text.match(/^Tool result for [^\n:]+:\n([\s\S]*?)(?:\n\nIf you need another tool|$)/);
+    return match ? match[1].trim() : null;
   }
 }
