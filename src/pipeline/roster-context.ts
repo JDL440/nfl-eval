@@ -18,6 +18,7 @@ import {
   getGlobalCache, DEFAULT_TTL,
   rosterCacheKey, snapsCacheKey, playerStatsCacheKey, teamEfficiencyCacheKey, pythonQueryCacheKey,
 } from '../cache/index.js';
+import { currentSeason, getPositionConfig, dataSourceName } from './league-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,8 +50,9 @@ interface SnapPlayer {
 // Script paths (relative to repo root)
 // ---------------------------------------------------------------------------
 
-function findScriptDir(): string {
+function findScriptDir(league: string = 'nfl'): string {
   const candidates = [
+    join(process.cwd(), 'content', 'data', league),
     join(process.cwd(), 'content', 'data'),
   ];
   for (const dir of candidates) {
@@ -63,8 +65,8 @@ function findScriptDir(): string {
 // Data fetching
 // ---------------------------------------------------------------------------
 
-function runPythonQuery(scriptName: string, args: string[]): string | null {
-  const scriptDir = findScriptDir();
+function runPythonQuery(scriptName: string, args: string[], league: string = 'nfl'): string | null {
+  const scriptDir = findScriptDir(league);
   const scriptPath = join(scriptDir, scriptName);
 
   if (!existsSync(scriptPath)) {
@@ -85,14 +87,14 @@ function runPythonQuery(scriptName: string, args: string[]): string | null {
 }
 
 /** Query the official nflverse roster for a team. */
-function queryRoster(team: string, season: number): RosterPlayer[] {
+function queryRoster(team: string, season: number, league: string = 'nfl'): RosterPlayer[] {
   const cache = getGlobalCache();
   const key = rosterCacheKey(team, season);
   return cache.getOrFetch<RosterPlayer[]>(key, () => {
     const raw = runPythonQuery('query_rosters.py', [
       '--team', team,
       '--season', String(season),
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as RosterPlayer[];
@@ -103,7 +105,7 @@ function queryRoster(team: string, season: number): RosterPlayer[] {
 }
 
 /** Query snap counts for supplementary usage data. */
-function querySnaps(team: string, season: number, group: string, top: number): SnapPlayer[] {
+function querySnaps(team: string, season: number, group: string, top: number, league: string = 'nfl'): SnapPlayer[] {
   const cache = getGlobalCache();
   const key = snapsCacheKey(team, season, group, top);
   return cache.getOrFetch<SnapPlayer[]>(key, () => {
@@ -112,7 +114,7 @@ function querySnaps(team: string, season: number, group: string, top: number): S
       '--season', String(season),
       '--position-group', group,
       '--top', String(top),
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as SnapPlayer[];
@@ -167,14 +169,14 @@ interface TeamEfficiency {
 }
 
 /** Query player stats from nflverse — returns parsed object or null. */
-function queryPlayerStats(player: string, season: number): PlayerStats | null {
+function queryPlayerStats(player: string, season: number, league: string = 'nfl'): PlayerStats | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
   return cache.getOrFetch<PlayerStats>(key, () => {
     const raw = runPythonQuery('query_player_epa.py', [
       '--player', player,
       '--season', String(season),
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -187,14 +189,14 @@ function queryPlayerStats(player: string, season: number): PlayerStats | null {
 }
 
 /** Query team efficiency metrics from nflverse. */
-function queryTeamEfficiency(team: string, season: number): TeamEfficiency | null {
+function queryTeamEfficiency(team: string, season: number, league: string = 'nfl'): TeamEfficiency | null {
   const cache = getGlobalCache();
   const key = teamEfficiencyCacheKey(team, season);
   return cache.getOrFetch<TeamEfficiency>(key, () => {
     const raw = runPythonQuery('query_team_efficiency.py', [
       '--team', team,
       '--season', String(season),
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as TeamEfficiency;
@@ -216,6 +218,7 @@ function buildKeyStatsSection(
   snapPct: Map<string, number>,
   team: string,
   season: number,
+  league: string = 'nfl',
 ): string | null {
   // Identify high-snap skill players
   const candidates = roster
@@ -225,11 +228,12 @@ function buildKeyStatsSection(
 
   if (candidates.length === 0) return null;
 
+  const sourceName = dataSourceName(league);
   const lines: string[] = [];
-  lines.push('### Key Player Statistics (nflverse verified)');
+  lines.push(`### Key Player Statistics (${sourceName} verified)`);
   lines.push('');
-  lines.push('> ⚠️ These are ACTUAL stats from the nflverse dataset. Use these numbers, not training data.');
-  lines.push('> If a stat below contradicts a claim, the nflverse data is correct.');
+  lines.push(`> ⚠️ These are ACTUAL stats from the ${sourceName} dataset. Use these numbers, not training data.`);
+  lines.push(`> If a stat below contradicts a claim, the ${sourceName} data is correct.`);
   lines.push('');
 
   const wallStart = Date.now();
@@ -237,7 +241,7 @@ function buildKeyStatsSection(
     if (Date.now() - wallStart > MAX_STATS_WALL_TIME_MS) break; // avoid blocking event loop
     let stats: PlayerStats | null;
     try {
-      stats = queryPlayerStats(p.full_name, season);
+      stats = queryPlayerStats(p.full_name, season, league);
     } catch { continue; }
     if (!stats) continue;
 
@@ -273,7 +277,7 @@ function buildKeyStatsSection(
   // Also add team efficiency (skip if already over time budget)
   if (Date.now() - wallStart < MAX_STATS_WALL_TIME_MS) {
     try {
-      const teamStats = queryTeamEfficiency(team, season);
+      const teamStats = queryTeamEfficiency(team, season, league);
       if (teamStats) {
         lines.push('');
         lines.push(`**${team} Team Totals:** `
@@ -291,40 +295,22 @@ function buildKeyStatsSection(
   return lines.join('\n');
 }
 
-/** Current NFL season — offseason articles reference the previous season's data. */
-function currentSeason(): number {
-  const now = new Date();
-  return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
-}
-
-/** Position display order */
-const OFF_POS_ORDER = ['QB', 'RB', 'FB', 'WR', 'TE', 'T', 'G', 'C', 'OL'];
-const DEF_POS_ORDER = ['DE', 'DT', 'NT', 'DL', 'OLB', 'ILB', 'MLB', 'LB', 'CB', 'SS', 'FS', 'S', 'DB'];
-const ST_POS_ORDER = ['K', 'P', 'LS'];
-
-function isOffensivePos(pos: string): boolean {
-  return OFF_POS_ORDER.includes(pos);
-}
-function isDefensivePos(pos: string): boolean {
-  return DEF_POS_ORDER.includes(pos);
-}
-
 /**
  * Build a concise roster context string for a team.
  * Returns null if data isn't available (graceful degradation).
  *
  * Uses the official nflverse roster (primary) + snap counts (supplementary).
  */
-export function buildTeamRosterContext(team: string): string | null {
-  const season = currentSeason();
+export function buildTeamRosterContext(team: string, league: string = 'nfl'): string | null {
+  const season = currentSeason(league);
   const teamUpper = team.toUpperCase();
 
   // Primary: official roster
-  const roster = queryRoster(teamUpper, season);
+  const roster = queryRoster(teamUpper, season, league);
 
   // Supplementary: snap counts for usage context
-  const offSnaps = querySnaps(teamUpper, season, 'offense', 20);
-  const defSnaps = querySnaps(teamUpper, season, 'defense', 20);
+  const offSnaps = querySnaps(teamUpper, season, 'offense', 20, league);
+  const defSnaps = querySnaps(teamUpper, season, 'defense', 20, league);
 
   // Build snap lookup: player name → pct
   const snapPct = new Map<string, number>();
@@ -342,16 +328,17 @@ export function buildTeamRosterContext(team: string): string | null {
 
   // If official roster is empty but snap data exists, use legacy snap-only format
   if (roster.length === 0) {
-    return buildSnapOnlyContext(teamUpper, season, offSnaps, defSnaps);
+    return buildSnapOnlyContext(teamUpper, season, offSnaps, defSnaps, league);
   }
 
   const rosterWeek = roster[0]?.roster_week ?? '?';
   const parts: string[] = [];
   parts.push(`## Current ${teamUpper} Official Roster (${season} Season, Week ${rosterWeek})`);
   parts.push('');
+  const sourceName = dataSourceName(league);
   parts.push('> ⚠️ USE THIS DATA as the best available reference for player-team assignments.');
   parts.push('> Do NOT rely on training data — rosters change frequently via trades, cuts, and signings.');
-  parts.push('> NOTE: This data updates daily from nflverse. Very recent transactions (last 24-48 hours)');
+  parts.push(`> NOTE: This data updates daily from ${sourceName}. Very recent transactions (last 24-48 hours)`);
   parts.push('> may not yet be reflected. If a player is missing but has been publicly reported as signed/traded');
   parts.push('> to this team, note the discrepancy but do not treat it as an error.');
   parts.push('');
@@ -364,48 +351,26 @@ export function buildTeamRosterContext(team: string): string | null {
     byPos.get(pos)!.push(p);
   }
 
-  // Offense
-  const offPositions = OFF_POS_ORDER.filter(p => byPos.has(p));
-  if (offPositions.length > 0) {
-    parts.push('### Offense');
-    for (const pos of offPositions) {
-      const players = byPos.get(pos)!;
-      for (const p of players) {
-        parts.push(formatRosterLine(p, snapPct));
+  // Render position groups from league config
+  const posConfig = getPositionConfig(league);
+  const allGroupedPositions = new Set<string>();
+  for (const group of posConfig.groups) {
+    const matchedPositions = group.positions.filter(p => byPos.has(p));
+    if (matchedPositions.length > 0) {
+      parts.push(`### ${group.name}`);
+      for (const pos of matchedPositions) {
+        const players = byPos.get(pos)!;
+        for (const p of players) {
+          parts.push(formatRosterLine(p, snapPct));
+        }
       }
+      parts.push('');
     }
-    parts.push('');
+    for (const pos of group.positions) allGroupedPositions.add(pos);
   }
 
-  // Defense
-  const defPositions = DEF_POS_ORDER.filter(p => byPos.has(p));
-  if (defPositions.length > 0) {
-    parts.push('### Defense');
-    for (const pos of defPositions) {
-      const players = byPos.get(pos)!;
-      for (const p of players) {
-        parts.push(formatRosterLine(p, snapPct));
-      }
-    }
-    parts.push('');
-  }
-
-  // Special teams
-  const stPositions = ST_POS_ORDER.filter(p => byPos.has(p));
-  if (stPositions.length > 0) {
-    parts.push('### Special Teams');
-    for (const pos of stPositions) {
-      const players = byPos.get(pos)!;
-      for (const p of players) {
-        parts.push(formatRosterLine(p, snapPct));
-      }
-    }
-    parts.push('');
-  }
-
-  // Any remaining positions not in the predefined orders
-  const allKnown = new Set([...OFF_POS_ORDER, ...DEF_POS_ORDER, ...ST_POS_ORDER]);
-  const otherPositions = [...byPos.keys()].filter(p => !allKnown.has(p));
+  // Any remaining positions not in the predefined groups
+  const otherPositions = [...byPos.keys()].filter(p => !allGroupedPositions.has(p));
   if (otherPositions.length > 0) {
     parts.push('### Other');
     for (const pos of otherPositions) {
@@ -417,9 +382,9 @@ export function buildTeamRosterContext(team: string): string | null {
     parts.push('');
   }
 
-  // Key player statistics — nflverse verified data to prevent LLM fabrication
+  // Key player statistics — verified data to prevent LLM fabrication
   try {
-    const statsSection = buildKeyStatsSection(roster, snapPct, teamUpper, season);
+    const statsSection = buildKeyStatsSection(roster, snapPct, teamUpper, season, league);
     if (statsSection) {
       parts.push('');
       parts.push(statsSection);
@@ -429,7 +394,7 @@ export function buildTeamRosterContext(team: string): string | null {
     // Graceful degradation — roster context still useful without stats
   }
 
-  parts.push(`*Data source: nflverse official roster (week ${rosterWeek}) + snap counts + player stats (${season} season).*`);
+  parts.push(`*Data source: ${sourceName} official roster (week ${rosterWeek}) + snap counts + player stats (${season} season).*`);
   parts.push('*Updates daily. Very recent signings, trades, or cuts (last 24-48h) may not appear yet.*');
 
   return parts.join('\n');
@@ -448,7 +413,9 @@ function formatRosterLine(p: RosterPlayer, snapPct: Map<string, number>): string
 function buildSnapOnlyContext(
   teamUpper: string, season: number,
   offense: SnapPlayer[], defense: SnapPlayer[],
+  league: string = 'nfl',
 ): string {
+  const sourceName = dataSourceName(league);
   const parts: string[] = [];
   parts.push(`## Current ${teamUpper} Roster Context (${season} Season Data)`);
   parts.push('');
@@ -474,7 +441,7 @@ function buildSnapOnlyContext(
     parts.push('');
   }
 
-  parts.push(`*Data source: nflverse ${season} season snap counts only (official roster unavailable).*`);
+  parts.push(`*Data source: ${sourceName} ${season} season snap counts only (official roster unavailable).*`);
   return parts.join('\n');
 }
 
@@ -487,6 +454,7 @@ export function ensureRosterContext(
   articleId: string,
   team: string,
   forceRefresh = false,
+  league: string = 'nfl',
 ): string | null {
   const ARTIFACT_NAME = 'roster-context.md';
 
@@ -496,7 +464,7 @@ export function ensureRosterContext(
     if (cached) return cached;
   }
 
-  const context = buildTeamRosterContext(team);
+  const context = buildTeamRosterContext(team, league);
   if (context) {
     repo.artifacts.put(articleId, ARTIFACT_NAME, context);
   }
@@ -548,12 +516,13 @@ export interface PlayerMention {
 export function validatePlayerMentions(
   articleText: string,
   team: string,
+  league: string = 'nfl',
 ): PlayerMention[] {
-  const season = currentSeason();
+  const season = currentSeason(league);
   const teamUpper = team.toUpperCase();
 
   // Get roster for the target team
-  const roster = queryRoster(teamUpper, season);
+  const roster = queryRoster(teamUpper, season, league);
   if (roster.length === 0) return []; // Can't validate without data
 
   const teamNames = new Set(roster.map(p => p.full_name.toLowerCase()));
@@ -573,7 +542,7 @@ export function validatePlayerMentions(
     }
 
     // Check if this player is on a DIFFERENT team (strong signal of error)
-    const allTeams = queryPlayerTeam(name, season);
+    const allTeams = queryPlayerTeam(name, season, league);
     if (allTeams) {
       results.push({
         name,
@@ -582,10 +551,11 @@ export function validatePlayerMentions(
         detail: `Listed on ${allTeams}, not ${teamUpper}`,
       });
     } else {
+      const sourceName = dataSourceName(league);
       results.push({
         name,
         status: 'not_found',
-        detail: `Not found in nflverse roster data`,
+        detail: `Not found in ${sourceName} roster data`,
       });
     }
   }
@@ -618,14 +588,14 @@ function extractPlayerNames(text: string): Set<string> {
 }
 
 /** Look up which team a player is on (if any). Returns team abbreviation or null. */
-function queryPlayerTeam(playerName: string, season: number): string | null {
+function queryPlayerTeam(playerName: string, season: number, league: string = 'nfl'): string | null {
   const cache = getGlobalCache();
   const key = pythonQueryCacheKey('query_rosters_player', [playerName.toLowerCase(), String(season)]);
   return cache.getOrFetch<string>(key, () => {
     const raw = runPythonQuery('query_rosters.py', [
       '--player', playerName,
       '--season', String(season),
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       const data = JSON.parse(raw) as RosterPlayer[];
@@ -669,10 +639,11 @@ export function bootstrapRosterKnowledge(
   memory: MemoryStore,
   teams: string[],
   agentNames: string[] = ['lead'],
+  league: string = 'nfl',
 ): number {
   let count = 0;
   for (const team of teams) {
-    const ctx = buildTeamRosterContext(team);
+    const ctx = buildTeamRosterContext(team, league);
     if (!ctx) continue;
 
     // Build a compact summary (first 20 players) to keep memory entries small

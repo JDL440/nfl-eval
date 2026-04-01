@@ -16,6 +16,7 @@ import {
   getGlobalCache, DEFAULT_TTL,
   pythonQueryCacheKey, playerStatsCacheKey, draftHistoryCacheKey,
 } from '../cache/index.js';
+import { currentSeason, dataSourceName } from './league-helpers.js';
 import type { ExtractedClaims, StatClaim, DraftClaim, PerformanceClaim } from './claim-extractor.js';
 
 // ---------------------------------------------------------------------------
@@ -24,7 +25,8 @@ import type { ExtractedClaims, StatClaim, DraftClaim, PerformanceClaim } from '.
 
 export interface FactCheckLookup {
   claim: string;
-  nflverseData: string | null;
+  /** Data from the league's statistical source (nflverse, Statcast, etc.) */
+  leagueData: string | null;
   source: string;
 }
 
@@ -39,8 +41,9 @@ export interface FactCheckContext {
 // Script execution (mirrors roster-context.ts)
 // ---------------------------------------------------------------------------
 
-function findScriptDir(): string {
+function findScriptDir(league: string = 'nfl'): string {
   const candidates = [
+    join(process.cwd(), 'content', 'data', league),
     join(process.cwd(), 'content', 'data'),
   ];
   for (const dir of candidates) {
@@ -49,8 +52,8 @@ function findScriptDir(): string {
   return join(process.cwd(), 'content', 'data');
 }
 
-function runPythonQuery(scriptName: string, args: string[]): string | null {
-  const scriptDir = findScriptDir();
+function runPythonQuery(scriptName: string, args: string[], league: string = 'nfl'): string | null {
+  const scriptDir = findScriptDir(league);
   const scriptPath = join(scriptDir, scriptName);
 
   if (!existsSync(scriptPath)) {
@@ -71,20 +74,11 @@ function runPythonQuery(scriptName: string, args: string[]): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Season helper (mirrors roster-context.ts)
-// ---------------------------------------------------------------------------
-
-function currentSeason(): number {
-  const now = new Date();
-  return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
-}
-
-// ---------------------------------------------------------------------------
 // Individual claim lookups
 // ---------------------------------------------------------------------------
 
 /** Look up player stats from nflverse. */
-function lookupPlayerStats(player: string, season: number): string | null {
+function lookupPlayerStats(player: string, season: number, league: string = 'nfl'): string | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
   // validators.ts shares this cache key but stores parsed objects;
@@ -96,7 +90,7 @@ function lookupPlayerStats(player: string, season: number): string | null {
   const raw = runPythonQuery('query_player_epa.py', [
     '--player', player,
     '--season', String(season),
-  ]);
+  ], league);
   if (raw != null) {
     cache.set(key, raw, { ttlSeconds: DEFAULT_TTL.playerStats });
   }
@@ -104,7 +98,7 @@ function lookupPlayerStats(player: string, season: number): string | null {
 }
 
 /** Look up draft history for a player. */
-function lookupDraftHistory(player: string): string | null {
+function lookupDraftHistory(player: string, league: string = 'nfl'): string | null {
   const cache = getGlobalCache();
   const key = draftHistoryCacheKey([player.toLowerCase()]);
   // validators.ts shares this cache key but stores parsed objects;
@@ -115,7 +109,7 @@ function lookupDraftHistory(player: string): string | null {
   }
   const raw = runPythonQuery('query_draft_value.py', [
     '--player', player,
-  ]);
+  ], league);
   if (raw != null) {
     cache.set(key, raw, { ttlSeconds: DEFAULT_TTL.draftHistory });
   }
@@ -126,7 +120,7 @@ function lookupDraftHistory(player: string): string | null {
 // Build lookups for each claim type
 // ---------------------------------------------------------------------------
 
-function buildStatLookups(claims: StatClaim[], season: number): FactCheckLookup[] {
+function buildStatLookups(claims: StatClaim[], season: number, league: string = 'nfl'): FactCheckLookup[] {
   const lookups: FactCheckLookup[] = [];
   const queriedPlayers = new Set<string>();
 
@@ -134,10 +128,10 @@ function buildStatLookups(claims: StatClaim[], season: number): FactCheckLookup[
     if (queriedPlayers.has(claim.player)) continue;
     queriedPlayers.add(claim.player);
 
-    const data = lookupPlayerStats(claim.player, season);
+    const data = lookupPlayerStats(claim.player, season, league);
     lookups.push({
       claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
-      nflverseData: data,
+      leagueData: data,
       source: 'query_player_epa.py',
     });
   }
@@ -145,7 +139,7 @@ function buildStatLookups(claims: StatClaim[], season: number): FactCheckLookup[
   return lookups;
 }
 
-function buildDraftLookups(claims: DraftClaim[]): FactCheckLookup[] {
+function buildDraftLookups(claims: DraftClaim[], league: string = 'nfl'): FactCheckLookup[] {
   const lookups: FactCheckLookup[] = [];
   const queriedPlayers = new Set<string>();
 
@@ -153,7 +147,7 @@ function buildDraftLookups(claims: DraftClaim[]): FactCheckLookup[] {
     if (queriedPlayers.has(claim.player)) continue;
     queriedPlayers.add(claim.player);
 
-    const data = lookupDraftHistory(claim.player);
+    const data = lookupDraftHistory(claim.player, league);
     const claimParts = [`${claim.player}`];
     if (claim.round) claimParts.push(`round ${claim.round}`);
     if (claim.pick) claimParts.push(`pick ${claim.pick}`);
@@ -161,7 +155,7 @@ function buildDraftLookups(claims: DraftClaim[]): FactCheckLookup[] {
 
     lookups.push({
       claim: claimParts.join(', '),
-      nflverseData: data,
+      leagueData: data,
       source: 'query_draft_value.py',
     });
   }
@@ -169,7 +163,7 @@ function buildDraftLookups(claims: DraftClaim[]): FactCheckLookup[] {
   return lookups;
 }
 
-function buildPerformanceLookups(claims: PerformanceClaim[], season: number): FactCheckLookup[] {
+function buildPerformanceLookups(claims: PerformanceClaim[], season: number, league: string = 'nfl'): FactCheckLookup[] {
   const lookups: FactCheckLookup[] = [];
   const queriedPlayers = new Set<string>();
 
@@ -177,10 +171,10 @@ function buildPerformanceLookups(claims: PerformanceClaim[], season: number): Fa
     if (queriedPlayers.has(claim.player)) continue;
     queriedPlayers.add(claim.player);
 
-    const data = lookupPlayerStats(claim.player, season);
+    const data = lookupPlayerStats(claim.player, season, league);
     lookups.push({
       claim: claim.claim,
-      nflverseData: data,
+      leagueData: data,
       source: 'query_player_epa.py',
     });
   }
@@ -192,24 +186,24 @@ function buildPerformanceLookups(claims: PerformanceClaim[], season: number): Fa
 // Markdown builder
 // ---------------------------------------------------------------------------
 
-function formatLookupSection(title: string, lookups: FactCheckLookup[]): string {
+function formatLookupSection(title: string, lookups: FactCheckLookup[], sourceName: string): string {
   if (lookups.length === 0) return '';
 
   const lines: string[] = [`### ${title}`, ''];
 
   for (const lookup of lookups) {
     lines.push(`**Claim:** ${lookup.claim}`);
-    if (lookup.nflverseData) {
+    if (lookup.leagueData) {
       // Truncate very long JSON to keep context manageable
-      const data = lookup.nflverseData.length > 2000
-        ? lookup.nflverseData.slice(0, 2000) + '\n... (truncated)'
-        : lookup.nflverseData;
-      lines.push(`**nflverse data** (${lookup.source}):`);
+      const data = lookup.leagueData.length > 2000
+        ? lookup.leagueData.slice(0, 2000) + '\n... (truncated)'
+        : lookup.leagueData;
+      lines.push(`**${sourceName} data** (${lookup.source}):`);
       lines.push('```json');
       lines.push(data);
       lines.push('```');
     } else {
-      lines.push(`*No data found in nflverse (${lookup.source})*`);
+      lines.push(`*No data found in ${sourceName} (${lookup.source})*`);
     }
     lines.push('');
   }
@@ -228,12 +222,13 @@ function formatLookupSection(title: string, lookups: FactCheckLookup[]): string 
  *
  * Returns null if no claims could be verified (graceful degradation).
  */
-export function buildFactCheckContext(claims: ExtractedClaims): FactCheckContext | null {
-  const season = currentSeason();
+export function buildFactCheckContext(claims: ExtractedClaims, league: string = 'nfl'): FactCheckContext | null {
+  const season = currentSeason(league);
+  const sourceName = dataSourceName(league);
 
-  const statLookups = buildStatLookups(claims.statClaims, season);
-  const draftLookups = buildDraftLookups(claims.draftClaims);
-  const performanceLookups = buildPerformanceLookups(claims.performanceClaims, season);
+  const statLookups = buildStatLookups(claims.statClaims, season, league);
+  const draftLookups = buildDraftLookups(claims.draftClaims, league);
+  const performanceLookups = buildPerformanceLookups(claims.performanceClaims, season, league);
 
   const totalLookups = statLookups.length + draftLookups.length + performanceLookups.length;
   if (totalLookups === 0) {
@@ -241,29 +236,29 @@ export function buildFactCheckContext(claims: ExtractedClaims): FactCheckContext
   }
 
   const hasAnyData = [...statLookups, ...draftLookups, ...performanceLookups]
-    .some(l => l.nflverseData != null);
+    .some(l => l.leagueData != null);
 
   const parts: string[] = [];
-  parts.push('## Fact-Check Context — nflverse Verification Data');
+  parts.push(`## Fact-Check Context — ${sourceName} Verification Data`);
   parts.push('');
-  parts.push('> This data was queried from nflverse to verify claims in the panel discussion.');
+  parts.push(`> This data was queried from ${sourceName} to verify claims in the panel discussion.`);
   parts.push('> Compare each claim against the actual data below. Flag discrepancies.');
   parts.push('');
 
-  const statSection = formatLookupSection('Statistical Claims', statLookups);
-  const draftSection = formatLookupSection('Draft Claims', draftLookups);
-  const perfSection = formatLookupSection('Performance/Ranking Claims', performanceLookups);
+  const statSection = formatLookupSection('Statistical Claims', statLookups, sourceName);
+  const draftSection = formatLookupSection('Draft Claims', draftLookups, sourceName);
+  const perfSection = formatLookupSection('Performance/Ranking Claims', performanceLookups, sourceName);
 
   if (statSection) parts.push(statSection);
   if (draftSection) parts.push(draftSection);
   if (perfSection) parts.push(perfSection);
 
   if (!hasAnyData) {
-    parts.push('*No nflverse data could be retrieved for any claims. Fact-check will rely on LLM knowledge only.*');
+    parts.push(`*No ${sourceName} data could be retrieved for any claims. Fact-check will rely on LLM knowledge only.*`);
   }
 
   parts.push('');
-  parts.push(`*${totalLookups} claims checked against nflverse (${season} season data).*`);
+  parts.push(`*${totalLookups} claims checked against ${sourceName} (${season} season data).*`);
 
   const raw = parts.join('\n');
 
@@ -279,6 +274,7 @@ export function ensureFactCheckContext(
   articleId: string,
   claims: ExtractedClaims,
   forceRefresh = false,
+  league: string = 'nfl',
 ): FactCheckContext | null {
   const ARTIFACT_NAME = 'fact-check-context.md';
 
@@ -289,7 +285,7 @@ export function ensureFactCheckContext(
     }
   }
 
-  const context = buildFactCheckContext(claims);
+  const context = buildFactCheckContext(claims, league);
   if (context) {
     repo.artifacts.put(articleId, ARTIFACT_NAME, context.raw);
   }

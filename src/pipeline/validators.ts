@@ -16,6 +16,7 @@ import {
   getGlobalCache, DEFAULT_TTL,
   playerStatsCacheKey, draftHistoryCacheKey,
 } from '../cache/index.js';
+import { currentSeason, dataSourceName } from './league-helpers.js';
 import type { ExtractedClaims } from './claim-extractor.js';
 
 // ---------------------------------------------------------------------------
@@ -33,8 +34,9 @@ export interface ValidationResult {
 // Script execution (mirrors roster-context.ts)
 // ---------------------------------------------------------------------------
 
-function findScriptDir(): string {
+function findScriptDir(league: string = 'nfl'): string {
   const candidates = [
+    join(process.cwd(), 'content', 'data', league),
     join(process.cwd(), 'content', 'data'),
   ];
   for (const dir of candidates) {
@@ -43,8 +45,8 @@ function findScriptDir(): string {
   return join(process.cwd(), 'content', 'data');
 }
 
-function runPythonQuery(scriptName: string, args: string[]): string | null {
-  const scriptDir = findScriptDir();
+function runPythonQuery(scriptName: string, args: string[], league: string = 'nfl'): string | null {
+  const scriptDir = findScriptDir(league);
   const scriptPath = join(scriptDir, scriptName);
 
   if (!existsSync(scriptPath)) {
@@ -61,16 +63,6 @@ function runPythonQuery(scriptName: string, args: string[]): string | null {
     return result.trim();
   } catch {
     return null;
-  }
-}
-
-function currentSeason(league: string = 'nfl'): number {
-  const now = new Date();
-  switch (league) {
-    case 'mlb':
-      return now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
-    default: // nfl
-      return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
   }
 }
 
@@ -98,14 +90,14 @@ interface PlayerStatData {
   [key: string]: unknown;
 }
 
-function lookupPlayerStatsJson(player: string, season: number): PlayerStatData | null {
+function lookupPlayerStatsJson(player: string, season: number, league: string = 'nfl'): PlayerStatData | null {
   const cache = getGlobalCache();
   const key = playerStatsCacheKey(player, season);
   return cache.getOrFetch<PlayerStatData>(key, () => {
     const raw = runPythonQuery('query_player_epa.py', [
       '--player', player,
       '--season', String(season),
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -165,17 +157,17 @@ function getMetricMap(league: string): Record<string, (d: PlayerStatData) => num
  */
 export function validateStatClaims(claims: ExtractedClaims, league: string = 'nfl'): ValidationResult[] {
   const season = currentSeason(league);
-  const dataSource = league === 'nfl' ? 'nflverse' : league;
+  const sourceName = dataSourceName(league);
   const metricMap = getMetricMap(league);
   const results: ValidationResult[] = [];
 
   for (const claim of claims.statClaims) {
-    const stats = lookupPlayerStatsJson(claim.player, season);
+    const stats = lookupPlayerStatsJson(claim.player, season, league);
     if (!stats) {
       results.push({
         claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
         verified: false,
-        actual: `No ${dataSource} data found`,
+        actual: `No ${sourceName} data found`,
         source: 'query_player_epa.py',
       });
       continue;
@@ -210,7 +202,7 @@ export function validateStatClaims(claims: ExtractedClaims, league: string = 'nf
     results.push({
       claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
       verified: isClose,
-      actual: `${dataSource}: ${actualValue}`,
+      actual: `${sourceName}: ${actualValue}`,
       source: 'query_player_epa.py',
     });
   }
@@ -232,13 +224,13 @@ interface DraftData {
   [key: string]: unknown;
 }
 
-function lookupDraftData(player: string): DraftData | null {
+function lookupDraftData(player: string, league: string = 'nfl'): DraftData | null {
   const cache = getGlobalCache();
   const key = draftHistoryCacheKey([player.toLowerCase()]);
   return cache.getOrFetch<DraftData>(key, () => {
     const raw = runPythonQuery('query_draft_value.py', [
       '--player', player,
-    ]);
+    ], league);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -254,16 +246,16 @@ function lookupDraftData(player: string): DraftData | null {
  * Verify draft claims (pick number, round, year) against draft history data.
  */
 export function validateDraftClaims(claims: ExtractedClaims, league: string = 'nfl'): ValidationResult[] {
-  const dataSource = league === 'nfl' ? 'nflverse' : league;
+  const sourceName = dataSourceName(league);
   const results: ValidationResult[] = [];
 
   for (const claim of claims.draftClaims) {
-    const draft = lookupDraftData(claim.player);
+    const draft = lookupDraftData(claim.player, league);
     if (!draft) {
       results.push({
         claim: claim.raw,
         verified: false,
-        actual: `No draft data found in ${dataSource}`,
+        actual: `No draft data found in ${sourceName}`,
         source: 'query_draft_value.py',
       });
       continue;
@@ -291,7 +283,7 @@ export function validateDraftClaims(claims: ExtractedClaims, league: string = 'n
       claim: claim.raw,
       verified: mismatches.length === 0,
       actual: mismatches.length > 0
-        ? `MISMATCH: ${mismatches.join('; ')} (${dataSource}: ${actualParts.join(', ')})`
+        ? `MISMATCH: ${mismatches.join('; ')} (${sourceName}: ${actualParts.join(', ')})`
         : `Confirmed: ${actualParts.join(', ')}`,
       source: 'query_draft_value.py',
     });
@@ -308,7 +300,7 @@ export function buildValidationReport(
   draftResults: ValidationResult[],
   league: string = 'nfl',
 ): string {
-  const dataSource = league === 'nfl' ? 'nflverse' : league;
+  const sourceName = dataSourceName(league);
   const lines: string[] = ['## Pre-Publish Fact Validation', ''];
 
   const allResults = [...statResults, ...draftResults];
@@ -337,7 +329,7 @@ export function buildValidationReport(
     lines.push('');
   }
 
-  lines.push(`*${verified.length}/${allResults.length} claims verified against ${dataSource} data.*`);
+  lines.push(`*${verified.length}/${allResults.length} claims verified against ${sourceName} data.*`);
 
   return lines.join('\n');
 }
