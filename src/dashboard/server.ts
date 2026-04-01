@@ -12,6 +12,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { join, resolve } from 'node:path';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createServer as createHttpsServer } from 'node:https';
+import { createServer as createHttpServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
@@ -3122,6 +3123,31 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
   serve(serveOptions, (info) => {
     console.log(`NFL Lab Dashboard running at ${protocol}://${hostname}:${info.port}`);
   });
+
+  // When TLS is active, start a plain HTTP listener that redirects everything to HTTPS
+  if (config.tls) {
+    const httpPort = parseInt(process.env.NFL_HTTP_PORT ?? '80', 10);
+    const redirectServer = createHttpServer((req, res) => {
+      const host = (req.headers.host ?? 'localhost').replace(/:\d+$/, '');
+      const portSuffix = config.port === 443 ? '' : `:${config.port}`;
+      const location = `https://${host}${portSuffix}${req.url ?? '/'}`;
+      res.writeHead(301, { Location: location });
+      res.end();
+    });
+    redirectServer.listen(httpPort, hostname, () => {
+      console.log(`[tls] HTTP→HTTPS redirect listening on ${hostname}:${httpPort}`);
+    });
+    redirectServer.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EACCES') {
+        console.warn(`[tls] Could not bind HTTP redirect on port ${httpPort} (access denied). ` +
+          `Set NFL_HTTP_PORT to a non-privileged port or run as admin.`);
+      } else if (err.code === 'EADDRINUSE') {
+        console.warn(`[tls] Port ${httpPort} already in use — HTTP redirect server skipped.`);
+      } else {
+        console.warn(`[tls] HTTP redirect server error: ${err.message}`);
+      }
+    });
+  }
 }
 
 // Allow direct execution: npx tsx src/dashboard/server.ts
