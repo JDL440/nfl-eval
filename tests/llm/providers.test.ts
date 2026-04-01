@@ -188,6 +188,163 @@ describe('GeminiProvider', () => {
       const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
       expect(body.generationConfig.responseMimeType).toBeUndefined();
     });
+
+    it('sends native Gemini tool declarations when tools are provided', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          candidates: [{
+            content: {
+              parts: [{
+                functionCall: {
+                  name: 'get_weather',
+                  args: { location: 'Seattle, WA' },
+                },
+              }],
+            },
+            finishReason: 'STOP',
+          }],
+        }),
+      );
+
+      const res = await provider.chat({
+        messages: [{ role: 'user', content: 'How is the weather?' }],
+        model: 'gemini-3.1-pro-preview',
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'get_weather',
+            description: 'Get weather.',
+            parameters: {
+              type: 'object',
+              properties: {
+                location: { type: 'string' },
+              },
+              required: ['location'],
+            },
+          },
+        }],
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+      expect(body.tools).toEqual([{
+        functionDeclarations: [{
+          name: 'get_weather',
+          description: 'Get weather.',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: { type: 'string' },
+            },
+            required: ['location'],
+          },
+        }],
+      }]);
+      expect(body.toolConfig).toEqual({
+        functionCallingConfig: { mode: 'AUTO' },
+      });
+      expect(res.content).toBe(JSON.stringify({
+        type: 'tool_call',
+        toolName: 'get_weather',
+        args: { location: 'Seattle, WA' },
+      }));
+      expect(res.providerState).toEqual({
+        contents: [
+          { role: 'user', parts: [{ text: 'How is the weather?' }] },
+          {
+            role: 'model',
+            parts: [{
+              functionCall: {
+                name: 'get_weather',
+                args: { location: 'Seattle, WA' },
+              },
+            }],
+          },
+        ],
+      });
+    });
+
+    it('uses providerState contents and appends trailing tool results', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          candidates: [{ content: { parts: [{ text: 'It is cloudy.' }] }, finishReason: 'STOP' }],
+        }),
+      );
+
+      await provider.chat({
+        model: 'gemini-3.1-pro-preview',
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'get_weather',
+            description: 'Get weather.',
+            parameters: { type: 'object' },
+          },
+        }],
+        providerState: {
+          contents: [
+            { role: 'user', parts: [{ text: 'Weather?' }] },
+            {
+              role: 'model',
+              parts: [{
+                functionCall: {
+                  name: 'get_weather',
+                  args: { location: 'Seattle' },
+                },
+                thoughtSignature: 'opaque-token',
+              }],
+            },
+          ],
+        },
+        messages: [
+          { role: 'system', content: 'Use tools.' },
+          { role: 'user', content: 'Weather?' },
+          {
+            role: 'assistant',
+            content: '',
+            tool_calls: [{
+              id: 'tool-1',
+              type: 'function',
+              function: {
+                name: 'get_weather',
+                arguments: JSON.stringify({ location: 'Seattle' }),
+              },
+            }],
+          },
+          {
+            role: 'tool',
+            tool_call_id: 'tool-1',
+            name: 'get_weather',
+            content: JSON.stringify({ forecast: 'Cloudy' }),
+          },
+        ],
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+      expect(body.contents).toEqual([
+        { role: 'user', parts: [{ text: 'Weather?' }] },
+        {
+          role: 'model',
+          parts: [{
+            functionCall: {
+              name: 'get_weather',
+              args: { location: 'Seattle' },
+            },
+            thoughtSignature: 'opaque-token',
+          }],
+        },
+        {
+          role: 'user',
+          parts: [{
+            functionResponse: {
+              name: 'get_weather',
+              response: {
+                result: { forecast: 'Cloudy' },
+              },
+            },
+          }],
+        },
+      ]);
+    });
   });
 
   // -- Response parsing ----------------------------------------------------

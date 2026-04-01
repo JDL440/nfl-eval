@@ -1,11 +1,6 @@
 /**
  * Google Gemini LLM provider — routes requests to the Gemini REST API.
  *
- * Tool calling uses the text-based protocol (the system prompt instructs the
- * model to output {"type":"tool_call",...} JSON) rather than native
- * functionDeclarations.  This avoids Gemini 3.x's strict thought_signature
- * requirements which are incompatible with the runner's text-based tool loop.
- *
  * Uses native fetch (Node 18+). Requires GEMINI_API_KEY env var.
  */
 
@@ -35,6 +30,17 @@ const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 interface GeminiPart {
   text?: string;
+  functionCall?: {
+    name: string;
+    args: Record<string, unknown>;
+  };
+  functionResponse?: {
+    name: string;
+    response: {
+      result: unknown;
+    };
+  };
+  thoughtSignature?: string;
 }
 
 interface GeminiContent {
@@ -55,6 +61,44 @@ interface GeminiResponse {
     totalTokenCount: number;
     cachedContentTokenCount?: number;
   };
+}
+
+interface GeminiProviderState {
+  contents: GeminiContent[];
+}
+
+function parseToolArguments(raw: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function safeJsonParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function serializeNativeToolCall(part: NonNullable<GeminiPart['functionCall']>): string {
+  return JSON.stringify({
+    type: 'tool_call',
+    toolName: part.name,
+    args: part.args ?? {},
+  });
+}
+
+function serializeFinalContent(content: string): string {
+  return JSON.stringify({
+    type: 'final',
+    content,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -82,12 +126,16 @@ export class GeminiProvider implements LLMProvider {
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const apiKey = this.apiKey;
     const model = request.model ?? DEFAULT_MODEL;
+    const hasNativeTools = Boolean(request.tools?.length);
 
-    // Separate system instruction from conversation messages
     const systemMsg = request.messages.find((m) => m.role === 'system');
-    const contents = this.mapMessages(
-      request.messages.filter((m) => m.role !== 'system'),
-    );
+    const geminiState = this.getProviderState(request.providerState);
+    const contents = geminiState?.contents && hasNativeTools
+      ? [
+          ...geminiState.contents,
+          ...this.mapTrailingToolMessages(request.messages),
+        ]
+      : this.mapMessages(request.messages.filter((m) => m.role !== 'system'));
 
     const body: Record<string, unknown> = {
       contents,
@@ -103,15 +151,20 @@ export class GeminiProvider implements LLMProvider {
       };
     }
 
-    // Do NOT pass tools as native functionDeclarations — Gemini 3.x requires
-    // thought_signature round-tripping which is incompatible with the runner's
-    // text-based tool loop. The system prompt already instructs the model to
-    // output {"type":"tool_call","toolName":"...","args":{}} JSON.
-
-    // Do NOT set responseMimeType for Gemini — the system prompt instructs
-    // JSON format when needed. Gemini's strict JSON mode can cause it to
-    // wrap responses in arrays or use its own schema, breaking the expected
-    // {"type":"final"/"tool_call",...} envelope.
+    if (hasNativeTools) {
+      body['tools'] = [{
+        functionDeclarations: request.tools!.map((tool) => ({
+          name: tool.function.name,
+          description: tool.function.description,
+          parameters: tool.function.parameters,
+        })),
+      }];
+      body['toolConfig'] = {
+        functionCallingConfig: {
+          mode: 'AUTO',
+        },
+      };
+    }
 
     const url = `${API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
@@ -132,13 +185,25 @@ export class GeminiProvider implements LLMProvider {
 
     const data = (await res.json()) as GeminiResponse;
     const candidate = data.candidates?.[0];
-    const text =
-      candidate?.content?.parts?.map((p) => p.text).join('') ?? '';
+    const candidateContent = candidate?.content
+      ? {
+          role: candidate.content.role === 'user' ? 'user' : 'model',
+          parts: candidate.content.parts ?? [],
+        } satisfies GeminiContent
+      : undefined;
+    const toolCall = candidateContent?.parts.find((part) => part.functionCall)?.functionCall;
+    const text = candidateContent?.parts
+      .map((part) => part.text ?? '')
+      .join('') ?? '';
+    const allContents = candidateContent ? [...contents, candidateContent] : [...contents];
 
     return {
-      content: text,
+      content: hasNativeTools
+        ? (toolCall ? serializeNativeToolCall(toolCall) : serializeFinalContent(text))
+        : text,
       model,
       provider: this.id,
+      providerState: { contents: allContents },
       usage: data.usageMetadata
         ? {
             promptTokens: data.usageMetadata.promptTokenCount,
@@ -167,33 +232,74 @@ export class GeminiProvider implements LLMProvider {
   // Helpers
   // -------------------------------------------------------------------------
 
-  /** Map ChatMessage[] → Gemini contents format (text-only, no native tools). */
   private mapMessages(messages: ChatMessage[]): GeminiContent[] {
     return messages.map((m) => {
-      let text: string;
       if (m.role === 'tool') {
-        text = `Tool result for ${m.name ?? m.tool_call_id}:\n${m.content}`;
-      } else if (m.role === 'assistant') {
-        // The structured tool path sends assistant messages with empty content
-        // and tool_calls. Reconstruct readable text so Gemini sees a non-empty
-        // model turn.
-        if ((!m.content || m.content.trim().length === 0) && 'tool_calls' in m && m.tool_calls?.length) {
-          const tc = m.tool_calls[0];
-          text = JSON.stringify({
-            type: 'tool_call',
-            toolName: tc.function.name,
-            args: JSON.parse(tc.function.arguments || '{}'),
-          });
-        } else {
-          text = m.content;
-        }
-      } else {
-        text = m.content;
+        return {
+          role: 'user',
+          parts: [{
+            functionResponse: {
+              name: m.name ?? m.tool_call_id,
+              response: {
+                result: safeJsonParse(m.content),
+              },
+            },
+          }],
+        };
       }
+
+      if (m.role === 'assistant') {
+        const parts: GeminiPart[] = [];
+        if (m.content) {
+          parts.push({ text: m.content });
+        }
+        if (m.tool_calls?.length) {
+          parts.push(...m.tool_calls.map((toolCall) => ({
+            functionCall: {
+              name: toolCall.function.name,
+              args: parseToolArguments(toolCall.function.arguments),
+            },
+          })));
+        }
+        return {
+          role: 'model',
+          parts,
+        };
+      }
+
       return {
-        role: (m.role === 'assistant' ? 'model' : 'user') as 'model' | 'user',
-        parts: [{ text }],
+        role: 'user',
+        parts: [{ text: m.content }],
       };
     });
+  }
+
+  private mapTrailingToolMessages(messages: ChatMessage[]): GeminiContent[] {
+    const trailingToolMessages: Extract<ChatMessage, { role: 'tool' }>[] = [];
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role !== 'tool') {
+        break;
+      } else {
+        trailingToolMessages.unshift(message);
+      }
+    }
+
+    return this.mapMessages(trailingToolMessages);
+  }
+
+  private getProviderState(providerState: unknown): GeminiProviderState | undefined {
+    if (!providerState || typeof providerState !== 'object') {
+      return undefined;
+    }
+
+    const contents = (providerState as { contents?: unknown }).contents;
+    if (!Array.isArray(contents)) {
+      return undefined;
+    }
+
+    return {
+      contents: contents as GeminiContent[],
+    };
   }
 }
