@@ -66,6 +66,47 @@ function localTool(manifest, handler, safety, aliases = []) {
 }
 
 const nflverseAliases = ["nflverse-data", "nflverse", "data", "query"];
+const statcastAliases = ["statcast-data", "statcast", "mlb-data", "baseball"];
+
+// ── Statcast placeholder tool (MLB data pipeline not yet connected) ──────────
+const statcastDataTool = {
+    name: "statcast_data",
+    description:
+        "Query Statcast batting, pitching, and team stats for MLB players and teams. Returns stats sourced from Baseball Savant.",
+    parameters: {
+        type: "object",
+        properties: {
+            player: {
+                type: "string",
+                description: 'Player name (e.g., "Shohei Ohtani"). Partial match supported.',
+            },
+            season: {
+                type: "integer",
+                description: "Season year (e.g., 2025).",
+            },
+            query_type: {
+                type: "string",
+                enum: [
+                    "batting_stats",
+                    "pitching_stats",
+                    "team_batting",
+                    "team_pitching",
+                    "standings",
+                ],
+                description: "Type of Statcast query to run.",
+            },
+        },
+        required: ["query_type"],
+    },
+};
+
+async function handleStatcastData(_args) {
+    return {
+        textResultForLlm:
+            "Statcast data tools coming soon — MLB data pipeline not yet connected.",
+        resultType: "success",
+    };
+}
 
 export const localTools = [
     localTool(generateArticleImagesTool, handleGenerateArticleImages, {
@@ -156,6 +197,11 @@ export const localTools = [
         writesState: false,
         externalSideEffects: false,
     }, ["prediction-markets", "markets", "odds"]),
+    localTool(statcastDataTool, handleStatcastData, {
+        readOnly: true,
+        writesState: false,
+        externalSideEffects: false,
+    }, statcastAliases),
 ];
 
 export { normalizeToolResult };

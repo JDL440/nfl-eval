@@ -9,5 +9,16 @@
       "subscribeCaption": "Thanks for reading NFL Lab! Subscribe for free to receive new posts.",
       "footerPatterns": ["The NFL Lab", "Expert Panel", "virtual front office"]
     }
+  },
+  "mlb": {
+    "name": "MLB Lab",
+    "panelName": "The MLB Lab Expert Panel",
+    "dataSource": "baseballsavant",
+    "positions": ["SP", "RP", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"],
+    "substackConfig": {
+      "labName": "MLB Lab",
+      "subscribeCaption": "Thanks for reading MLB Lab! Subscribe for free to receive new posts.",
+      "footerPatterns": ["The MLB Lab", "Expert Panel", "virtual front office"]
+    }
   }
 }

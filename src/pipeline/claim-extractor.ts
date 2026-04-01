@@ -186,8 +186,63 @@ function getNflClaimConfig(): LeagueClaimConfig {
 }
 
 function getMlbClaimConfig(): LeagueClaimConfig {
-  // TODO: Phase 3 — implement MLB claim patterns (batting avg, ERA, WAR, etc.)
-  return { statPatterns: [], draftPatterns: [], superlativePatterns: [] };
+  return {
+    statPatterns: [
+      // Batting average: "Player hit .312" or "Player's .312 batting average"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:hit|batted|slashed)\\s+(\\.[0-9]{3})`, 'g'), metric: 'batting_avg' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\.[0-9]{3})\\s*(?:batting\\s*average|AVG)`, 'g'), metric: 'batting_avg' },
+      // Home runs
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:home\\s*runs?|HRs?)`, 'g'), metric: 'home_runs' },
+      // RBI
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:drove\\s+in\\s+|had\\s+)(\\d+)\\s*RBIs?`, 'g'), metric: 'rbi' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*RBIs?`, 'g'), metric: 'rbi' },
+      // ERA
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.\\d+)\\s*ERA`, 'g'), metric: 'era' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?ERA\\s*(?:of|:)?\\s*(\\d+\\.\\d+)`, 'g'), metric: 'era' },
+      // WAR
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?([-+]?\\d+\\.\\d+)\\s*WAR`, 'g'), metric: 'war' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:worth|valued\\s+at)\\s+([-+]?\\d+\\.\\d+)\\s*WAR`, 'g'), metric: 'war' },
+      // wRC+
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*wRC\\+`, 'g'), metric: 'wrc_plus' },
+      // FIP
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.\\d+)\\s*FIP`, 'g'), metric: 'fip' },
+      // WHIP
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.\\d+)\\s*WHIP`, 'g'), metric: 'whip' },
+      // OPS: slash line or standalone
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?\\.[0-9]{3}/\\.[0-9]{3}/\\.[0-9]{3}\\s*\\(?(\\.[0-9]{3})\\s*OPS`, 'g'), metric: 'ops' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\.[0-9]{3})\\s*OPS`, 'g'), metric: 'ops' },
+      // Strikeouts (pitching)
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:struck\\s+out|fanned)\\s+(\\d+)\\s*(?:batters?)?`, 'g'), metric: 'strikeouts' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:strikeouts|Ks)`, 'g'), metric: 'strikeouts' },
+      // Wins
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:won|went)\\s+(\\d+)\\s*(?:games?|wins?)`, 'g'), metric: 'wins' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*wins`, 'g'), metric: 'wins' },
+      // Stolen bases
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:stole|swiped)\\s+(\\d+)\\s*(?:bases?|bags?)`, 'g'), metric: 'stolen_bases' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:stolen\\s*bases?|SBs?)`, 'g'), metric: 'stolen_bases' },
+    ],
+    draftPatterns: [
+      // "Player was drafted in round X, pick Y"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:drafted|selected|picked)${SENT}*?round\\s*(\\d+)(?:${SENT}*?pick\\s*(\\d+))?`, 'g'), groups: ['player', 'round', 'pick'] },
+      // "Player was the Nth overall pick"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:No\\.?\\s*|#)(\\d+)\\s*overall\\s*pick`, 'g'), groups: ['player', 'pick'] },
+      // "Player, a Xth-round pick"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:a\\s+)?(\\d+)(?:st|nd|rd|th)[- ]round\\s*pick`, 'g'), groups: ['player', 'round'] },
+      // "20XX draft" + player name (MLB or generic)
+      { regex: new RegExp(`(20\\d{2})\\s*(?:MLB\\s*)?[Dd]raft${SENT}*?${NAME_PAT_CS}`, 'g'), groups: ['year', 'player'] },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(20\\d{2})\\s*(?:MLB\\s*)?[Dd]raft`, 'g'), groups: ['player', 'year'] },
+    ],
+    superlativePatterns: [
+      // "top X" rankings
+      new RegExp(`${NAME_PAT_CS}${SENT}*?top[- ]?(\\d+)`, 'g'),
+      // "ranked Nth" / "#N"
+      new RegExp(`${NAME_PAT_CS}${SENT}*?(?:ranked?|#)\\s*(\\d+)(?:st|nd|rd|th)?\\s*(?:in|among|at)`, 'g'),
+      // "led the league" / "led MLB" / "led the majors" / "league-leading"
+      new RegExp(`${NAME_PAT_CS}${SENT}*?(?:led the (?:league|majors|MLB)|league[- ]leading)`, 'g'),
+      // "best/worst in MLB/baseball/the majors/the league"
+      new RegExp(`${NAME_PAT_CS}${SENT}*?(?:best|worst|highest|lowest|most|fewest)\\s+in\\s+(?:the\\s+)?(?:MLB|baseball|the\\s+majors|the\\s+league|majors|league)`, 'g'),
+    ],
+  };
 }
 
 export function getClaimConfig(league: string): LeagueClaimConfig {

@@ -2,3 +2,7 @@
 # Analytics data access layer
 nflreadpy>=0.1.5
 polars>=1.0
+
+# MLB data access (pybaseball uses pandas natively)
+pybaseball>=2.3.0
+pandas>=2.0

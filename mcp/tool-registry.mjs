@@ -46,6 +46,113 @@ import {
     refreshNflverseCacheTool,
     handleRefreshNflverseCache,
 } from "../.github/extensions/nflverse-query/tool.mjs";
+import { cachedQuery, TTL } from "../.github/extensions/nflverse-query/mcp-cache.mjs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __execFileAsync = promisify(execFile);
+const __toolRegistryDir = dirname(fileURLToPath(import.meta.url));
+const __repoRoot = resolve(__toolRegistryDir, "..");
+const MLB_DATA_DIR = resolve(__repoRoot, "content", "data", "mlb");
+
+// ── Statcast placeholder tool (MLB data pipeline not yet connected) ──────────
+const statcastDataTool = {
+    name: "statcast_data",
+    description:
+        "Query Statcast batting, pitching, and team stats for MLB players and teams. Returns stats sourced from Baseball Savant.",
+    parameters: {
+        type: "object",
+        properties: {
+            player: {
+                type: "string",
+                description: 'Player name (e.g., "Shohei Ohtani"). Partial match supported.',
+            },
+            season: {
+                type: "integer",
+                description: "Season year (e.g., 2025).",
+            },
+            query_type: {
+                type: "string",
+                enum: [
+                    "batting_stats",
+                    "pitching_stats",
+                    "team_batting",
+                    "team_pitching",
+                    "standings",
+                ],
+                description: "Type of Statcast query to run.",
+            },
+        },
+        required: ["query_type"],
+    },
+};
+
+async function runMlbPythonQuery(script, args) {
+    const scriptPath = resolve(MLB_DATA_DIR, script);
+    const cmd = [scriptPath, ...args, "--format", "json"];
+    try {
+        const { stdout, stderr } = await __execFileAsync("python", cmd, {
+            cwd: __repoRoot,
+            timeout: 120_000,
+            maxBuffer: 10 * 1024 * 1024,
+        });
+        if (stderr) {
+            const isError = stderr.includes("❌") || stderr.includes("ERROR");
+            if (isError) return { data: null, error: stderr.trim() };
+        }
+        return { data: JSON.parse(stdout), error: null };
+    } catch (err) {
+        const msg = err.stderr?.trim() || err.message;
+        return { data: null, error: msg };
+    }
+}
+
+function mlbJsonToMarkdown(data, title) {
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+        return `No results for: ${title}`;
+    }
+    return `### ${title}\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
+}
+
+async function handleStatcastData(args) {
+    const { query_type, player, season } = args;
+    const seasonStr = season ? String(season) : "2024";
+
+    switch (query_type) {
+        case "batting_stats": {
+            if (!player) return { textResultForLlm: "Player name required for batting_stats query.", resultType: "error" };
+            const cacheKey = `mlb-batting:${player.toLowerCase().replace(/\s+/g, "-")}:${seasonStr}`;
+            return cachedQuery(cacheKey, TTL.playerStats,
+                () => runMlbPythonQuery("query_player_batting.py", ["--player", player, "--season", seasonStr]),
+                (data) => ({ textResultForLlm: mlbJsonToMarkdown(data, `${player} — ${seasonStr} Batting`), resultType: "success" }),
+            );
+        }
+        case "pitching_stats": {
+            if (!player) return { textResultForLlm: "Player name required for pitching_stats query.", resultType: "error" };
+            const cacheKey = `mlb-pitching:${player.toLowerCase().replace(/\s+/g, "-")}:${seasonStr}`;
+            return cachedQuery(cacheKey, TTL.playerStats,
+                () => runMlbPythonQuery("query_player_pitching.py", ["--player", player, "--season", seasonStr]),
+                (data) => ({ textResultForLlm: mlbJsonToMarkdown(data, `${player} — ${seasonStr} Pitching`), resultType: "success" }),
+            );
+        }
+        case "team_batting": {
+            const team = args.player || "NYY";
+            const cacheKey = `mlb-team-batting:${team.toUpperCase()}:${seasonStr}`;
+            return cachedQuery(cacheKey, TTL.teamStats,
+                () => runMlbPythonQuery("query_team_batting.py", ["--team", team, "--season", seasonStr]),
+                (data) => ({ textResultForLlm: mlbJsonToMarkdown(data, `${team.toUpperCase()} — ${seasonStr} Team Batting`), resultType: "success" }),
+            );
+        }
+        case "team_pitching":
+            return { textResultForLlm: "Team pitching query coming soon.", resultType: "success" };
+        case "standings":
+            return { textResultForLlm: "Standings query coming soon.", resultType: "success" };
+        default:
+            return { textResultForLlm: `Unknown query_type: ${query_type}. Use: batting_stats, pitching_stats, team_batting, team_pitching, or standings.`, resultType: "error" };
+    }
+}
 
 export const TOOL_CATEGORIES = ["all", "help", "media", "publishing", "data"];
 
@@ -63,6 +170,7 @@ export const SAFE_READ_ONLY_TOOL_NAMES = Object.freeze([
     "query_historical_comps",
     "query_rosters",
     "query_fantasy_stats",
+    "statcast_data",
 ]);
 
 export const BLOCKED_TOOL_NAMES = Object.freeze([
@@ -340,6 +448,21 @@ const BASE_TOOL_METADATA = {
             },
         ],
     },
+    statcast_data: {
+        category: "data",
+        sideEffects: "none (read-only Statcast lookup — pipeline not yet connected)",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        examples: [
+            {
+                player: "Shohei Ohtani",
+                season: 2025,
+                query_type: "batting_stats",
+            },
+        ],
+    },
 };
 
 function buildToolEntry(tool, handler, metadata) {
@@ -371,6 +494,7 @@ const BASE_LOCAL_TOOL_ENTRIES = [
     buildToolEntry(queryRostersTool, handleQueryRosters, BASE_TOOL_METADATA.query_rosters),
     buildToolEntry(queryFantasyStatsTool, handleQueryFantasyStats, BASE_TOOL_METADATA.query_fantasy_stats),
     buildToolEntry(refreshNflverseCacheTool, handleRefreshNflverseCache, BASE_TOOL_METADATA.refresh_nflverse_cache),
+    buildToolEntry(statcastDataTool, handleStatcastData, BASE_TOOL_METADATA.statcast_data),
 ];
 
 function formatCatalogMarkdown(entries, options = {}) {
