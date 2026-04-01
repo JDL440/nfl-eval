@@ -304,6 +304,22 @@ document.getElementById('nav-toggle')?.addEventListener('click', () => {
 </aside>
 ```
 
+### Single-column detail pages
+**Problem:** Some dashboard detail pages reuse `.detail-grid.mobile-detail-layout` even when they do not render a sidebar, which leaves an empty desktop column and makes the main editorial content feel narrower than the shell.  
+**Solution:** Add a page-specific opt-out class and restore a single desktop column for that route instead of weakening the shared sidebar layout for pages that still need it.
+
+```css
+.detail-grid.article-detail-single {
+  grid-template-columns: 1fr;
+}
+```
+
+```html
+<div class="detail-grid mobile-detail-layout article-detail-single">
+  <div class="detail-main mobile-primary-column">...</div>
+</div>
+```
+
 ### `.action-group-mobile` Button Grouping
 **Problem:** Multiple action buttons in a row overflow on phones  
 **Solution:** Stack vertically on mobile, keep horizontal on desktop

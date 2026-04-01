@@ -1,5 +1,9 @@
 # Active Decisions
 
+- **UX: Navigation reset and article layout** (2026-04-01): Keep shared mobile drawer implementation, but fully reset all mobile-only hidden-state properties (opacity, isibility, pointer-events, 	ransform, absolute offsets) at @media (min-width: 768px) to prevent stale mobile state from blocking desktop interaction. Treat article detail page as single-column editorial workspace on desktop by opting it out of shared 2-column detail grid with rticle-detail-single modifier class. Fix active nav link contrast by overriding .btn-header's white text with dark text on accent background. Root cause: responsive state leakage (not broken markup), article width issue came from inheriting publish/detail split (not shell max-width). Surgical desktop reset is lower risk than header restructuring. Files: src\dashboard\public\styles.css, src\dashboard\views\article.ts.
+
+# Active Decisions
+
 - **Code: Gemini native tools + providerState** (2026-04-01): Use Gemini native `functionDeclarations` when tools are enabled, and preserve Gemini conversation continuity through an opaque `providerState` blob containing raw `contents`. Gemini 3.x emits `thoughtSignature` tokens that must be round-tripped exactly across tool turns. Reconstructing turns from normalized `ChatMessage[]` loses that opaque state, so the runner now threads `providerState` without inspecting it while the Gemini provider owns serialization and replay. Implementation: `src\llm\gateway.ts` adds `providerState?: unknown` to `ChatRequest` and `ChatResponse`; `src\agents\runner.ts` carries providerState through both structured and legacy tool loops; `src\llm\providers\gemini.ts` stores raw Gemini `contents` in providerState, reuses them on follow-up calls, and appends only fresh trailing tool results as `functionResponse` parts. Manual verification via `test-gemini.ts`.
 
 - **Code: File-write audit — hardcoded script paths** (2026-03-31):Complete audit of file write operations in the pipeline revealed that most writes are safe (DB-backed artifacts, config-resolved paths), but Python data script paths are hardcoded to `process.cwd()/content/data`, which breaks NFL_DATA_DIR isolation when running in PROD from a different working directory. Impact: fact-check, roster validation, stat validation, and data service all break in PROD when CWD ≠ repo root. See code-scriptsdir-config decision for the fix.
@@ -328,4 +332,5 @@ The dashboard already has:
 ---
 
 **END OF DECISIONS**
+
 

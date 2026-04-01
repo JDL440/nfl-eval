@@ -184,7 +184,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
         </div>
       </div>
 
-      <div class="detail-grid mobile-detail-layout">
+      <div class="detail-grid mobile-detail-layout article-detail-single">
         <div class="detail-main mobile-primary-column">
           ${renderActionPanel(article, advanceCheck, isAdvancing)}
           ${(revisionHistory?.length ?? 0) > 0 ? renderRevisionHistory(revisionHistory ?? []) : ''}
