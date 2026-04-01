@@ -103,6 +103,7 @@ import { CopilotProvider } from '../llm/providers/copilot.js';
 import { CopilotCLIProvider } from '../llm/providers/copilot-cli.js';
 import { MockProvider } from '../llm/providers/mock.js';
 import { LMStudioProvider } from '../llm/providers/lmstudio.js';
+import { GeminiProvider } from '../llm/providers/gemini.js';
 import { EventBus, registerSSE } from '../dashboard/sse.js';
 import { initGlobalCache, FileCacheProvider } from '../cache/index.js';
 import { renderConfigPage } from './views/config.js';
@@ -2749,16 +2750,34 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
       }
     };
 
+    const registerGeminiProvider = async (): Promise<void> => {
+      if (gateway.getProvider('gemini')) return;
+      const geminiKey = process.env['GEMINI_API_KEY'];
+      if (!geminiKey) {
+        console.log('Gemini LLM provider skipped — GEMINI_API_KEY not set');
+        return;
+      }
+      try {
+        const gemini = new GeminiProvider(geminiKey);
+        gateway.registerProvider(gemini);
+        console.log('Gemini LLM provider registered (Google Gemini API)');
+      } catch (err) {
+        console.log(`Gemini LLM provider not available: ${err instanceof Error ? err.message : err}`);
+      }
+    };
+
     if (process.env['MOCK_LLM'] === '1') {
       await registerMockProvider();
     } else {
       const registrationOrder: Array<() => Promise<void>> = explicitProvider === 'lmstudio'
-        ? [registerLMStudioProvider, registerCopilotCliProvider, registerCopilotApiProvider]
+        ? [registerLMStudioProvider, registerCopilotCliProvider, registerCopilotApiProvider, registerGeminiProvider]
         : explicitProvider === 'copilot-api'
-          ? [registerCopilotApiProvider, registerCopilotCliProvider, registerLMStudioProvider]
+          ? [registerCopilotApiProvider, registerCopilotCliProvider, registerLMStudioProvider, registerGeminiProvider]
           : explicitProvider === 'copilot-cli'
-            ? [registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider]
-            : [registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider];
+            ? [registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider, registerGeminiProvider]
+            : explicitProvider === 'gemini'
+              ? [registerGeminiProvider, registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider]
+              : [registerCopilotCliProvider, registerCopilotApiProvider, registerLMStudioProvider, registerGeminiProvider];
 
       for (const registerProvider of registrationOrder) {
         await registerProvider();
