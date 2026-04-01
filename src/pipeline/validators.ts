@@ -64,9 +64,14 @@ function runPythonQuery(scriptName: string, args: string[]): string | null {
   }
 }
 
-function currentSeason(): number {
+function currentSeason(league: string = 'nfl'): number {
   const now = new Date();
-  return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
+  switch (league) {
+    case 'mlb':
+      return now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+    default: // nfl
+      return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -113,45 +118,55 @@ function lookupPlayerStatsJson(player: string, season: number): PlayerStatData |
   }, DEFAULT_TTL.playerStats ?? 3600);
 }
 
-/** Map claim metrics to nflverse stat fields. */
-const METRIC_MAP: Record<string, (d: PlayerStatData) => number | undefined> = {
-  'passing_yards': d => d.passing_yards,
-  'rushing_yards': d => d.rushing_yards,
-  'receiving_yards': d => d.receiving_yards,
-  'touchdowns': d => {
-    const p = d.passing_tds ?? 0;
-    const ru = d.rushing_tds ?? 0;
-    const re = d.receiving_tds ?? 0;
-    return p + ru + re;
-  },
-  'interceptions': d => d.interceptions,
-  'sacks': d => d.sacks,
-  'EPA': d => d.passing_epa ?? d.rushing_epa ?? d.receiving_epa,
-  'completion_pct': d => {
-    if (d.completions != null && d.attempts != null && d.attempts > 0) {
-      return (d.completions / d.attempts) * 100;
-    }
-    return undefined;
-  },
-  'cpoe': d => d.passing_epa, // Approximate — CPOE isn't directly in basic stats
-  'target_share': d => {
-    // target_share is usually a team-relative metric, not available in basic player stats
-    return undefined;
-  },
-  'passer_rating': d => {
-    // Passer rating needs calculation — skip for now, flag as unverifiable
-    return undefined;
-  },
-  'tackles': d => d.tackles as number | undefined,
-  'success_rate': d => undefined, // Team-level metric
-};
+/** Map claim metrics to data-source stat field extractors, per league. */
+function getMetricMap(league: string): Record<string, (d: PlayerStatData) => number | undefined> {
+  switch (league) {
+    case 'mlb':
+      // TODO: Phase 3 — map to Statcast/FanGraphs fields
+      return {};
+    default: // nfl
+      return {
+        'passing_yards': d => d.passing_yards,
+        'rushing_yards': d => d.rushing_yards,
+        'receiving_yards': d => d.receiving_yards,
+        'touchdowns': d => {
+          const p = d.passing_tds ?? 0;
+          const ru = d.rushing_tds ?? 0;
+          const re = d.receiving_tds ?? 0;
+          return p + ru + re;
+        },
+        'interceptions': d => d.interceptions,
+        'sacks': d => d.sacks,
+        'EPA': d => d.passing_epa ?? d.rushing_epa ?? d.receiving_epa,
+        'completion_pct': d => {
+          if (d.completions != null && d.attempts != null && d.attempts > 0) {
+            return (d.completions / d.attempts) * 100;
+          }
+          return undefined;
+        },
+        'cpoe': d => d.passing_epa, // Approximate — CPOE isn't directly in basic stats
+        'target_share': d => {
+          // target_share is usually a team-relative metric, not available in basic player stats
+          return undefined;
+        },
+        'passer_rating': d => {
+          // Passer rating needs calculation — skip for now, flag as unverifiable
+          return undefined;
+        },
+        'tackles': d => d.tackles as number | undefined,
+        'success_rate': d => undefined, // Team-level metric
+      };
+  }
+}
 
 /**
- * Cross-reference statistical claims against nflverse data.
+ * Cross-reference statistical claims against league data source.
  * Returns a validation result for each claim where data is available.
  */
-export function validateStatClaims(claims: ExtractedClaims): ValidationResult[] {
-  const season = currentSeason();
+export function validateStatClaims(claims: ExtractedClaims, league: string = 'nfl'): ValidationResult[] {
+  const season = currentSeason(league);
+  const dataSource = league === 'nfl' ? 'nflverse' : league;
+  const metricMap = getMetricMap(league);
   const results: ValidationResult[] = [];
 
   for (const claim of claims.statClaims) {
@@ -160,13 +175,13 @@ export function validateStatClaims(claims: ExtractedClaims): ValidationResult[] 
       results.push({
         claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
         verified: false,
-        actual: 'No nflverse data found',
+        actual: `No ${dataSource} data found`,
         source: 'query_player_epa.py',
       });
       continue;
     }
 
-    const extractor = METRIC_MAP[claim.metric];
+    const extractor = metricMap[claim.metric];
     if (!extractor) {
       results.push({
         claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
@@ -195,7 +210,7 @@ export function validateStatClaims(claims: ExtractedClaims): ValidationResult[] 
     results.push({
       claim: `${claim.player}: ${claim.metric} = ${claim.value}`,
       verified: isClose,
-      actual: `nflverse: ${actualValue}`,
+      actual: `${dataSource}: ${actualValue}`,
       source: 'query_player_epa.py',
     });
   }
@@ -236,9 +251,10 @@ function lookupDraftData(player: string): DraftData | null {
 }
 
 /**
- * Verify draft claims (pick number, round, year) against nflverse draft history.
+ * Verify draft claims (pick number, round, year) against draft history data.
  */
-export function validateDraftClaims(claims: ExtractedClaims): ValidationResult[] {
+export function validateDraftClaims(claims: ExtractedClaims, league: string = 'nfl'): ValidationResult[] {
+  const dataSource = league === 'nfl' ? 'nflverse' : league;
   const results: ValidationResult[] = [];
 
   for (const claim of claims.draftClaims) {
@@ -247,7 +263,7 @@ export function validateDraftClaims(claims: ExtractedClaims): ValidationResult[]
       results.push({
         claim: claim.raw,
         verified: false,
-        actual: 'No draft data found in nflverse',
+        actual: `No draft data found in ${dataSource}`,
         source: 'query_draft_value.py',
       });
       continue;
@@ -275,7 +291,7 @@ export function validateDraftClaims(claims: ExtractedClaims): ValidationResult[]
       claim: claim.raw,
       verified: mismatches.length === 0,
       actual: mismatches.length > 0
-        ? `MISMATCH: ${mismatches.join('; ')} (nflverse: ${actualParts.join(', ')})`
+        ? `MISMATCH: ${mismatches.join('; ')} (${dataSource}: ${actualParts.join(', ')})`
         : `Confirmed: ${actualParts.join(', ')}`,
       source: 'query_draft_value.py',
     });
@@ -290,7 +306,9 @@ export function validateDraftClaims(claims: ExtractedClaims): ValidationResult[]
 export function buildValidationReport(
   statResults: ValidationResult[],
   draftResults: ValidationResult[],
+  league: string = 'nfl',
 ): string {
+  const dataSource = league === 'nfl' ? 'nflverse' : league;
   const lines: string[] = ['## Pre-Publish Fact Validation', ''];
 
   const allResults = [...statResults, ...draftResults];
@@ -319,7 +337,7 @@ export function buildValidationReport(
     lines.push('');
   }
 
-  lines.push(`*${verified.length}/${allResults.length} claims verified against nflverse data.*`);
+  lines.push(`*${verified.length}/${allResults.length} claims verified against ${dataSource} data.*`);
 
   return lines.join('\n');
 }

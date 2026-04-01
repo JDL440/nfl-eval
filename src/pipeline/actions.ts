@@ -776,18 +776,27 @@ function buildAgentTraceContext(
   };
 }
 
-const DEFAULT_STAGE_REQUESTED_TOOLS = [
+// Base tools shared across all leagues
+const BASE_STAGE_REQUESTED_TOOLS = [
   'pipeline-read',
-  'nflverse-data',
   'prediction-markets',
   'web_search',
 ] as const;
 
+/** Return the primary data tool name for a league. */
+export function getLeagueDataTool(league: string): string {
+  switch (league) {
+    case 'mlb': return 'statcast-data';
+    default: return 'nflverse-data';
+  }
+}
+
 function buildStageRequestedTools(
   surface: string,
+  league: string,
   explicitRequestedTools?: string[],
 ): string[] {
-  const requested = new Set<string>(DEFAULT_STAGE_REQUESTED_TOOLS);
+  const requested = new Set<string>([...BASE_STAGE_REQUESTED_TOOLS, getLeagueDataTool(league)]);
   if (surface === 'runPublisherPass') {
     requested.add('article');
   }
@@ -816,7 +825,7 @@ function runAgent(
       includeWebSearch: params.toolCalling?.includeWebSearch ?? true,
       allowWriteTools: params.toolCalling?.allowWriteTools ?? false,
       maxToolCalls: params.toolCalling?.maxToolCalls ?? 50,
-      requestedTools: buildStageRequestedTools(surface, params.toolCalling?.requestedTools),
+      requestedTools: buildStageRequestedTools(surface, ctx.config.league, params.toolCalling?.requestedTools),
       context: {
         repo: ctx.repo,
         engine: ctx.engine,
@@ -1064,14 +1073,9 @@ const PRODUCTION_AGENTS = new Set([
   'lead', 'writer', 'editor', 'scribe', 'coordinator', 'panel-moderator', 'publisher',
 ]);
 
-const TEAM_ABBRS = new Set([
-  'ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb',
-  'hou','ind','jax','kc','lac','lar','lv','mia','min','ne','no','nyg',
-  'nyj','phi','pit','sea','sf','tb','ten','was',
-]);
-
 /** Build a categorized roster string from available agent charters. */
-function buildAgentRoster(runner: AgentRunner): string {
+function buildAgentRoster(runner: AgentRunner, config: AppConfig): string {
+  const teamAbbrs = new Set(config.teams.map(t => t.abbr.toLowerCase()));
   const agents = runner.listAgents();
   const specialists: string[] = [];
   const teamAgents: string[] = [];
@@ -1083,7 +1087,7 @@ function buildAgentRoster(runner: AgentRunner): string {
     const identity = charter?.identity ?? '';
     const summary = identity.split('\n')[0]?.slice(0, 120) || name;
 
-    if (TEAM_ABBRS.has(name)) {
+    if (teamAbbrs.has(name)) {
       teamAgents.push(`- **${name.toUpperCase()}**: ${summary}`);
     } else {
       specialists.push(`- **${name}**: ${summary}`);
@@ -1148,7 +1152,7 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
 
     const promptContent = gatherContext(ctx.repo, articleId, 'composePanel', ctx.config);
 
-    const roster = buildAgentRoster(ctx.runner);
+    const roster = buildAgentRoster(ctx.runner, ctx.config);
     const depthLevel = article.depth_level ?? 2;
 
     // Check for pinned agents
@@ -1403,7 +1407,7 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
         }
       }
       const combinedPanelText = panelTexts.join('\n\n');
-      const claims = extractClaims(combinedPanelText);
+      const claims = extractClaims(combinedPanelText, article.league);
       contractClaims = claims.contractClaims.map(claim => claim.raw);
 
       // Build enriched fact-check context from nflverse if claims found
@@ -1769,11 +1773,11 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
         }
 
         // Run deterministic stat and draft claim validation
-        const claims = extractClaims(draftContent);
+        const claims = extractClaims(draftContent, article.league);
         if (totalClaimCount(claims) > 0) {
-          const statResults = validateStatClaims(claims);
-          const draftResults = validateDraftClaims(claims);
-          const report = buildValidationReport(statResults, draftResults);
+          const statResults = validateStatClaims(claims, article.league);
+          const draftResults = validateDraftClaims(claims, article.league);
+          const report = buildValidationReport(statResults, draftResults, article.league);
           ctx.repo.artifacts.put(articleId, 'fact-validation.md', report);
         }
       }

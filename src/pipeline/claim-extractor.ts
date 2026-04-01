@@ -110,7 +110,7 @@ const SENT = `(?:[^.]|\\.[\\d])`;
 const NAME_PAT_CS = `([A-Z][a-z]+(?:\\s+(?:[A-Z][a-zA-Z'-]+|[IVX]+|[JS]r\\.?))+)`;
 
 // ---------------------------------------------------------------------------
-// Statistical claims
+// League-aware claim configuration
 // ---------------------------------------------------------------------------
 
 interface StatPattern {
@@ -118,43 +118,95 @@ interface StatPattern {
   metric: string;
 }
 
-const STAT_PATTERNS: StatPattern[] = [
-  // EPA
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?([-+]?\\d+\\.\\d+)\\s*EPA`, 'g'), metric: 'EPA' },
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?EPA\\s*(?:of|:)?\\s*([-+]?\\d+\\.\\d+)`, 'g'), metric: 'EPA' },
-  // Passing yards
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d[\\d,]+)\\s*(?:passing|pass)\\s*yards`, 'g'), metric: 'passing_yards' },
-  // Rushing yards
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d[\\d,]+)\\s*(?:rushing|rush)\\s*yards`, 'g'), metric: 'rushing_yards' },
-  // Receiving yards
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d[\\d,]+)\\s*(?:receiving|rec\\.?)\\s*yards`, 'g'), metric: 'receiving_yards' },
-  // Completion percentage
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)%?\\s*completion`, 'g'), metric: 'completion_pct' },
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?completion${SENT}*?(\\d+\\.?\\d*)%`, 'g'), metric: 'completion_pct' },
-  // Passer rating
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)\\s*passer\\s*rating`, 'g'), metric: 'passer_rating' },
-  // Touchdowns
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:touchdowns?|TDs?)`, 'g'), metric: 'touchdowns' },
-  // Targets / target share
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)%?\\s*target\\s*share`, 'g'), metric: 'target_share' },
-  // Sacks
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)\\s*sacks?`, 'g'), metric: 'sacks' },
-  // Interceptions
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:interceptions?|INTs?)`, 'g'), metric: 'interceptions' },
-  // Success rate
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)%?\\s*success\\s*rate`, 'g'), metric: 'success_rate' },
-  // CPOE
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?([-+]?\\d+\\.\\d+)\\s*CPOE`, 'g'), metric: 'cpoe' },
-  // Tackles
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:total\\s+)?tackles`, 'g'), metric: 'tackles' },
-];
+interface DraftPattern {
+  regex: RegExp;
+  groups: ('player' | 'round' | 'pick' | 'year')[];
+}
 
-function extractStatClaims(text: string): StatClaim[] {
+export interface LeagueClaimConfig {
+  statPatterns: StatPattern[];
+  draftPatterns: DraftPattern[];
+  superlativePatterns: RegExp[];
+}
+
+function getNflClaimConfig(): LeagueClaimConfig {
+  return {
+    statPatterns: [
+      // EPA
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?([-+]?\\d+\\.\\d+)\\s*EPA`, 'g'), metric: 'EPA' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?EPA\\s*(?:of|:)?\\s*([-+]?\\d+\\.\\d+)`, 'g'), metric: 'EPA' },
+      // Passing yards
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d[\\d,]+)\\s*(?:passing|pass)\\s*yards`, 'g'), metric: 'passing_yards' },
+      // Rushing yards
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d[\\d,]+)\\s*(?:rushing|rush)\\s*yards`, 'g'), metric: 'rushing_yards' },
+      // Receiving yards
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d[\\d,]+)\\s*(?:receiving|rec\\.?)\\s*yards`, 'g'), metric: 'receiving_yards' },
+      // Completion percentage
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)%?\\s*completion`, 'g'), metric: 'completion_pct' },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?completion${SENT}*?(\\d+\\.?\\d*)%`, 'g'), metric: 'completion_pct' },
+      // Passer rating
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)\\s*passer\\s*rating`, 'g'), metric: 'passer_rating' },
+      // Touchdowns
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:touchdowns?|TDs?)`, 'g'), metric: 'touchdowns' },
+      // Targets / target share
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)%?\\s*target\\s*share`, 'g'), metric: 'target_share' },
+      // Sacks
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)\\s*sacks?`, 'g'), metric: 'sacks' },
+      // Interceptions
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:interceptions?|INTs?)`, 'g'), metric: 'interceptions' },
+      // Success rate
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+\\.?\\d*)%?\\s*success\\s*rate`, 'g'), metric: 'success_rate' },
+      // CPOE
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?([-+]?\\d+\\.\\d+)\\s*CPOE`, 'g'), metric: 'cpoe' },
+      // Tackles
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(\\d+)\\s*(?:total\\s+)?tackles`, 'g'), metric: 'tackles' },
+    ],
+    draftPatterns: [
+      // "Player was drafted in round X, pick Y"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:drafted|selected|picked)${SENT}*?round\\s*(\\d)(?:${SENT}*?pick\\s*(\\d+))?`, 'g'), groups: ['player', 'round', 'pick'] },
+      // "Player was the Nth overall pick"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:No\\.?\\s*|#)(\\d+)\\s*overall\\s*pick`, 'g'), groups: ['player', 'pick'] },
+      // "Player, a Xth-round pick"
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:a\\s+)?(\\d)(?:st|nd|rd|th)[- ]round\\s*pick`, 'g'), groups: ['player', 'round'] },
+      // "20XX draft" + player name
+      { regex: new RegExp(`(20\\d{2})\\s*(?:NFL\\s*)?[Dd]raft${SENT}*?${NAME_PAT_CS}`, 'g'), groups: ['year', 'player'] },
+      { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(20\\d{2})\\s*(?:NFL\\s*)?[Dd]raft`, 'g'), groups: ['player', 'year'] },
+    ],
+    superlativePatterns: [
+      // "top X" rankings
+      new RegExp(`${NAME_PAT_CS}${SENT}*?top[- ]?(\\d+)`, 'g'),
+      // "ranked Nth" / "#N"
+      new RegExp(`${NAME_PAT_CS}${SENT}*?(?:ranked?|#)\\s*(\\d+)(?:st|nd|rd|th)?\\s*(?:in|among|at)`, 'g'),
+      // "led the league" / "league-leading"
+      new RegExp(`${NAME_PAT_CS}${SENT}*?(?:led the (?:league|NFL)|league[- ]leading)`, 'g'),
+      // "best in the NFL" / "worst in the NFL"
+      new RegExp(`${NAME_PAT_CS}${SENT}*?(?:best|worst|highest|lowest|most|fewest)\\s+in\\s+the\\s+(?:NFL|league)`, 'g'),
+    ],
+  };
+}
+
+function getMlbClaimConfig(): LeagueClaimConfig {
+  // TODO: Phase 3 — implement MLB claim patterns (batting avg, ERA, WAR, etc.)
+  return { statPatterns: [], draftPatterns: [], superlativePatterns: [] };
+}
+
+export function getClaimConfig(league: string): LeagueClaimConfig {
+  switch (league) {
+    case 'mlb': return getMlbClaimConfig();
+    default: return getNflClaimConfig();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Statistical claims
+// ---------------------------------------------------------------------------
+
+function extractStatClaims(text: string, patterns: StatPattern[]): StatClaim[] {
   const clean = stripMarkdown(text);
   const claims: StatClaim[] = [];
   const seen = new Set<string>();
 
-  for (const { regex, metric } of STAT_PATTERNS) {
+  for (const { regex, metric } of patterns) {
     regex.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = regex.exec(clean)) !== null) {
@@ -215,24 +267,12 @@ function extractContractClaims(text: string): ContractClaim[] {
 // Draft claims
 // ---------------------------------------------------------------------------
 
-const DRAFT_PATTERNS: { regex: RegExp; groups: ('player' | 'round' | 'pick' | 'year')[] }[] = [
-  // "Player was drafted in round X, pick Y"
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:drafted|selected|picked)${SENT}*?round\\s*(\\d)(?:${SENT}*?pick\\s*(\\d+))?`, 'g'), groups: ['player', 'round', 'pick'] },
-  // "Player was the Nth overall pick"
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:No\\.?\\s*|#)(\\d+)\\s*overall\\s*pick`, 'g'), groups: ['player', 'pick'] },
-  // "Player, a Xth-round pick"
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(?:a\\s+)?(\\d)(?:st|nd|rd|th)[- ]round\\s*pick`, 'g'), groups: ['player', 'round'] },
-  // "20XX draft" + player name
-  { regex: new RegExp(`(20\\d{2})\\s*(?:NFL\\s*)?[Dd]raft${SENT}*?${NAME_PAT_CS}`, 'g'), groups: ['year', 'player'] },
-  { regex: new RegExp(`${NAME_PAT_CS}${SENT}*?(20\\d{2})\\s*(?:NFL\\s*)?[Dd]raft`, 'g'), groups: ['player', 'year'] },
-];
-
-function extractDraftClaims(text: string): DraftClaim[] {
+function extractDraftClaims(text: string, patterns: DraftPattern[]): DraftClaim[] {
   const clean = stripMarkdown(text);
   const claims: DraftClaim[] = [];
   const seen = new Set<string>();
 
-  for (const { regex, groups } of DRAFT_PATTERNS) {
+  for (const { regex, groups } of patterns) {
     regex.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = regex.exec(clean)) !== null) {
@@ -263,23 +303,12 @@ function extractDraftClaims(text: string): DraftClaim[] {
 // Performance / ranking claims
 // ---------------------------------------------------------------------------
 
-const PERF_PATTERNS: RegExp[] = [
-  // "top X" rankings
-  new RegExp(`${NAME_PAT_CS}${SENT}*?top[- ]?(\\d+)`, 'g'),
-  // "ranked Nth" / "#N"
-  new RegExp(`${NAME_PAT_CS}${SENT}*?(?:ranked?|#)\\s*(\\d+)(?:st|nd|rd|th)?\\s*(?:in|among|at)`, 'g'),
-  // "led the league" / "league-leading"
-  new RegExp(`${NAME_PAT_CS}${SENT}*?(?:led the (?:league|NFL)|league[- ]leading)`, 'g'),
-  // "best in the NFL" / "worst in the NFL"
-  new RegExp(`${NAME_PAT_CS}${SENT}*?(?:best|worst|highest|lowest|most|fewest)\\s+in\\s+the\\s+(?:NFL|league)`, 'g'),
-];
-
-function extractPerformanceClaims(text: string): PerformanceClaim[] {
+function extractPerformanceClaims(text: string, patterns: RegExp[]): PerformanceClaim[] {
   const clean = stripMarkdown(text);
   const claims: PerformanceClaim[] = [];
   const seen = new Set<string>();
 
-  for (const regex of PERF_PATTERNS) {
+  for (const regex of patterns) {
     regex.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = regex.exec(clean)) !== null) {
@@ -302,14 +331,15 @@ function extractPerformanceClaims(text: string): PerformanceClaim[] {
 
 /**
  * Extract all verifiable claims from panel markdown text.
- * Returns structured claims categorised for nflverse query routing.
+ * Returns structured claims categorised for data-source query routing.
  */
-export function extractClaims(text: string): ExtractedClaims {
+export function extractClaims(text: string, league: string = 'nfl'): ExtractedClaims {
+  const config = getClaimConfig(league);
   return {
-    statClaims: extractStatClaims(text),
+    statClaims: extractStatClaims(text, config.statPatterns),
     contractClaims: extractContractClaims(text),
-    draftClaims: extractDraftClaims(text),
-    performanceClaims: extractPerformanceClaims(text),
+    draftClaims: extractDraftClaims(text, config.draftPatterns),
+    performanceClaims: extractPerformanceClaims(text, config.superlativePatterns),
   };
 }
 
