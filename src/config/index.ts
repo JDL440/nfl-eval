@@ -352,7 +352,9 @@ export function resolveDashboardAuthConfig(
       ?? DEFAULT_DASHBOARD_SESSION_COOKIE,
     sessionTtlHours,
     secureCookies: overrides?.secureCookies
-      ?? (process.env.DASHBOARD_SECURE_COOKIES?.toLowerCase() === 'true'),
+      ?? (process.env.DASHBOARD_SECURE_COOKIES
+        ? process.env.DASHBOARD_SECURE_COOKIES.toLowerCase() === 'true'
+        : env === 'production'),
   };
 }
 

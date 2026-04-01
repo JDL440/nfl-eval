@@ -172,7 +172,7 @@ describe('GeminiProvider', () => {
       expect(body.generationConfig.maxOutputTokens).toBe(2048);
     });
 
-    it('sets responseMimeType for json responseFormat', async () => {
+    it('does NOT set responseMimeType (system prompt handles JSON)', async () => {
       fetchSpy.mockResolvedValueOnce(
         mockResponse({
           candidates: [{ content: { parts: [{ text: '{"a":1}' }] }, finishReason: 'STOP' }],
@@ -186,7 +186,7 @@ describe('GeminiProvider', () => {
       });
 
       const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
-      expect(body.generationConfig.responseMimeType).toBe('application/json');
+      expect(body.generationConfig.responseMimeType).toBeUndefined();
     });
   });
 

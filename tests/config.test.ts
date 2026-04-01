@@ -44,7 +44,7 @@ describe('config', () => {
   });
 
   it('throws on unknown league', () => {
-    expect(() => loadConfig({ dataDir: tempDir, league: 'mlb' })).toThrow('Unknown league');
+    expect(() => loadConfig({ dataDir: tempDir, league: 'xyz' })).toThrow('Unknown league');
   });
 
   it('sets correct paths for league-scoped dirs', () => {
