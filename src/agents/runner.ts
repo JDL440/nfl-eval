@@ -1117,10 +1117,12 @@ export class AgentRunner {
     let lastCallKey = '';
     let consecutiveDupes = 0;
     const MAX_CONSECUTIVE_DUPES = 3;
+    let providerState: unknown;
 
     for (let attempt = 0; attempt <= params.maxToolCalls; attempt += 1) {
       const response = await this._gateway.chat({
         messages,
+        providerState,
         model: params.model,
         provider: params.provider,
         temperature: params.temperature,
@@ -1130,6 +1132,7 @@ export class AgentRunner {
         taskFamily: params.taskFamily,
         providerContext: params.providerContext,
       });
+      providerState = response.providerState;
 
       aggregatedUsage = {
         promptTokens: aggregatedUsage.promptTokens + (response.usage?.promptTokens ?? 0),
@@ -1461,27 +1464,30 @@ export class AgentRunner {
           totalTokens: number;
         } | undefined;
         let finalResponse: import('../llm/gateway.js').ChatResponse | undefined;
+        let providerState: unknown;
 
         for (let attempt = 0; attempt < maxToolCalls; attempt += 1) {
           const nativeTools = buildNativeToolDefinitions(availableTools);
           const structuredResponse = await this._gateway.chat({
             messages: toolConversation,
             tools: nativeTools.length > 0 ? nativeTools : undefined,
+            providerState,
             provider,
             model,
             temperature,
             maxTokens,
             // When native tools are provided to a provider that supports them
-            // (e.g. LMStudio), omit responseFormat so the provider can decide
-            // how to constrain the output.  Other providers still use JSON mode
-            // alongside native tools.
-            responseFormat: nativeTools.length > 0 && route.providerId === 'lmstudio'
+            // (e.g. LMStudio, Gemini), omit responseFormat so the provider can
+            // decide how to constrain the output.  Other providers still use
+            // JSON mode alongside native tools.
+            responseFormat: nativeTools.length > 0 && (route.providerId === 'lmstudio' || route.providerId === 'gemini')
               ? undefined : 'json',
             stageKey: model ? undefined : stageKey,
             taskFamily,
             disallowedProviderIds: ['copilot-cli'],
             providerContext,
           });
+          providerState = structuredResponse.providerState;
           lastProviderMetadata = structuredResponse.providerMetadata;
           lastProviderId = structuredResponse.provider;
           lastModelId = structuredResponse.model;

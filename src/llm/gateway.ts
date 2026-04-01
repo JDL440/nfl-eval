@@ -68,6 +68,7 @@ export interface ProviderMetadata {
 export interface ChatRequest {
   messages: ChatMessage[];
   tools?: ChatToolDefinition[];
+  providerState?: unknown;
   provider?: string;
   model?: string;
   temperature?: number;
@@ -85,6 +86,7 @@ export interface ChatResponse {
   content: string;
   model: string;
   provider: string;
+  providerState?: unknown;
   usage?: {
     promptTokens: number;
     completionTokens: number;
