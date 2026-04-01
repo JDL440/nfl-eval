@@ -106,10 +106,10 @@ export class GeminiProvider implements LLMProvider {
     // text-based tool loop. The system prompt already instructs the model to
     // output {"type":"tool_call","toolName":"...","args":{}} JSON.
 
-    if (request.responseFormat === 'json') {
-      (body['generationConfig'] as Record<string, unknown>)['responseMimeType'] =
-        'application/json';
-    }
+    // Do NOT set responseMimeType for Gemini — the system prompt instructs
+    // JSON format when needed. Gemini's strict JSON mode can cause it to
+    // wrap responses in arrays or use its own schema, breaking the expected
+    // {"type":"final"/"tool_call",...} envelope.
 
     const url = `${API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
@@ -166,13 +166,31 @@ export class GeminiProvider implements LLMProvider {
 
   /** Map ChatMessage[] → Gemini contents format (text-only, no native tools). */
   private mapMessages(messages: ChatMessage[]): GeminiContent[] {
-    return messages.map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{
-        text: m.role === 'tool'
-          ? `Tool result for ${m.name ?? m.tool_call_id}:\n${m.content}`
-          : m.content,
-      }],
-    }));
+    return messages.map((m) => {
+      let text: string;
+      if (m.role === 'tool') {
+        text = `Tool result for ${m.name ?? m.tool_call_id}:\n${m.content}`;
+      } else if (m.role === 'assistant') {
+        // The structured tool path sends assistant messages with empty content
+        // and tool_calls. Reconstruct readable text so Gemini sees a non-empty
+        // model turn.
+        if ((!m.content || m.content.trim().length === 0) && 'tool_calls' in m && m.tool_calls?.length) {
+          const tc = m.tool_calls[0];
+          text = JSON.stringify({
+            type: 'tool_call',
+            toolName: tc.function.name,
+            args: JSON.parse(tc.function.arguments || '{}'),
+          });
+        } else {
+          text = m.content;
+        }
+      } else {
+        text = m.content;
+      }
+      return {
+        role: (m.role === 'assistant' ? 'model' : 'user') as 'model' | 'user',
+        parts: [{ text }],
+      };
+    });
   }
 }
