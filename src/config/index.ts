@@ -15,6 +15,11 @@ export interface LeagueConfig {
   };
 }
 
+export interface TlsConfig {
+  certPath: string;
+  keyPath: string;
+}
+
 export interface AppConfig {
   dataDir: string;
   league: string;
@@ -31,6 +36,7 @@ export interface AppConfig {
   env: 'development' | 'production' | 'test';
   dashboardAuth?: DashboardAuthConfig;
   contextPreset?: ContextPreset;
+  tls?: TlsConfig;
 }
 
 export interface DashboardAuthConfig {
@@ -326,6 +332,11 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
   const dashboardAuth = resolveDashboardAuthConfig(env, overrides?.dashboardAuth);
   const contextPreset = overrides?.contextPreset ?? normalizeContextPreset(process.env.NFL_CONTEXT_PRESET);
 
+  // TLS: enabled when both NFL_TLS_CERT and NFL_TLS_KEY are set
+  const tlsCert = overrides?.tls?.certPath ?? process.env.NFL_TLS_CERT;
+  const tlsKey = overrides?.tls?.keyPath ?? process.env.NFL_TLS_KEY;
+  const tls = (tlsCert && tlsKey) ? { certPath: resolve(tlsCert), keyPath: resolve(tlsKey) } : undefined;
+
   return {
     dataDir,
     league,
@@ -343,5 +354,6 @@ export function loadConfig(overrides?: AppConfigOverrides): AppConfig {
     contextPreset,
     ...overrides,
     dashboardAuth,
+    tls,
   };
 }

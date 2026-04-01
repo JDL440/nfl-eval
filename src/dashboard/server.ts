@@ -10,7 +10,8 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { join, resolve } from 'node:path';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { createServer as createHttpsServer } from 'node:https';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { Repository } from '../db/repository.js';
 import type { AppConfig } from '../config/index.js';
@@ -3073,6 +3074,14 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     if (config.dataDir.includes('-dev') || config.dataDir.includes('-test')) {
       issues.push(`Data directory looks like a non-prod path: ${config.dataDir}`);
     }
+    if (config.tls) {
+      if (!existsSync(config.tls.certPath)) {
+        issues.push(`TLS certificate not found: ${config.tls.certPath}`);
+      }
+      if (!existsSync(config.tls.keyPath)) {
+        issues.push(`TLS key not found: ${config.tls.keyPath}`);
+      }
+    }
     if (issues.length > 0) {
       console.error('[PREFLIGHT FAILED]');
       issues.forEach((i) => console.error(`  ✗ ${i}`));
@@ -3087,12 +3096,31 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
   console.log(`[startup] Data dir    : ${config.dataDir}`);
   console.log(`[startup] Auth mode   : ${config.dashboardAuth?.mode ?? 'off'}`);
   console.log(`[startup] Port        : ${config.port}`);
+  console.log(`[startup] TLS         : ${config.tls ? 'enabled' : 'off'}`);
   console.log(`[startup] ════════════════════════════════════════`);
 
   // Public-facing: bind all interfaces. Auth + security headers are the protection layer.
   const hostname = '0.0.0.0';
-  serve({ fetch: app.fetch, port: config.port, hostname }, (info) => {
-    console.log(`NFL Lab Dashboard running at http://${hostname}:${info.port}`);
+  const protocol = config.tls ? 'https' : 'http';
+
+  const serveOptions: Parameters<typeof serve>[0] = {
+    fetch: app.fetch,
+    port: config.port,
+    hostname,
+  };
+
+  if (config.tls) {
+    serveOptions.createServer = createHttpsServer;
+    serveOptions.serverOptions = {
+      key: readFileSync(config.tls.keyPath),
+      cert: readFileSync(config.tls.certPath),
+    };
+    console.log(`[tls] Certificate: ${config.tls.certPath}`);
+    console.log(`[tls] Key:         ${config.tls.keyPath}`);
+  }
+
+  serve(serveOptions, (info) => {
+    console.log(`NFL Lab Dashboard running at ${protocol}://${hostname}:${info.port}`);
   });
 }
 
