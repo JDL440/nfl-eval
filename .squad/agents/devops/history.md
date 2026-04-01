@@ -37,3 +37,13 @@
 - Fixture-only changes per decision inbox; no product code (src/) files modified.
 - E2E test results: 91/93 tests passed. 2 pre-existing failures in pipeline.test.ts (memory storage, unrelated to fixture changes).
 - Article contract fixture template: '# Article Contract\n\n## Structure\n- Introduction\n- Analysis\n- Conclusion\n\n## Word Count Target\n{N} words' where N matches the draft word count for that test scenario.
+
+## 2026-04-01T06:30:00Z: Code audit — Python script path hardening (NFL_SCRIPTS_DIR config)
+
+- **Related to:** Code agent audit of file-write operations in the pipeline
+- **Finding:** Python data script paths hardcoded to \process.cwd()/content/data\ break when PROD runs from a different CWD or when NSSM sets CWD unexpectedly
+- **Impact:** fact-check-context.ts, roster-context.ts, validators.ts, data.ts all fail in PROD when CWD ≠ repo root
+- **Fix implemented:** Added \scriptsDir: string\ to AppConfig, resolved from \NFL_SCRIPTS_DIR\ env var (fallback: \join(process.cwd(), 'content', 'data')\)
+- **NSSM Configuration:** For NSSM service setup, set environment variable: \NFL_SCRIPTS_DIR=C:\github\nfl-eval\content\data\
+- **Validation:** Build passes, 144 tests pass, no regressions
+- **Commit:** 78e646c5
