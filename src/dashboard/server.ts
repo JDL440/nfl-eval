@@ -816,6 +816,7 @@ export function createApp(
   app.get('/', (c) => {
     const articles = repo.getAllArticles().filter(a => a.status !== 'archived');
     const teams = repo.getDistinctTeams();
+    const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
     return c.html(
       renderHome({
         config,
@@ -824,6 +825,7 @@ export function createApp(
         published: articles.filter(a => a.current_stage === 8),
         pipelineSummary: buildPipelineSummary(articles),
         teams,
+        modelMap,
       }),
     );
   });
@@ -968,7 +970,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-    return c.html(renderArticleMetaDisplay(article));
+    return c.html(renderArticleMetaDisplay(article, repo.getUsageEvents(id)));
   });
 
   app.get('/htmx/articles/:id/edit-meta', (c) => {
@@ -1014,7 +1016,7 @@ export function createApp(
 
     try {
       const updated = repo.updateArticle(id, updates);
-      return c.html(renderArticleMetaDisplay(updated));
+      return c.html(renderArticleMetaDisplay(updated, repo.getUsageEvents(id)));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       return c.html(`<p class="empty-state">${escapeHtml(message)}</p>`, 400);
@@ -1855,7 +1857,8 @@ export function createApp(
     }
 
     const articles = repo.listArticles({ search, stage, team, depthLevel, limit: 50, excludeArchived: !includeArchived });
-    return c.html(renderFilteredArticles(articles));
+    const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
+    return c.html(renderFilteredArticles(articles, modelMap));
   });
 
   app.get('/htmx/pipeline-summary', (c) => {
@@ -1864,36 +1867,31 @@ export function createApp(
   });
 
   app.get('/htmx/ready-to-publish', (c) => {
-    return c.html(
-      renderReadyToPublish(repo.getAllArticles().filter(a => a.current_stage === 7 && a.status !== 'archived')),
-    );
+    const articles = repo.getAllArticles().filter(a => a.current_stage === 7 && a.status !== 'archived');
+    const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
+    return c.html(renderReadyToPublish(articles, modelMap));
   });
 
   app.get('/htmx/recent-ideas', (c) => {
-    return c.html(
-      renderRecentIdeas(repo.getAllArticles().filter(a => a.current_stage === 1 && a.status !== 'archived')),
-    );
+    const articles = repo.getAllArticles().filter(a => a.current_stage === 1 && a.status !== 'archived');
+    const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
+    return c.html(renderRecentIdeas(articles, modelMap));
   });
 
   app.get('/htmx/published', (c) => {
     const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-    return c.html(
-      renderPublished(
-        repo
-          .getAllArticles()
-          .filter(a => a.current_stage === 8 && (!a.published_at || a.published_at >= cutoff)),
-      ),
-    );
+    const articles = repo
+      .getAllArticles()
+      .filter(a => a.current_stage === 8 && (!a.published_at || a.published_at >= cutoff));
+    const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
+    return c.html(renderPublished(articles, modelMap));
   });
 
   app.get('/htmx/stage/:stage', (c) => {
     const stage = parseInt(c.req.param('stage'), 10) as Stage;
-    return c.html(
-      renderStageArticles(
-        repo.getAllArticles().filter(a => a.current_stage === stage),
-        stage,
-      ),
-    );
+    const articles = repo.getAllArticles().filter(a => a.current_stage === stage);
+    const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
+    return c.html(renderStageArticles(articles, stage, modelMap));
   });
 
   // ── Roster panel (htmx) ──────────────────────────────────────────────────
@@ -1950,7 +1948,7 @@ export function createApp(
     const id = c.req.param('id');
     const article = repo.getArticle(id);
     if (!article) return c.html('', 404);
-    return c.html(renderLiveHeader(article));
+    return c.html(renderLiveHeader(article, repo.getUsageEvents(id)));
   });
 
   app.get('/htmx/articles/:id/live-artifacts', (c) => {

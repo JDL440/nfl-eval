@@ -335,6 +335,32 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Ready One');
     });
 
+    it('home page shows the dominant model badge on article cards', async () => {
+      repo.createArticle({ id: 'idea-model', title: 'Idea Model' });
+      repo.recordUsageEvent({
+        articleId: 'idea-model',
+        surface: 'ideaGeneration',
+        provider: 'gemini',
+        modelOrTool: 'gemini-3.1-pro-preview',
+        promptTokens: 500,
+        outputTokens: 250,
+      });
+      repo.recordUsageEvent({
+        articleId: 'idea-model',
+        surface: 'ideaGeneration',
+        provider: 'anthropic',
+        modelOrTool: 'claude-sonnet-4.5',
+        promptTokens: 50,
+        outputTokens: 25,
+      });
+
+      const res = await app.request('/');
+      const html = await res.text();
+      expect(html).toContain('Idea Model');
+      expect(html).toContain('badge-model">gemini-3.1-pro</span>');
+      expect(html).not.toContain('gemini-3.1-pro-preview');
+    });
+
     it('article detail page renders', async () => {
       repo.createArticle({ id: 'detail-test', title: 'Detail Test Article' });
 
@@ -348,6 +374,33 @@ describe('Dashboard Server', () => {
       expect(html).toContain('Token Usage');
       expect(html).toContain('/articles/detail-test/traces');
       expect(html).not.toContain('Audit Log');
+    });
+
+    it('article detail shows the dominant model badge from usage events', async () => {
+      repo.createArticle({ id: 'detail-model', title: 'Detail Model Article', llm_provider: 'gemini' });
+      repo.recordUsageEvent({
+        articleId: 'detail-model',
+        stage: 4,
+        surface: 'draft',
+        provider: 'anthropic',
+        modelOrTool: 'claude-sonnet-4.5',
+        promptTokens: 900,
+        outputTokens: 600,
+      });
+      repo.recordUsageEvent({
+        articleId: 'detail-model',
+        stage: 4,
+        surface: 'draft',
+        provider: 'gemini',
+        modelOrTool: 'gemini-3.1-pro-preview',
+        promptTokens: 100,
+        outputTokens: 100,
+      });
+
+      const res = await app.request('/articles/detail-model');
+      const html = await res.text();
+      expect(html).toContain('badge-model">claude-sonnet-4.5</span>');
+      expect(html).not.toContain('badge-model">gemini</span>');
     });
 
     it('article detail usage panel keeps older copilot-cli usage after many later events', async () => {

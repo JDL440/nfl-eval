@@ -12,6 +12,7 @@ import { renderLayout, escapeHtml, formatDate } from './layout.js';
 import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
 import type { Article, Stage } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
+import { formatModelLabel } from './article.js';
 
 export interface HomeData {
   config: AppConfig;
@@ -20,6 +21,7 @@ export interface HomeData {
   published: Article[];
   pipelineSummary: Record<number, { name: string; count: number }>;
   teams?: string[];
+  modelMap?: Map<string, string>;
 }
 
 export type PipelineSummary = Record<number, { name: string; count: number }>;
@@ -27,7 +29,7 @@ export type PipelineSummary = Record<number, { name: string; count: number }>;
 // ── Full page ────────────────────────────────────────────────────────────────
 
 export function renderHome(data: HomeData): string {
-  const { config, readyArticles, recentIdeas, published, pipelineSummary, teams = [] } = data;
+  const { config, readyArticles, recentIdeas, published, pipelineSummary, teams = [], modelMap } = data;
 
   const content = `
     <div class="dashboard-home">
@@ -48,7 +50,7 @@ export function renderHome(data: HomeData): string {
         </div>
         ${renderIdeaForm()}
         <div id="ideas-list" hx-get="/htmx/recent-ideas" hx-trigger="refreshIdeas from:body, sse:article_created" hx-swap="innerHTML">
-          ${renderRecentIdeas(recentIdeas)}
+          ${renderRecentIdeas(recentIdeas, modelMap)}
         </div>
       </section>
 
@@ -104,7 +106,7 @@ export function renderHome(data: HomeData): string {
           <p class="section-copy">Stage 7 stories stay front and center so the final review and publish handoff feel quick and deliberate.</p>
         </div>
         <div hx-get="/htmx/ready-to-publish" hx-trigger="refreshPublish from:body, sse:article_published" hx-swap="innerHTML">
-          ${renderReadyToPublish(readyArticles)}
+          ${renderReadyToPublish(readyArticles, modelMap)}
         </div>
       </section>
 
@@ -126,7 +128,7 @@ export function renderHome(data: HomeData): string {
           <p class="section-copy">Recent stories stay close at hand with clean timestamps and direct links back to the live post.</p>
         </div>
         <div hx-get="/htmx/published" hx-trigger="refreshPublished from:body, sse:article_published" hx-swap="innerHTML">
-          ${renderPublished(published)}
+          ${renderPublished(published, modelMap)}
         </div>
       </section>
       </div>
@@ -137,7 +139,14 @@ export function renderHome(data: HomeData): string {
 
 // ── Partials (HTML fragments) ────────────────────────────────────────────────
 
-export function renderReadyToPublish(articles: Article[]): string {
+function cardModelBadge(a: Article, modelMap?: Map<string, string>): string {
+  const raw = (modelMap?.get(a.id)) ?? a.llm_provider ?? null;
+  if (!raw) return '';
+  const label = formatModelLabel(raw);
+  return `<span class="badge badge-model">${escapeHtml(label)}</span>`;
+}
+
+export function renderReadyToPublish(articles: Article[], modelMap?: Map<string, string>): string {
   if (articles.length === 0) {
     return '<p class="empty-state">No articles ready to publish</p>';
   }
@@ -150,6 +159,7 @@ export function renderReadyToPublish(articles: Article[]): string {
         </div>
         <div class="card-meta">
           <span class="badge badge-stage badge-stage-7">Stage 7 · Publisher Pass</span>
+          ${cardModelBadge(a, modelMap)}
           <span class="meta-date">Updated ${formatDate(a.updated_at)}</span>
         </div>
         <div class="card-actions action-group">
@@ -188,7 +198,7 @@ export function renderPipelineSummary(summary: PipelineSummary): string {
     </div>`;
 }
 
-export function renderRecentIdeas(articles: Article[]): string {
+export function renderRecentIdeas(articles: Article[], modelMap?: Map<string, string>): string {
   if (articles.length === 0) {
     return '<p class="empty-state">No ideas yet — submit one above</p>';
   }
@@ -201,6 +211,7 @@ export function renderRecentIdeas(articles: Article[]): string {
         </div>
         <div class="card-meta">
           <span class="badge badge-stage badge-stage-1">Stage 1 · Idea</span>
+          ${cardModelBadge(a, modelMap)}
           <span class="meta-date">Created ${formatDate(a.created_at)}</span>
         </div>
         <div class="card-actions action-group">
@@ -211,7 +222,7 @@ export function renderRecentIdeas(articles: Article[]): string {
   </div>`;
 }
 
-export function renderPublished(articles: Article[]): string {
+export function renderPublished(articles: Article[], modelMap?: Map<string, string>): string {
   if (articles.length === 0) {
     return '<p class="empty-state">No recently published articles</p>';
   }
@@ -224,6 +235,7 @@ export function renderPublished(articles: Article[]): string {
         </div>
         <div class="card-meta">
           <span class="badge badge-stage badge-stage-8">Published</span>
+          ${cardModelBadge(a, modelMap)}
           <span class="meta-date">Published ${formatDate(a.published_at)}</span>
         </div>
         <div class="card-actions">
@@ -236,7 +248,7 @@ export function renderPublished(articles: Article[]): string {
   </div>`;
 }
 
-export function renderStageArticles(articles: Article[], stage: Stage): string {
+export function renderStageArticles(articles: Article[], stage: Stage, modelMap?: Map<string, string>): string {
   const stageName = STAGE_NAMES[stage] ?? `Stage ${stage}`;
   if (articles.length === 0) {
     return `<p class="empty-state">No articles in ${escapeHtml(stageName)}</p>`;
@@ -251,6 +263,7 @@ export function renderStageArticles(articles: Article[], stage: Stage): string {
         <div class="article-card card-compact">
           <a href="/articles/${escapeHtml(a.id)}" class="article-title">${escapeHtml(a.title)}</a>
           ${a.primary_team ? `<span class="badge badge-team">${escapeHtml(a.primary_team)}</span>` : ''}
+          ${cardModelBadge(a, modelMap)}
           <span class="meta-date">${formatDate(a.updated_at)}</span>
         </div>
       `).join('')}
@@ -269,7 +282,7 @@ function renderIdeaForm(): string {
 
 // ── Filtered articles partial ──────────────────────────────────────────────
 
-export function renderFilteredArticles(articles: Article[]): string {
+export function renderFilteredArticles(articles: Article[], modelMap?: Map<string, string>): string {
   if (articles.length === 0) {
     return '<p class="empty-state">No articles match your filters</p>';
   }
@@ -282,6 +295,7 @@ export function renderFilteredArticles(articles: Article[]): string {
         <span class="badge badge-stage badge-stage-${stage}">S${stage}</span>
         <span class="article-title">${escapeHtml(a.title)}</span>
         ${a.primary_team ? `<span class="badge badge-team">${escapeHtml(a.primary_team)}</span>` : ''}
+        ${cardModelBadge(a, modelMap)}
         <span class="meta-date">${formatDate(a.updated_at)}</span>
       </a>`;
     }).join('')}
