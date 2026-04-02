@@ -28,8 +28,10 @@ tools: [view, rg, vitest]
    - Recompute from `resolveEditorialControls(...)` so rows like `depth_level=2` + `content_profile='deep_dive'` promote to `technical_deep_dive` instead of staying stuck on default beat-analysis values.
 
 4. **If legacy state is a tuple, preserve that tuple on legacy writes.**
-   - When compatibility input is a pair like `content_profile + depth_level`, do not write the legacy columns back from preset defaults unless the caller explicitly edited preset-era fields.
-   - A single preset cannot safely round-trip every legacy tuple; writing back `legacy_depth_level` / `legacy_content_profile` from preset-derived controls can silently mutate valid inputs like `(accessible, 3)` or `(deep_dive, 2)`.
+    - When compatibility input is a pair like `content_profile + depth_level`, do not write the legacy columns back from preset defaults unless the caller explicitly edited preset-era fields.
+    - A single preset cannot safely round-trip every legacy tuple; writing back `legacy_depth_level` / `legacy_content_profile` from preset-derived controls can silently mutate valid inputs like `(accessible, 3)` or `(deep_dive, 2)`.
+    - If a route first resolves canonical preset-era fields and then the repository resolves again before insert/update, persist the caller's explicit legacy tuple separately on write or the second pass will collapse it back to preset defaults.
+    - `panel_shape` alone should not be treated as canonical editorial intent for deciding whether to preserve legacy compatibility values; it is an advanced override that can coexist with preserved `depth_level` / `content_profile`.
 
 5. **Test create and partial-update paths separately.**
    - Create is not automatically safe; it can silently collapse legacy tuples while still producing "reasonable" canonical preset fields.

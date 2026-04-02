@@ -2043,3 +2043,61 @@ An engineer maintaining schedules might think:
 - **Operator impact:** The same schedule can be created or edited through two different mental models, with different defaults and different feedback loops. That increases training cost, weakens trust in “saved” state, and leaves tests anchored to the legacy route family instead of the canonical HTMX settings flow.
 - **Follow-up guidance:** Future UX or Code work on schedule/editorial controls should audit `/config?tab=schedules` and `/schedules*` together, but take the Settings route family as product truth.
 
+
+---
+
+## Decision: ux-editorial-revision
+# UX editorial revision follow-up
+
+- **Date:** 2026-04-02
+- **Decision:** Preserve legacy schedule tuples (\depth_level\ + \content_profile\) as compatibility state on create/update when the operator is using legacy inputs, even while canonical split controls are re-derived and stored.
+- **Why:** preset defaults cannot safely round-trip tuples like \(2, deep_dive)\ or \(3, accessible)\, and a second repository normalization pass can silently rewrite the operator's intended schedule semantics.
+- **Implementation notes:**
+  - \src/types.ts\ now preserves explicit legacy compatibility values unless preset/profile/form/analytics intent was explicitly supplied.
+  - \src/db/repository.ts\ writes explicit legacy schedule fields back on create/update instead of re-deriving them from preset defaults.
+  - \src/dashboard/server.ts\ recomputes \
+ext_run_at\ for JSON schedule PATCH timing edits unless the caller explicitly supplies a replacement timestamp.
+  - \src/migration/migrate.ts\ drops stale \pipeline_board\ before ALTER work so repository schema sync can rebuild the canonical view.
+- **Validation:** \
+pm run v2:build\ and \
+pm run test -- tests/types.test.ts tests/dashboard/metadata-edit.test.ts tests/dashboard/schedules.test.ts tests/dashboard/settings-routes.test.ts tests/db/schedule.test.ts tests/db/repository.test.ts tests/migration/migrate.test.ts tests/pipeline/article-scheduler-service.test.ts\.
+- **Follow-up revision:** \/api/schedules/:id\ now explicitly returns 400 JSON for malformed editorial payloads (for example invalid \panel_constraints_json\) instead of leaking a 500, while keeping automatic \
+ext_run_at\ recomputation for real weekday/time edits.
+
+## Decision: lead-editorial-followups
+# Lead Editorial Follow-ups
+
+- **Date:** 2026-04-04
+- **Requested by:** Backend (Squad Agent)
+- **Decision:** APPROVE for the explicitly narrowed follow-up seams only.
+
+### Approved scope
+
+1. **Legacy default backfill on existing rows**
+   - \
+eedsEditorialBackfill()\ + \hasUntouchedEditorialDefaults()\ correctly detect additive-column defaults on old rows.
+   - \nsureArticleScheduleColumns()\ backfills canonical editorial columns from legacy \content_profile\ / \depth_level\ semantics.
+
+2. **\depth 2 + deep_dive => technical_deep_dive\ mapping**
+   - Current resolution path maps that legacy schedule combination to \	echnical_deep_dive\ with the expected canonical fields.
+
+3. **HTMX invalid JSON behavior**
+   - Settings schedule HTMX posts return a 400 HTML partial when \panelConstraintsJson\ is malformed.
+   - Article metadata HTMX edit already has the same 400 partial contract.
+
+4. **\PATCH /api/schedules/:id\ non-editorial preservation**
+   - Non-editorial JSON PATCH bodies do not trigger editorial re-resolution, so stored canonical overrides remain intact.
+
+5. **\POST /api/settings/article-schedules/:id\ preserves \
+ext_run_at\ on non-time edits**
+   - Config-form saves only recompute \
+ext_run_at\ when weekday or time actually changes.
+
+6. **Migration \pipeline_board\ parity**
+   - Migration now drops the legacy view and relies on repository schema initialization to recreate the canonical \pipeline_board\ view from \schema.sql\.
+   - Focused migration tests verify editorial columns and \depth_level = 4 => Feature\ parity.
+
+### Scope guard
+
+- This approval applies only to the six seams above.
+- It does **not** supersede the broader contract concern that legacy schedule tuples can still be rewritten when the system writes legacy fields back from preset-derived defaults.

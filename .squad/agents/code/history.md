@@ -35,6 +35,11 @@
 
 ## Learnings
 
+### Schedule-fix audit snapshot (2026-04-02)
+
+- Current evidence says the three audited seams are fixed on HEAD: `src\types.ts#resolveEditorialControls()` preserves mixed legacy schedule tuples when canonical controls are derived, `src\dashboard\server.ts` only recomputes JSON PATCH `next_run_at` when weekday/time changed and no explicit `next_run_at` was supplied, and `src\migration\migrate.ts` drops `pipeline_board` before `new Repository(dest)` recreates the current-schema view contract from `src\db\schema.sql`.
+- The strongest proving tests for this slice are `tests\types.test.ts`, `tests\db\schedule.test.ts`, `tests\dashboard\schedules.test.ts`, `tests\dashboard\settings-routes.test.ts`, and `tests\migration\migrate.test.ts`; that focused bundle passed together via `npm run test -- --run tests/types.test.ts tests/db/schedule.test.ts tests/dashboard/schedules.test.ts tests/dashboard/settings-routes.test.ts tests/migration/migrate.test.ts`.
+
 ### Editorial regression verification sweep (2026-04-02)
 
 - The current hotfix path for editorial regressions is now locked by focused tests across `tests\dashboard\metadata-edit.test.ts`, `tests\dashboard\schedules.test.ts`, `tests\dashboard\settings-routes.test.ts`, `tests\db\schedule.test.ts`, `tests\db\repository.test.ts`, and `tests\migration\migrate.test.ts`; use that slice before touching compatibility logic again.
@@ -212,3 +217,21 @@ Full audit report: `.squad/decisions/inbox/code-dashboard-depth-audit.md` — co
 
 ### UX Agent Coordination
 **Mobile dashboard shared-shell restyle:** UX agent is running parallel background+sync follow-up task to eliminate hamburger/menu overlap, horizontal overflow, and restyle toward premium design. Shared shell contracts: (1) `viewport-fit=cover` in HTML heads, (2) safe-area-aware spacing in `src\dashboard\public\styles.css`, (3) mobile header grid layout for `.shared-mobile-nav`. Both UX and Code agents verify outcomes via filesystem and test suite. Mobile restyle decision baseline is now recorded in decisions.md.
+- 2026-04-02 contradiction audit: schedule editorial compatibility currently resolves through src\types.ts::resolveEditorialControls, with schedule create/update persistence bridged in src\db\repository.ts (createArticleSchedule, updateArticleSchedule, resolveScheduleEditorialUpdate).
+- JSON schedule PATCH truth lives in src\dashboard\server.ts app.patch('/api/schedules/:id'): it recomputes next_run_at only when weekday_utc/time_of_day_utc change and the payload does not explicitly send next_run_at.
+- Migration parity for pipeline_board currently depends on src\migration\migrate.ts dropping the legacy view before new Repository(dest) recreates the authoritative schema/view; regression coverage is in tests\migration\migrate.test.ts.
+- Preferred audit validation slice for schedule/editorial regressions: tests\types.test.ts, tests\db\schedule.test.ts, tests\dashboard\schedules.test.ts, tests\dashboard\settings-routes.test.ts, and tests\migration\migrate.test.ts.
+
+## Scribe Orchestration Session (2026-04-02T14:29:30Z)
+
+- **Session:** Contradiction audit coordination and decisions inbox merge
+- **Orchestration:** Spawned three agents per manifest:
+  1. Code agent (background) — audit src/types.ts resolveEditorialControls, src/dashboard/server.ts PATCH /api/schedules/:id, src/migration/migrate.ts pipeline_board refresh
+  2. Code agent (follow-up) — narrow verdict after initial audit
+  3. Explore agent (read-only) — fast verification pass
+- **Scribe Work:**
+  - Wrote 3 orchestration logs at 2026-04-02T14-29-30Z-contradiction-audit-*.md
+  - Wrote session log at 2026-04-02T14-29-30Z-contradiction-audit.md
+  - Merged 2 inbox decisions into decisions.md (ux-editorial-revision, lead-editorial-followups)
+  - Deleted inbox files after merge
+- **Pending:** Agent completions for verdict consolidation
