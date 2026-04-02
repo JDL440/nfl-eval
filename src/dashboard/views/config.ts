@@ -178,6 +178,57 @@ function optionSelected(current: string, value: string): string {
   return current === value ? ' selected' : '';
 }
 
+const PANEL_CONSTRAINTS_SCHEMA_EXAMPLE = JSON.stringify({
+  min_agents: 2,
+  max_agents: 4,
+  required_agents: ['film'],
+  excluded_agents: ['odds'],
+  allow_team_agent_omission: false,
+  scope_mode: 'team',
+}, null, 2);
+
+function buildAdvancedToggleScript(containerSelector: string, detailsSelector: string): string {
+  return [
+    `const details = this.form.querySelector('${detailsSelector}');`,
+    'if (this.checked && details) details.open = true;',
+    `this.form.querySelectorAll('${containerSelector} select, ${containerSelector} textarea').forEach((field) => {`,
+    'field.disabled = !this.checked;',
+    "if (!this.checked) field.setCustomValidity('');",
+    '});',
+  ].join(' ');
+}
+
+function renderPanelConstraintsField(input: {
+  id: string;
+  name: string;
+  value: string;
+  disabled: boolean;
+}): string {
+  const validationScript = [
+    'const value = this.value.trim();',
+    "if (!value) { this.setCustomValidity(''); return; }",
+    'try {',
+    'const parsed = JSON.parse(value);',
+    "if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Panel constraints must be a JSON object.');",
+    "this.setCustomValidity('');",
+    '} catch (error) {',
+    "const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Enter a valid JSON object.';",
+    'this.setCustomValidity(message);',
+    '}',
+  ].join(' ');
+
+  return `
+    <div class="form-group form-group-full">
+      <label for="${escapeHtml(input.id)}">Panel constraints JSON</label>
+      <textarea id="${escapeHtml(input.id)}" name="${escapeHtml(input.name)}" rows="4" class="settings-json-input" aria-describedby="${escapeHtml(`${input.id}-hint`)} ${escapeHtml(`${input.id}-example`)}" oninput="${validationScript}"${input.disabled ? ' disabled' : ''}>${escapeHtml(input.value)}</textarea>
+      <p id="${escapeHtml(`${input.id}-hint`)}" class="form-hint">Optional hard min/max or required/excluded agent overrides. Must be a JSON object.</p>
+      <div id="${escapeHtml(`${input.id}-example`)}" class="settings-schema-example">
+        <span class="settings-schema-label">Schema example</span>
+        <pre class="settings-schema-code"><code>${escapeHtml(PANEL_CONSTRAINTS_SCHEMA_EXAMPLE)}</code></pre>
+      </div>
+    </div>`;
+}
+
 // ── Tab bar ─────────────────────────────────────────────────────────────────
 
 function renderTabBar(active: TabId): string {
@@ -413,41 +464,51 @@ function renderSchedulesTab(data: ConfigPageData): string {
                 </select>
               </div>
             </div>
-            <div class="form-group">
-              <label><input type="checkbox"${advancedChecked ? ' checked' : ''} onchange="this.form.querySelectorAll('[data-config-schedule-advanced] select, [data-config-schedule-advanced] textarea').forEach((field) => { field.disabled = !this.checked; })"> Override preset defaults</label>
-              <p class="form-hint">Legacy compatibility: ${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}</p>
-            </div>
-            <div class="settings-grid-2" data-config-schedule-advanced>
-              <div class="form-group">
-                <label>Reader profile</label>
-                <select name="readerProfile"${advancedChecked ? '' : ' disabled'}>
-                  ${renderReaderProfileOptions(editorial.reader_profile)}
-                </select>
+            <details class="settings-advanced"${advancedChecked ? ' open' : ''} data-config-schedule-advanced-panel>
+              <summary>
+                <span class="settings-advanced-title">Advanced editorial overrides</span>
+                <span class="settings-advanced-summary">Override the preset only when this schedule needs a different reader profile, panel shape, analytics mode, or explicit agent constraints.</span>
+              </summary>
+              <div class="settings-advanced-body">
+                <div class="form-group">
+                  <label class="settings-checkbox"><input type="checkbox"${advancedChecked ? ' checked' : ''} onchange="${buildAdvancedToggleScript('[data-config-schedule-advanced]', '[data-config-schedule-advanced-panel]')}"> <span>Override preset defaults</span></label>
+                  <p class="form-hint">Legacy compatibility: ${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}</p>
+                </div>
+                <div class="settings-grid-2" data-config-schedule-advanced>
+                  <div class="form-group">
+                    <label>Reader profile</label>
+                    <select name="readerProfile"${advancedChecked ? '' : ' disabled'}>
+                      ${renderReaderProfileOptions(editorial.reader_profile)}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Article form</label>
+                    <select name="articleForm"${advancedChecked ? '' : ' disabled'}>
+                      ${renderArticleFormOptions(editorial.article_form)}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Panel shape</label>
+                    <select name="panelShape"${advancedChecked ? '' : ' disabled'}>
+                      ${renderPanelShapeOptions(editorial.panel_shape)}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Analytics mode</label>
+                    <select name="analyticsMode"${advancedChecked ? '' : ' disabled'}>
+                      ${renderAnalyticsModeOptions(editorial.analytics_mode)}
+                    </select>
+                    <p class="form-hint">Casual-facing presets should stay explain-only unless the reason is explicit.</p>
+                  </div>
+                  ${renderPanelConstraintsField({
+                    id: `schedule-panel-constraints-${schedule.id}`,
+                    name: 'panelConstraintsJson',
+                    value: editorial.panel_constraints_json ?? '',
+                    disabled: !advancedChecked,
+                  })}
+                </div>
               </div>
-              <div class="form-group">
-                <label>Article form</label>
-                <select name="articleForm"${advancedChecked ? '' : ' disabled'}>
-                  ${renderArticleFormOptions(editorial.article_form)}
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Panel shape</label>
-                <select name="panelShape"${advancedChecked ? '' : ' disabled'}>
-                  ${renderPanelShapeOptions(editorial.panel_shape)}
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Analytics mode</label>
-                <select name="analyticsMode"${advancedChecked ? '' : ' disabled'}>
-                  ${renderAnalyticsModeOptions(editorial.analytics_mode)}
-                </select>
-                <p class="form-hint">Casual-facing presets should stay explain-only unless the reason is explicit.</p>
-              </div>
-              <div class="form-group form-group-full">
-                <label>Panel constraints JSON</label>
-                <textarea name="panelConstraintsJson" rows="3"${advancedChecked ? '' : ' disabled'}>${escapeHtml(editorial.panel_constraints_json ?? '')}</textarea>
-              </div>
-            </div>
+            </details>
             <dl class="settings-kv">
               <div><dt>Next run</dt><dd><code>${escapeHtml(schedule.next_run_at)}</code></dd></div>
               <div><dt>Last run</dt><dd>${escapeHtml(schedule.last_run_at ?? 'Never')}</dd></div>
@@ -514,40 +575,50 @@ function renderSchedulesTab(data: ConfigPageData): string {
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label><input type="checkbox" onchange="this.form.querySelectorAll('[data-config-add-advanced] select, [data-config-add-advanced] textarea').forEach((field) => { field.disabled = !this.checked; })"> Override preset defaults</label>
-          <p class="form-hint">Tuesday-style slots map cleanly to Casual Explainer. Thursday-style analysis usually starts with Technical Deep Dive.</p>
-        </div>
-        <div class="settings-grid-2" data-config-add-advanced>
-          <div class="form-group">
-            <label for="schedule-reader-profile">Reader profile</label>
-            <select id="schedule-reader-profile" name="readerProfile" disabled>
-              ${renderReaderProfileOptions('casual')}
-            </select>
+        <details class="settings-advanced" data-config-add-advanced-panel>
+          <summary>
+            <span class="settings-advanced-title">Advanced editorial overrides</span>
+            <span class="settings-advanced-summary">Start with a preset, then open this section only when the slot needs custom editorial controls or explicit panel constraints.</span>
+          </summary>
+          <div class="settings-advanced-body">
+            <div class="form-group">
+              <label class="settings-checkbox"><input type="checkbox" onchange="${buildAdvancedToggleScript('[data-config-add-advanced]', '[data-config-add-advanced-panel]')}"> <span>Override preset defaults</span></label>
+              <p class="form-hint">Tuesday-style slots map cleanly to Casual Explainer. Thursday-style analysis usually starts with Technical Deep Dive.</p>
+            </div>
+            <div class="settings-grid-2" data-config-add-advanced>
+              <div class="form-group">
+                <label for="schedule-reader-profile">Reader profile</label>
+                <select id="schedule-reader-profile" name="readerProfile" disabled>
+                  ${renderReaderProfileOptions('casual')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="schedule-article-form">Article form</label>
+                <select id="schedule-article-form" name="articleForm" disabled>
+                  ${renderArticleFormOptions('brief')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="schedule-panel-shape">Panel shape</label>
+                <select id="schedule-panel-shape" name="panelShape" disabled>
+                  ${renderPanelShapeOptions('news_reaction')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="schedule-analytics-mode">Analytics mode</label>
+                <select id="schedule-analytics-mode" name="analyticsMode" disabled>
+                  ${renderAnalyticsModeOptions('explain_only')}
+                </select>
+              </div>
+              ${renderPanelConstraintsField({
+                id: 'schedule-panel-constraints',
+                name: 'panelConstraintsJson',
+                value: '',
+                disabled: true,
+              })}
+            </div>
           </div>
-          <div class="form-group">
-            <label for="schedule-article-form">Article form</label>
-            <select id="schedule-article-form" name="articleForm" disabled>
-              ${renderArticleFormOptions('brief')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="schedule-panel-shape">Panel shape</label>
-            <select id="schedule-panel-shape" name="panelShape" disabled>
-              ${renderPanelShapeOptions('news_reaction')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="schedule-analytics-mode">Analytics mode</label>
-            <select id="schedule-analytics-mode" name="analyticsMode" disabled>
-              ${renderAnalyticsModeOptions('explain_only')}
-            </select>
-          </div>
-          <div class="form-group form-group-full">
-            <label for="schedule-panel-constraints">Panel constraints JSON</label>
-            <textarea id="schedule-panel-constraints" name="panelConstraintsJson" rows="3" disabled></textarea>
-          </div>
-        </div>
+        </details>
         <div class="form-group">
           <label><input type="checkbox" name="enabled" value="true" checked> Enabled</label>
         </div>

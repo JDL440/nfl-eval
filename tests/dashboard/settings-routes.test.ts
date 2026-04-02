@@ -293,8 +293,7 @@ describe('Settings API Routes', () => {
         prompt: 'Find the best current Seahawks storyline for a broad audience.',
         weekdayUtc: '2',
         timeOfDayUtc: '14:00',
-        contentProfile: 'accessible',
-        depthLevel: '1',
+        presetId: 'casual_explainer',
         providerMode: 'default',
         providerId: '',
         enabled: 'true',
@@ -328,8 +327,7 @@ describe('Settings API Routes', () => {
         prompt: 'Find the best Packers analytical angle this week.',
         weekdayUtc: '4',
         timeOfDayUtc: '15:30',
-        contentProfile: 'deep_dive',
-        depthLevel: '3',
+        presetId: 'technical_deep_dive',
         providerMode: 'default',
         providerId: '',
       });
@@ -342,6 +340,26 @@ describe('Settings API Routes', () => {
       expect(updated?.team_abbr).toBe('GB');
       expect(updated?.content_profile).toBe('deep_dive');
       expect(updated?.depth_level).toBe(3);
+    });
+
+    it('returns a 400 partial for invalid panel constraints JSON from the config form', async () => {
+      const res = await formPost(app, '/api/settings/article-schedules', {
+        name: 'Seahawks Tuesday Accessible',
+        teamAbbr: 'SEA',
+        prompt: 'Find the best current Seahawks storyline for a broad audience.',
+        weekdayUtc: '2',
+        timeOfDayUtc: '14:00',
+        presetId: 'casual_explainer',
+        panelConstraintsJson: '{bad json',
+        providerMode: 'default',
+        providerId: '',
+        enabled: 'true',
+      });
+
+      expect(res.status).toBe(400);
+      const html = await res.text();
+      expect(html).toContain('Invalid panel_constraints_json');
+      expect(repo.listArticleSchedules()).toHaveLength(0);
     });
 
     it('preserves next_run_at when schedule timing is unchanged', async () => {

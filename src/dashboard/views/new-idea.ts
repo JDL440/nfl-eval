@@ -197,7 +197,7 @@ export function renderNewIdeaPage(config: {
   const providerField = llmProviders.length > 0
     ? `
         <div class="form-group">
-          <label for="idea-provider">LLM Provider <span class="form-hint">(saved on the article and reused for later LLM stages)</span></label>
+          <label for="idea-provider">Model Selection <span class="form-hint">(saved on the article and reused for later LLM stages)</span></label>
           <select id="idea-provider" name="provider" class="input input-full select">
             ${llmProviders.map((provider) => `
               <option value="${escapeHtml(provider.id)}"${provider.default ? ' selected' : ''}>
@@ -269,73 +269,6 @@ export function renderNewIdeaPage(config: {
             </div>
           </div>
 
-          <div class="form-group form-checkbox">
-            <label>
-              <input
-                type="checkbox"
-                id="use-editorial-overrides"
-                ${advancedChecked ? 'checked' : ''}
-                onchange="toggleEditorialOverrides(this.checked)">
-              Override preset defaults
-              <span class="form-hint">(for narrative exceptions, non-default panel shapes, or heavier analytics)</span>
-            </label>
-          </div>
-
-          <div id="editorial-override-fields" data-editorial-advanced-fields>
-            <div class="settings-grid-2">
-              <div class="form-group">
-                <label for="reader-profile">Reader profile</label>
-                <select id="reader-profile" name="readerProfile" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
-                  ${renderReaderProfileOptions(editorial.reader_profile)}
-                </select>
-                <div class="form-hint">Casual presets should keep stats explained, not assumed.</div>
-              </div>
-              <div class="form-group">
-                <label for="article-form">Article form</label>
-                <select id="article-form" name="articleForm" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
-                  ${renderArticleFormOptions(editorial.article_form)}
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="panel-shape">Panel shape</label>
-                <select id="panel-shape" name="panelShape" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
-                  ${renderPanelShapeOptions(editorial.panel_shape)}
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="analytics-mode">Analytics mode</label>
-                <select id="analytics-mode" name="analyticsMode" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
-                  ${renderAnalyticsModeOptions(editorial.analytics_mode)}
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="panel-min">Panel min</label>
-                <input id="panel-min" name="panelMin" type="number" min="1" max="6" class="input input-full" placeholder="Auto"${advancedChecked ? '' : ' disabled'}>
-              </div>
-              <div class="form-group">
-                <label for="panel-max">Panel max</label>
-                <input id="panel-max" name="panelMax" type="number" min="1" max="6" class="input input-full" placeholder="Auto"${advancedChecked ? '' : ' disabled'}>
-              </div>
-              <div class="form-group">
-                <label for="required-agents">Required agents</label>
-                <input id="required-agents" name="requiredAgents" type="text" class="input input-full" placeholder="cap, analytics"${advancedChecked ? '' : ' disabled'}>
-              </div>
-              <div class="form-group">
-                <label for="excluded-agents">Excluded agents</label>
-                <input id="excluded-agents" name="excludedAgents" type="text" class="input input-full" placeholder="fantasy"${advancedChecked ? '' : ' disabled'}>
-              </div>
-            </div>
-
-            <div class="form-group form-checkbox">
-              <label>
-                <input type="checkbox" id="allow-team-agent-omission" name="allowTeamAgentOmission"${advancedChecked ? '' : ' disabled'}>
-                Allow panels without a primary team agent
-              </label>
-            </div>
-          </div>
-
-          ${providerField}
-
           <div class="form-group">
             <label>Pin Expert Agents <span class="form-hint">(optional — these agents will always be included on the panel)</span></label>
             <div id="selected-agents" class="team-chips"></div>
@@ -345,8 +278,6 @@ export function renderNewIdeaPage(config: {
             <input type="hidden" id="pinned-agents" name="pinnedAgents" value="">
           </div>
 
-          <div id="form-status" class="form-status" style="display:none"></div>
-
           <div class="form-group form-checkbox">
             <label>
               <input type="checkbox" id="auto-advance" name="autoAdvance">
@@ -354,6 +285,79 @@ export function renderNewIdeaPage(config: {
               <span class="form-hint">(stops at Stage 7 for review)</span>
             </label>
           </div>
+
+          <details class="detail-section" id="idea-advanced-section"${advancedChecked ? ' open' : ''}>
+            <summary>Advanced settings <span class="form-hint">(editorial overrides, panel constraints, and model selection)</span></summary>
+
+            <div class="form-group form-checkbox" style="margin-top:1rem">
+              <label>
+                <input
+                  type="checkbox"
+                  id="use-editorial-overrides"
+                  ${advancedChecked ? 'checked' : ''}
+                  onchange="toggleEditorialOverrides(this.checked)">
+                Override preset defaults
+                <span class="form-hint">(for narrative exceptions, non-default panel shapes, or heavier analytics)</span>
+              </label>
+            </div>
+
+            <div id="editorial-override-fields" data-editorial-advanced-fields>
+              <div class="settings-grid-2">
+                <div class="form-group">
+                  <label for="reader-profile">Reader profile</label>
+                  <select id="reader-profile" name="readerProfile" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                    ${renderReaderProfileOptions(editorial.reader_profile)}
+                  </select>
+                  <div class="form-hint">Casual presets should keep stats explained, not assumed.</div>
+                </div>
+                <div class="form-group">
+                  <label for="article-form">Article form</label>
+                  <select id="article-form" name="articleForm" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                    ${renderArticleFormOptions(editorial.article_form)}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="panel-shape">Panel shape</label>
+                  <select id="panel-shape" name="panelShape" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                    ${renderPanelShapeOptions(editorial.panel_shape)}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="analytics-mode">Analytics mode</label>
+                  <select id="analytics-mode" name="analyticsMode" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                    ${renderAnalyticsModeOptions(editorial.analytics_mode)}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="panel-min">Panel min</label>
+                  <input id="panel-min" name="panelMin" type="number" min="1" max="6" class="input input-full" placeholder="Auto"${advancedChecked ? '' : ' disabled'}>
+                </div>
+                <div class="form-group">
+                  <label for="panel-max">Panel max</label>
+                  <input id="panel-max" name="panelMax" type="number" min="1" max="6" class="input input-full" placeholder="Auto"${advancedChecked ? '' : ' disabled'}>
+                </div>
+                <div class="form-group">
+                  <label for="required-agents">Required agents</label>
+                  <input id="required-agents" name="requiredAgents" type="text" class="input input-full" placeholder="cap, analytics"${advancedChecked ? '' : ' disabled'}>
+                </div>
+                <div class="form-group">
+                  <label for="excluded-agents">Excluded agents</label>
+                  <input id="excluded-agents" name="excludedAgents" type="text" class="input input-full" placeholder="fantasy"${advancedChecked ? '' : ' disabled'}>
+                </div>
+              </div>
+
+              <div class="form-group form-checkbox">
+                <label>
+                  <input type="checkbox" id="allow-team-agent-omission" name="allowTeamAgentOmission"${advancedChecked ? '' : ' disabled'}>
+                  Allow panels without a primary team agent
+                </label>
+              </div>
+            </div>
+
+            ${providerField}
+          </details>
+
+          <div id="form-status" class="form-status" style="display:none"></div>
 
           <div class="form-actions">
             <a href="/" class="btn btn-secondary">Cancel</a>

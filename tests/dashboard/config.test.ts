@@ -169,5 +169,8 @@ describe('Config Viewer Page', () => {
     expect(html).toContain('Add Schedule');
     expect(html).toContain('Seahawks Tuesday Accessible');
     expect(html).toContain('Use runtime default');
+    expect(html).toContain('Advanced editorial overrides');
+    expect(html).toContain('Schema example');
+    expect(html).toContain('&quot;min_agents&quot;: 2');
   });
 });

@@ -185,6 +185,30 @@ describe('renderNewIdeaPage', () => {
     expect(html).toContain('<strong>copilot-cli</strong> = GitHub Copilot CLI agent');
   });
 
+  it('moves editorial overrides and model selection into a bottom advanced section', () => {
+    const html = renderNewIdeaPage({
+      labName: 'NFL Lab',
+      llmProviders: [
+        { id: 'lmstudio', name: 'LM Studio (Local)', default: true },
+        { id: 'copilot-cli', name: 'GitHub Copilot CLI' },
+      ],
+    });
+
+    const advancedIndex = html.indexOf('id="idea-advanced-section"');
+    const pinnedAgentsIndex = html.indexOf('id="pinned-agents"');
+    const autoAdvanceIndex = html.indexOf('id="auto-advance"');
+    const advancedCloseIndex = html.indexOf('</details>', advancedIndex);
+    const advancedSection = html.slice(advancedIndex, advancedCloseIndex);
+
+    expect(advancedSection).toContain('<summary>Advanced settings');
+    expect(advancedSection).toContain('name="readerProfile"');
+    expect(advancedSection).toContain('name="articleForm"');
+    expect(advancedSection).toContain('name="allowTeamAgentOmission"');
+    expect(advancedSection).toContain('name="provider"');
+    expect(advancedIndex).toBeGreaterThan(pinnedAgentsIndex);
+    expect(advancedIndex).toBeGreaterThan(autoAdvanceIndex);
+  });
+
   it('embeds trace-aware error rendering for failed idea creation', () => {
     const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('const renderIdeaErrorStatus =');
@@ -514,6 +538,9 @@ Writer + Analyst + Editor
       expect(html).toContain('name="provider"');
       expect(html).toContain('LM Studio (Local) (default)');
       expect(html).toContain('GitHub Copilot CLI');
+      const advancedIndex = html.indexOf('id="idea-advanced-section"');
+      const advancedSection = html.slice(advancedIndex, html.indexOf('</details>', advancedIndex));
+      expect(advancedSection).toContain('name="provider"');
     });
 
     it('generates idea via LLM and extracts title', async () => {
