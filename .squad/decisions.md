@@ -766,3 +766,1280 @@ Do not frame the current state as a single “depth control” rollout. The repo
 - `tests\dashboard\schedules.test.ts`
 - `tests\dashboard\server.test.ts`
 
+
+
+---
+
+# Merged from Inbox (2026-04-02T14:03:57Z)
+
+## Decision: code-editorial-followup
+# Code — Editorial follow-up compatibility contract
+
+- **Date:** 2026-04-02
+- **Decision:** Treat the all-default editorial bundle (`beat_analysis` / `engaged` / `standard` / `auto` / `normal`, with no `panel_constraints_json`) as legacy migration state when it conflicts with stored `depth_level` / `content_profile`, and preserve richer canonical editorial fields on non-editorial schedule PATCHes.
+- **Why:** Additive column migrations can silently stamp old rows with defaults before compatibility backfill runs, and unrelated PATCHes can erase intentional overrides if they re-resolve from legacy fallback fields.
+- **Files:** `src\db\repository.ts`, `src\dashboard\server.ts`, `tests\db\schedule.test.ts`, `tests\dashboard\schedules.test.ts`, `tests\dashboard\settings-routes.test.ts`, `tests\migration\migrate.test.ts`
+
+
+## Decision: code-schedules-audit
+# Code — schedules UX audit judgment (2026-04-02)
+
+## Decision
+
+Treat `/config?tab=schedules` as the canonical operator editing surface for recurring article schedules. Treat `/schedules` as a compatibility/detail surface until it is converged or retired.
+
+## Why
+
+- `src\dashboard\views\config.ts` renders the preset-first schedule editor used in the current admin surface, with HTMX mutation flows and inline result handling.
+- `src\dashboard\server.ts` backs that surface with `/api/settings/article-schedules*`, which uses shared normalization plus admin-style error handling and `HX-Redirect`.
+- `src\dashboard\views\schedules.ts` uses the same editorial resolver, so it is not fully stale at the data-model layer, but it still diverges in operator contract: snake_case fields, full-page redirects, different defaults, no create-time enabled toggle, and different provider controls.
+- Only `/schedules/:id` currently exposes per-schedule run history, so retirement should preserve that visibility elsewhere before removal.
+
+## Evidence
+
+- `src\dashboard\views\config.ts:368-455,469-555`
+- `src\dashboard\views\schedules.ts:53-95,131-245,247-295`
+- `src\dashboard\server.ts:1300-1375,2954-3153`
+- `tests\dashboard\schedules.test.ts:62-183`
+
+
+## Decision: lead-depth-panel-review
+# Lead review — depth/panel redesign approval
+
+- **Status:** Not approved yet.
+- **Why:** The branch makes strong progress on canonical editorial controls, but two functional gaps still block approval:
+  1. multi-team intake is not persisted end to end (`src\pipeline\idea-generation.ts` still builds context from `teams[0]`, stores `primary_team: teams[0]`, and `src\db\repository.ts#createArticle()` serializes `teams` from only `primary_team`);
+  2. schedules still ship two live operator contracts over the same model (`src\dashboard\views\config.ts` + `/api/settings/article-schedules` using camelCase/defaults, and `src\dashboard\views\schedules.ts` + `/schedules` using snake_case/different defaults).
+- **Scope guard:** This is not a rejection of the typed editorial model, repository migration, article metadata work, model-policy wiring, or compose-panel prompt updates. It is a hold on rollout completeness until cross-team persistence and schedule-surface convergence are resolved.
+- **Validation evidence:** Focused vitest coverage passed for dashboard/db/pipeline/model-policy suites, but those tests do not prove multi-team persistence or cross-surface schedule parity.
+
+
+## Decision: lead-editorial-audit
+# Lead decision inbox — editorial-state audit follow-up
+
+- **Status:** proposed
+- **Date:** 2026-04-03
+- **Scope:** dashboard editorial-state redesign; schedules, article metadata, home filtering, regression coverage
+
+## Decision
+
+Do **not** treat the current dashboard/editorial redesign as functionally complete until three seams are closed together:
+
+1. preserve canonical schedule overrides on partial `/api/schedules/:id` PATCH updates,
+2. make preset changes hydrate advanced editorial fields on article/config/legacy-schedule editors the way new-idea already does,
+3. add regression coverage against the **rendered form contracts**, not only legacy compatibility payloads.
+
+## Why
+
+- The API schedule PATCH path can erase `panel_shape`, `analytics_mode`, and `panel_constraints_json` on non-editorial updates because it recomputes from legacy defaults.
+- Article/config/schedule preset-first forms can persist stale advanced values under a new preset label because only intake syncs preset changes into hidden override fields.
+- Existing dashboard tests are mostly compatibility-path checks, so the suite can stay green while the live preset-first UX drifts.
+
+## Evidence anchors
+
+- `src\dashboard\server.ts:3133-3152`
+- `src\types.ts:231-259`
+- `src\dashboard\views\new-idea.ts:438-457`
+- `src\dashboard\views\article.ts:176-236`
+- `src\dashboard\views\config.ts:396-448,497-548`
+- `src\dashboard\views\schedules.ts:197-239`
+- `tests\dashboard\settings-routes.test.ts:289-345`
+- `tests\dashboard\metadata-edit.test.ts:129-158`
+- `tests\dashboard\schedules.test.ts:112-132`
+
+
+## Decision: lead-editorial-followup-review
+# Lead inbox — editorial follow-up prep review
+
+## Constraint to preserve
+
+Keep `pipeline_board` as a single schema contract across live bootstrap and v1→v2 migration paths.
+
+- `src\db\schema.sql` now defines `pipeline_board` with canonical editorial columns (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`) in addition to legacy depth fields.
+- `src\migration\migrate.ts` still drops and recreates `pipeline_board` with the older league-only projection.
+
+If follow-up code touches migration or schema/view compatibility, preserve one rule: **a migrated database must expose the same `pipeline_board` columns and meanings as a freshly initialized database**. Either mirror schema changes into the migration view every time, or stop hand-maintaining a divergent migration-specific view definition.
+
+
+## Decision: lead-editorial-followups
+# Lead Editorial Follow-ups
+
+- **Date:** 2026-04-04
+- **Requested by:** Backend (Squad Agent)
+- **Decision:** REJECT current editorial compatibility landing until the schedule legacy contract is fixed.
+
+## Why rejected
+
+1. **Legacy schedule tuple collapse is still live.**
+   - `resolveEditorialControls()` plus `createArticleSchedule()` / `updateArticleSchedule()` still writes legacy fields back from preset-derived defaults.
+   - Result: valid legacy combinations are mutated on save.
+   - Concrete failures observed:
+     - `(content_profile='accessible', depth_level=3)` collapses to `(deep_dive, 2)`
+     - `(content_profile='deep_dive', depth_level=2)` promotes to `(deep_dive, 3)`
+
+2. **JSON schedule PATCH is not parity-safe yet.**
+   - `/api/schedules/:id` preserves advanced editorial fields on non-editorial PATCH bodies, but it still does **not** recompute `next_run_at` when `weekday_utc` / `time_of_day_utc` change.
+   - Form-based schedule editors handle this more safely, so the API contract remains split.
+
+## Approval conditions
+
+- Preserve submitted legacy schedule tuples on legacy create/update paths; only derive canonical preset-era columns from them.
+- Add regressions for at least:
+  - legacy create preserving `(accessible,2)`
+  - legacy create preserving `(accessible,3)`
+  - legacy update preserving submitted tuple while updating canonical fields
+  - JSON `PATCH /api/schedules/:id` recomputing `next_run_at` when timing changes
+  - HTMX invalid panel-constraint JSON returning a 400 partial on settings schedule forms
+  - migration `pipeline_board` parity with canonical schema view columns + `depth_level = 4 => Feature`
+
+## Scope guard
+
+- This rejection is about the compatibility contract only.
+- Form-level preset UX, helper-input ergonomics, and broader schedule-surface convergence remain follow-up work, not blockers for this specific approval once the contract seams above are closed.
+
+
+## Decision: lead-editorial-state-audit
+# Lead editorial-state audit
+
+## Decision
+Treat partial schedule updates as non-editorial by default. Any schedule route that does not actually receive editorial fields must preserve existing canonical editorial columns (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, `panel_constraints_json`) instead of rebuilding them from legacy compatibility fields. Preset-first forms that expose optional overrides must also hydrate advanced fields from the currently selected preset before those fields are enabled or submitted.
+
+## Why
+- `src\dashboard\server.ts:3133-3152` currently always calls `parseEditorialRequest()` inside `PATCH /api/schedules/:id`, so a name-only or timing-only patch can erase stored overrides and rewrite schedule editorial state from fallback `depth_level` / `content_profile`.
+- `src\dashboard\views\new-idea.ts:438-457,529-533` already demonstrates the safe preset-sync interaction; `src\dashboard\views\article.ts:178-236`, `src\dashboard\views\schedules.ts:197-238`, and `src\dashboard\views\config.ts:395-449,496-549` do not, which leaves preset-change + later-override flows vulnerable to stale subordinate-field submission.
+- `src\types.ts` and `src\db\repository.ts` already model preset-era controls as canonical and legacy fields as derived compatibility state, so letting non-editorial edits rewrite canonical columns from legacy fallbacks breaks the intended contract.
+
+## Consequence
+Future editorial-control rollout work should reject any partial-update route that normalizes canonical editorial state when the request did not touch editorial inputs, and reject any preset-first form that can submit stale advanced values after a preset change.
+
+
+## Decision: lead-review-findings
+# UX-Focused Code Review — Lead Findings (2026-04-02T06:15:00Z)
+
+**Scope:** schedules UX vs canonical editorial state, hidden data loss, field-name mismatches, workflow inconsistencies, regression coverage.
+
+---
+
+## 1. SCHEDULES UX MISALIGNED FROM NEW-IDEA DEFAULTS (Critical)
+
+**Finding:** New-idea form defaults to `beat_analysis` preset (engaged, standard, normal analytics), but schedule new-form defaults to `casual_explainer` (casual, brief, explain-only). Both surfaces control the same editorial state model, but ship different starting assumptions.
+
+**Evidence:**
+- `src\dashboard\views\new-idea.ts:188` — `buildEditorialUiState({ preset_id: 'beat_analysis' })`
+- `src\dashboard\views\schedules.ts:144` — preset defaults to `casual_explainer`
+- Both feed identical `parseEditorialRequest()` in `src\dashboard\server.ts:1027–1056`
+
+**Why it matters:** Recurring schedules created via `/config?tab=schedules` will silently adopt `explain_only` analytics mode and "casual" reader profile instead of the default orchestration assumption (engaged, standard). Users moving between intake (new-idea) and recurring-schedule config will see different editorial defaults, creating hidden migration friction.
+
+**UX decision impact:** ("preset-first migration") requires unified default across all intake surfaces. Schedule form should follow new-idea default.
+
+---
+
+## 2. PANEL CONSTRAINTS HELPER INPUTS IGNORED WHEN JSON FIELD EXISTS (High Priority)
+
+**Finding:** `src\dashboard\server.ts:1003–1026` — `parsePanelConstraintsInput()` checks if `panelConstraintsJson` textarea has content _first_; if it does, function returns that JSON immediately without reading helper inputs (min_agents, max_agents, required_agents, etc.). Users editing helper controls on an existing schedule with a non-empty JSON field will have edits silently no-op.
+
+**Evidence:**
+- `src\dashboard\server.ts:1004–1006` — `if (typeof rawJson === 'string' && rawJson.trim()) { return rawJson.trim(); }`
+- Lines 1008–1025 — Helper parsing code never executes if JSON field is non-empty
+- `src\dashboard\views\config.ts:400` and `src\dashboard\views\schedules.ts:238` — Both render the textarea + helper fields in the same form
+
+**Why it matters:** Contradicts the UI promise of dual edit paths (helpers OR raw JSON). Users may think they've saved panel constraint overrides (min agents, scope mode) when in fact the existing JSON textarea wins. This is a "helper-controls-vs-raw-JSON priority inversion" on an admin form, flagged in Lead history as a risky pattern.
+
+**Validation:** Form UX allows both paths but runtime enforces raw-JSON-wins silently.
+
+---
+
+## 3. SCHEDULES AND NEW-IDEA FIELD-NAME INCONSISTENCY (Medium Priority)
+
+**Finding:** Schedule form uses camelCase input names (`presetId`, `readerProfile`, `articleForm`, `panelShape`, `analyticsMode`) while article metadata edits use snake_case (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`). Both eventually feed `parseEditorialRequest()` which normalizes via `getBodyValue()`, so persistence works, but the inconsistency signals UX/backend seam misalignment.
+
+**Evidence:**
+- `src\dashboard\views\schedules.ts:198, 216, 220, 224, 228` — camelCase in schedule form
+- `src\dashboard\server.ts:1035–1049` — `parseEditorialRequest` handles both via `getBodyValue(...keys)` lookup
+- `src\dashboard\views\article.ts` metadata edit form uses snake_case names
+
+**Why it matters:** Operator confusion when reading form HTML or debugging request bodies. Future form rewrites may not notice the dual convention and create dead code paths.
+
+---
+
+## 4. SCHEDULE SURFACE PARITY FAILURE — CONVERGED UX DECISION NOT FULLY APPLIED (Medium Priority)
+
+**Finding:** Two separate schedule UX surfaces persist with misaligned semantics:
+  1. `/config?tab=schedules` (HTMX, preset-first, uses editorial-controls.ts helpers)
+  2. `/schedules/new` and `/schedules/:id/edit` (full-page forms, legacy raw persist)
+
+The UX decision ("preset-first migration") requires surface convergence and explicit governance of whether schedule creation is preset-aware or raw-depth-aware. Current state: both routes exist, each with its own form implementation and defaults, creating two contracts over one model.
+
+**Evidence:**
+- `src\dashboard\views\schedules.ts:131–245` — Full-page schedule form
+- `src\dashboard\views\config.ts:328–400` — HTMX schedule card form
+- Both target different POST endpoints (`/schedules/new` vs `/api/settings/article-schedules`)
+- Different field defaults (lines 144 vs line 396 preset picker)
+
+**Why it matters:** The decisions log explicitly requires "Phase 2—converge schedules (choose canonical surface, align field names/defaults/validation/persistence)." Current branch ships both surfaces, which contradicts that decision scope and leaves operator choice undefined.
+
+**Test gap:** No cross-surface parity tests for schedule creation. Tests that create schedules use one surface (likely config tab based on routes.test patterns), so regressions in the other surface would not be caught.
+
+---
+
+## 5. IMPLICIT LEGACY PERSISTENCE WHEN ONLY DEPTH/PROFILE CHANGE (Medium Priority)
+
+**Finding:** Article metadata edit route (`/htmx/articles/:id/edit-meta`) allows changing `depth_level` or `content_profile` alone (lines 1089–1117 condition checks for any editorial field change). When only legacy fields change, `parseEditorialRequest()` recomputes `preset_id`, `article_form`, and related preset-era columns via `resolveEditorialControls()`. This is intentional per Code decision (recompute to avoid stale metadata), but the roundtrip is hidden from UI and may not be obvious to operators editing depth/profile that the preset ID also changes.
+
+**Evidence:**
+- `src\dashboard\server.ts:1089–1117` — Condition catches any preset/depth/profile change
+- `src\dashboard\server.ts:1104–1116` — All editorial columns updated via `parseEditorialRequest()`
+- The recomputation is correct per Code decision but _implicit_ in the form
+
+**Why it matters:** If an operator edits only `depth_level` to 3 on a `casual_explainer`-preset article, the system will recompute `preset_id` to a derived value that may surprise the operator. The form does not show what preset ID will result from the depth change. This is correct behavior but lack of visibility could trigger confusion ("Why did my preset change?").
+
+**Validation:** The recomputation logic is working as intended per Code decision; this is an observability/transparency concern, not a correctness bug.
+
+---
+
+## 6. MISSING REGRESSION COVERAGE FOR SCHEDULE DEFAULTS (Medium Priority)
+
+**Finding:** The depth/panel redesign introduced new editorial columns (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`) and changed how schedules store them. No regression tests verify that:
+  - Schedule creation via `/schedules/new` (full-page form) stores the correct defaults
+  - Schedule creation via `/config?tab=schedules` (HTMX form) stores the correct defaults
+  - Both surfaces produce identical editorial state for the same input
+  - Editing helper controls (min agents, required agents) on an existing schedule persists correctly when JSON field is empty
+
+**Evidence:**
+- `tests\dashboard\schedules.test.ts` and `tests\dashboard\settings-routes.test.ts` exist but would need specific assertions for default divergence and field-persistence parity
+- No test verifies the `parsePanelConstraintsInput()` priority rule (JSON field wins)
+
+**Why it matters:** Current test suite validates that articles can be created and schedules can be created/edited, but does not validate that the two intake surfaces converge on the same defaults or that helper-input persistence works correctly.
+
+---
+
+## Summary for Coordination
+
+Four findings require immediate attention:
+
+1. **Unify schedule defaults** with new-idea form (preset should be `beat_analysis`, not `casual_explainer`)
+2. **Fix helper-input priority** in `parsePanelConstraintsInput()` — read helpers first, JSON second, or require explicit choice
+3. **Resolve schedule-surface parity** — apply the "converge schedules" phase from UX decision
+4. **Add regression coverage** for defaults, field persistence, and cross-surface parity
+
+All findings align with existing team decisions (Code: "compatibility-first preset model", UX: "preset-first migration"). No new design work is required; implementation is applying stated decisions completely.
+
+
+## Decision: lead-schedules-audit
+---
+decision_id: lead-schedules-audit-2026-04-03
+status: findings-report
+created_at: 2026-04-03T13:00:00Z
+audience: Backend (Squad Agent)
+title: "Architectural Review: Schedule Management Routes & Views"
+---
+
+# Lead Architecture Audit: Schedule Management Contract Divergence
+
+**Scope:** Views contract (render/form/input), server handlers (POST/PATCH), persistence (repo/schema), test alignment  
+**Focus:** Canonical authority, operator-visible defaults, cross-surface consistency, test-vs-reality alignment  
+**Judgment:** DERIVED vs. CANONICAL vs. STALE status for `/schedules` surface
+
+---
+
+## Part 1: Product Truth Architecture — Where Things Live
+
+### Storage / Persistence Truth
+
+**Database Schema** (`src\db\schema.sql:278–300`)
+- `article_schedules` table stores: `preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, `panel_constraints_json` (split editorial fields) **AND** legacy `depth_level`, `content_profile` (derived compatibility fields)
+- Both families of columns populated on every insert/update
+- Schema validates: `preset_id` NOT NULL DEFAULT 'beat_analysis'
+
+**Repository Layer** (`src\db\repository.ts`)
+- `createArticleSchedule()` and `updateArticleSchedule()` persist both legacy and split fields
+- No schema-level enforcement of consistency (both can drift independently)
+
+### Type System Truth
+
+**Canonical Editorial Model** (`src\types.ts:61–74`)
+```typescript
+export interface EditorialControls {
+  preset_id: EditorialPresetId;
+  reader_profile: ReaderProfile;
+  article_form: ArticleForm;
+  panel_shape: PanelShape;
+  analytics_mode: AnalyticsMode;
+  panel_constraints_json: string | null;
+}
+
+export interface ResolvedEditorialControls extends EditorialControls {
+  panel_constraints: PanelConstraints | null;
+  legacy_depth_level: DepthLevel;           // ← derived
+  legacy_content_profile: ArticleScheduleContentProfile;  // ← derived
+}
+```
+
+**Resolution Function** (`src\types.ts:218–261` `resolveEditorialControls()`)
+- Takes mixed input (preset_id + depth_level + content_profile + reader_profile + article_form + ...)
+- **Line 231–233:** If `preset_id` provided and valid, uses it; else derives from legacy depth/profile via `presetFromLegacy()`
+- **Line 235–246:** Derives remaining fields from preset defaults, allowing optional overrides
+- **Line 249–260:** Always re-derives `legacy_depth_level` from `article_form` and `legacy_content_profile` from `reader_profile` + `analytics_mode`
+
+**Key insight:** Preset is the source of truth; depth/profile are always derived **outbound**. But input can arrive in either form.
+
+### View/Form Truth
+
+**Schedules view** (`src\dashboard\views\schedules.ts:136–152`)
+- Defaults new schedule to: `preset_id: 'casual_explainer'`, `depth_level: 1`, `content_profile: 'accessible'`
+- Line 154: Checks `hasEditorialOverrides()` to hide/show advanced fields
+
+**Config/settings view** (`src\dashboard\views\config.ts:400–449`, form-rendering for schedules tab)
+- Uses camelCase field names (`presetId`, `weekdayUtc`, `timeOfDayUtc`, etc.)
+- Does not hardcode a default preset; inherits from database state or falls back to `beat_analysis`
+
+**New-idea view** (`src\dashboard\views\new-idea.ts:438–457`)
+- Defaults preset to `beat_analysis` (engaged reader, standard form, normal analytics)
+
+### Request Handler Truth
+
+**Config/HTMX route** (`src\dashboard\server.ts:1300–1339` POST `/api/settings/article-schedules`)
+- Line 1303: `parseEditorialRequest(body, { defaultDepth: 2, contentProfile: null })`
+- Falls back to depth 2 (standard) → resolves to `beat_analysis` when no preset given
+- Returns HTTP 200 with HTMX `HX-Redirect` header (line 1333)
+- Line 1326: Records audit trail via `repo.recordSettingsAudit()`
+
+**Legacy schedules route** (`src\dashboard\server.ts:2963–3002` POST `/schedules/new`)
+- Line 2981–2984: `parseEditorialRequest(body, { defaultDepth: 1, contentProfile: 'accessible' })`
+- Falls back to depth 1 (casual) → resolves to `casual_explainer` when no preset given
+- Line 3001: Returns HTTP 302 redirect (full-page, no HTMX)
+- NO audit logging
+
+**Shared helper: parsePanelConstraintsInput()** (`src\dashboard\server.ts:1003–1026`)
+- Line 1004–1007: **If JSON textarea populated, returns immediately without reading helper inputs**
+- Line 1008–1025: Only parses helper inputs (min_agents, required_agents, scope_mode) if JSON is empty/falsy
+- **Both config and schedules routes use this function** (called via parseEditorialRequest, line 1050)
+
+### Test Truth
+
+**tests\dashboard\schedules.test.ts:62–82** (POST /api/schedules)
+- Creates schedule with **explicit** depth_level and content_profile
+- Does **not** test default preset when none specified
+- Does **not** assert derived article_form value matches depth_level
+
+---
+
+## Part 2: Five Audit Questions — Direct Answers
+
+### Question 1: What /schedules exposes that other surfaces do not, or vice versa?
+
+**Exposure difference: Everything is identical**
+
+| Control | `/schedules` view | `/config?tab=schedules` view | 
+|---------|-------------------|-------------------------------|
+| Preset selector | ✅ Yes (dropdown) | ✅ Yes (dropdown) |
+| Reader profile override | ✅ Yes (advanced) | ✅ Yes (advanced) |
+| Article form override | ✅ Yes (advanced) | ✅ Yes (advanced) |
+| Panel shape override | ✅ Yes (advanced) | ✅ Yes (advanced) |
+| Analytics mode override | ✅ Yes (advanced) | ✅ Yes (advanced) |
+| Panel constraints JSON | ✅ Yes (textarea) | ✅ Yes (textarea) |
+| Provider override | ✅ Yes (dropdown) | ✅ Yes (dropdown) |
+| Base prompt | ✅ Yes (textarea) | ✅ Yes (textarea) |
+
+**Verdict:** NO ASYMMETRIC EXPOSURE. Both surfaces expose identical controls for editing the same data. Difference is **not in what can be edited, but in HOW it's edited** (naming convention, interaction model, defaults).
+
+---
+
+### Question 2: Defaults that differ in operator-visible ways?
+
+**Default preset divergence (CONFIRMED):**
+
+| Surface | Create route | Default preset | Line # | Fallback depth |
+|---------|-----------|------------------|--------|---|
+| New-idea form | (articles table) | `beat_analysis` | implicit via resolveEditorialControls | 2 |
+| Schedules view | `/schedules/new` | `casual_explainer` | schedules.ts:144 | 1 |
+| Config view | `/api/settings/article-schedules` | `beat_analysis` | server.ts:1303 defaultDepth:2 | 2 |
+
+**Operator impact:** 
+- Submit new-idea form with no preset selection → saves `beat_analysis` (engaged, standard form, normal analytics)
+- Submit schedules form with no preset selection → saves `casual_explainer` (casual, brief form, explain-only)
+- Submit config form with no preset selection → saves `beat_analysis`
+
+**Same repository, different editorial intent per surface. Operator creating recurring schedule via `/schedules` gets different defaults than operator manually creating idea.**
+
+**Time-of-day default:**
+- Schedules form: hardcoded `time_of_day_utc: '09:00'` (line schedules.ts:139)
+- Config form: uses submitted value, no hardcode
+- New-idea: N/A (articles don't have recurring time)
+
+**Verdict:** YES, defaults differ materially and are operator-visible. Preset choice determines reader sophistication (casual vs engaged) and article length (brief vs standard), which are fundamental content decisions.
+
+---
+
+### Question 3: Whether legacy depth/profile labels are misleading now that feature/depth-4 exists?
+
+**Depth-to-form mapping** (`src\types.ts:189–199` `deriveDepthLevelFromArticleForm()`)
+```
+brief      → depth 1
+standard   → depth 2
+deep       → depth 3
+feature    → depth 4
+```
+
+**Label display** (`editorial-controls.ts:17–22`)
+```
+1: 'Casual Fan'
+2: 'The Beat'
+3: 'Deep Dive'
+4: 'Feature'
+```
+
+**Where rendered:** `src\dashboard\views\schedules.ts:111` 
+```html
+<div class="form-hint">
+  ${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · 
+  ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}
+</div>
+```
+
+**Misleading aspect:** The labels are **accurate but semantically overloaded**. "Depth 4" suggests a numeric progression (deeper → more depth), but depth 4 actually signals **a different article structure** (`feature` form) distinct from depth 3 (`deep` form). 
+
+- Depth 1 → Depth 2: progression (casual → beat)
+- Depth 2 → Depth 3: progression (beat → deep dive)
+- **Depth 3 → Depth 4: structural shift** (deep dive form → feature form, not a continuity)
+
+**Where it matters:** 
+- Operators may assume "go from depth 3 to 4" is a linear progression, not a form-family change
+- Schedule table renders depth + profile labels but doesn't show overrides (panel_shape, analytics_mode are hidden), so "3 — Deep Dive" could actually be `panel_shape: 'auto', analytics_mode: 'metrics_forward'` with no visual hint
+
+**Verdict:** Misleading in the sense that depth 4 is not a linear continuation; it's a distinct editorial choice. **Labels are accurate**, but **semantic risk** for future maintainers who may assume linearity. **Low operator impact** because labels are correct; labels don't hide data, they just don't explain the model fully.
+
+---
+
+### Question 4: HTMX consequence where /config behaves as live canonical surface but /schedules behaves as stale full-page contract?
+
+**Interaction model difference (CONFIRMED):**
+
+**Config surface (`/api/settings/article-schedules`)**
+- Method: POST (form submission)
+- Response handler line 1333: `c.header('HX-Redirect', '/config?tab=schedules')`
+- Response code: HTTP 200
+- Behavior: HTMX POST succeeds; browser navigates to HX-Redirect; page section updates; no full reload
+- State preservation: Scroll position, tab selection, filter state remain
+
+**Schedules surface (`/schedules/:id/edit`)**
+- Method: POST (form submission)
+- Response handler line 3001: `return c.redirect('/schedules')`
+- Response code: HTTP 302
+- Behavior: Full-page POST + redirect cycle; browser reloads entire page
+- State loss: Scroll position lost, must navigate back manually
+
+**Consequence for operators:**
+1. **Create schedule via config:** Instant feedback, stay on settings page, no disruption → feels **live**
+2. **Create schedule via schedules:** Full page reload, navigate away, lose context → feels **stale/slow**
+
+**The "stale" aspect:** The `/schedules` surface gives delayed feedback (full page reload), while `/config` surface provides immediate HTMX feedback. Operators perceive `/schedules` as slower and less responsive, even though both write to same database and complete instantly.
+
+**Verdict:** YES. `/config` is live (HTMX-native, immediate visual feedback), `/schedules` is stale-feeling (full-page contract, reload delay). Not a correctness issue, but **UX/perception issue** that compounds defaults divergence. Operator who edits in config sees instant result; same operator who edits in schedules experiences reload wait.
+
+---
+
+### Question 5: Whether tests\dashboard\schedules.test.ts aligns with product truth or legacy depth semantics?
+
+**Test inventory and analysis:**
+
+```typescript
+it('POST /api/schedules creates a schedule', ...) {
+  body: {
+    name: 'Tuesday Test',
+    weekday_utc: 2,
+    time_of_day_utc: '09:00',
+    team_abbr: 'sea',
+    prompt: 'Seahawks latest news',
+    depth_level: 1,
+    content_profile: 'accessible'
+  }
+  // ✅ Asserts: depth_level === 1
+  // ✅ Asserts: content_profile === 'accessible'
+  // ❌ Missing: assertion that preset_id was set
+  // ❌ Missing: assertion that reader_profile was set
+  // ❌ Missing: assertion that article_form was set
+})
+
+it('PATCH /api/schedules/:id updates a schedule', ...) {
+  PATCH with { name: 'New', depth_level: 3 }
+  // ✅ Asserts: depth_level === 3
+  // ✅ Asserts: article_form === 'deep' (derived from depth 3)
+  // ❌ Missing: assert that preset_id was recalculated
+  // ❌ Missing: assert that reader_profile, analytics_mode match preset defaults
+  // ❌ Missing: assert that preset overrides survive name-only PATCH
+})
+```
+
+**Alignment assessment:**
+
+**Tests validate:** Legacy depth/profile API contract (create with snake_case fields, read them back)
+
+**Tests do NOT validate:** 
+1. Product truth (when no preset given, what preset should be set?)
+2. Derivation (depth 3 → article_form 'deep' is asserted, but is it derived from preset or directly from depth?)
+3. Cross-surface defaults (no test comparing `/schedules/new` defaults to `/api/schedules` defaults to `/api/settings/article-schedules`)
+4. Override persistence (no test asserts that depth-only PATCH preserves preset overrides)
+5. Helper-input priority (no test asserts that JSON textarea wins over helper inputs)
+
+**Verdict:** Tests align with **legacy depth semantics** (snake_case, depth as input), NOT **product truth** (preset-first model, depth as derived output). 
+
+**Example of gap:** Test creates schedule with `depth_level: 1, content_profile: 'accessible'`, then asserts `depth_level === 1`. But product truth says "depth 1 should resolve to preset_id='casual_explainer', reader_profile='casual', article_form='brief'". Test doesn't assert any of the split fields. **If preset resolution broke, test would still pass.**
+
+**Test is green but doesn't validate canonical editorial state.** It validates the API surface (depth persistence) but not the product model (preset resolution).
+
+---
+
+## Part 3: Architectural Judgment
+
+### Where Product Truth Lives (Summary Table)
+
+| Layer | Authority | Evidence |
+|-------|-----------|----------|
+| **Schema** | Split model (preset + legacy) | `src\db\schema.sql:288` DEFAULT 'beat_analysis'; both columns persist |
+| **Types** | Preset-first, with derivation | `src\types.ts:218–261` resolveEditorialControls() always derives depth from preset |
+| **Views** | Divergent defaults | schedules.ts:144 ('casual_explainer') vs. new-idea implicit ('beat_analysis') |
+| **Routes** | Dual contracts | `/api/settings/*` (depth:2) vs. `/schedules/*` (depth:1) |
+| **Tests** | Legacy-only | schedules.test.ts asserts depth/profile, not presets |
+
+**Canonical authority should be:** Types (resolveEditorialControls) + schema (preset NOT NULL), but views/routes contradict each other.
+
+---
+
+### Three-Way Route Comparison
+
+#### /schedules Surface (Legacy Full-Page)
+- **Field naming:** snake_case (`preset_id`, `weekday_utc`, `content_profile`, `depth_level`)
+- **Create default preset:** `casual_explainer` (line schedules.ts:144)
+- **Create default depth:** 1 (line schedules.ts:142)
+- **Response type:** HTTP 302 redirect (line server.ts:3001)
+- **Interaction:** Full-page POST + reload
+- **Audit trail:** NO (no recordSettingsAudit call in schedules route)
+- **Preset awareness:** YES (renders override checkboxes)
+- **Helper input priority:** JSON > helpers (line server.ts:1005-1007)
+
+#### /config?tab=schedules Surface (HTMX Settings-Driven)
+- **Field naming:** camelCase (`presetId`, `weekdayUtc`, `panelConstraintsJson`, `depthLevel`)
+- **Create default preset:** `beat_analysis` (implied from defaultDepth:2, line server.ts:1303)
+- **Create default depth:** 2 (line server.ts:1303)
+- **Response type:** HX-Redirect (line server.ts:1333)
+- **Interaction:** HTMX POST + inline update
+- **Audit trail:** YES (line server.ts:1326 recordSettingsAudit)
+- **Preset awareness:** YES (same controls)
+- **Helper input priority:** JSON > helpers (same function)
+
+#### /api/schedules Surface (JSON API)
+- **Field naming:** snake_case (same as legacy /schedules)
+- **Create default preset:** `casual_explainer` (line server.ts:3111-3112 defaultDepth:1)
+- **Create default depth:** 1
+- **Response type:** JSON 201 (line server.ts:3130)
+- **Interaction:** JSON request/response
+- **Audit trail:** NO
+- **Preset awareness:** YES
+- **Helper input priority:** JSON > helpers
+
+**Commonality:** All three share `parseEditorialRequest()` (line 1027) and `parsePanelConstraintsInput()` (line 1003) functions.
+
+**Divergence:** Defaults differ; naming differs; interaction model differs; audit trail differs.
+
+---
+
+## Final Judgment: /schedules Status
+
+### Canonical, Derived, or Stale?
+
+**VERDICT: /schedules is DERIVED** (legacy full-page view of shared data model)
+
+**Reasons:**
+
+1. **Not canonical:** Uses legacy snake_case naming. Canonical would be camelCase (modern convention used in editorial-controls, new-idea, article views). **Evidence:** schedules.ts form names vs. config.ts form names.
+
+2. **Not canonical:** Creates with depth-1 default instead of depth-2. Canonical default would align with board/product decision (beat_analysis). **Evidence:** schedules.ts:142-144 vs. server.ts:1303.
+
+3. **Not canonical:** No audit trail. Canonical for settings would record decisions via `recordSettingsAudit()`. **Evidence:** server.ts:1326 (config) vs. server.ts:2963-3002 (schedules, no audit).
+
+4. **Not canonical:** Full-page interaction model (302 redirect). Canonical for settings would be HTMX-native (HX-Redirect, inline feedback). **Evidence:** server.ts:1333 (HX-Redirect) vs. 3001 (redirect).
+
+5. **Not stale:** Data persists correctly to same schema. Queries return identical results. Not "broken" or "abandoned."
+
+6. **Is derived:** Derives from same repository/types. Reads/writes same schema. Applies same business logic.
+
+**Therefore:** `/schedules` is a valid **secondary interface** to canonical data, but it is NOT the **primary canonical authority**. The canonical surface is `/config?tab=schedules` (HTMX, camelCase, audit-logged, beat_analysis defaults, settings-integrated).
+
+---
+
+## Recommendation for Backend
+
+**Do not retire /schedules yet.** Operators may prefer full-page workflows. But:
+
+1. **Mark as legacy:** Add JSDoc `@deprecated` and inline comment explaining config is canonical.
+
+2. **Align defaults or document:** Decide:
+   - Should /schedules default to beat_analysis (align with product intent)?
+   - Or should new-idea default to casual_explainer (align with /schedules)?
+   - Current divergence creates hidden friction.
+
+3. **Fix helper-input priority:** `parsePanelConstraintsInput()` (line 1005–1007) should not silently discard helper edits. 
+   - Option A: Return validation error if JSON + helpers both populated
+   - Option B: Prefer helpers if JSON empty
+   - Option C: Document that JSON always wins (current behavior)
+
+4. **Unify naming convention:** Migrate schedules.ts to camelCase (matches editorial-controls convention). Keep both in parseBody via `getBodyValue()` for backward compat.
+
+5. **Add parity tests:** Create `tests\dashboard\schedules-parity.test.ts` asserting:
+   - Default preset matches across all three surfaces
+   - Helper edits persist when JSON empty
+   - Helper edits are silenced when JSON exists (or validation error)
+   - Cross-surface create/edit round-trips preserve preset overrides
+
+6. **Add audit logging:** Config route logs settings changes (good); schedules route should too for operator accountability.
+
+---
+
+## Files to Review in Follow-Up
+
+- `src\dashboard\views\schedules.ts` (defaults at line 136-152, field names in form)
+- `src\dashboard\server.ts` (routes 1300, 2963, 3091; helpers 993, 1003, 1027)
+- `src\dashboard\views\config.ts` (form field names, defaults)
+- `tests\dashboard\schedules.test.ts` (add preset/parity assertions)
+- `src\types.ts` (resolveEditorialControls logic, derivation direction)
+
+---
+
+## Summary: Evidence-Based Findings
+
+| Finding | Impact | Evidence | Line # |
+|---------|--------|----------|--------|
+| **Default preset diverges** | HIGH | schedules.ts:144 vs. server.ts:1303 | 144, 1303 |
+| **Helper-inputs silenced by JSON** | CRITICAL | parsePanelConstraintsInput returns JSON first | 1005–1007 |
+| **Field naming asymmetry** | MEDIUM | form input names snake_case vs camelCase | schedules.ts, config.ts |
+| **Interaction model diverges** | MEDIUM | HX-Redirect vs. 302 redirect | 1333, 3001 |
+| **No audit trail on legacy route** | MEDIUM | recordSettingsAudit only on config route | 1326 vs. absent |
+| **Tests don't assert presets** | MEDIUM | schedules.test.ts only checks depth/profile | 62–82 |
+| **Depth 4 semantics overloaded** | LOW | Feature is different form, not just deeper | types.ts:189–199 |
+
+
+
+## Decision: ux-depth-panel-implementation
+# UX Decision — Depth/Panel Dashboard Implementation
+
+- Date: 2026-04-02
+- Agent: UX
+
+## Decision
+
+Implement the dashboard migration as **preset-first with opt-in advanced overrides** across all operator-facing editorial surfaces:
+
+1. Preset is the primary control on new idea, article metadata, config schedules, standalone schedules, and home filtering.
+2. Advanced controls stay available, but are disabled until the operator explicitly checks **Override preset defaults**.
+3. Legacy `depth_level` / `content_profile` remain compatibility outputs derived through `resolveEditorialControls()` and `parseEditorialRequest()`, not primary UI concepts.
+
+## Why
+
+If preset and advanced fields are always submitted together, a newly selected preset is silently overridden by the old explicit axis values. Disabling advanced inputs until opt-in keeps the simple path trustworthy, preserves migration compatibility, and prevents stale override drift between UI and server handlers.
+
+## Impacted paths
+
+- `src/dashboard/views/new-idea.ts`
+- `src/dashboard/views/article.ts`
+- `src/dashboard/views/home.ts`
+- `src/dashboard/views/config.ts`
+- `src/dashboard/views/schedules.ts`
+- `src/dashboard/server.ts`
+
+## Notes
+
+- Tuesday-style slots map cleanly to `casual_explainer`.
+- Thursday-style analytical slots map cleanly to `technical_deep_dive`.
+- Casual-facing copy should explicitly discourage unexplained analytics rather than hoping legacy depth semantics imply it.
+
+
+## Decision: ux-review-findings
+# UX Review Findings — Editorial State Inconsistencies
+
+**Date:** 2025-01-XX  
+**Reviewer:** UX  
+**Scope:** Dashboard UI for editorial metadata intake, filtering, scheduling, and publishing
+
+---
+
+## CRITICAL FINDINGS
+
+### 1. **Schedules UX Exposes 4 Depth Values While Intake & Filtering Expose Only 3**
+
+**Impact:** Data loss risk on round-trip UX; user confusion about what "Feature" means.
+
+- **new-idea.ts** (line 263-269): `renderPresetOptions()` exposes only 4 presets (`casual_explainer`, `beat_analysis`, `technical_deep_dive`, `narrative_feature`). No explicit depth level selector.
+- **schedules.ts** (line 131-244): Form default and rendering show `depth_level: 1..4` with legacy label fallback (line 111: `formatLegacyDepthLabel()`). The form initializes `depth_level: 1` (line 142) but allows 1-4 via the database API.
+- **types.ts** (line 77-82): `DEPTH_LEVEL_MAP` collapses depth 4 onto `deep_dive`, same bucket as depth 3. This is the stated architectural problem.
+- **home.ts**: No depth filter selector. Home only filters by preset (line 82-88), not by legacy depth.
+
+**Evidence chain:**
+- When user creates via new-idea form: they pick a preset (which maps to article_form, which derives depth_level).
+- If that article is later scheduled via schedules form: the UI shows `formatLegacyDepthLabel(depth_level)` — depth 4 will say "Feature," depth 3 says "Deep Dive," but pipeline treats them identically (line 81 in types.ts).
+- If user tries to filter home articles by depth: no such filter exists. Only preset filter (which is read-only from creation time).
+
+**Recommended action:** Align surfaces to expose the same set of values. Either:
+1. Stop offering depth 4 in schedule forms, or
+2. Add depth filter to home search, or  
+3. Split presentation: show preset in intake/schedules, show derived legacy labels read-only.
+
+---
+
+### 2. **Hidden Data Loss: `depth_level` and `content_profile` Both Persist but UI Maps Them Inconsistently**
+
+**Impact:** When editorial controls are overridden, derived fields may not sync. Metadata edit form can stale panel sizing.
+
+- **article.ts** (removed in diff): Old form had explicit depth level selector (1-4 with word-count hints).
+- **new article creation** (server.ts): When creating via new-idea, `depth_level` is derived from `article_form` (types.ts line 189-199), `content_profile` is derived from `reader_profile` + `analyticsMode` (types.ts line 202-208).
+- **schedules persistence** (types.ts line 567-589): ArticleSchedule stores all six fields: `depth_level`, `content_profile`, AND the new four-axis controls (`reader_profile`, `article_form`, `panel_shape`, `analytics_mode`).
+- **editorial-controls.ts** (line 40-61): `buildEditorialUiState()` resolves legacy fields ON READ. If user changes preset in schedules form, `legacy_depth_level` is re-derived, potentially differing from what was saved.
+
+**Scenario where data desync occurs:**
+1. Schedule created with preset `technical_deep_dive` → auto-derives `depth_level: 3`, `content_profile: 'deep_dive'`.
+2. Admin manually edits schedule: changes `analytics_mode` to `explain_only` (keeping everything else).
+3. On re-render, `deriveContentProfileFromControls()` (line 202-208) now returns `'accessible'`, but `depth_level` stays 3.
+4. User sees `"3 — Deep Dive · Accessible"` hint (line 199), but runtime behavior may expect `depth_dive` content profile.
+
+**Recommended action:** 
+- Store a `precomputed_legacy_depth` and `precomputed_legacy_profile` snapshot in DB on schedule save (alongside the new four-axis fields).
+- OR: Make editorial-controls.ts derivation deterministic per preset, not per individual axis (i.e., don't let `analyticsMode` alone flip content_profile if preset choice is already explicit).
+
+---
+
+### 3. **Preset Label Mismatch: "narrative_feature" Preset But "Feature" Depth Display**
+
+**Impact:** Semantic confusion; preset names don't match UI labels.
+
+- **editorial-controls.ts** (line 21): `LEGACY_DEPTH_LABELS[4] = 'Feature'`.
+- **types.ts** (line 34-38): `EditorialPresetId` enum has `'narrative_feature'` as the label.
+- **schedules.ts** (line 110): Renders preset via `formatPresetLabel(s.preset_id)` from types.ts, which will show "Narrative Feature", not "Feature".
+- But editorial-controls.ts line 103-104 shows in form hint: "Legacy compatibility stays at {depth label} · {profile}" — so if preset is `narrative_feature`, the hint will say "Feature" (derived from depth 4).
+
+**User perspective:** In schedules table, they see "Narrative Feature" (preset name), but in the form hint they see "Feature" (legacy depth name). No clear signal that these are the same thing.
+
+**Recommended action:**
+- Rename preset to match: either `feature` or `narrative_feature_deep_dive`, OR
+- In schedules table row, render both the preset name AND the legacy depth label for clarity (e.g., "Narrative Feature (Feature, Deep Dive)").
+
+---
+
+### 4. **Metadata Edit Form Removed: No Path to Change Depth After Stage 1**
+
+**Impact:** Users cannot adjust article ambition/panel sizing after intake; forced to re-submit or manually edit DB.
+
+- **article.ts diff**: Old form (deleted in this changeset) had explicit depth selector with warning: _"Changing depth level after Stage 1 may desync prompts/panel sizing"_ (line 127 in old code).
+- **New article.ts** (currently): No depth/preset controls in `renderArticleMetaEditForm()`. Only title, subtitle, teams.
+- **server.ts**: Routes still accept PATCH to `/api/articles/:id` with `depth_level` and `preset_id` (grep shows these are whitelisted fields), but the UI has no form to edit them.
+
+**Scenario:** User realizes depth 2 idea should be depth 3 after seeing discussion prompt. Can't change it in UI. Must use API or contact admin.
+
+**Recommended action:**
+- Either restore preset/form selector in article edit form (with strong warning), OR
+- Document that depth changes post-Stage-1 require API calls, not UI (and surface that in help text).
+
+---
+
+### 5. **Inconsistent Field Names Across Surfaces (camelCase vs snake_case)**
+
+**Impact:** Client-side form submission logic must translate; harder to debug, easier to miss fields.
+
+- **server.ts**: Accepts both `depthLevel` (camelCase) and `depth_level` (snake_case) in form bodies via `getBodyValue(body, 'depthLevel', 'depth_level')` (grep output).
+- **new-idea.ts** (line 263): Form field `name="presetId"` (camelCase).
+- **schedules.ts** (line 198): Form field `name="preset_id"` (snake_case).
+- **editorial-controls.ts**: Internal helper `buildLegacyFields()` returns `{ depthLevel, contentProfile }` (camelCase).
+
+**Consequence:** When new-idea form POSTs, it sends `{ presetId, articleForm, readerProfile, ... }` (camelCase). Server must normalize. When schedules form POSTs, field names are snake_case. This is error-prone; if a field is forgotten in the translation, it silently doesn't update.
+
+**Recommended action:**
+- Standardize on one convention in form submission (recommend snake_case to match DB).
+- Validate all expected fields in server route and reject if missing, rather than silently defaulting.
+
+---
+
+## LOWER-PRIORITY FINDINGS
+
+### 6. **Panel Constraints JSON Not Exposed in New-Idea Form**
+
+- **schedules.ts** (line 236-238): Advanced panel constraints JSON editor exists in schedule form.
+- **new-idea.ts** (line 284-327): No such field in idea form, even though editorial-controls.ts supports it.
+- User cannot pin specific agents or enforce multi-team scope at idea time; must manually edit schedule later.
+- _Impact: Moderate._ Presets handle common cases; expert users can override in schedules. No data loss.
+
+---
+
+### 7. **No Preset Reordering / Prioritization for Intake**
+
+- **types.ts** (line 84-89): `EDITORIAL_PRESET_ORDER` is hardcoded: `casual_explainer` → `beat_analysis` → `technical_deep_dive` → `narrative_feature`.
+- **editorial-controls.ts** (line 72-76): Renders presets in order.
+- If org's most common preset changes (e.g., narratives become most popular), form UX doesn't adapt.
+- _Impact: Low._ Order can be re-hardcoded if needed. No runtime issue.
+
+---
+
+## SUMMARY TABLE: Which Surfaces Expose Which Values?
+
+| Surface | depth_level (1-4) | preset | article_form | reader_profile | panel_shape | content_profile | analytics_mode |
+|---------|-------------------|--------|--------------|-----------------|-------------|-----------------|-----------------|
+| **new-idea** form | Derived only | ✅ Explicit | Conditional override | Conditional | Conditional | Derived | Conditional |
+| **schedules** form | ✅ Explicit (default 1) | ✅ Explicit | Conditional | Conditional | Conditional | Derived | Conditional |
+| **home** filters | ❌ No filter | ✅ Filter exists | ❌ No filter | ❌ No filter | ❌ No filter | ❌ No filter | ❌ No filter |
+| **article** detail (old) | ✅ Shown, editable | — | — | — | — | — | — |
+| **article** detail (new) | ✅ Shown (read-only badge) | ✅ Shown badge | — | — | — | — | — |
+| **DB schema** | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted |
+
+**Key:** ✅ = Exposed / ❌ = Not exposed / Derived = Computed on read
+
+---
+
+## TEST COVERAGE GAPS
+
+1. **Round-trip UX test:** Create article via new-idea with preset X → navigate to schedules → verify depth/profile match.
+2. **Metadata edit test:** When schedule depth changes from 3→2, verify that derived content_profile is recalculated and saved correctly.
+3. **Filter consistency test:** Filter home articles by preset; verify that no depth-4 articles are silently hidden.
+
+---
+
+## NEXT STEPS FOR ARCHITECTURE TEAM
+
+1. Decide on canonical editorial state: Is it the four-axis model (reader_profile, article_form, panel_shape, analytics_mode) or the legacy (depth_level, content_profile)?
+2. If migrating to four-axis: migrate all form surfaces (intake, schedules, article detail) to expose four-axis controls; deprecate depth_level from UI payloads (can remain in DB as derived field for backward compat).
+3. If keeping legacy: remove the four-axis fields from schedule UI to reduce confusion; derive them server-side only.
+4. Update tests to verify round-trip consistency: creation → schedule → publish, all fields stable.
+
+
+## Decision: ux-schedules-audit-detailed
+---
+title: Schedule Routes Audit — Operator Mental Models & Evidence
+author: UX
+date: 2026-04-03
+status: audit-complete
+tags: [dashboard, schedules, htmx, dual-contract, canonical-vs-stale, mental-models]
+---
+
+# UX Audit: /schedules vs /config?tab=schedules — Five Questions Answered
+
+## Charter Context
+UX owns dashboard UI, HTMX views, user experience, and frontend work. This audit focuses on **what operators see and interact with**, not internal wiring. The five critical questions below are answered with **operator-visible evidence** and file/line citations.
+
+---
+
+## Question 1: What /schedules Exposes That Other Surfaces Do Not?
+
+### Answer
+`/schedules` exposes a **full-page isolated schedule management workflow** that other surfaces deliberately do not provide. This creates mental-model risk because operators experience two entirely different interaction patterns for the same task.
+
+| Exposure | `/schedules` | `/config?tab=schedules` | Operator Experience |
+|----------|-----------|--------|---------|
+| **Scope** | Schedules only (full page) | Schedules + providers + secrets (tabbed page) | "Settings page" (integrated) vs "Schedule management page" (standalone) |
+| **Discovery** | Standalone in nav (unclear) | Nav → Settings → Schedules tab | Schedules discoverable from settings; settings always discoverable |
+| **Edit affordance** | Click row → full page edit form | Inline editable card in-place | "I'm making a change" (full context) vs "I'm tweaking a setting" (contextual) |
+| **Recent runs** | Visible table (schedules.ts:247–296) | NOT visible | Debug-able (see execution history) vs blind (no visibility) |
+| **Provider selection** | Single dropdown (schedules.ts:166–171) | Batch provider profiles on same page | "Pick a provider" vs "Manage providers AND assign to schedule" |
+| **Form layout** | Vertical stacked grid (schedules.ts:177–244) | Horizontal settings form (config.ts:368–430) | Different cognitive load; different scanning patterns |
+
+### Evidence
+- **`/schedules` unique rendering:** `src/dashboard/views/schedules.ts:46–99` (full page layout) vs `src/dashboard/views/config.ts:328–430` (tabbed card)
+- **Full-page routes:** `src/dashboard/server.ts:2954–3027` (GET /schedules, POST /schedules/new, GET /schedules/:id, GET /schedules/:id/edit, POST /schedules/:id/edit)
+- **Settings routes:** `src/dashboard/server.ts:1300–1390` (POST /api/settings/article-schedules)
+- **Recent runs table:** `src/dashboard/views/schedules.ts:270–292` (only in /schedules)
+
+### Operator Mental Model Risk
+An operator may think:
+- **Via `/schedules`:** "I'm managing schedules in isolation. This is a dedicated tool."
+- **Via `/config`:** "Schedules are one part of the settings ecosystem alongside providers and secrets."
+
+These are incompatible mental models of the same feature. An operator alternating between surfaces will have to context-switch and may forget which surface edits the canonical data.
+
+---
+
+## Question 2: Defaults That Differ in Operator-Visible Ways
+
+### Answer
+**Critical mismatch:** `/schedules` form hard-codes editorial defaults (`depth_level: 1, content_profile: 'accessible'`) but **does NOT render these fields to operators**. Operators cannot see what they're committing.
+
+| Aspect | Evidence | Operator-Visible Impact |
+|--------|----------|---------|
+| **Field rendering — Depth** | `/schedules`: Lines 142–161 (form inputs for `weekday_utc`, `time_of_day_utc`, `team_abbr`, `preset_id`, `provider` only—**no depth input**). `/config`: Lines 378–399 (camelCase field name labels with hints). | Operator sees preset only in `/schedules`. Has no way to edit or even see depth. In `/config`, depth is also hidden but camelCase naming suggests advanced/preset-derived model. |
+| **Field rendering — Content Profile** | `/schedules`: Lines 142–161 (**not rendered**). `/config`: Lines 378–399 (**not rendered**). | Neither surface exposes content_profile as an operator-visible control. Both persist it via hard-coded defaults. |
+| **Hidden defaults** | `/schedules:136–152` sets `depth_level: 1, content_profile: 'accessible', preset_id: 'casual_explainer'` as form defaults (lines 142–144). | When operator submits form without touching these fields, they persist invisibly. Operator never consented to "depth 1" or "accessible"—the form never asked. |
+| **Preset rendering** | Both surfaces render `preset_id` dropdown (schedules.ts:198, config.ts:396). | Operator thinks they're setting a preset; the system is also locking in legacy depth/profile. |
+| **Error feedback** | `/schedules`: Line 2975 redirects to `?error=missing+fields`. `/config`: Line 1337 returns HTMX badge `badge-verdict-reject`. | Operator sees error in URL bar (late feedback) vs inline badge (immediate feedback). Different timing, different affordance. |
+| **Success feedback** | `/schedules`: Line 3001 redirects to `?flash=Schedule+created`. `/config`: Line 1334 sends `HX-Redirect: /config?tab=schedules` + inline `badge-verdict-approved`. | `/schedules` shows success via redirect + page reload. `/config` shows inline badge first, then reload. `/config` operator gets immediate feedback; `/schedules` operator waits for page. |
+
+### Evidence
+- **Hidden defaults in `/schedules` form:** `src/dashboard/views/schedules.ts:136–152`
+  ```typescript
+  const v = schedule ?? {
+    name: '',
+    weekday_utc: 2,  // Tuesday default
+    time_of_day_utc: '09:00',
+    team_abbr: teams[0]?.abbr ?? '',
+    prompt: '',
+    depth_level: 1,                           // ← HIDDEN DEFAULT
+    content_profile: 'accessible' as const,   // ← HIDDEN DEFAULT
+    preset_id: 'casual_explainer' as const,   // ← VISIBLE (dropdown)
+    ...
+  };
+  ```
+- **Rendered form controls:** `src/dashboard/views/schedules.ts:177–244` (preset dropdown only; no depth/profile controls)
+- **Config camelCase naming:** `src/dashboard/views/config.ts:380–399` (teamAbbr, weekdayUtc, timeOfDayUtc, presetId)
+- **Error/success routes:** `src/dashboard/server.ts:2975, 3001, 3069` (full-page redirects) vs `src/dashboard/server.ts:1337, 1333–1334` (HTMX badges + HX-Redirect)
+
+### Operator Mental Model Risk
+An operator may think:
+- **Via `/schedules`:** "I'm setting a preset. The form doesn't ask for depth or profile, so they don't matter."
+- **Reality:** Depth and profile are being set to hardcoded values (1 + accessible) every time the form is submitted.
+
+An operator who later inspects the schedule database or checks created article properties will be confused: "I set 'Beat Analysis' preset, but the article says depth 1 and accessible. What happened?"
+
+---
+
+## Question 3: Whether Legacy Depth/Profile Labels Are Misleading Now That Feature/Depth-4 Exists
+
+### Answer
+**Yes, depth labels are deeply misleading** because:
+
+1. **Depth 4 is a ghost option:** Stored but never exposed to operators in any form.
+2. **Neither surface renders depth controls:** Operators cannot intentionally set any depth level, rendering all depth-related defaults invisible.
+3. **Labels exist but fields don't:** `formatLegacyDepthLabel()` and `LEGACY_DEPTH_LABELS` (editorial-controls.ts:17–22) suggest depth is a first-class choice, but it's actually a phantom persistence detail.
+
+### Evidence
+- **Depth labels defined:** `src/dashboard/views/editorial-controls.ts:17–22`
+  ```typescript
+  const LEGACY_DEPTH_LABELS: Record<number, string> = {
+    1: 'Casual Fan',
+    2: 'The Beat',
+    3: 'Deep Dive',
+    4: 'Feature',
+  };
+  ```
+- **Both surfaces show depth in schedules list:** `src/dashboard/views/schedules.ts:110–112` (formatLegacyDepthLabel + formatContentProfileLabel in the table)
+- **Neither surface renders depth form control:** 
+  - `/schedules:142–161` — no depth input
+  - `/config:378–399` — no depth input
+- **Depth 4 runtime collapse:** `src/types.ts:77–82`
+  ```typescript
+  export const DEPTH_LEVEL_MAP: Record<DepthLevel, DepthName> = {
+    1: 'casual_fan',
+    2: 'the_beat',
+    3: 'deep_dive',
+    4: 'deep_dive',  // ← Depth 4 collapses to same tier as depth 3
+  };
+  ```
+
+### Operator Mental Model Risk
+An operator may think:
+- **Via the label:** "Feature (depth 4) is a distinct scheduling strategy."
+- **Via the labels shown in the table:** "I can see and choose feature-level schedules."
+- **Reality:** Depth 4 exists only in the database. Operators cannot set it, cannot see it in forms, and if they could set it, it would collapse to "deep_dive" at runtime, making it functionally identical to depth 3.
+
+The table rendering (`schedules.ts:110–112`) shows `formatLegacyDepthLabel()` output, making it look like depth is a visible, intentional choice—but operators have no way to make that choice in the form.
+
+---
+
+## Question 4: HTMX Consequence — /config as Live Canonical, /schedules as Stale Full-Page
+
+### Answer
+**Clear contrast:** `/config` is **live and canonical** (HTMX + immediate feedback); `/schedules` is **stale and decoupled** (full-page POST redirects, no inline feedback).
+
+### Evidence — The Two Contracts Side by Side
+
+**CANONICAL: `/config?tab=schedules` (HTMX-driven, live feedback)**
+
+- **Form rendering:** `src/dashboard/views/config.ts:368–430`
+  ```html
+  <form class="settings-form" 
+    hx-post="/api/settings/article-schedules/${id}" 
+    hx-target="#schedule-result" 
+    hx-swap="innerHTML">
+  ```
+  (camelCase field names: `teamAbbr`, `weekdayUtc`, `timeOfDayUtc`, `presetId`, `providerMode`)
+
+- **Route handler:** `src/dashboard/server.ts:1300–1340` (POST /api/settings/article-schedules)
+  ```javascript
+  const editorial = parseEditorialRequest(body as Record<string, unknown>, 
+    { defaultDepth: 2, contentProfile: null });
+  const schedule = repo.createArticleSchedule({ ... });
+  c.header('HX-Redirect', '/config?tab=schedules');
+  return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Created</span> Schedule added</div>');
+  ```
+
+- **Operator feedback:** Inline result badge appears instantly (line 1334), then page reloads via HX-Redirect. **Operator sees success before the page changes.**
+
+- **Error handling:** `src/dashboard/server.ts:1337` returns inline error badge, not a redirect.
+
+- **Semantic:** Form submit → HTMX POST → server response HTML badge → client-side HX-Redirect → page reload. **Feedback is synchronous and local.**
+
+---
+
+**STALE: `/schedules` (full-page POST, no inline feedback)**
+
+- **Form rendering:** `src/dashboard/views/schedules.ts:177–244`
+  ```html
+  <form method="POST" action="/schedules/new" class="form-grid">
+  ```
+  (snake_case field names: `team_abbr`, `weekday_utc`, `time_of_day_utc`, `preset_id`, `provider`)
+
+- **Route handler:** `src/dashboard/server.ts:2963–3002` (POST /schedules/new)
+  ```javascript
+  const editorial = parseEditorialRequest(body as Record<string, unknown>, 
+    { defaultDepth: 1, contentProfile: 'accessible' });
+  repo.createArticleSchedule({ ... });
+  return c.redirect(`/schedules?flash=${encodeURIComponent('Schedule created')}`);
+  ```
+
+- **Operator feedback:** Form submits → server processes → **entire page redirects** → browser reloads → operator sees flash message in query param. **Feedback is delayed and requires full page load.**
+
+- **Error handling:** `src/dashboard/server.ts:2975` redirects to `?error=missing+fields`. Operator must wait for full-page reload to see the error.
+
+- **Semantic:** Form submit → POST → server redirect → browser GETs new page → page renders. **Feedback is asynchronous and requires full navigation.**
+
+### Operator Experience Divergence
+
+| Scenario | `/config` (canonical) | `/schedules` (stale) |
+|----------|--------|---------|
+| **Create schedule** | Fill form → submit → see inline "Created" badge instantly → page reloads → new schedule visible | Fill form → submit → wait for page to load → see "Schedule created" in URL bar → new schedule visible |
+| **Error (missing field)** | Fill form → submit → see inline red error badge instantly | Fill form → submit → wait for page → see "?error=missing+fields" in URL |
+| **Mental model** | "I'm tweaking a setting in real-time" | "I'm submitting a form and waiting for confirmation" |
+| **Next action** | Can immediately edit another schedule inline (same page) | Must click to navigate to edit page or create form |
+
+### Evidence — Line-by-Line Proof
+- **HTMX canonical request:** `src/dashboard/views/config.ts:368` hx-post to `/api/settings/article-schedules`
+- **HTMX canonical response:** `src/dashboard/server.ts:1334` returns badge + HX-Redirect header
+- **Full-page request:** `src/dashboard/views/schedules.ts:177` form method="POST" action="/schedules/new"
+- **Full-page response:** `src/dashboard/server.ts:3001` returns c.redirect()
+- **Feedback timing:** config sends result badge before redirect; schedules redirects first, shows flash after
+
+### Operator Mental Model Risk
+An operator may think:
+- **Via `/config`:** "Settings are live and immediate. I submit and see results right away."
+- **Via `/schedules`:** "Schedules are traditional forms. I submit and wait for the page to reload."
+
+These operators are using the same feature but experiencing it as two different products. An operator who learns schedules via `/config` will be confused by `/schedules`' slower, less responsive UX. An operator who only uses `/schedules` might think the system is sluggish.
+
+---
+
+## Question 5: Do Tests Align with Product Truth or Legacy Depth Semantics?
+
+### Answer
+**Tests are misaligned:** They validate the intermediate JSON API (`/api/schedules`) and legacy full-page routes, but **NOT the new HTMX canonical surface** (`/api/settings/article-schedules`). This means:
+
+1. **No coverage for the canonical operator surface** — if `/api/settings/article-schedules` breaks, tests won't catch it.
+2. **Legacy semantics are locked in by tests** — depth_level and content_profile validation is tested (schedules.test.ts:62–83), so refactoring those fields is harder.
+3. **Product truth (editorial presets) is not tested** — preset_id, reader_profile, article_form, panel_shape, analytics_mode are persisted (via parseEditorialRequest) but tests don't assert them.
+
+### Evidence
+
+**Test coverage present (legacy/intermediate API):**
+- `tests/dashboard/schedules.test.ts:54–60` tests `GET /api/schedules` (JSON list)
+- `tests/dashboard/schedules.test.ts:62–83` tests `POST /api/schedules` (JSON create with depth_level, content_profile, preset_id)
+  ```javascript
+  it('POST /api/schedules creates a schedule', async () => {
+    const res = await app.request('/api/schedules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Tuesday Test',
+        depth_level: 1,          // ← Legacy field
+        content_profile: 'accessible',  // ← Legacy field
+      }),
+    });
+    expect(body.depth_level).toBe(1);
+    expect(body.content_profile).toBe('accessible');
+  });
+  ```
+
+**Test coverage absent (canonical HTMX surface):**
+- No tests for `POST /api/settings/article-schedules` (new HTMX route at server.ts:1300)
+- No tests for `POST /api/settings/article-schedules/:id` (new HTMX update at server.ts:1341)
+- No assertions on camelCase field parsing (`teamAbbr`, `weekdayUtc`, etc.)
+- No assertions on HTMX response format (badges, HX-Redirect header)
+
+**Test coverage absent (full-page `/schedules` operator surface):**
+- No tests for `GET /schedules` (list page)
+- No tests for `POST /schedules/new` (full-page create)
+- No tests for `GET /schedules/:id/edit` (edit page)
+- No tests for `POST /schedules/:id/edit` (full-page update)
+- No assertions on form rendering or field visibility
+
+### Product Truth vs Test Truth
+
+| Aspect | Product Truth | Test Truth |
+|--------|--------|--------|
+| **Field naming** | Canonical uses camelCase (`teamAbbr`); legacy uses snake_case (`team_abbr`) | Tests only validate snake_case |
+| **Defaults** | Canonical defaults via `parseEditorialRequest({ defaultDepth: 2, contentProfile: null })` (server.ts:1303). Legacy defaults via hardcoded form values (schedules.ts:142–144). | Tests hardcode defaults in test payloads; don't test form-level defaults |
+| **Editorial controls** | Preset-first model (preset_id + reader_profile + article_form + panel_shape + analytics_mode are atomic) | Tests only assert depth_level + content_profile (legacy proxies) |
+| **Response format** | Canonical returns HTML badge + HX-Redirect. Legacy returns HTTP redirect. | Tests only check JSON response bodies |
+
+### Evidence — Missing Test Cases
+
+Looking at `tests/dashboard/schedules.test.ts`, there are NO test cases for:
+
+- `POST /api/settings/article-schedules` (canonical HTMX route, server.ts:1300)
+- camelCase field parsing (`teamAbbr`, `weekdayUtc`, `timeOfDayUtc`, `presetId`, `providerMode`)
+- Preset-first persistence (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`)
+- HTMX response contract (check for badge HTML, HX-Redirect header)
+- Full-page route behavior (`GET /schedules`, `POST /schedules/new`, `POST /schedules/:id/edit`)
+- Form rendering validation (check that depth_level and content_profile are NOT rendered in forms)
+
+### Operator Mental Model Risk
+A product manager or editor reviewing the test suite might think:
+- **Via the tests:** "Schedules use depth_level and content_profile as first-class, tested fields."
+- **Reality:** The canonical operator surface (`/config`) doesn't expose these fields in forms; they're persisted only via hidden defaults. The tests validate legacy semantics, not the intended preset-first model.
+
+An engineer maintaining schedules might think:
+- **Via the tests:** "The /api/schedules endpoint is the canonical API."
+- **Reality:** `/api/settings/article-schedules` is the canonical operator surface, and it's not tested.
+
+---
+
+## JUDGMENT: Is /schedules Canonical, Derived, or Stale?
+
+### Final Verdict
+
+**`/schedules` is STALE.**
+
+| Dimension | Status | Evidence |
+|-----------|--------|----------|
+| **Interaction model** | Stale | Full-page POST redirects (server.ts:2963–3027) vs canonical HTMX live feedback (server.ts:1300–1390). No inline error/success affordances. |
+| **Field semantics** | Stale | Snake_case form names (schedules.ts:177–244) vs canonical camelCase (config.ts:368). Hidden editorial defaults (schedules.ts:142–144) vs explicit preset-first rendering (config.ts:396). |
+| **Operator mental model** | Stale | `/schedules` suggests "schedule management in isolation" vs `/config` suggests "schedules as part of settings ecosystem." |
+| **Discoverability** | Stale | Standalone nav link (location unclear). `/config?tab=schedules` is findable from Settings page. |
+| **Editorial controls** | Stale | Depth/profile hidden in form defaults vs preset-first checkbox + fieldset in config. |
+| **Test alignment** | Stale | Tests validate legacy routes and JSON API (intermediate) but not canonical HTMX routes (server.ts:1300–1390). |
+| **Error affordances** | Stale | URL redirect `?error=` (schedules.ts:2975) vs inline badge (server.ts:1337). |
+
+### Why Stale, Not Deprecated
+`/schedules` is not yet fully deprecated because:
+1. It serves full-page scheduled history visibility (renderScheduleDetailPage, schedules.ts:247–296) that `/config` tab doesn't expose
+2. Legacy tests and JSON API still rely on it
+3. There may be external integrations expecting `/api/schedules` JSON contract
+
+### Canonical Surface
+**`/config?tab=schedules`** is canonical because it:
+- Uses HTMX (modern dashboard interaction pattern)
+- Provides live feedback before navigation
+- Integrates schedules into settings ecosystem
+- Exposes editorial preset controls explicitly
+- Returns proper HTMX response headers (HX-Redirect)
+
+### Derived Surface
+**`/api/schedules`** is derived because it:
+- Is an intermediate JSON API used by tools, not operators
+- Persists through the same shared `parseEditorialRequest()` normalizer as canonical
+- Has test coverage but less operational relevance than either full UI surface
+
+---
+
+## Recommendations (Prioritized by Operator Impact)
+
+### 🔴 Immediate (Breaks Operator Mental Models)
+
+1. **Mark `/schedules` as compatibility-only in UI** — Add banner: "Use Settings → Schedules for the latest schedule management experience."
+2. **Render depth_level + content_profile controls explicitly in `/schedules` form** OR document why they're hidden as hard-coded defaults. Operators should never persist data they cannot see.
+3. **Test `/api/settings/article-schedules*` canonical HTMX routes** — Add test suite validating camelCase parsing, badge responses, and HX-Redirect headers.
+
+### 🟡 Short-Term (Clarify Semantics)
+
+1. **Deprecate full-page `/schedules` routes** with 2-sprint notice. Redirect to `/config?tab=schedules`.
+2. **Unify field naming** — Adopt camelCase everywhere or snake_case everywhere. Currently the two surfaces use different conventions over identical data.
+3. **Render schedule recent-runs history in `/config` tab** (currently only in `/schedules` detail page) so operators lose no visibility when migrating.
+4. **Document schedule content_profile behavior** — "This setting affects generated article sizing but does not persist to created articles."
+
+### 🟢 Long-Term (Consolidation)
+
+1. **Retire `/schedules` entirely** — Redirect all traffic to `/config?tab=schedules`.
+2. **Consider read-only `/api/schedules` endpoint** — Keep for external tools; remove from operator UI.
+3. **Migrate schedule tests to `/api/settings/*` suite** — Test the canonical surface, not intermediate API.
+
+---
+
+## Evidence Summary
+
+**Form rendering (hidden defaults):**
+- `src/dashboard/views/schedules.ts:136–152` (form defaults v = schedule ?? {...})
+- `src/dashboard/views/schedules.ts:177–244` (form inputs; only team_abbr, weekday_utc, time_of_day_utc, preset_id, provider visible)
+
+**Canonical form (preset-first camelCase):**
+- `src/dashboard/views/config.ts:328–430` (renderSchedulesTab)
+- `src/dashboard/views/config.ts:368–399` (form with teamAbbr, weekdayUtc, timeOfDayUtc, presetId, providerMode)
+
+**Route handlers (stale full-page vs canonical HTMX):**
+- `src/dashboard/server.ts:2954–3027` (legacy /schedules routes, POST redirects)
+- `src/dashboard/server.ts:1300–1390` (canonical /api/settings/article-schedules HTMX routes, HX-Redirect)
+
+**Shared persistence:**
+- `src/dashboard/server.ts:1027–1050` (parseEditorialRequest normalizer, shared by both surfaces)
+
+**Depth labels & runtime collapse:**
+- `src/dashboard/views/editorial-controls.ts:17–22` (LEGACY_DEPTH_LABELS, all 4 levels labeled)
+- `src/types.ts:77–82` (DEPTH_LEVEL_MAP, depths 3 and 4 collapse to same tier)
+
+**Test coverage gaps:**
+- `tests/dashboard/schedules.test.ts:54–100` (validates /api/schedules JSON API and legacy routes only)
+- Missing: tests for /api/settings/article-schedules*, camelCase parsing, HTMX response format, full-page /schedules routes
+
+---
+
+**Conclusion:** `/schedules` is **STALE**. Operators experience it as a separate full-page product with hidden defaults, no inline feedback, and no visual integration with settings. The canonical surface is `/config?tab=schedules` (HTMX-driven, live, preset-first). Recommend deprecation with operator-friendly migration path.
+
+
+## Decision: ux-schedules-audit-evidence
+# Schedule Audit — Compact Evidence Appendix
+
+## 1. What /schedules Exposes That Other Surfaces Do Not
+
+- **Full-page isolation vs integrated settings:** `/schedules` renders standalone schedule list + detail + edit pages (server.ts:2954–3027). `/config?tab=schedules` renders as one card in a tabbed settings page (views/config.ts:328–430). **Operator mental model:** Different feature boundaries and discoverability.
+- **Recent runs visibility:** `/schedules` detail page shows schedule execution history (views/schedules.ts:270–292). `/config` tab has no runs visibility. **Impact:** Operator using `/schedules` can debug schedule execution; `/config` operator cannot.
+- **Provider picker design:** `/schedules` single dropdown (views/schedules.ts:166–171). `/config` manages provider profiles on same page as schedule assignment (views/config.ts:338–343). **Impact:** Different mental model: "pick provider" vs "manage AND assign."
+
+## 2. Defaults That Differ in Operator-Visible Ways
+
+- **Hidden form defaults in `/schedules`:** Lines 136–152 set `depth_level: 1, content_profile: 'accessible', preset_id: 'casual_explainer'` but form renders only preset_id dropdown (lines 177–244). **Operator sees no depth/profile controls; commits invisible defaults.**
+- **Field naming divergence:** `/schedules` form uses snake_case (`team_abbr`, `weekday_utc`, `time_of_day_utc`, `depth_level`, `content_profile`). `/config` form uses camelCase (`teamAbbr`, `weekdayUtc`, `timeOfDayUtc`, `presetId`, `contentProfile`) (views/config.ts:380–399). **Mental model:** Different naming suggests different data models to operator.
+- **Error feedback timing:** `/schedules` redirects to `?error=missing+fields` (server.ts:2975; full-page reload required). `/config` returns inline HTMX badge `badge-verdict-reject` (server.ts:1337; instant feedback). **Operator experience:** Wait vs see-immediately.
+- **Success feedback:** `/schedules` redirect + page reload with flash in query param (server.ts:3001). `/config` inline success badge, then HX-Redirect (server.ts:1334). **Operator perception:** Slow confirmation vs fast confirmation.
+
+## 3. Legacy Depth/Profile Labels Misleading with Depth-4
+
+- **Depth labels defined but no form control:** `LEGACY_DEPTH_LABELS` all four levels (1–4) in editorial-controls.ts:17–22. Neither `/schedules` nor `/config` renders depth input field (views/schedules.ts:142–161; views/config.ts:378–399). **Operator cannot set depth despite seeing labels.** Depth is phantom persistence.
+- **Depth-4 ghost option:** Both surfaces persist `depth_level: 1–4` to same table but no form exposes depth choice. Depth 4 collapses to "deep_dive" at runtime (types.ts:77–82 `DEPTH_LEVEL_MAP`), identical to depth 3. **Operator sees Feature label in table (schedules.ts:110–112) but cannot create Feature schedules.**
+
+## 4. HTMX Consequence: /config Canonical, /schedules Stale
+
+- **Request/response contract divergence:** `/config` form: `hx-post="/api/settings/article-schedules"` (views/config.ts:368). Handler: `parseEditorialRequest(body, defaultDepth:2, contentProfile:null)` + returns HTMX badge + HX-Redirect (server.ts:1300–1334). `/schedules` form: `method="POST" action="/schedules/new"` (views/schedules.ts:177). Handler: direct field access + `parseEditorialRequest(body, defaultDepth:1, contentProfile:'accessible')` + `c.redirect()` (server.ts:2963–3001). **Live feedback vs page reload.**
+- **Persistence defaults differ:** Canonical parses editorial from form fields with `defaultDepth: 2, contentProfile: null`. Legacy form hard-codes `depth_level: 1, content_profile: 'accessible'` before sending (views/schedules.ts:142–144). **Mental model mismatch:** Operator submitting legacy form commits values they never chose.
+
+## 5. Tests Align with Legacy Depth, Not Canonical HTMX
+
+- **Test coverage present (legacy only):** `GET /api/schedules` (schedules.test.ts:54–60). `POST /api/schedules` validates `depth_level`, `content_profile`, `preset_id` (schedules.test.ts:62–83). **Tests lock in legacy field semantics, not product truth.**
+- **Test coverage absent (canonical):** No tests for `POST /api/settings/article-schedules` (server.ts:1300). No assertions on camelCase parsing (`teamAbbr`, etc.), badge responses, or HX-Redirect headers. **Canonical operator surface is untested.**
+- **Test coverage absent (full-page UX):** No tests for `GET /schedules`, `POST /schedules/new`, `POST /schedules/:id/edit`, or form rendering (views/schedules.ts:177–244). **What operators actually see is not tested.**
+
+---
+
+## JUDGMENT
+
+**`/schedules` is STALE**
+
+| Dimension | Evidence |
+|-----------|----------|
+| **Interaction model** | Full-page POST redirects (server.ts:2963–3027) vs HTMX live feedback (server.ts:1300–1390). No inline affordances. |
+| **Field semantics** | Snake_case hidden defaults vs camelCase explicit preset-first. |
+| **Operator mental model** | "Isolated scheduling tool" vs "integrated settings component." Incompatible. |
+| **Test alignment** | Tests validate legacy routes, not canonical operator surface. |
+
+**Canonical surface:** `/config?tab=schedules` (HTMX-driven, live feedback, preset-first, integrated into settings ecosystem, tested operator contracts needed).
+
+
+## Decision: ux-schedules-audit
+# UX Schedules Audit — canonicality judgment
+
+- **Decision:** Treat `/config?tab=schedules` as the canonical operator surface for schedule editing. Treat standalone `/schedules*` and `/api/schedules*` as compatibility/stale contracts until they are explicitly converged or retired.
+- **Why:** Settings schedules is the only live surface aligned with the preset-first editorial model (`presetId`, `readerProfile`, `articleForm`, `panelShape`, `analyticsMode`, `panelConstraintsJson`, provider mode/override split, HTMX result handling, HX-Redirect back to the schedules tab). Standalone `/schedules*` edits the same records through a full-page contract with snake_case naming, redirect-only feedback, a collapsed provider field, different create defaults, and legacy compatibility copy that overstates depth/profile as primary truth.
+- **Evidence:** `src/dashboard/views/config.ts:345-557`, `src/dashboard/views/schedules.ts:101-245`, `src/dashboard/server.ts:1257-1432`, `src/dashboard/server.ts:2954-3156`, `src/types.ts:76-127,218-260`, `tests/dashboard/schedules.test.ts:62-182`, `src/db/schema.sql:26-32,278-295`.
+- **Operator impact:** The same schedule can be created or edited through two different mental models, with different defaults and different feedback loops. That increases training cost, weakens trust in “saved” state, and leaves tests anchored to the legacy route family instead of the canonical HTMX settings flow.
+- **Follow-up guidance:** Future UX or Code work on schedule/editorial controls should audit `/config?tab=schedules` and `/schedules*` together, but take the Settings route family as product truth.
+

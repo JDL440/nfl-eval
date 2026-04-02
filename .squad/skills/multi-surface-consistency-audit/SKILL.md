@@ -166,6 +166,26 @@ For every redesigned form:
 
 If the form and handler speak different vocabularies, treat that as a higher-priority regression than copy drift.
 
+## New Failure Mode: Compatibility-Only Tests Giving False Confidence
+
+After a redesign, tests can stay green while still missing the real operator contract if they keep posting old compatibility fields instead of the fields the live form now renders.
+
+Example pattern in this repo:
+
+- `src\dashboard\views\config.ts`, `article.ts`, and `schedules.ts` render preset-first forms
+- but tests still submit legacy payloads like `depthLevel`, `contentProfile`, or `depth_level`
+- routes keep accepting both, so the suite passes even if the rendered form and preset-sync behavior drift
+
+### Audit check
+
+For each migrated surface:
+
+1. compare the rendered `name=` attributes with the payload used in tests
+2. make sure at least one regression test submits the exact live form contract
+3. separately keep compatibility tests for old callers if those callers are intentionally still supported
+
+If all coverage sits on compatibility inputs, treat the redesign as only partially verified.
+
 ## New Failure Mode: Alias-Labeled Filters
 
 Sometimes the UI adopts new editorial labels while the backend still filters on an older field.
@@ -212,3 +232,14 @@ This pattern applies to any concept that appears in multiple UI surfaces:
 ---
 
 **Example Application:** Depth/Panel Redesign Impact Analysis (`.squad/decisions/inbox/ux-depth-panel-impact.md`)
+
+## Additional pattern: canonical vs compatibility schedule surfaces
+
+When the same records are editable in both `/config` and a standalone admin page, do not stop at checking field parity. Also decide **which surface operators should trust** by comparing:
+
+1. interaction model (HTMX/live result vs full-page redirect),
+2. naming contract (camelCase vs snake_case),
+3. defaults shown on create forms,
+4. whether tests cover the same route family the product now treats as primary.
+
+If the richer HTMX settings surface is preset-first while the standalone page still frames legacy compatibility labels as first-class truth, classify the standalone page as **derived or stale**, not as an equal peer. That judgment matters because otherwise audits underweight operator confusion and over-trust tests that only exercise legacy APIs.

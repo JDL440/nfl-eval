@@ -77,6 +77,7 @@ Treat the split as **additive compatibility migration**, not a data model rewrit
 - **Test both old and new paths** — articles created via depth_level should resolve to same preset/controls as articles created via preset directly.
 - **Separate UI from runtime** — UI shows "Casual Explainer" preset but runtime accepts both preset_id and legacy depth_level; no runtime-breaking changes until all surfaces migrate.
 - **Disable advanced fields until explicitly enabled** — if preset + advanced inputs submit together by default, stale explicit values will silently override the newly selected preset on save.
+- **Re-sync preset-driven forms on edit surfaces too** — if an admin/settings edit form always posts `readerProfile` / `articleForm` / `panelShape` / `analyticsMode`, changing only `presetId` can persist a contradictory row where the badge says one preset but the actual derived legacy values still reflect stale advanced controls.
 
 ## Preset-first form pattern
 
@@ -102,6 +103,11 @@ When shipping the actual dashboard migration, use this interaction model:
    - Do not make them the main form controls again.
 
 This avoids the most common migration bug: users select a different preset, submit, and nothing changes because old advanced values were still posted.
+
+### Regression checks for edit surfaces
+
+- Submit a preset-only change on an existing record and assert `preset_id`, derived legacy fields, and visible split fields all move together.
+- Submit an edit with advanced overrides disabled and confirm stale stored advanced values do not override the new preset.
 
 ## Lockout Heuristics
 

@@ -26,6 +26,9 @@ Audit the render path and parse path together.
 4. **Check edit vs create separately**
    - Create forms often start with empty JSON, so helpers work there.
    - Edit forms often preload JSON, so the same helpers silently no-op.
+5. **Check whether helper inputs are pre-populated**
+   - Blank helper inputs next to prefilled raw JSON are a red flag.
+   - Operators will assume the blanks are the current state and can accidentally trust controls that are not actually authoritative.
 
 ## Repository example
 
@@ -44,3 +47,4 @@ Audit the render path and parse path together.
 - Save an existing record with non-empty JSON using only helper-field changes.
 - Assert the persisted JSON changes accordingly.
 - Repeat for both create and edit flows if the product has multiple live surfaces.
+- Add one assertion that the edit form renders existing helper values, or explicitly hides those helpers when raw JSON is authoritative.
