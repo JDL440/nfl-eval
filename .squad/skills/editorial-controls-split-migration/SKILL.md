@@ -76,6 +76,32 @@ Treat the split as **additive compatibility migration**, not a data model rewrit
 - **Resolution function is canonical** — always use resolveEditorialControls() to populate new fields from legacy depth (not manual mapping).
 - **Test both old and new paths** — articles created via depth_level should resolve to same preset/controls as articles created via preset directly.
 - **Separate UI from runtime** — UI shows "Casual Explainer" preset but runtime accepts both preset_id and legacy depth_level; no runtime-breaking changes until all surfaces migrate.
+- **Disable advanced fields until explicitly enabled** — if preset + advanced inputs submit together by default, stale explicit values will silently override the newly selected preset on save.
+
+## Preset-first form pattern
+
+When shipping the actual dashboard migration, use this interaction model:
+
+1. **Preset selector first**
+   - This is the primary operator choice.
+   - Copy should explain the editorial intent in human terms.
+
+2. **Override checkbox second**
+   - Label it clearly, e.g. `Override preset defaults`
+   - Keep advanced controls disabled until checked.
+
+3. **Advanced controls third**
+   - reader_profile
+   - article_form
+   - panel_shape
+   - analytics_mode
+   - optional panel constraints
+
+4. **Legacy compatibility shown, not edited**
+   - Render derived `depth_level` / `content_profile` as hints or badges.
+   - Do not make them the main form controls again.
+
+This avoids the most common migration bug: users select a different preset, submit, and nothing changes because old advanced values were still posted.
 
 ## Lockout Heuristics
 

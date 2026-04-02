@@ -146,6 +146,45 @@ For every derived-control migration, inspect both:
 
 If both patterns exist in the same product area, the UI surfaces are almost certainly diverging.
 
+## New Failure Mode: Rendered Form / Handler Mismatch
+
+A redesign can appear complete in the UI while the route still persists the old contract.
+
+Example in this repo:
+
+- `src\dashboard\views\article.ts` renders `presetId`, `readerProfile`, `articleForm`, `panelShape`, `analyticsMode`, and `panelConstraintsJson`
+- but `POST /htmx/articles/:id/edit-meta` in `src\dashboard\server.ts` still only saves legacy metadata fields
+
+### Audit check
+
+For every redesigned form:
+
+1. inspect the rendered field names
+2. inspect the exact handler receiving them
+3. inspect the repository write path
+4. verify tests assert both render parity and persistence parity
+
+If the form and handler speak different vocabularies, treat that as a higher-priority regression than copy drift.
+
+## New Failure Mode: Alias-Labeled Filters
+
+Sometimes the UI adopts new editorial labels while the backend still filters on an older field.
+
+Example in this repo:
+
+- `src\dashboard\views\home.ts` labels the filter with preset names
+- `/htmx/filtered-articles` still accepts `depth` and filters by `depth_level`
+
+### Audit check
+
+Verify whether:
+
+- the visible control is filtering the real new concept
+- multiple new-state combinations collapse into one legacy value
+- the label overpromises precision the backend cannot honor
+
+If yes, recommend either renaming the control honestly or upgrading the backend filter before more UI rollout.
+
 ## New Failure Mode: Dual Live Contracts
 
 If both a replacement settings surface and a legacy full-page surface remain live, treat them as separate contracts until proven otherwise.

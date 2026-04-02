@@ -5,6 +5,14 @@
 - **Stream 2 (Engineering-System):** surfaces .squad/*, squad agent, ralph-watch, heartbeat. Owners: Lead + Ralph + Research + DevOps.
 - **Validation:** article quality, render QA, publish readiness, board hygiene, reduced coordination drift.
 
+## Spawn Audit — Depth/Panel Redesign Final Approval (2026-04-02T06:01:07Z)
+
+- **Status:** Approved. No blocking gaps.
+- **Agent:** fast-audit (Code role)
+- **Verdict:** Canonical/legacy mapping verified across types, schema, repository, dashboard, and tests.
+- **Implementation readiness:** Both code and UX decisions finalized. Preset-first runtime migration established with explicit legacy bridge and recomputation guards. Schedule surface convergence and test parity coverage documented in inbox decisions (now merged into decisions.md).
+- **Summary:** Audit found depth/panel redesign complete and sound. Code decision establishes compatibility-first preset model: depth/profile writable and derived, feature treated as article form, panel constraints drive model policy. UX decision phases out ghost options, converges schedule surfaces, and requires one editorial vocabulary across all dashboard surfaces.
+
 # Code Agent Project History
 
 ## Core Context
@@ -31,6 +39,10 @@
 - 2026-04-02 — No-code dashboard impact scan confirmed the server layer is ahead of the UI layer for editorial redesign. `src\dashboard\server.ts` already funnels `/api/ideas` and config schedule HTMX writes through `parseEditorialRequest()` and can accept `presetId`, `readerProfile`, `articleForm`, `panelShape`, `analyticsMode`, and `panelConstraintsJson`, but `src\dashboard\views\new-idea.ts`, `src\dashboard\views\home.ts`, `src\dashboard\views\article.ts`, `src\dashboard\views\config.ts`, and `src\dashboard\views\schedules.ts` still present or filter mostly on legacy depth/content-profile controls. Focused dashboard baseline on current HEAD: `npx vitest run tests/dashboard/config.test.ts tests/dashboard/metadata-edit.test.ts tests/dashboard/new-idea.test.ts tests/dashboard/schedules.test.ts tests/dashboard/server.test.ts tests/dashboard/settings-routes.test.ts tests/dashboard/sse.test.ts tests/dashboard/traces.test.ts tests/dashboard/wave2.test.ts` => 225/228 passing, with 3 current failures in `tests/dashboard/metadata-edit.test.ts` and `tests/dashboard/schedules.test.ts` caused by depth/edit contract drift.
 
 **Panel Composition Intimacy**: Stage 3 (Panel Composition) uses article.depth_level to set min/max agent count. ModelPolicy.resolve() maps depth to panel model keys. This deep coupling means changing "reader depth" in Stage 1+ automatically changes panel constraints set in Stage 3, violating separation of concerns. Must refactor to pass editorial controls separately from panel constraints.
+
+- 2026-04-02 — Runtime depth/panel migration is now implemented around panel shape and explicit constraints. `src\types.ts` keeps `feature` on the balanced 3–4 agent auto-panel path, `src\llm\model-policy.ts` derives panel tier from resolved editorial controls instead of raw depth, and `src\pipeline\actions.ts` explicitly tells Lead that feature is a form choice rather than a max-size panel signal.
+- 2026-04-02 — Compatibility-safe editorial updates need dedicated merge logic. `src\db\repository.ts` now has `resolveArticleEditorialUpdate(...)` and `resolveScheduleEditorialUpdate(...)` so legacy-only `depth_level` / `content_profile` edits recompute `preset_id`, `article_form`, and related derived fields instead of silently preserving stale preset-era values; proof lives in `tests\db\schedule.test.ts`, `tests\dashboard\schedules.test.ts`, and `tests\dashboard\metadata-edit.test.ts`.
+- 2026-04-02 — Manual and scheduled ideation now share one backend seam. `src\services\article-creation.ts` delegates to `src\pipeline\idea-generation.ts`, recurring schedules pass preset + advanced panel controls through that seam, and `tests\dashboard\new-idea.test.ts` includes a mocked end-to-end request showing preset + panel-constraint inputs survive into both the persisted article metadata and the Lead ideation prompt.
 
 **SSE/HTMX Brittleness**: Article metadata edits (POST /htmx/articles/:id/edit-meta) don't emit events on depth change; page stays stale if user changes depth after Stage 3 commit. Must add migration or locking logic to prevent post-Stage-1 depth changes from desync'ing panel.
 
