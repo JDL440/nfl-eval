@@ -4,6 +4,19 @@
 
 import { renderLayout, escapeHtml } from './layout.js';
 import type { TeamEntry } from '../../config/index.js';
+import {
+  buildEditorialUiState,
+  buildLegacyFields,
+  formatLegacyDepthLabel,
+  getPresetDescription,
+  hasEditorialOverrides,
+  renderAnalyticsModeOptions,
+  renderArticleFormOptions,
+  renderPanelShapeOptions,
+  renderPresetOptions,
+  renderReaderProfileOptions,
+  serializePresetClientMap,
+} from './editorial-controls.js';
 
 interface NewIdeaProviderOption {
   id: string;
@@ -80,8 +93,15 @@ export const IDEA_TEMPLATE = `# Article Idea: {Generated Title}
 ## Primary Team
 {TEAM_ABBR} — {Full Team Name}
 
-## Depth Level
-{1|2|3} — {Level Name} ({word range}, {agent count} agents)
+## Editorial Preset
+{Preset label}
+
+## Editorial Controls
+- Reader Profile: {casual|engaged|hardcore}
+- Article Form: {brief|standard|deep|feature}
+- Panel Shape: {auto|news_reaction|contract_eval|trade_eval|draft_eval|scheme_breakdown|cohort_rank|market_map}
+- Analytics Mode: {explain_only|normal|metrics_forward}
+- Legacy Compatibility: {Depth label} / {Content profile}
 
 ## Suggested Panel
 {Agent1} + {Agent2} + ... (role breakdown)
@@ -165,6 +185,9 @@ export function renderNewIdeaPage(config: {
   const teams = config.teams ?? [];
   const agents = config.expertAgents ?? [];
   const llmProviders = config.llmProviders ?? [];
+  const editorial = buildEditorialUiState({ preset_id: 'beat_analysis' });
+  const legacy = buildLegacyFields(editorial.article_form, editorial.reader_profile, editorial.analytics_mode);
+  const advancedChecked = hasEditorialOverrides(editorial);
   const agentChips = agents.length > 0 ? agents.map(a => `
     <button type="button" class="agent-badge" data-agent="${escapeHtml(a)}"
       onclick="toggleAgent(this, '${escapeHtml(a)}')">
@@ -195,11 +218,11 @@ export function renderNewIdeaPage(config: {
       <section class="detail-section idea-page-hero">
         <p class="section-kicker">Story intake</p>
         <h1>New Article Idea</h1>
-        <p class="page-subtitle">Shape the prompt, choose the right depth, and pin any must-have experts before the pipeline begins.</p>
+        <p class="page-subtitle">Shape the prompt, choose the editorial preset, and override it only when the story genuinely needs a different panel or analytics posture.</p>
         <div class="idea-page-highlights">
           <span class="badge badge-stage badge-stage-1">Prompt → Lead → idea.md</span>
           <span class="badge badge-team">Mobile-first intake</span>
-          <span class="badge badge-depth">Optional expert pinning</span>
+          <span class="badge badge-depth">Preset-first intake</span>
         </div>
       </section>
 
@@ -236,12 +259,79 @@ export function renderNewIdeaPage(config: {
           </div>
 
           <div class="form-group">
-            <label for="depth-level">Depth Level</label>
-            <select id="depth-level" name="depthLevel" class="input input-full select">
-              <option value="1">1 — Casual Fan</option>
-              <option value="2" selected>2 — The Beat</option>
-              <option value="3">3 — Deep Dive</option>
+            <label for="preset-id">Editorial Preset</label>
+            <select id="preset-id" name="presetId" class="input input-full select">
+              ${renderPresetOptions(editorial.preset_id)}
             </select>
+            <div class="form-hint" id="idea-preset-hint">
+              ${escapeHtml(getPresetDescription(editorial.preset_id))}
+              <strong>Legacy compatibility:</strong> ${escapeHtml(formatLegacyDepthLabel(legacy.depthLevel))} · ${escapeHtml(legacy.contentProfile === 'accessible' ? 'Accessible' : 'Deep Dive')}
+            </div>
+          </div>
+
+          <div class="form-group form-checkbox">
+            <label>
+              <input
+                type="checkbox"
+                id="use-editorial-overrides"
+                ${advancedChecked ? 'checked' : ''}
+                onchange="toggleEditorialOverrides(this.checked)">
+              Override preset defaults
+              <span class="form-hint">(for narrative exceptions, non-default panel shapes, or heavier analytics)</span>
+            </label>
+          </div>
+
+          <div id="editorial-override-fields" data-editorial-advanced-fields>
+            <div class="settings-grid-2">
+              <div class="form-group">
+                <label for="reader-profile">Reader profile</label>
+                <select id="reader-profile" name="readerProfile" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                  ${renderReaderProfileOptions(editorial.reader_profile)}
+                </select>
+                <div class="form-hint">Casual presets should keep stats explained, not assumed.</div>
+              </div>
+              <div class="form-group">
+                <label for="article-form">Article form</label>
+                <select id="article-form" name="articleForm" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                  ${renderArticleFormOptions(editorial.article_form)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="panel-shape">Panel shape</label>
+                <select id="panel-shape" name="panelShape" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                  ${renderPanelShapeOptions(editorial.panel_shape)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="analytics-mode">Analytics mode</label>
+                <select id="analytics-mode" name="analyticsMode" class="input input-full select"${advancedChecked ? '' : ' disabled'}>
+                  ${renderAnalyticsModeOptions(editorial.analytics_mode)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="panel-min">Panel min</label>
+                <input id="panel-min" name="panelMin" type="number" min="1" max="6" class="input input-full" placeholder="Auto"${advancedChecked ? '' : ' disabled'}>
+              </div>
+              <div class="form-group">
+                <label for="panel-max">Panel max</label>
+                <input id="panel-max" name="panelMax" type="number" min="1" max="6" class="input input-full" placeholder="Auto"${advancedChecked ? '' : ' disabled'}>
+              </div>
+              <div class="form-group">
+                <label for="required-agents">Required agents</label>
+                <input id="required-agents" name="requiredAgents" type="text" class="input input-full" placeholder="cap, analytics"${advancedChecked ? '' : ' disabled'}>
+              </div>
+              <div class="form-group">
+                <label for="excluded-agents">Excluded agents</label>
+                <input id="excluded-agents" name="excludedAgents" type="text" class="input input-full" placeholder="fantasy"${advancedChecked ? '' : ' disabled'}>
+              </div>
+            </div>
+
+            <div class="form-group form-checkbox">
+              <label>
+                <input type="checkbox" id="allow-team-agent-omission" name="allowTeamAgentOmission"${advancedChecked ? '' : ' disabled'}>
+                Allow panels without a primary team agent
+              </label>
+            </div>
           </div>
 
           ${providerField}
@@ -278,6 +368,7 @@ export function renderNewIdeaPage(config: {
     <script>
       const escapeIdeaStatusHtml = ${escapeIdeaStatusHtml.toString()};
       const renderIdeaErrorStatus = ${renderIdeaErrorStatus.toString()};
+      const editorialPresetMap = ${serializePresetClientMap()};
 
       function surpriseMe() {
         const prompt = document.getElementById('prompt');
@@ -308,6 +399,61 @@ export function renderNewIdeaPage(config: {
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function currentLegacyCompatibility() {
+        const useOverrides = document.getElementById('use-editorial-overrides').checked;
+        const presetId = document.getElementById('preset-id').value;
+        const preset = editorialPresetMap[presetId] || editorialPresetMap['beat_analysis'];
+        const readerProfile = useOverrides ? document.getElementById('reader-profile').value : preset.readerProfile;
+        const articleForm = useOverrides ? document.getElementById('article-form').value : preset.articleForm;
+        const analyticsMode = useOverrides ? document.getElementById('analytics-mode').value : preset.analyticsMode;
+        const legacy = ${JSON.stringify(legacy)};
+        const depthLevel = ({ brief: 1, standard: 2, deep: 3, feature: 4 }[articleForm]) || legacy.depthLevel;
+        return {
+          depthLevel,
+          contentProfile: (readerProfile === 'casual' || analyticsMode === 'explain_only') ? 'accessible' : 'deep_dive',
+        };
+      }
+
+      function updatePresetHint() {
+        const presetId = document.getElementById('preset-id').value;
+        const preset = editorialPresetMap[presetId] || editorialPresetMap['beat_analysis'];
+        const compatibility = currentLegacyCompatibility();
+        const depthLabels = {
+          1: '1 — Casual Fan',
+          2: '2 — The Beat',
+          3: '3 — Deep Dive',
+          4: '4 — Feature',
+        };
+        const hint = document.getElementById('idea-preset-hint');
+        if (!hint) return;
+        hint.innerHTML = escapeHtmlClient(preset.description)
+          + ' <strong>Legacy compatibility:</strong> '
+          + escapeHtmlClient(depthLabels[compatibility.depthLevel] || ('Depth ' + compatibility.depthLevel))
+          + ' · '
+          + escapeHtmlClient(compatibility.contentProfile === 'accessible' ? 'Accessible' : 'Deep Dive');
+      }
+
+      function syncPresetDefaults() {
+        if (document.getElementById('use-editorial-overrides').checked) {
+          updatePresetHint();
+          return;
+        }
+        const presetId = document.getElementById('preset-id').value;
+        const preset = editorialPresetMap[presetId] || editorialPresetMap['beat_analysis'];
+        document.getElementById('reader-profile').value = preset.readerProfile;
+        document.getElementById('article-form').value = preset.articleForm;
+        document.getElementById('panel-shape').value = preset.panelShape;
+        document.getElementById('analytics-mode').value = preset.analyticsMode;
+        updatePresetHint();
+      }
+
+      function toggleEditorialOverrides(enabled) {
+        document.querySelectorAll('#editorial-override-fields select, #editorial-override-fields input').forEach((field) => {
+          field.disabled = !enabled;
+        });
+        syncPresetDefaults();
       }
 
       const selectedTeams = new Set();
@@ -380,6 +526,12 @@ export function renderNewIdeaPage(config: {
         });
       })();
 
+      document.getElementById('preset-id').addEventListener('change', syncPresetDefaults);
+      ['reader-profile', 'article-form', 'analytics-mode'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', updatePresetHint);
+      });
+      toggleEditorialOverrides(document.getElementById('use-editorial-overrides').checked);
+
       document.getElementById('idea-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submit-btn');
@@ -400,7 +552,20 @@ export function renderNewIdeaPage(config: {
             body: JSON.stringify({
               prompt,
               teams: Array.from(selectedTeams),
-              depthLevel: parseInt(document.getElementById('depth-level').value, 10),
+              depthLevel: currentLegacyCompatibility().depthLevel,
+              contentProfile: currentLegacyCompatibility().contentProfile,
+              presetId: document.getElementById('preset-id').value,
+              ...(document.getElementById('use-editorial-overrides').checked ? {
+                readerProfile: document.getElementById('reader-profile').value,
+                articleForm: document.getElementById('article-form').value,
+                panelShape: document.getElementById('panel-shape').value,
+                analyticsMode: document.getElementById('analytics-mode').value,
+                panelMin: document.getElementById('panel-min').value,
+                panelMax: document.getElementById('panel-max').value,
+                requiredAgents: document.getElementById('required-agents').value,
+                excludedAgents: document.getElementById('excluded-agents').value,
+                allowTeamAgentOmission: document.getElementById('allow-team-agent-omission').checked,
+              } : {}),
               provider: document.getElementById('idea-provider')?.value || undefined,
               autoAdvance: document.getElementById('auto-advance').checked,
               pinnedAgents: Array.from(pinnedAgents),

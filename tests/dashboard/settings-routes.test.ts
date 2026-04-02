@@ -108,6 +108,10 @@ describe('Settings API Routes', () => {
       skillsDir,
       logsDir: join(dataDir, 'logs'),
       memoryDbPath: join(dataDir, 'memory.db'),
+      teams: [
+        { abbr: 'SEA', city: 'Seattle', name: 'Seahawks' },
+        { abbr: 'GB', city: 'Green Bay', name: 'Packers' },
+      ],
       dashboardAuth: {
         mode: 'off',
         sessionCookieName: 'test_session',
@@ -276,6 +280,139 @@ describe('Settings API Routes', () => {
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain('Deleted');
+    });
+  });
+
+  // ── Article schedules ───────────────────────────────────
+
+  describe('article schedule settings routes', () => {
+    it('creates a schedule from the config form', async () => {
+      const res = await formPost(app, '/api/settings/article-schedules', {
+        name: 'Seahawks Tuesday Accessible',
+        teamAbbr: 'SEA',
+        prompt: 'Find the best current Seahawks storyline for a broad audience.',
+        weekdayUtc: '2',
+        timeOfDayUtc: '14:00',
+        contentProfile: 'accessible',
+        depthLevel: '1',
+        providerMode: 'default',
+        providerId: '',
+        enabled: 'true',
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Created');
+
+      const schedules = repo.listArticleSchedules();
+      expect(schedules).toHaveLength(1);
+      expect(schedules[0].team_abbr).toBe('SEA');
+      expect(schedules[0].content_profile).toBe('accessible');
+      expect(schedules[0].depth_level).toBe(1);
+    });
+
+    it('updates a schedule from the config form', async () => {
+      const schedule = repo.createArticleSchedule({
+        name: 'Seahawks Tuesday Accessible',
+        team_abbr: 'SEA',
+        prompt: 'Old prompt',
+        weekday_utc: 2,
+        time_of_day_utc: '14:00',
+        content_profile: 'accessible',
+        depth_level: 1,
+        next_run_at: '2025-07-15 14:00:00',
+      });
+
+      const res = await formPost(app, `/api/settings/article-schedules/${schedule.id}`, {
+        name: 'Packers Thursday Deep Dive',
+        teamAbbr: 'GB',
+        prompt: 'Find the best Packers analytical angle this week.',
+        weekdayUtc: '4',
+        timeOfDayUtc: '15:30',
+        contentProfile: 'deep_dive',
+        depthLevel: '3',
+        providerMode: 'default',
+        providerId: '',
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Updated');
+
+      const updated = repo.getArticleSchedule(schedule.id);
+      expect(updated?.name).toBe('Packers Thursday Deep Dive');
+      expect(updated?.team_abbr).toBe('GB');
+      expect(updated?.content_profile).toBe('deep_dive');
+      expect(updated?.depth_level).toBe(3);
+    });
+
+    it('preserves next_run_at when schedule timing is unchanged', async () => {
+      const schedule = repo.createArticleSchedule({
+        name: 'Seahawks Tuesday Accessible',
+        team_abbr: 'SEA',
+        prompt: 'Old prompt',
+        weekday_utc: 2,
+        time_of_day_utc: '14:00',
+        content_profile: 'accessible',
+        depth_level: 1,
+        next_run_at: '2025-07-15 14:00:00',
+      });
+
+      const res = await formPost(app, `/api/settings/article-schedules/${schedule.id}`, {
+        name: 'Seahawks Tuesday Deep Dive',
+        teamAbbr: 'SEA',
+        prompt: 'New prompt',
+        weekdayUtc: '2',
+        timeOfDayUtc: '14:00',
+        contentProfile: 'deep_dive',
+        depthLevel: '3',
+        providerMode: 'override',
+        providerId: 'gemini',
+      });
+
+      expect(res.status).toBe(200);
+      const updated = repo.getArticleSchedule(schedule.id);
+      expect(updated?.next_run_at).toBe('2025-07-15 14:00:00');
+      expect(updated?.content_profile).toBe('deep_dive');
+      expect(updated?.depth_level).toBe(3);
+      expect(updated?.provider_mode).toBe('override');
+      expect(updated?.provider_id).toBe('gemini');
+    });
+
+    it('toggles a schedule enabled state', async () => {
+      const schedule = repo.createArticleSchedule({
+        name: 'Seahawks Tuesday Accessible',
+        team_abbr: 'SEA',
+        prompt: 'Prompt',
+        weekday_utc: 2,
+        time_of_day_utc: '14:00',
+        content_profile: 'accessible',
+        depth_level: 1,
+        next_run_at: '2025-07-15 14:00:00',
+      });
+
+      const res = await formPost(app, `/api/settings/article-schedules/${schedule.id}/toggle`, {});
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Toggled');
+      expect(repo.getArticleSchedule(schedule.id)?.enabled).toBe(0);
+    });
+
+    it('deletes a schedule', async () => {
+      const schedule = repo.createArticleSchedule({
+        name: 'Seahawks Tuesday Accessible',
+        team_abbr: 'SEA',
+        prompt: 'Prompt',
+        weekday_utc: 2,
+        time_of_day_utc: '14:00',
+        content_profile: 'accessible',
+        depth_level: 1,
+        next_run_at: '2025-07-15 14:00:00',
+      });
+
+      const res = await formDelete(app, `/api/settings/article-schedules/${schedule.id}`);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('Deleted');
+      expect(repo.getArticleSchedule(schedule.id)).toBeNull();
     });
   });
 

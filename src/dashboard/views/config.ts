@@ -3,6 +3,27 @@
  */
 
 import { renderLayout, escapeHtml } from './layout.js';
+import { formatPresetLabel } from '../../types.js';
+import {
+  buildEditorialUiState,
+  formatContentProfileLabel,
+  formatLegacyDepthLabel,
+  getPresetDescription,
+  hasEditorialOverrides,
+  renderAnalyticsModeOptions,
+  renderArticleFormOptions,
+  renderPanelShapeOptions,
+  renderPresetOptions,
+  renderReaderProfileOptions,
+} from './editorial-controls.js';
+import {
+  ANALYTICS_MODE_LABELS,
+  ARTICLE_FORM_LABELS,
+  EDITORIAL_PRESET_ORDER,
+  EDITORIAL_PRESETS,
+  PANEL_SHAPE_LABELS,
+  READER_PROFILE_LABELS,
+} from '../../types.js';
 
 // ── Legacy interfaces (kept for backward-compat / test contracts) ───────────
 
@@ -32,6 +53,7 @@ export interface ConfigPageData {
   league: string;
   environment: string;
   activeTab?: string;
+  availableTeams: Array<{ abbr: string; label: string }>;
   // Overview
   defaultProvider: { label: string; providerId: string } | null;
   serviceReadiness: Record<string, { ready: boolean; detail: string }>;
@@ -44,6 +66,29 @@ export interface ConfigPageData {
     isDefault: boolean;
     enabled: boolean;
     config: Record<string, unknown>;
+  }>;
+  articleSchedules: Array<{
+    id: string;
+    name: string;
+    enabled: number;
+    team_abbr: string;
+    prompt: string;
+    weekday_utc: number;
+    time_of_day_utc: string;
+    content_profile: 'accessible' | 'deep_dive';
+    depth_level: number;
+    preset_id: string;
+    reader_profile: string;
+    article_form: string;
+    panel_shape: string;
+    analytics_mode: string;
+    panel_constraints_json: string | null;
+    provider_mode: 'default' | 'override';
+    provider_id: string | null;
+    last_run_at: string | null;
+    next_run_at: string;
+    created_at: string;
+    updated_at: string;
   }>;
   // Publishing
   publishing: {
@@ -101,6 +146,7 @@ export interface ConfigPageData {
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'providers', label: 'LLM Providers' },
+  { id: 'schedules', label: 'Schedules' },
   { id: 'publishing', label: 'Publishing' },
   { id: 'images', label: 'Images' },
   { id: 'access', label: 'Access' },
@@ -276,6 +322,238 @@ function renderProvidersTab(data: ConfigPageData): string {
         </div>
       </form>
       <div id="add-profile-result" class="settings-result"></div>
+    </section>`;
+}
+
+function renderSchedulesTab(data: ConfigPageData): string {
+  const weekdayOptions = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' },
+  ];
+  const providerOptions = data.providerProfiles
+    .filter((profile) => profile.enabled)
+    .map((profile) => ({
+      id: profile.providerId,
+      label: profile.isDefault ? `${profile.label} (${profile.providerId}, default)` : `${profile.label} (${profile.providerId})`,
+    }));
+
+  const scheduleCards = data.articleSchedules.length > 0
+    ? data.articleSchedules.map((schedule) => {
+      const editorial = buildEditorialUiState(schedule);
+      const advancedChecked = hasEditorialOverrides(editorial);
+      return `
+        <div class="provider-profile-card">
+          <div class="profile-header">
+            <div>
+              <strong>${escapeHtml(schedule.name)}</strong>
+              <span class="badge badge-team">${escapeHtml(schedule.team_abbr)}</span>
+              <span class="badge badge-depth">${escapeHtml(String(schedule.time_of_day_utc))} UTC</span>
+              <span class="badge">${escapeHtml(formatPresetLabel(schedule.preset_id))}</span>
+              ${schedule.enabled === 1 ? '<span class="badge badge-verdict-approved">Enabled</span>' : '<span class="badge badge-verdict-reject">Disabled</span>'}
+            </div>
+            <div class="profile-actions">
+              <form class="admin-inline-form" hx-post="/api/settings/article-schedules/${escapeHtml(schedule.id)}/toggle" hx-target="#schedule-result" hx-swap="innerHTML">
+                <button type="submit" class="btn">${schedule.enabled === 1 ? 'Disable' : 'Enable'}</button>
+              </form>
+              <form class="admin-inline-form" hx-delete="/api/settings/article-schedules/${escapeHtml(schedule.id)}" hx-target="#schedule-result" hx-swap="innerHTML" hx-confirm="Delete schedule '${escapeHtml(schedule.name)}'?">
+                <button type="submit" class="btn">Delete</button>
+              </form>
+            </div>
+          </div>
+          <form class="settings-form" hx-post="/api/settings/article-schedules/${escapeHtml(schedule.id)}" hx-target="#schedule-result" hx-swap="innerHTML">
+            <div class="form-group">
+              <label>Name</label>
+              <input type="text" name="name" value="${escapeHtml(schedule.name)}" required>
+            </div>
+            <div class="form-group">
+              <label>Prompt</label>
+              <textarea name="prompt" rows="4" required>${escapeHtml(schedule.prompt)}</textarea>
+            </div>
+            <div class="settings-grid-2">
+              <div class="form-group">
+                <label>Team</label>
+                <select name="teamAbbr">
+                  ${data.availableTeams.map((team) => `<option value="${escapeHtml(team.abbr)}"${team.abbr === schedule.team_abbr ? ' selected' : ''}>${escapeHtml(team.label)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Weekday (UTC)</label>
+                <select name="weekdayUtc">
+                  ${weekdayOptions.map((option) => `<option value="${option.value}"${option.value === schedule.weekday_utc ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Time (UTC)</label>
+                <input type="time" name="timeOfDayUtc" value="${escapeHtml(schedule.time_of_day_utc)}" required>
+              </div>
+              <div class="form-group">
+                <label>Editorial preset</label>
+                <select name="presetId">
+                  ${renderPresetOptions(editorial.preset_id)}
+                </select>
+                <p class="form-hint">${escapeHtml(getPresetDescription(editorial.preset_id))}</p>
+              </div>
+              <div class="form-group">
+                <label>Provider mode</label>
+                <select name="providerMode">
+                  <option value="default"${schedule.provider_mode === 'default' ? ' selected' : ''}>Use runtime default</option>
+                  <option value="override"${schedule.provider_mode === 'override' ? ' selected' : ''}>Override provider</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Provider override</label>
+                <select name="providerId">
+                  <option value="">None</option>
+                  ${providerOptions.map((option) => `<option value="${escapeHtml(option.id)}"${option.id === schedule.provider_id ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox"${advancedChecked ? ' checked' : ''} onchange="this.form.querySelectorAll('[data-config-schedule-advanced] select, [data-config-schedule-advanced] textarea').forEach((field) => { field.disabled = !this.checked; })"> Override preset defaults</label>
+              <p class="form-hint">Legacy compatibility: ${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}</p>
+            </div>
+            <div class="settings-grid-2" data-config-schedule-advanced>
+              <div class="form-group">
+                <label>Reader profile</label>
+                <select name="readerProfile"${advancedChecked ? '' : ' disabled'}>
+                  ${renderReaderProfileOptions(editorial.reader_profile)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Article form</label>
+                <select name="articleForm"${advancedChecked ? '' : ' disabled'}>
+                  ${renderArticleFormOptions(editorial.article_form)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Panel shape</label>
+                <select name="panelShape"${advancedChecked ? '' : ' disabled'}>
+                  ${renderPanelShapeOptions(editorial.panel_shape)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Analytics mode</label>
+                <select name="analyticsMode"${advancedChecked ? '' : ' disabled'}>
+                  ${renderAnalyticsModeOptions(editorial.analytics_mode)}
+                </select>
+                <p class="form-hint">Casual-facing presets should stay explain-only unless the reason is explicit.</p>
+              </div>
+              <div class="form-group form-group-full">
+                <label>Panel constraints JSON</label>
+                <textarea name="panelConstraintsJson" rows="3"${advancedChecked ? '' : ' disabled'}>${escapeHtml(editorial.panel_constraints_json ?? '')}</textarea>
+              </div>
+            </div>
+            <dl class="settings-kv">
+              <div><dt>Next run</dt><dd><code>${escapeHtml(schedule.next_run_at)}</code></dd></div>
+              <div><dt>Last run</dt><dd>${escapeHtml(schedule.last_run_at ?? 'Never')}</dd></div>
+            </dl>
+            <button type="submit" class="btn btn-primary">Save Schedule</button>
+          </form>
+        </div>`;
+    }).join('')
+    : '<p class="empty-state">No schedules configured.</p>';
+
+  return `
+    <section class="detail-section settings-panel">
+      <h2>Article schedules</h2>
+      ${scheduleCards}
+      <div id="schedule-result" class="settings-result"></div>
+    </section>
+      <section class="detail-section settings-panel">
+        <h2>Add Schedule</h2>
+        <form class="settings-form" hx-post="/api/settings/article-schedules" hx-target="#add-schedule-result" hx-swap="innerHTML">
+        <div class="form-group">
+          <label for="schedule-name">Name</label>
+          <input id="schedule-name" name="name" type="text" placeholder="Seahawks Tuesday accessible" required>
+        </div>
+        <div class="form-group">
+          <label for="schedule-prompt">Prompt</label>
+          <textarea id="schedule-prompt" name="prompt" rows="4" placeholder="Find the most relevant current Seahawks storyline and build an approachable fan article." required></textarea>
+        </div>
+        <div class="settings-grid-2">
+          <div class="form-group">
+            <label for="schedule-team">Team</label>
+            <select id="schedule-team" name="teamAbbr">
+              ${data.availableTeams.map((team) => `<option value="${escapeHtml(team.abbr)}">${escapeHtml(team.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-weekday">Weekday (UTC)</label>
+            <select id="schedule-weekday" name="weekdayUtc">
+              ${weekdayOptions.map((option) => `<option value="${option.value}"${option.value === 2 ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-time">Time (UTC)</label>
+            <input id="schedule-time" name="timeOfDayUtc" type="time" value="14:00" required>
+          </div>
+          <div class="form-group">
+            <label for="schedule-preset">Editorial preset</label>
+            <select id="schedule-preset" name="presetId">
+              ${renderPresetOptions('casual_explainer')}
+            </select>
+            <p class="form-hint">${escapeHtml(getPresetDescription('casual_explainer'))}</p>
+          </div>
+          <div class="form-group">
+            <label for="schedule-provider-mode">Provider mode</label>
+            <select id="schedule-provider-mode" name="providerMode">
+              <option value="default" selected>Use runtime default</option>
+              <option value="override">Override provider</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-provider-id">Provider override</label>
+            <select id="schedule-provider-id" name="providerId">
+              <option value="">None</option>
+              ${providerOptions.map((option) => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" onchange="this.form.querySelectorAll('[data-config-add-advanced] select, [data-config-add-advanced] textarea').forEach((field) => { field.disabled = !this.checked; })"> Override preset defaults</label>
+          <p class="form-hint">Tuesday-style slots map cleanly to Casual Explainer. Thursday-style analysis usually starts with Technical Deep Dive.</p>
+        </div>
+        <div class="settings-grid-2" data-config-add-advanced>
+          <div class="form-group">
+            <label for="schedule-reader-profile">Reader profile</label>
+            <select id="schedule-reader-profile" name="readerProfile" disabled>
+              ${renderReaderProfileOptions('casual')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-article-form">Article form</label>
+            <select id="schedule-article-form" name="articleForm" disabled>
+              ${renderArticleFormOptions('brief')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-panel-shape">Panel shape</label>
+            <select id="schedule-panel-shape" name="panelShape" disabled>
+              ${renderPanelShapeOptions('news_reaction')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-analytics-mode">Analytics mode</label>
+            <select id="schedule-analytics-mode" name="analyticsMode" disabled>
+              ${renderAnalyticsModeOptions('explain_only')}
+            </select>
+          </div>
+          <div class="form-group form-group-full">
+            <label for="schedule-panel-constraints">Panel constraints JSON</label>
+            <textarea id="schedule-panel-constraints" name="panelConstraintsJson" rows="3" disabled></textarea>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" name="enabled" value="true" checked> Enabled</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Schedule</button>
+      </form>
+      <div id="add-schedule-result" class="settings-result"></div>
     </section>`;
 }
 
@@ -559,6 +837,7 @@ function renderDiagnosticsTab(data: ConfigPageData): string {
 const TAB_RENDERERS: Record<TabId, (data: ConfigPageData) => string> = {
   overview: renderOverviewTab,
   providers: renderProvidersTab,
+  schedules: renderSchedulesTab,
   publishing: renderPublishingTab,
   images: renderImagesTab,
   access: renderAccessTab,

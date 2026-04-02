@@ -6,7 +6,16 @@
  */
 
 import type { Stage } from '../types.js';
-import { STAGE_NAMES } from '../types.js';
+import {
+  ANALYTICS_MODE_LABELS,
+  ARTICLE_FORM_LABELS,
+  PANEL_SHAPE_LABELS,
+  READER_PROFILE_LABELS,
+  STAGE_NAMES,
+  formatPresetLabel,
+  getPanelSizeGuidance,
+  resolveEditorialControls,
+} from '../types.js';
 import type { Repository } from '../db/repository.js';
 import type { PipelineEngine } from './engine.js';
 import type { AgentRunner, AgentRunParams, AgentRunResult } from '../agents/runner.js';
@@ -1154,7 +1163,27 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
     const promptContent = gatherContext(ctx.repo, articleId, 'composePanel', ctx.config);
 
     const roster = buildAgentRoster(ctx.runner, ctx.config);
-    const depthLevel = article.depth_level ?? 2;
+    const editorial = resolveEditorialControls({
+      preset_id: article.preset_id,
+      reader_profile: article.reader_profile,
+      article_form: article.article_form,
+      panel_shape: article.panel_shape,
+      analytics_mode: article.analytics_mode,
+      panel_constraints_json: article.panel_constraints_json,
+      depth_level: article.depth_level,
+    });
+    const panelLimits = getPanelSizeGuidance(editorial);
+    const allowTeamAgentOmission =
+      editorial.panel_shape === 'cohort_rank'
+      || editorial.panel_shape === 'market_map'
+      || editorial.panel_constraints?.allow_team_agent_omission === true
+      || editorial.panel_constraints?.scope_mode === 'cohort';
+    const requiredAgentRules = editorial.panel_constraints?.required_agents?.length
+      ? [`- Required agents: ${editorial.panel_constraints.required_agents.join(', ')}`]
+      : [];
+    const excludedAgentRules = editorial.panel_constraints?.excluded_agents?.length
+      ? [`- Excluded agents: ${editorial.panel_constraints.excluded_agents.join(', ')}`]
+      : [];
 
     // Check for pinned agents
     const pinnedAgents = ctx.repo.getPinnedAgents(articleId);
@@ -1172,18 +1201,48 @@ async function composePanel(articleId: string, ctx: ActionContext): Promise<Acti
     const task = [
       'Select a panel of analysts for this discussion from the available roster.',
       '',
-      `Depth Level: ${depthLevel} (${depthLevel === 1 ? '2 agents max' : depthLevel === 2 ? '3-4 agents' : '4-5 agents'})`,
+      `Editorial preset: ${formatPresetLabel(editorial.preset_id)}`,
+      `Reader profile: ${READER_PROFILE_LABELS[editorial.reader_profile]}`,
+      `Article form: ${ARTICLE_FORM_LABELS[editorial.article_form]} (legacy depth ${editorial.legacy_depth_level})`,
+      `Panel shape: ${PANEL_SHAPE_LABELS[editorial.panel_shape]}`,
+      `Analytics mode: ${ANALYTICS_MODE_LABELS[editorial.analytics_mode]}`,
+      `Panel size target: ${panelLimits.min}${panelLimits.min === panelLimits.max ? '' : `-${panelLimits.max}`} agents`,
+      editorial.article_form === 'feature'
+        ? '- Feature is an article-form choice, not an automatic license to max out panel size. Let panel shape and explicit constraints drive composition.'
+        : null,
+      editorial.panel_shape === 'trade_eval'
+        ? '- Trade evaluations should cover both sides of the transaction with cap/valuation context, not just the primary team.'
+        : null,
+      editorial.panel_shape === 'contract_eval'
+        ? '- Contract evaluations should prioritize cap mechanics, player leverage, and team context.'
+        : null,
+      editorial.panel_shape === 'draft_eval'
+        ? '- Draft evaluations should include prospect context plus team fit, not just roster needs.'
+        : null,
+      editorial.panel_shape === 'scheme_breakdown'
+        ? '- Scheme breakdowns should prioritize coaches/unit specialists and analytical context.'
+        : null,
+      editorial.panel_shape === 'cohort_rank'
+        ? '- Cohort panels should compare across teams or player groups; do not force a single-team framing.'
+        : null,
+      editorial.panel_shape === 'market_map'
+        ? '- Market-map panels should center leaguewide valuation/comparison rather than a single-team lens.'
+        : null,
       pinnedSection,
       '',
       '## Available Agents',
       roster,
       '',
       'Rules:',
-      '- Always include the relevant team agent for the primary team',
+      allowTeamAgentOmission
+        ? '- Include a primary-team agent only when it materially improves the panel; cohort and market-map panels may omit it'
+        : '- Always include the relevant team agent for the primary team',
       '- Always include at least one specialist',
       pinnedAgents.length > 0 ? '- Always include the required/pinned agents listed above' : '',
+      ...requiredAgentRules,
+      ...excludedAgentRules,
       '- Select agents whose expertise matches the article topic',
-      '- Panel size must respect the depth level limits',
+      '- Panel size must respect the panel shape and explicit constraint target above',
       '- Each panelist should have a distinct analytical lane',
       '',
       '⚠️ CRITICAL OUTPUT FORMAT: List each panelist as a markdown bullet with bold agent name, em-dash, and role. Example:',

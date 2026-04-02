@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS articles (
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
     published_at    TEXT,
     depth_level     INTEGER NOT NULL DEFAULT 2,  -- 1=Casual Fan, 2=The Beat, 3=Deep Dive
+    preset_id       TEXT NOT NULL DEFAULT 'beat_analysis',
+    reader_profile  TEXT NOT NULL DEFAULT 'engaged' CHECK (reader_profile IN ('casual', 'engaged', 'hardcore')),
+    article_form    TEXT NOT NULL DEFAULT 'standard' CHECK (article_form IN ('brief', 'standard', 'deep', 'feature')),
+    panel_shape     TEXT NOT NULL DEFAULT 'auto' CHECK (panel_shape IN ('auto', 'news_reaction', 'contract_eval', 'trade_eval', 'draft_eval', 'scheme_breakdown', 'cohort_rank', 'market_map')),
+    analytics_mode  TEXT NOT NULL DEFAULT 'normal' CHECK (analytics_mode IN ('explain_only', 'normal', 'metrics_forward')),
+    panel_constraints_json TEXT,
     target_publish_date TEXT,
     publish_window  TEXT,
     time_sensitive  INTEGER NOT NULL DEFAULT 0,
@@ -266,6 +272,58 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 
 -- ─────────────────────────────────────────────
+-- ARTICLE SCHEDULES
+-- Recurring article-generation schedules owned by the service.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS article_schedules (
+    id                TEXT PRIMARY KEY,
+    name              TEXT NOT NULL,
+    enabled           INTEGER NOT NULL DEFAULT 1,
+    team_abbr         TEXT NOT NULL,
+    prompt            TEXT NOT NULL,
+    weekday_utc       INTEGER NOT NULL,
+    time_of_day_utc   TEXT NOT NULL,
+    content_profile   TEXT NOT NULL CHECK (content_profile IN ('accessible', 'deep_dive')),
+    depth_level       INTEGER NOT NULL DEFAULT 2,
+    preset_id         TEXT NOT NULL DEFAULT 'beat_analysis',
+    reader_profile    TEXT NOT NULL DEFAULT 'engaged' CHECK (reader_profile IN ('casual', 'engaged', 'hardcore')),
+    article_form      TEXT NOT NULL DEFAULT 'standard' CHECK (article_form IN ('brief', 'standard', 'deep', 'feature')),
+    panel_shape       TEXT NOT NULL DEFAULT 'auto' CHECK (panel_shape IN ('auto', 'news_reaction', 'contract_eval', 'trade_eval', 'draft_eval', 'scheme_breakdown', 'cohort_rank', 'market_map')),
+    analytics_mode    TEXT NOT NULL DEFAULT 'normal' CHECK (analytics_mode IN ('explain_only', 'normal', 'metrics_forward')),
+    panel_constraints_json TEXT,
+    provider_mode     TEXT NOT NULL DEFAULT 'default' CHECK (provider_mode IN ('default', 'override')),
+    provider_id       TEXT,
+    last_run_at       TEXT,
+    next_run_at       TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_schedules_due
+    ON article_schedules(enabled, next_run_at);
+
+-- ─────────────────────────────────────────────
+-- ARTICLE SCHEDULE RUNS
+-- One claimed/executed slot per schedule occurrence.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS article_schedule_runs (
+    id                TEXT PRIMARY KEY,
+    schedule_id       TEXT NOT NULL REFERENCES article_schedules(id) ON DELETE CASCADE,
+    scheduled_for     TEXT NOT NULL,
+    status            TEXT NOT NULL CHECK (status IN ('claimed', 'created_article', 'completed', 'failed', 'skipped')),
+    discovery_json    TEXT,
+    selected_story_json TEXT,
+    article_id        TEXT REFERENCES articles(id),
+    error_text        TEXT,
+    started_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at      TEXT,
+    UNIQUE(schedule_id, scheduled_for)
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_schedule_runs_schedule
+    ON article_schedule_runs(schedule_id, started_at DESC);
+
+-- ─────────────────────────────────────────────
 -- ARTIFACTS
 -- Article file content stored in DB (source of truth).
 -- ─────────────────────────────────────────────
@@ -307,10 +365,16 @@ SELECT
     a.discussion_path,
     a.article_path,
     a.depth_level,
+    a.preset_id,
+    a.reader_profile,
+    a.article_form,
+    a.panel_shape,
+    a.analytics_mode,
     CASE a.depth_level
         WHEN 1 THEN 'Casual Fan'
         WHEN 2 THEN 'The Beat'
         WHEN 3 THEN 'Deep Dive'
+        WHEN 4 THEN 'Feature'
         ELSE 'Unknown'
     END AS depth_name,
     a.target_publish_date,

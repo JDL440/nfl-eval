@@ -10,11 +10,27 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
+import {
+  ANALYTICS_MODE_LABELS,
+  ARTICLE_FORM_LABELS,
+  EDITORIAL_PRESETS,
+  PANEL_SHAPE_LABELS,
+  READER_PROFILE_LABELS,
+  resolveEditorialControls,
+} from '../types.js';
 import type {
+  AnalyticsMode,
   Article,
+  ArticleForm,
+  ArticleSchedule,
+  ArticleScheduleContentProfile,
+  ArticleScheduleProviderMode,
+  ArticleScheduleRun,
+  ArticleScheduleRunStatus,
   ArticleRetrospective,
   ArticleRetrospectiveFinding,
   ArticleRun,
+  EditorialPresetId,
   LlmTrace,
   LlmTraceStatus,
   ArticleStatus,
@@ -23,6 +39,8 @@ import type {
   Note,
   NoteTarget,
   NoteType,
+  PanelShape,
+  ReaderProfile,
   PublisherPass,
   RetrospectiveDigestFindingRow,
   RunStatus,
@@ -67,6 +85,159 @@ function validateStatus<T extends string>(value: string, allowed: readonly T[], 
   if (!(allowed as readonly string[]).includes(value)) {
     throw new Error(`Invalid ${label} '${value}', expected one of ${JSON.stringify(allowed)}`);
   }
+}
+
+function validateDepthLevel(depthLevel: number, label = 'depth_level'): void {
+  if (!Number.isInteger(depthLevel) || depthLevel < 1 || depthLevel > 4) {
+    throw new Error(`${label} must be an integer 1–4, got ${JSON.stringify(depthLevel)}`);
+  }
+}
+
+function validatePresetId(value: string, label = 'preset_id'): asserts value is EditorialPresetId {
+  if (!(value in EDITORIAL_PRESETS)) {
+    throw new Error(`Invalid ${label} '${value}'`);
+  }
+}
+
+function validateReaderProfile(value: string, label = 'reader_profile'): asserts value is ReaderProfile {
+  if (!(value in READER_PROFILE_LABELS)) {
+    throw new Error(`Invalid ${label} '${value}'`);
+  }
+}
+
+function validateArticleForm(value: string, label = 'article_form'): asserts value is ArticleForm {
+  if (!(value in ARTICLE_FORM_LABELS)) {
+    throw new Error(`Invalid ${label} '${value}'`);
+  }
+}
+
+function validatePanelShape(value: string, label = 'panel_shape'): asserts value is PanelShape {
+  if (!(value in PANEL_SHAPE_LABELS)) {
+    throw new Error(`Invalid ${label} '${value}'`);
+  }
+}
+
+function validateAnalyticsMode(value: string, label = 'analytics_mode'): asserts value is AnalyticsMode {
+  if (!(value in ANALYTICS_MODE_LABELS)) {
+    throw new Error(`Invalid ${label} '${value}'`);
+  }
+}
+
+function validateWeekdayUtc(weekdayUtc: number): void {
+  if (!Number.isInteger(weekdayUtc) || weekdayUtc < 0 || weekdayUtc > 6) {
+    throw new Error(`weekday_utc must be an integer 0–6, got ${JSON.stringify(weekdayUtc)}`);
+  }
+}
+
+function validateTimeOfDayUtc(value: string): void {
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+    throw new Error(`time_of_day_utc must be HH:MM, got ${JSON.stringify(value)}`);
+  }
+}
+
+function validateScheduleProviderMode(value: string): asserts value is ArticleScheduleProviderMode {
+  if (value !== 'default' && value !== 'override') {
+    throw new Error(`provider_mode must be 'default' or 'override', got ${JSON.stringify(value)}`);
+  }
+}
+
+function validateScheduleContentProfile(value: string): asserts value is ArticleScheduleContentProfile {
+  if (value !== 'accessible' && value !== 'deep_dive') {
+    throw new Error(`content_profile must be 'accessible' or 'deep_dive', got ${JSON.stringify(value)}`);
+  }
+}
+
+function validateScheduleRunStatus(value: string): asserts value is ArticleScheduleRunStatus {
+  if (!['claimed', 'created_article', 'completed', 'failed', 'skipped'].includes(value)) {
+    throw new Error(`Invalid schedule run status '${value}'`);
+  }
+}
+
+function resolveArticleEditorialUpdate(
+  article: Pick<Article, 'preset_id' | 'reader_profile' | 'article_form' | 'panel_shape' | 'analytics_mode' | 'panel_constraints_json' | 'depth_level'>,
+  updates: {
+    depth_level?: number;
+    preset_id?: EditorialPresetId;
+    reader_profile?: ReaderProfile;
+    article_form?: ArticleForm;
+    panel_shape?: PanelShape;
+    analytics_mode?: AnalyticsMode;
+    panel_constraints_json?: string | null;
+  },
+) {
+  const legacyDepthChanged = updates.depth_level !== undefined;
+  return resolveEditorialControls({
+    preset_id: updates.preset_id ?? (legacyDepthChanged ? undefined : article.preset_id),
+    reader_profile: updates.reader_profile ?? article.reader_profile,
+    article_form: updates.article_form ?? (legacyDepthChanged ? undefined : article.article_form),
+    panel_shape: updates.panel_shape ?? article.panel_shape,
+    analytics_mode: updates.analytics_mode ?? article.analytics_mode,
+    panel_constraints_json: updates.panel_constraints_json ?? article.panel_constraints_json,
+    depth_level: updates.depth_level ?? article.depth_level,
+  });
+}
+
+function resolveScheduleEditorialUpdate(
+  schedule: Pick<ArticleSchedule, 'content_profile' | 'preset_id' | 'reader_profile' | 'article_form' | 'panel_shape' | 'analytics_mode' | 'panel_constraints_json' | 'depth_level'>,
+  patch: {
+    content_profile?: ArticleScheduleContentProfile;
+    depth_level?: number;
+    preset_id?: EditorialPresetId;
+    reader_profile?: ReaderProfile;
+    article_form?: ArticleForm;
+    panel_shape?: PanelShape;
+    analytics_mode?: AnalyticsMode;
+    panel_constraints_json?: string | null;
+  },
+) {
+  const legacyDepthChanged = patch.depth_level !== undefined;
+  const legacyProfileChanged = patch.content_profile !== undefined;
+  return resolveEditorialControls({
+    preset_id: patch.preset_id ?? ((legacyDepthChanged || legacyProfileChanged) ? undefined : schedule.preset_id),
+    reader_profile: patch.reader_profile ?? ((legacyDepthChanged || legacyProfileChanged) && patch.analytics_mode === undefined ? undefined : schedule.reader_profile),
+    article_form: patch.article_form ?? (legacyDepthChanged ? undefined : schedule.article_form),
+    panel_shape: patch.panel_shape ?? schedule.panel_shape,
+    analytics_mode: patch.analytics_mode ?? ((legacyDepthChanged || legacyProfileChanged) && patch.reader_profile === undefined ? undefined : schedule.analytics_mode),
+    panel_constraints_json: patch.panel_constraints_json ?? schedule.panel_constraints_json,
+    depth_level: patch.depth_level ?? schedule.depth_level,
+    content_profile: patch.content_profile ?? schedule.content_profile,
+  });
+}
+
+function isBlankText(value: string | null | undefined): boolean {
+  return value == null || value.trim() === '';
+}
+
+function hasUntouchedEditorialDefaults(row: {
+  preset_id: string | null;
+  reader_profile: string | null;
+  article_form: string | null;
+  panel_shape: string | null;
+  analytics_mode: string | null;
+  panel_constraints_json: string | null;
+}): boolean {
+  return row.panel_constraints_json == null
+    && row.preset_id === 'beat_analysis'
+    && row.reader_profile === 'engaged'
+    && row.article_form === 'standard'
+    && row.panel_shape === 'auto'
+    && row.analytics_mode === 'normal';
+}
+
+function needsEditorialBackfill(row: {
+  preset_id: string | null;
+  reader_profile: string | null;
+  article_form: string | null;
+  panel_shape: string | null;
+  analytics_mode: string | null;
+  panel_constraints_json: string | null;
+}): boolean {
+  return isBlankText(row.preset_id)
+    || isBlankText(row.reader_profile)
+    || isBlankText(row.article_form)
+    || isBlankText(row.panel_shape)
+    || isBlankText(row.analytics_mode)
+    || hasUntouchedEditorialDefaults(row);
 }
 
 function normalizeMetadataJson(metadata: unknown): string | null {
@@ -315,6 +486,7 @@ export class Repository {
     const sql = readFileSync(schemaPath, 'utf-8');
     this.db.exec(sql);
     this.ensureArticleColumns();
+    this.ensureArticleScheduleColumns();
     this.ensureRevisionSummaryColumns();
     this.ensureLlmTraceColumns();
   }
@@ -325,6 +497,114 @@ export class Repository {
 
     if (!columnNames.has('llm_provider')) {
       this.db.exec('ALTER TABLE articles ADD COLUMN llm_provider TEXT');
+    }
+    if (!columnNames.has('preset_id')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN preset_id TEXT');
+    }
+    if (!columnNames.has('reader_profile')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN reader_profile TEXT');
+    }
+    if (!columnNames.has('article_form')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN article_form TEXT');
+    }
+    if (!columnNames.has('panel_shape')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN panel_shape TEXT');
+    }
+    if (!columnNames.has('analytics_mode')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN analytics_mode TEXT');
+    }
+    if (!columnNames.has('panel_constraints_json')) {
+      this.db.exec('ALTER TABLE articles ADD COLUMN panel_constraints_json TEXT');
+    }
+    const rows = this.db.prepare(`
+      SELECT id, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json
+      FROM articles
+    `).all() as Array<{
+      id: string;
+      depth_level: number;
+      preset_id: string | null;
+      reader_profile: string | null;
+      article_form: string | null;
+      panel_shape: string | null;
+      analytics_mode: string | null;
+      panel_constraints_json: string | null;
+    }>;
+    const update = this.db.prepare(`
+      UPDATE articles
+      SET preset_id = ?, reader_profile = ?, article_form = ?, panel_shape = ?, analytics_mode = ?, panel_constraints_json = ?
+      WHERE id = ?
+    `);
+    for (const row of rows) {
+      if (!needsEditorialBackfill(row)) continue;
+      const editorial = resolveEditorialControls({ depth_level: row.depth_level });
+      update.run(
+        editorial.preset_id,
+        editorial.reader_profile,
+        editorial.article_form,
+        editorial.panel_shape,
+        editorial.analytics_mode,
+        row.panel_constraints_json,
+        row.id,
+      );
+    }
+  }
+
+  private ensureArticleScheduleColumns(): void {
+    const columns = this.db.prepare('PRAGMA table_info(article_schedules)').all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+
+    if (!columnNames.has('preset_id')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN preset_id TEXT');
+    }
+    if (!columnNames.has('reader_profile')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN reader_profile TEXT');
+    }
+    if (!columnNames.has('article_form')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN article_form TEXT');
+    }
+    if (!columnNames.has('panel_shape')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN panel_shape TEXT');
+    }
+    if (!columnNames.has('analytics_mode')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN analytics_mode TEXT');
+    }
+    if (!columnNames.has('panel_constraints_json')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN panel_constraints_json TEXT');
+    }
+    const rows = this.db.prepare(`
+      SELECT id, content_profile, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json
+      FROM article_schedules
+    `).all() as Array<{
+      id: string;
+      content_profile: ArticleScheduleContentProfile;
+      depth_level: number;
+      preset_id: string | null;
+      reader_profile: string | null;
+      article_form: string | null;
+      panel_shape: string | null;
+      analytics_mode: string | null;
+      panel_constraints_json: string | null;
+    }>;
+    const update = this.db.prepare(`
+      UPDATE article_schedules
+      SET preset_id = ?, reader_profile = ?, article_form = ?, panel_shape = ?, analytics_mode = ?, panel_constraints_json = ?
+      WHERE id = ?
+    `);
+    for (const row of rows) {
+      if (!needsEditorialBackfill(row)) continue;
+      const editorial = resolveEditorialControls({
+        depth_level: row.depth_level,
+        content_profile: row.content_profile,
+      });
+      update.run(
+        editorial.preset_id,
+        editorial.reader_profile,
+        editorial.article_form,
+        editorial.panel_shape,
+        editorial.analytics_mode,
+        row.panel_constraints_json,
+        row.id,
+      );
     }
   }
 
@@ -390,6 +670,51 @@ export class Repository {
       'SELECT * FROM articles ORDER BY current_stage DESC, updated_at DESC',
     );
     return stmt.all() as unknown as Article[];
+  }
+
+  getArticleSchedule(scheduleId: string): ArticleSchedule | null {
+    const row = this.db.prepare(
+      'SELECT * FROM article_schedules WHERE id = ?',
+    ).get(scheduleId) as ArticleSchedule | undefined;
+    return row ?? null;
+  }
+
+  listArticleSchedules(options?: {
+    enabledOnly?: boolean;
+    dueBefore?: string;
+  }): ArticleSchedule[] {
+    const where: string[] = [];
+    const params: Array<string | number> = [];
+    if (options?.enabledOnly) {
+      where.push('enabled = 1');
+    }
+    if (options?.dueBefore) {
+      where.push('next_run_at <= ?');
+      params.push(options.dueBefore);
+    }
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    const stmt = this.db.prepare(
+      `SELECT * FROM article_schedules ${whereClause} ORDER BY next_run_at ASC, id ASC`,
+    );
+    return stmt.all(...params) as unknown as ArticleSchedule[];
+  }
+
+  listArticleScheduleRuns(scheduleId: string, limit?: number): ArticleScheduleRun[] {
+    if (limit == null) {
+      return this.db.prepare(
+        'SELECT * FROM article_schedule_runs WHERE schedule_id = ? ORDER BY scheduled_for DESC, started_at DESC, id DESC',
+      ).all(scheduleId) as unknown as ArticleScheduleRun[];
+    }
+    return this.db.prepare(
+      'SELECT * FROM article_schedule_runs WHERE schedule_id = ? ORDER BY scheduled_for DESC, started_at DESC, id DESC LIMIT ?',
+    ).all(scheduleId, limit) as unknown as ArticleScheduleRun[];
+  }
+
+  getArticleScheduleRun(runId: string): ArticleScheduleRun | null {
+    const row = this.db.prepare(
+      'SELECT * FROM article_schedule_runs WHERE id = ?',
+    ).get(runId) as ArticleScheduleRun | undefined;
+    return row ?? null;
   }
 
   getEditorReviews(articleId: string): EditorReview[] {
@@ -950,7 +1275,19 @@ export class Repository {
 
   updateArticle(
     articleId: string,
-    updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[]; llm_provider?: string | null },
+    updates: {
+      title?: string;
+      subtitle?: string | null;
+      depth_level?: number;
+      teams?: string[];
+      llm_provider?: string | null;
+      preset_id?: EditorialPresetId;
+      reader_profile?: ReaderProfile;
+      article_form?: ArticleForm;
+      panel_shape?: PanelShape;
+      analytics_mode?: AnalyticsMode;
+      panel_constraints_json?: string | null;
+    },
   ): Article {
     const article = this.getArticle(articleId);
     if (article == null) {
@@ -978,8 +1315,37 @@ export class Repository {
       if (!Number.isInteger(depth) || depth < 1 || depth > 4) {
         throw new Error(`depth_level must be an integer 1–4, got ${JSON.stringify(depth)}`);
       }
-      setParts.push('depth_level = ?');
-      params.push(depth);
+    }
+
+    const editorialPatch =
+      updates.depth_level !== undefined ||
+      updates.preset_id !== undefined ||
+      updates.reader_profile !== undefined ||
+      updates.article_form !== undefined ||
+      updates.panel_shape !== undefined ||
+      updates.analytics_mode !== undefined ||
+      updates.panel_constraints_json !== undefined
+        ? resolveArticleEditorialUpdate(article, updates)
+        : null;
+    if (editorialPatch) {
+      setParts.push(
+        'preset_id = ?',
+        'reader_profile = ?',
+        'article_form = ?',
+        'panel_shape = ?',
+        'analytics_mode = ?',
+        'panel_constraints_json = ?',
+        'depth_level = ?',
+      );
+      params.push(
+        editorialPatch.preset_id,
+        editorialPatch.reader_profile,
+        editorialPatch.article_form,
+        editorialPatch.panel_shape,
+        editorialPatch.analytics_mode,
+        editorialPatch.panel_constraints_json,
+        editorialPatch.legacy_depth_level,
+      );
     }
 
     if (updates.teams !== undefined) {
@@ -1961,6 +2327,12 @@ export class Repository {
     primary_team?: string;
     league?: string;
     depth_level?: number;
+    preset_id?: EditorialPresetId;
+    reader_profile?: ReaderProfile;
+    article_form?: ArticleForm;
+    panel_shape?: PanelShape;
+    analytics_mode?: AnalyticsMode;
+    panel_constraints_json?: string | null;
   }): Article {
     const {
       id,
@@ -1970,6 +2342,15 @@ export class Repository {
       league = 'nfl',
       depth_level = 2,
     } = params;
+    const editorial = resolveEditorialControls({
+      preset_id: params.preset_id,
+      reader_profile: params.reader_profile,
+      article_form: params.article_form,
+      panel_shape: params.panel_shape,
+      analytics_mode: params.analytics_mode,
+      panel_constraints_json: params.panel_constraints_json ?? null,
+      depth_level,
+    });
 
     const existing = this.getArticle(id);
     if (existing != null) {
@@ -1982,10 +2363,26 @@ export class Repository {
     const stmt = this.db.prepare(
       `INSERT INTO articles
        (id, title, llm_provider, primary_team, teams, league, status, current_stage,
-        created_at, updated_at, depth_level, time_sensitive)
-       VALUES (?, ?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, 0)`,
+        created_at, updated_at, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json, time_sensitive)
+       VALUES (?, ?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     );
-    stmt.run(id, title, llm_provider, primary_team, teams, league, now, now, depth_level);
+    stmt.run(
+      id,
+      title,
+      llm_provider,
+      primary_team,
+      teams,
+      league,
+      now,
+      now,
+      editorial.legacy_depth_level,
+      editorial.preset_id,
+      editorial.reader_profile,
+      editorial.article_form,
+      editorial.panel_shape,
+      editorial.analytics_mode,
+      editorial.panel_constraints_json,
+    );
 
     const transStmt = this.db.prepare(
       `INSERT INTO stage_transitions
@@ -1995,6 +2392,308 @@ export class Repository {
     transStmt.run(id, null, 1, 'dashboard', 'New idea created', now);
 
     return this.getArticle(id)!;
+  }
+
+  createArticleSchedule(input: {
+    name: string;
+    team_abbr: string;
+    prompt: string;
+    weekday_utc: number;
+    time_of_day_utc: string;
+    content_profile: ArticleScheduleContentProfile;
+    depth_level: number;
+    preset_id?: EditorialPresetId;
+    reader_profile?: ReaderProfile;
+    article_form?: ArticleForm;
+    panel_shape?: PanelShape;
+    analytics_mode?: AnalyticsMode;
+    panel_constraints_json?: string | null;
+    provider_mode?: ArticleScheduleProviderMode;
+    provider_id?: string | null;
+    enabled?: boolean;
+    next_run_at: string;
+  }): ArticleSchedule {
+    const name = input.name.trim();
+    const teamAbbr = input.team_abbr.trim();
+    const prompt = input.prompt.trim();
+    const providerMode = input.provider_mode ?? 'default';
+    const providerId = providerMode === 'override' ? (input.provider_id?.trim() || null) : null;
+
+    if (!name) throw new Error('name is required');
+    if (!teamAbbr) throw new Error('team_abbr is required');
+    if (!prompt) throw new Error('prompt is required');
+    validateWeekdayUtc(input.weekday_utc);
+    validateTimeOfDayUtc(input.time_of_day_utc);
+    validateScheduleContentProfile(input.content_profile);
+    validateDepthLevel(input.depth_level);
+    validateScheduleProviderMode(providerMode);
+    const editorial = resolveEditorialControls({
+      preset_id: input.preset_id,
+      reader_profile: input.reader_profile,
+      article_form: input.article_form,
+      panel_shape: input.panel_shape,
+      analytics_mode: input.analytics_mode,
+      panel_constraints_json: input.panel_constraints_json ?? null,
+      depth_level: input.depth_level,
+      content_profile: input.content_profile,
+    });
+    if (providerMode === 'override' && !providerId) {
+      throw new Error('provider_id is required when provider_mode is override');
+    }
+
+    const id = randomUUID();
+    const now = nowISO();
+    this.db.prepare(
+      `INSERT INTO article_schedules
+       (id, name, enabled, team_abbr, prompt, weekday_utc, time_of_day_utc, content_profile, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json, provider_mode, provider_id, next_run_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      name,
+      input.enabled === false ? 0 : 1,
+      teamAbbr,
+      prompt,
+      input.weekday_utc,
+      input.time_of_day_utc,
+      input.content_profile,
+      input.depth_level,
+      editorial.preset_id,
+      editorial.reader_profile,
+      editorial.article_form,
+      editorial.panel_shape,
+      editorial.analytics_mode,
+      editorial.panel_constraints_json,
+      providerMode,
+      providerId,
+      input.next_run_at,
+      now,
+      now,
+    );
+    return this.getArticleSchedule(id)!;
+  }
+
+  updateArticleSchedule(scheduleId: string, patch: {
+    name?: string;
+    team_abbr?: string;
+    prompt?: string;
+    weekday_utc?: number;
+    time_of_day_utc?: string;
+    content_profile?: ArticleScheduleContentProfile;
+    depth_level?: number;
+    preset_id?: EditorialPresetId;
+    reader_profile?: ReaderProfile;
+    article_form?: ArticleForm;
+    panel_shape?: PanelShape;
+    analytics_mode?: AnalyticsMode;
+    panel_constraints_json?: string | null;
+    provider_mode?: ArticleScheduleProviderMode;
+    provider_id?: string | null;
+    enabled?: boolean;
+    next_run_at?: string;
+    last_run_at?: string | null;
+  }): ArticleSchedule {
+    const existing = this.getArticleSchedule(scheduleId);
+    if (!existing) throw new Error(`Article schedule '${scheduleId}' not found`);
+
+    const setParts: string[] = [];
+    const params: Array<string | number | null> = [];
+
+    if (patch.name !== undefined) {
+      const value = patch.name.trim();
+      if (!value) throw new Error('name is required');
+      setParts.push('name = ?');
+      params.push(value);
+    }
+    if (patch.team_abbr !== undefined) {
+      const value = patch.team_abbr.trim();
+      if (!value) throw new Error('team_abbr is required');
+      setParts.push('team_abbr = ?');
+      params.push(value);
+    }
+    if (patch.prompt !== undefined) {
+      const value = patch.prompt.trim();
+      if (!value) throw new Error('prompt is required');
+      setParts.push('prompt = ?');
+      params.push(value);
+    }
+    if (patch.weekday_utc !== undefined) {
+      validateWeekdayUtc(patch.weekday_utc);
+      setParts.push('weekday_utc = ?');
+      params.push(patch.weekday_utc);
+    }
+    if (patch.time_of_day_utc !== undefined) {
+      validateTimeOfDayUtc(patch.time_of_day_utc);
+      setParts.push('time_of_day_utc = ?');
+      params.push(patch.time_of_day_utc);
+    }
+    if (patch.content_profile !== undefined) {
+      validateScheduleContentProfile(patch.content_profile);
+    }
+    if (patch.depth_level !== undefined) {
+      validateDepthLevel(patch.depth_level);
+    }
+    const editorialPatch =
+      patch.content_profile !== undefined ||
+      patch.depth_level !== undefined ||
+      patch.preset_id !== undefined ||
+      patch.reader_profile !== undefined ||
+      patch.article_form !== undefined ||
+      patch.panel_shape !== undefined ||
+      patch.analytics_mode !== undefined ||
+      patch.panel_constraints_json !== undefined
+        ? resolveScheduleEditorialUpdate(existing, patch)
+        : null;
+    if (editorialPatch) {
+      const legacyContentProfile = patch.content_profile ?? editorialPatch.legacy_content_profile;
+      const legacyDepthLevel = patch.depth_level ?? editorialPatch.legacy_depth_level;
+      setParts.push(
+        'preset_id = ?',
+        'reader_profile = ?',
+        'article_form = ?',
+        'panel_shape = ?',
+        'analytics_mode = ?',
+        'panel_constraints_json = ?',
+        'content_profile = ?',
+        'depth_level = ?',
+      );
+      params.push(
+        editorialPatch.preset_id,
+        editorialPatch.reader_profile,
+        editorialPatch.article_form,
+        editorialPatch.panel_shape,
+        editorialPatch.analytics_mode,
+        editorialPatch.panel_constraints_json,
+        legacyContentProfile,
+        legacyDepthLevel,
+      );
+    }
+    const providerMode = patch.provider_mode ?? existing.provider_mode;
+    validateScheduleProviderMode(providerMode);
+    if (patch.provider_mode !== undefined) {
+      setParts.push('provider_mode = ?');
+      params.push(providerMode);
+    }
+    if (patch.provider_id !== undefined || patch.provider_mode !== undefined) {
+      const providerId = providerMode === 'override'
+        ? ((patch.provider_id ?? existing.provider_id)?.trim() || null)
+        : null;
+      if (providerMode === 'override' && !providerId) {
+        throw new Error('provider_id is required when provider_mode is override');
+      }
+      setParts.push('provider_id = ?');
+      params.push(providerId);
+    }
+    if (patch.enabled !== undefined) {
+      setParts.push('enabled = ?');
+      params.push(patch.enabled ? 1 : 0);
+    }
+    if (patch.next_run_at !== undefined) {
+      setParts.push('next_run_at = ?');
+      params.push(patch.next_run_at);
+    }
+    if (patch.last_run_at !== undefined) {
+      setParts.push('last_run_at = ?');
+      params.push(patch.last_run_at);
+    }
+
+    if (setParts.length === 0) return existing;
+
+    setParts.push('updated_at = ?');
+    params.push(nowISO(), scheduleId);
+    this.db.prepare(
+      `UPDATE article_schedules SET ${setParts.join(', ')} WHERE id = ?`,
+    ).run(...params);
+    return this.getArticleSchedule(scheduleId)!;
+  }
+
+  deleteArticleSchedule(scheduleId: string): void {
+    this.db.prepare('DELETE FROM article_schedules WHERE id = ?').run(scheduleId);
+  }
+
+  claimArticleScheduleRun(scheduleId: string, scheduledFor: string): ArticleScheduleRun | null {
+    const runId = randomUUID();
+    const now = nowISO();
+    try {
+      this.db.exec('BEGIN IMMEDIATE');
+      this.db.prepare(
+        `INSERT OR IGNORE INTO article_schedule_runs
+         (id, schedule_id, scheduled_for, status, started_at)
+         VALUES (?, ?, ?, 'claimed', ?)`,
+      ).run(runId, scheduleId, scheduledFor, now);
+      const row = this.db.prepare(
+        'SELECT * FROM article_schedule_runs WHERE schedule_id = ? AND scheduled_for = ?',
+      ).get(scheduleId, scheduledFor) as ArticleScheduleRun | undefined;
+      if (!row || row.id !== runId) {
+        this.db.exec('COMMIT');
+        return null;
+      }
+      this.db.exec('COMMIT');
+      return row;
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+  }
+
+  updateArticleScheduleRun(runId: string, patch: {
+    status?: ArticleScheduleRunStatus;
+    discovery_json?: string | null;
+    selected_story_json?: string | null;
+    article_id?: string | null;
+    error_text?: string | null;
+    completed_at?: string | null;
+  }): ArticleScheduleRun {
+    const existing = this.getArticleScheduleRun(runId);
+    if (!existing) throw new Error(`Article schedule run '${runId}' not found`);
+
+    const setParts: string[] = [];
+    const params: Array<string | null> = [];
+    if (patch.status !== undefined) {
+      validateScheduleRunStatus(patch.status);
+      setParts.push('status = ?');
+      params.push(patch.status);
+    }
+    if (patch.discovery_json !== undefined) {
+      setParts.push('discovery_json = ?');
+      params.push(patch.discovery_json);
+    }
+    if (patch.selected_story_json !== undefined) {
+      setParts.push('selected_story_json = ?');
+      params.push(patch.selected_story_json);
+    }
+    if (patch.article_id !== undefined) {
+      setParts.push('article_id = ?');
+      params.push(patch.article_id);
+    }
+    if (patch.error_text !== undefined) {
+      setParts.push('error_text = ?');
+      params.push(patch.error_text);
+    }
+    if (patch.completed_at !== undefined) {
+      setParts.push('completed_at = ?');
+      params.push(patch.completed_at);
+    }
+    if (setParts.length === 0) return existing;
+
+    params.push(runId);
+    this.db.prepare(
+      `UPDATE article_schedule_runs SET ${setParts.join(', ')} WHERE id = ?`,
+    ).run(...params);
+    return this.getArticleScheduleRun(runId)!;
+  }
+
+  markArticleScheduleRunCompleted(runId: string, patch?: {
+    status?: Extract<ArticleScheduleRunStatus, 'completed' | 'failed' | 'skipped'>;
+    discovery_json?: string | null;
+    selected_story_json?: string | null;
+    article_id?: string | null;
+    error_text?: string | null;
+  }): ArticleScheduleRun {
+    return this.updateArticleScheduleRun(runId, {
+      ...patch,
+      status: patch?.status ?? 'completed',
+      completed_at: nowISO(),
+    });
   }
 
   // ── Pinned agents (article_panels) ────────────────────────────────────────

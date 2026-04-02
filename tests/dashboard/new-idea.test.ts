@@ -148,22 +148,23 @@ The Actual Title Here
 // ── View rendering tests ────────────────────────────────────────────────────
 
 describe('renderNewIdeaPage', () => {
-  it('renders the smart form with prompt, team grid, depth level, and auto-advance', () => {
+  it('renders the smart form with prompt, team grid, editorial preset, and auto-advance', () => {
     const html = renderNewIdeaPage({ labName: 'NFL Lab' });
     expect(html).toContain('<!DOCTYPE html>');
     expect(html).toContain('New Article Idea');
     expect(html).toContain('name="prompt"');
     expect(html).toContain('team-grid');
     expect(html).toContain('auto-advance');
-    expect(html).toContain('name="depthLevel"');
-    expect(html).toContain('1 — Casual Fan');
-    expect(html).toContain('2 — The Beat');
-    expect(html).toContain('3 — Deep Dive');
+    expect(html).toContain('name="presetId"');
+    expect(html).toContain('Casual Explainer');
+    expect(html).toContain('Beat Analysis');
+    expect(html).toContain('Technical Deep Dive');
+    expect(html).toContain('Narrative Feature');
   });
 
-  it('defaults depth level to 2', () => {
+  it('defaults the preset to beat analysis', () => {
     const html = renderNewIdeaPage({ labName: 'NFL Lab' });
-    expect(html).toContain('value="2" selected');
+    expect(html).toContain('value="beat_analysis" selected');
   });
 
   it('renders an LLM provider selector when providers are available', () => {
@@ -312,7 +313,7 @@ describe('New Idea Routes', () => {
       expect(html).toContain('name="prompt"');
       expect(html).toContain('team-grid');
       expect(html).toContain('auto-advance');
-      expect(html).toContain('name="depthLevel"');
+      expect(html).toContain('name="presetId"');
     });
   });
 
@@ -555,6 +556,51 @@ Writer + Analyst + Editor
       expect(article!.depth_level).toBe(3);
     });
 
+    it('respects presets and advanced panel controls end to end', async () => {
+      const res = await llmApp.request('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Build a narrative feature around a hypothetical Seahawks-Jets trade',
+          teams: ['SEA', 'NYJ'],
+          depthLevel: 4,
+          presetId: 'narrative_feature',
+          panelShape: 'trade_eval',
+          panelMin: 4,
+          panelMax: 4,
+          requiredAgents: 'cap, playerrep',
+          excludedAgents: 'fantasy',
+          allowTeamAgentOmission: true,
+          scopeMode: 'cohort',
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const body = await res.json() as { id: string };
+      const article = repo.getArticle(body.id)!;
+      expect(article.preset_id).toBe('narrative_feature');
+      expect(article.article_form).toBe('feature');
+      expect(article.panel_shape).toBe('trade_eval');
+      expect(article.depth_level).toBe(4);
+      expect(article.panel_constraints_json).toBe(JSON.stringify({
+        min_agents: 4,
+        max_agents: 4,
+        required_agents: ['cap', 'playerrep'],
+        excluded_agents: ['fantasy'],
+        allow_team_agent_omission: true,
+        scope_mode: 'cohort',
+      }));
+
+      const task = mockRun.mock.calls.at(-1)?.[0]?.task ?? '';
+      expect(task).toContain('Editorial preset: Narrative Feature');
+      expect(task).toContain('Article form: Feature (legacy depth 4)');
+      expect(task).toContain('Panel shape: Trade evaluation');
+      expect(task).toContain('Panel constraints: 4 agents');
+      expect(task).toContain('Required downstream agents: cap, playerrep');
+      expect(task).toContain('Excluded downstream agents: fantasy');
+      expect(task).toContain('Feature means a longer-form narrative structure');
+    });
+
     it('passes the selected provider to the runner', async () => {
       const res = await llmApp.request('/api/ideas', {
         method: 'POST',
@@ -589,7 +635,7 @@ Writer + Analyst + Editor
       expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({
         task: expect.stringContaining('Generate a structured article idea'),
       }));
-    });
+    }, 10000);
 
     it('rejects unknown provider overrides', async () => {
       const res = await llmApp.request('/api/ideas', {

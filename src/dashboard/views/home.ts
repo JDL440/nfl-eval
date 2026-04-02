@@ -9,7 +9,7 @@
  */
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
-import { STAGE_NAMES, VALID_STAGES } from '../../types.js';
+import { EDITORIAL_PRESET_ORDER, STAGE_NAMES, VALID_STAGES, formatPresetLabel } from '../../types.js';
 import type { Article, Stage } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import { formatModelLabel } from './article.js';
@@ -58,7 +58,7 @@ export function renderHome(data: HomeData): string {
         <div class="section-heading">
           <p class="section-kicker">Find work fast</p>
           <h2>Search the queue</h2>
-          <p class="section-copy">Search the active desk, then narrow by stage, team, depth, or archive status without breaking focus.</p>
+          <p class="section-copy">Search the active desk, then narrow by stage, team, editorial preset, or archive status without breaking focus.</p>
         </div>
         <div class="filter-bar">
           <input type="search" name="search" placeholder="Search articles…" class="filter-input"
@@ -79,14 +79,12 @@ export function renderHome(data: HomeData): string {
             <option value="">All Teams</option>
             ${teams.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
           </select>
-          <select name="depth" class="filter-select"
+          <select name="preset" class="filter-select"
             hx-get="/htmx/filtered-articles" hx-trigger="change"
             hx-target="#filtered-results" hx-swap="innerHTML"
             hx-include=".filter-bar">
-            <option value="">All Depths</option>
-            <option value="1">1 — Casual Fan</option>
-            <option value="2">2 — The Beat</option>
-            <option value="3">3 — Deep Dive</option>
+            <option value="">All Presets</option>
+            ${EDITORIAL_PRESET_ORDER.map((presetId) => `<option value="${presetId}">${escapeHtml(formatPresetLabel(presetId))}</option>`).join('')}
           </select>
           <label class="filter-checkbox">
             <input type="checkbox" name="include_archived" value="1"
@@ -146,6 +144,10 @@ function cardModelBadge(a: Article, modelMap?: Map<string, string>): string {
   return `<span class="badge badge-model">${escapeHtml(label)}</span>`;
 }
 
+function cardPresetBadge(a: Article): string {
+  return `<span class="badge badge-depth">${escapeHtml(formatPresetLabel(a.preset_id))}</span>`;
+}
+
 export function renderReadyToPublish(articles: Article[], modelMap?: Map<string, string>): string {
   if (articles.length === 0) {
     return '<p class="empty-state">No articles ready to publish</p>';
@@ -159,6 +161,7 @@ export function renderReadyToPublish(articles: Article[], modelMap?: Map<string,
         </div>
         <div class="card-meta">
           <span class="badge badge-stage badge-stage-7">Stage 7 · Publisher Pass</span>
+          ${cardPresetBadge(a)}
           ${cardModelBadge(a, modelMap)}
           <span class="meta-date">Updated ${formatDate(a.updated_at)}</span>
         </div>
@@ -211,6 +214,7 @@ export function renderRecentIdeas(articles: Article[], modelMap?: Map<string, st
         </div>
         <div class="card-meta">
           <span class="badge badge-stage badge-stage-1">Stage 1 · Idea</span>
+          ${cardPresetBadge(a)}
           ${cardModelBadge(a, modelMap)}
           <span class="meta-date">Created ${formatDate(a.created_at)}</span>
         </div>
@@ -235,6 +239,7 @@ export function renderPublished(articles: Article[], modelMap?: Map<string, stri
         </div>
         <div class="card-meta">
           <span class="badge badge-stage badge-stage-8">Published</span>
+          ${cardPresetBadge(a)}
           ${cardModelBadge(a, modelMap)}
           <span class="meta-date">Published ${formatDate(a.published_at)}</span>
         </div>
@@ -276,7 +281,7 @@ function renderIdeaForm(): string {
   return `
     <div class="idea-quick-actions action-group">
       <a href="/ideas/new" class="btn btn-primary btn-lg">Start a new idea</a>
-      <span class="idea-hint">Open the full intake flow to shape a pitch, assign teams, and set the depth.</span>
+      <span class="idea-hint">Open the full intake flow to shape a pitch, assign teams, and choose the right editorial preset.</span>
     </div>`;
 }
 
@@ -293,6 +298,7 @@ export function renderFilteredArticles(articles: Article[], modelMap?: Map<strin
       return `
       <a href="/articles/${escapeHtml(a.id)}" class="filtered-item">
         <span class="badge badge-stage badge-stage-${stage}">S${stage}</span>
+        ${cardPresetBadge(a)}
         <span class="article-title">${escapeHtml(a.title)}</span>
         ${a.primary_team ? `<span class="badge badge-team">${escapeHtml(a.primary_team)}</span>` : ''}
         ${cardModelBadge(a, modelMap)}

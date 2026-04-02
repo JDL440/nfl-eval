@@ -19,6 +19,59 @@ export type RunStatus = 'started' | 'completed' | 'failed' | 'cancelled' | 'inte
 export type UsageEventType = 'planned' | 'started' | 'completed' | 'updated' | 'failed' | 'skipped' | 'stage_transition';
 export type DepthLevel = 1 | 2 | 3 | 4;
 export type DepthName = 'casual_fan' | 'the_beat' | 'deep_dive';
+export type ReaderProfile = 'casual' | 'engaged' | 'hardcore';
+export type ArticleForm = 'brief' | 'standard' | 'deep' | 'feature';
+export type PanelShape =
+  | 'auto'
+  | 'news_reaction'
+  | 'contract_eval'
+  | 'trade_eval'
+  | 'draft_eval'
+  | 'scheme_breakdown'
+  | 'cohort_rank'
+  | 'market_map';
+export type AnalyticsMode = 'explain_only' | 'normal' | 'metrics_forward';
+export type EditorialPresetId =
+  | 'casual_explainer'
+  | 'beat_analysis'
+  | 'technical_deep_dive'
+  | 'narrative_feature';
+export type ScopeMode = 'single_team' | 'multi_team' | 'cohort';
+export type ArticleScheduleContentProfile = 'accessible' | 'deep_dive';
+
+export interface PanelConstraints {
+  min_agents?: number;
+  max_agents?: number;
+  required_agents?: string[];
+  excluded_agents?: string[];
+  allow_team_agent_omission?: boolean;
+  scope_mode?: ScopeMode;
+}
+
+export interface EditorialPresetDefinition {
+  id: EditorialPresetId;
+  label: string;
+  description: string;
+  reader_profile: ReaderProfile;
+  article_form: ArticleForm;
+  panel_shape: PanelShape;
+  analytics_mode: AnalyticsMode;
+}
+
+export interface EditorialControls {
+  preset_id: EditorialPresetId;
+  reader_profile: ReaderProfile;
+  article_form: ArticleForm;
+  panel_shape: PanelShape;
+  analytics_mode: AnalyticsMode;
+  panel_constraints_json: string | null;
+}
+
+export interface ResolvedEditorialControls extends EditorialControls {
+  panel_constraints: PanelConstraints | null;
+  legacy_depth_level: DepthLevel;
+  legacy_content_profile: ArticleScheduleContentProfile;
+}
 
 // Depth level 4 is a "Feature" in the dashboard UI, but maps to deep_dive for pipeline sizing/policy.
 export const DEPTH_LEVEL_MAP: Record<DepthLevel, DepthName> = {
@@ -27,6 +80,239 @@ export const DEPTH_LEVEL_MAP: Record<DepthLevel, DepthName> = {
   3: 'deep_dive',
   4: 'deep_dive',
 };
+
+export const EDITORIAL_PRESET_ORDER: EditorialPresetId[] = [
+  'casual_explainer',
+  'beat_analysis',
+  'technical_deep_dive',
+  'narrative_feature',
+];
+
+export const EDITORIAL_PRESETS: Record<EditorialPresetId, EditorialPresetDefinition> = {
+  casual_explainer: {
+    id: 'casual_explainer',
+    label: 'Casual Explainer',
+    description: 'Approachable fan-facing article with light jargon and clean framing.',
+    reader_profile: 'casual',
+    article_form: 'brief',
+    panel_shape: 'news_reaction',
+    analytics_mode: 'explain_only',
+  },
+  beat_analysis: {
+    id: 'beat_analysis',
+    label: 'Beat Analysis',
+    description: 'Default single-team analysis for engaged readers.',
+    reader_profile: 'engaged',
+    article_form: 'standard',
+    panel_shape: 'auto',
+    analytics_mode: 'normal',
+  },
+  technical_deep_dive: {
+    id: 'technical_deep_dive',
+    label: 'Technical Deep Dive',
+    description: 'Deeper evidence-heavy analysis for highly engaged readers.',
+    reader_profile: 'hardcore',
+    article_form: 'deep',
+    panel_shape: 'auto',
+    analytics_mode: 'metrics_forward',
+  },
+  narrative_feature: {
+    id: 'narrative_feature',
+    label: 'Narrative Feature',
+    description: 'Longer-form storytelling with strong reporting structure, not necessarily metrics-heavy.',
+    reader_profile: 'engaged',
+    article_form: 'feature',
+    panel_shape: 'auto',
+    analytics_mode: 'normal',
+  },
+};
+
+export const PANEL_SHAPE_LABELS: Record<PanelShape, string> = {
+  auto: 'Auto',
+  news_reaction: 'News reaction',
+  contract_eval: 'Contract evaluation',
+  trade_eval: 'Trade evaluation',
+  draft_eval: 'Draft evaluation',
+  scheme_breakdown: 'Scheme breakdown',
+  cohort_rank: 'Cohort / comparison',
+  market_map: 'Market map',
+};
+
+export const ANALYTICS_MODE_LABELS: Record<AnalyticsMode, string> = {
+  explain_only: 'Explain-only',
+  normal: 'Normal',
+  metrics_forward: 'Metrics-forward',
+};
+
+export const READER_PROFILE_LABELS: Record<ReaderProfile, string> = {
+  casual: 'Casual',
+  engaged: 'Engaged',
+  hardcore: 'Hardcore',
+};
+
+export const ARTICLE_FORM_LABELS: Record<ArticleForm, string> = {
+  brief: 'Brief',
+  standard: 'Standard',
+  deep: 'Deep',
+  feature: 'Feature',
+};
+
+export function parsePanelConstraintsJson(value: string | null | undefined): PanelConstraints | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('panel_constraints_json must decode to an object');
+    }
+    return parsed as PanelConstraints;
+  } catch (err) {
+    throw new Error(
+      `Invalid panel_constraints_json: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+export function stringifyPanelConstraints(value: PanelConstraints | null | undefined): string | null {
+  if (!value) return null;
+  const cleaned: PanelConstraints = {};
+  if (value.min_agents != null) cleaned.min_agents = value.min_agents;
+  if (value.max_agents != null) cleaned.max_agents = value.max_agents;
+  if (value.required_agents && value.required_agents.length > 0) cleaned.required_agents = value.required_agents;
+  if (value.excluded_agents && value.excluded_agents.length > 0) cleaned.excluded_agents = value.excluded_agents;
+  if (value.allow_team_agent_omission != null) cleaned.allow_team_agent_omission = value.allow_team_agent_omission;
+  if (value.scope_mode) cleaned.scope_mode = value.scope_mode;
+  return Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : null;
+}
+
+export function deriveDepthLevelFromArticleForm(articleForm: ArticleForm): DepthLevel {
+  switch (articleForm) {
+    case 'brief':
+      return 1;
+    case 'standard':
+      return 2;
+    case 'deep':
+      return 3;
+    case 'feature':
+      return 4;
+  }
+}
+
+export function deriveContentProfileFromControls(
+  readerProfile: ReaderProfile,
+  analyticsMode: AnalyticsMode,
+): ArticleScheduleContentProfile {
+  return readerProfile === 'casual' || analyticsMode === 'explain_only'
+    ? 'accessible'
+    : 'deep_dive';
+}
+
+function presetFromLegacy(depthLevel: DepthLevel, contentProfile?: ArticleScheduleContentProfile | null): EditorialPresetId {
+  if (depthLevel === 4) return 'narrative_feature';
+  if (depthLevel >= 3) return contentProfile === 'accessible' ? 'beat_analysis' : 'technical_deep_dive';
+  if (depthLevel === 1) return 'casual_explainer';
+  return contentProfile === 'deep_dive' ? 'technical_deep_dive' : 'beat_analysis';
+}
+
+export function resolveEditorialControls(input: {
+  preset_id?: string | null;
+  reader_profile?: string | null;
+  article_form?: string | null;
+  panel_shape?: string | null;
+  analytics_mode?: string | null;
+  panel_constraints_json?: string | null;
+  depth_level?: number | null;
+  content_profile?: ArticleScheduleContentProfile | null;
+} = {}): ResolvedEditorialControls {
+  const legacyDepthProvided = ([1, 2, 3, 4] as const).includes(input.depth_level as DepthLevel);
+  const legacyDepth = legacyDepthProvided
+    ? (input.depth_level as DepthLevel)
+    : 2;
+  const legacyContentProfileProvided = input.content_profile === 'accessible' || input.content_profile === 'deep_dive';
+  const hasExplicitCanonicalInput =
+    input.preset_id != null
+    || input.reader_profile != null
+    || input.article_form != null
+    || input.analytics_mode != null;
+  const presetId = (input.preset_id && input.preset_id in EDITORIAL_PRESETS
+    ? input.preset_id
+    : presetFromLegacy(legacyDepth, input.content_profile)) as EditorialPresetId;
+  const preset = EDITORIAL_PRESETS[presetId];
+  const readerProfile = (input.reader_profile && input.reader_profile in READER_PROFILE_LABELS
+    ? input.reader_profile
+    : preset.reader_profile) as ReaderProfile;
+  const articleForm = (input.article_form && input.article_form in ARTICLE_FORM_LABELS
+    ? input.article_form
+    : preset.article_form) as ArticleForm;
+  const panelShape = (input.panel_shape && input.panel_shape in PANEL_SHAPE_LABELS
+    ? input.panel_shape
+    : preset.panel_shape) as PanelShape;
+  const analyticsMode = (input.analytics_mode && input.analytics_mode in ANALYTICS_MODE_LABELS
+    ? input.analytics_mode
+    : preset.analytics_mode) as AnalyticsMode;
+  const panelConstraintsJson = input.panel_constraints_json?.trim() || null;
+  const panelConstraints = parsePanelConstraintsJson(panelConstraintsJson);
+  const resolvedDepth = hasExplicitCanonicalInput || !legacyDepthProvided
+    ? deriveDepthLevelFromArticleForm(articleForm)
+    : legacyDepth;
+  const resolvedContentProfile = hasExplicitCanonicalInput || !legacyContentProfileProvided
+    ? deriveContentProfileFromControls(readerProfile, analyticsMode)
+    : input.content_profile;
+  return {
+    preset_id: presetId,
+    reader_profile: readerProfile,
+    article_form: articleForm,
+    panel_shape: panelShape,
+    analytics_mode: analyticsMode,
+    panel_constraints_json: panelConstraintsJson,
+    panel_constraints: panelConstraints,
+    legacy_depth_level: resolvedDepth,
+    legacy_content_profile: resolvedContentProfile as ArticleScheduleContentProfile,
+  };
+}
+
+export function getPresetDefinition(presetId: string | null | undefined): EditorialPresetDefinition {
+  const id = presetId && presetId in EDITORIAL_PRESETS
+    ? presetId as EditorialPresetId
+    : 'beat_analysis';
+  return EDITORIAL_PRESETS[id];
+}
+
+export function formatPresetLabel(presetId: string | null | undefined): string {
+  return getPresetDefinition(presetId).label;
+}
+
+export function getPanelSizeGuidance(controls: Pick<ResolvedEditorialControls, 'panel_shape' | 'article_form' | 'panel_constraints'>): { min: number; max: number } {
+  if (controls.panel_constraints?.min_agents != null || controls.panel_constraints?.max_agents != null) {
+    const min = controls.panel_constraints.min_agents ?? controls.panel_constraints.max_agents ?? 2;
+    const max = controls.panel_constraints.max_agents ?? controls.panel_constraints.min_agents ?? Math.max(min, 2);
+    return { min, max: Math.max(min, max) };
+  }
+  switch (controls.panel_shape) {
+    case 'news_reaction':
+      return { min: 2, max: 2 };
+    case 'contract_eval':
+    case 'draft_eval':
+    case 'scheme_breakdown':
+      return { min: 3, max: 4 };
+    case 'trade_eval':
+    case 'cohort_rank':
+    case 'market_map':
+      return { min: 4, max: 5 };
+    case 'auto':
+      switch (controls.article_form) {
+        case 'brief':
+          return { min: 2, max: 2 };
+        case 'standard':
+          return { min: 3, max: 4 };
+        case 'feature':
+          return { min: 3, max: 4 };
+        case 'deep':
+          return { min: 4, max: 5 };
+      }
+  }
+}
 
 export interface Article {
   id: string;
@@ -46,6 +332,12 @@ export interface Article {
   updated_at: string;
   published_at: string | null;
   depth_level: DepthLevel;
+  preset_id: EditorialPresetId;
+  reader_profile: ReaderProfile;
+  article_form: ArticleForm;
+  panel_shape: PanelShape;
+  analytics_mode: AnalyticsMode;
+  panel_constraints_json: string | null;
   target_publish_date: string | null;
   publish_window: string | null;
   time_sensitive: number;
@@ -279,6 +571,46 @@ export interface UsageEvent {
   cost_usd_estimate: number | null;
   metadata_json: string | null;
   created_at: string;
+}
+
+export type ArticleScheduleProviderMode = 'default' | 'override';
+export type ArticleScheduleRunStatus = 'claimed' | 'created_article' | 'completed' | 'failed' | 'skipped';
+
+export interface ArticleSchedule {
+  id: string;
+  name: string;
+  enabled: number;
+  team_abbr: string;
+  prompt: string;
+  weekday_utc: number;
+  time_of_day_utc: string;
+  content_profile: ArticleScheduleContentProfile;
+  depth_level: DepthLevel;
+  preset_id: EditorialPresetId;
+  reader_profile: ReaderProfile;
+  article_form: ArticleForm;
+  panel_shape: PanelShape;
+  analytics_mode: AnalyticsMode;
+  panel_constraints_json: string | null;
+  provider_mode: ArticleScheduleProviderMode;
+  provider_id: string | null;
+  last_run_at: string | null;
+  next_run_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArticleScheduleRun {
+  id: string;
+  schedule_id: string;
+  scheduled_for: string;
+  status: ArticleScheduleRunStatus;
+  discovery_json: string | null;
+  selected_story_json: string | null;
+  article_id: string | null;
+  error_text: string | null;
+  started_at: string;
+  completed_at: string | null;
 }
 
 export type LlmTraceStatus = 'started' | 'completed' | 'failed';

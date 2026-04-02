@@ -90,6 +90,10 @@ describe('Config Viewer Page', () => {
       skillsDir,
       logsDir: join(dataDir, 'logs'),
       memoryDbPath: join(dataDir, 'memory.db'),
+      teams: [
+        { abbr: 'SEA', city: 'Seattle', name: 'Seahawks' },
+        { abbr: 'GB', city: 'Green Bay', name: 'Packers' },
+      ],
       dashboardAuth: {
         mode: 'off',
         sessionCookieName: 'config_test_session',
@@ -145,5 +149,25 @@ describe('Config Viewer Page', () => {
     const html = await res.text();
     expect(html).toContain('Access');
     expect(html).toContain('Auth Mode');
+  });
+
+  it('schedules tab shows schedule management form and existing schedules', async () => {
+    repo.createArticleSchedule({
+      name: 'Seahawks Tuesday Accessible',
+      team_abbr: 'SEA',
+      prompt: 'Find the best current Seahawks storyline for a broad audience.',
+      weekday_utc: 2,
+      time_of_day_utc: '14:00',
+      content_profile: 'accessible',
+      depth_level: 1,
+      next_run_at: '2025-07-15 14:00:00',
+    });
+
+    const res = await app.request('/config?tab=schedules');
+    const html = await res.text();
+    expect(html).toContain('Article schedules');
+    expect(html).toContain('Add Schedule');
+    expect(html).toContain('Seahawks Tuesday Accessible');
+    expect(html).toContain('Use runtime default');
   });
 });

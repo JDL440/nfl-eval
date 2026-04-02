@@ -200,6 +200,99 @@ describe('migrate', () => {
     db.close();
   });
 
+  it('backfills legacy article editorial columns during migration', async () => {
+    createV1Structure(v1Root);
+    const legacyDb = new DatabaseSync(join(v1Root, 'content', 'pipeline.db'));
+    legacyDb.exec(`UPDATE articles SET depth_level = 4 WHERE id = 'test-article'`);
+    legacyDb.close();
+
+    const report = await migrate({ v1Root, dataDir });
+
+    expect(report.errors).toHaveLength(0);
+
+    const db = new DatabaseSync(join(dataDir, 'pipeline.db'));
+    const row = db.prepare(`
+      SELECT preset_id, reader_profile, article_form, panel_shape, analytics_mode
+      FROM articles
+      WHERE id = ?
+    `).get('test-article') as unknown as {
+      preset_id: string;
+      reader_profile: string;
+      article_form: string;
+      panel_shape: string;
+      analytics_mode: string;
+    };
+    expect(row).toEqual({
+      preset_id: 'narrative_feature',
+      reader_profile: 'engaged',
+      article_form: 'feature',
+      panel_shape: 'auto',
+      analytics_mode: 'normal',
+    });
+    db.close();
+  });
+
+  it('recreates pipeline_board with the current schema contract', async () => {
+    createV1Structure(v1Root);
+    const legacyDb = new DatabaseSync(join(v1Root, 'content', 'pipeline.db'));
+    legacyDb.exec(`UPDATE articles SET depth_level = 4 WHERE id = 'test-article'`);
+    legacyDb.exec(`
+      CREATE VIEW pipeline_board AS
+      SELECT
+        id,
+        title,
+        primary_team,
+        status,
+        current_stage,
+        depth_level,
+        CASE depth_level
+          WHEN 1 THEN 'Casual Fan'
+          WHEN 2 THEN 'The Beat'
+          WHEN 3 THEN 'Deep Dive'
+          WHEN 4 THEN 'Deep Dive'
+          ELSE 'Unknown'
+        END AS depth_name,
+        updated_at
+      FROM articles
+    `);
+    legacyDb.close();
+
+    const report = await migrate({ v1Root, dataDir });
+
+    expect(report.errors).toHaveLength(0);
+
+    const db = new DatabaseSync(join(dataDir, 'pipeline.db'));
+    const viewCols = db.prepare('PRAGMA table_info(pipeline_board)').all() as unknown as Array<{ name: string }>;
+    expect(viewCols.map((col) => col.name)).toEqual(expect.arrayContaining([
+      'league',
+      'preset_id',
+      'reader_profile',
+      'article_form',
+      'panel_shape',
+      'analytics_mode',
+      'depth_name',
+    ]));
+    expect(viewCols.some((col) => col.name === 'panel_constraints_json')).toBe(false);
+
+    const row = db.prepare(`
+      SELECT league, preset_id, article_form, depth_name
+      FROM pipeline_board
+      WHERE id = ?
+    `).get('test-article') as unknown as {
+      league: string;
+      preset_id: string;
+      article_form: string;
+      depth_name: string;
+    };
+    expect(row).toEqual({
+      league: 'nfl',
+      preset_id: 'narrative_feature',
+      article_form: 'feature',
+      depth_name: 'Feature',
+    });
+    db.close();
+  });
+
   // ── Article directories ────────────────────────────────────────────────────
 
   it('article directories are copied to correct location', async () => {

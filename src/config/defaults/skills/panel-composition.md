@@ -12,21 +12,23 @@ tools: []
 
 Defines the rules Lead follows when selecting a panel of analysts for an article discussion. The panel must be drawn from the **available agent roster** provided in the task — never invented.
 
-## Panel Size Limits by Depth Level
+## Panel Size Guidance by Shape / Form
 
-| Depth Level | Min | Max | Rationale |
-|-------------|-----|-----|-----------|
-| 1 — Casual Fan | 2 | **2** | Narrative-first; 2 agents produce enough tension without cap-nerd detail |
-| 2 — The Beat | 3 | **4** | Default; balance of depth and cost |
-| 3 — Deep Dive | 4 | **5** | Full scheme/cap/draft analysis; 5 agents justified only here |
+| Panel Shape / Form | Min | Max | Rationale |
+|--------------------|-----|-----|-----------|
+| `news_reaction` or brief explainer | 2 | **2** | Fast, reader-friendly, low-overhead analysis |
+| `auto` + standard/feature | 3 | **4** | Balanced coverage; features stay broader without forcing a max-size panel |
+| `contract_eval` / `draft_eval` / `scheme_breakdown` | 3 | **4** | Specialist-heavy, but usually still focused |
+| `trade_eval` / `cohort_rank` / `market_map` | 4 | **5** | Multi-perspective or cross-team shapes need wider representation |
+| `auto` + deep | 4 | **5** | Deep technical analysis can justify the fullest panel |
 
-**Do not exceed these limits.** A Level 1 article with 4 agents costs the same as a Level 3 article but delivers a worse reader experience.
+**Do not exceed these limits.** Treat article form as an editorial goal and panel shape / explicit constraints as the orchestration driver.
 
 ## Selection Rules
 
-1. **Always include the relevant team agent** for the primary team — they ground the discussion in roster and competitive reality.
+1. **Include the relevant team agent** for the primary team unless panel shape or explicit constraints say a cross-team / cohort frame is better.
 2. **Always include at least one specialist** — pure team-agent panels produce fan-level analysis.
-3. **Panel size must respect the depth level limits above.**
+3. **Panel size must respect the panel-shape / constraint limits above.**
 4. **Each panelist must have a distinct analytical lane** — overlap between Cap and PlayerRep is fine (negotiation counterpoints); overlap between two team agents is usually wasteful.
 5. **Only select agents from the Available Agents roster** — never invent agent names.
 

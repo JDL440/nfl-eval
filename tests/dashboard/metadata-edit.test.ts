@@ -84,6 +84,8 @@ describe('Dashboard article metadata editing', () => {
       expect(persisted.title).toBe('New Title');
       expect(persisted.subtitle).toBeNull();
       expect(persisted.depth_level).toBe(4);
+      expect(persisted.article_form).toBe('feature');
+      expect(persisted.preset_id).toBe('narrative_feature');
       expect(persisted.teams).toBe(JSON.stringify(['seahawks', 'chiefs']));
     });
 
@@ -151,7 +153,27 @@ describe('Dashboard article metadata editing', () => {
       expect(updated.title).toBe('After');
       expect(updated.subtitle).toBe('Sub');
       expect(updated.depth_level).toBe(3);
+      expect(updated.article_form).toBe('deep');
       expect(updated.teams).toBe(JSON.stringify(['seahawks', 'chiefs']));
+    });
+
+    it('POST /htmx/articles/:id/edit-meta returns a 400 partial for invalid panel constraints JSON', async () => {
+      repo.createArticle({ id: 'h3', title: 'Before' });
+
+      const form = new URLSearchParams({
+        panel_constraints_json: '{bad json',
+      });
+
+      const res = await app.request('/htmx/articles/h3/edit-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+      });
+
+      expect(res.status).toBe(400);
+      const html = await res.text();
+      expect(html).toContain('Invalid panel_constraints_json');
+      expect(repo.getArticle('h3')?.panel_constraints_json).toBeNull();
     });
   });
 });

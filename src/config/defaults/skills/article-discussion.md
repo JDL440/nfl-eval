@@ -54,7 +54,10 @@ Every discussion prompt must have all five:
 ```markdown
 # Discussion Prompt: [Article Title]
 
-**Depth Level:** [1 — Casual Fan | 2 — The Beat | 3 — Deep Dive]
+**Editorial Preset:** [Casual Explainer | Beat Analysis | Technical Deep Dive | Narrative Feature]
+**Reader Profile:** [Casual | Engaged | Hardcore]
+**Article Form:** [Brief | Standard | Deep | Feature]
+**Panel Shape:** [Auto | News reaction | Contract evaluation | Trade evaluation | Draft evaluation | Scheme breakdown | Cohort / comparison | Market map]
 
 ## The Core Question
 [One sentence — sharp, specific, contentious]
@@ -101,18 +104,20 @@ If the prompt lacks an anchor the article clearly needs, name the gap instead of
 
 | Rule | Rationale |
 |------|-----------|
-| Always include the relevant team agent | Keeps the discussion grounded in team context |
+| Include the relevant team agent unless the article is intentionally cross-team / cohort-focused | Keeps single-team pieces grounded without forcing the wrong topology |
 | Always include at least one specialist | Pure team-agent panels produce fan-level analysis |
-| Panel size is gated by depth level | Prevents over-spending tokens on casual pieces |
+| Panel size is gated by panel shape and explicit constraints | Prevents article form from silently dictating topology |
 | Each panelist should have a distinct lane | Minimizes overlap and repetition |
 
-### Panel Size Limits by Depth Level
+### Panel Size Guidance by Shape / Form
 
-| Depth Level | Min | Max | Rationale |
-|-------------|-----|-----|-----------|
-| 1 — Casual Fan | 2 | 2 | Narrative-first; enough tension without overloading the piece |
-| 2 — The Beat | 3 | 4 | Default balance of depth and cost |
-| 3 — Deep Dive | 4 | 5 | Full scheme/cap/draft analysis |
+| Panel Shape / Form | Min | Max | Rationale |
+|--------------------|-----|-----|-----------|
+| `news_reaction` or brief explainer | 2 | 2 | Narrative-first; enough tension without overloading the piece |
+| `auto` + standard/feature | 3 | 4 | Default balance of depth and cost without treating features as a special model tier |
+| `contract_eval` / `draft_eval` / `scheme_breakdown` | 3 | 4 | Specialist-heavy but still focused |
+| `trade_eval` / `cohort_rank` / `market_map` | 4 | 5 | Cross-team / comparison work needs broader representation |
+| `auto` + deep | 4 | 5 | Deep technical analysis justifies the fullest panel |
 
 ### Panel Composition Matrix
 

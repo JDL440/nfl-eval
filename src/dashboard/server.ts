@@ -25,8 +25,13 @@ import {
   prepareRuntimeDataDir,
   resolveDashboardAuthConfig,
 } from '../config/index.js';
-import { STAGE_NAMES, VALID_STAGES } from '../types.js';
-import type { Stage, Article } from '../types.js';
+import {
+  STAGE_NAMES,
+  VALID_STAGES,
+  resolveEditorialControls,
+  stringifyPanelConstraints,
+} from '../types.js';
+import type { PanelConstraints, Stage, Article } from '../types.js';
 import { SettingsResolver } from '../settings/resolver.js';
 import { ensureBootstrapAdmin } from '../settings/bootstrap.js';
 import { encryptSecret, isSecretCryptoAvailable } from '../settings/crypto.js';
@@ -61,10 +66,13 @@ import { escapeHtml } from './views/layout.js';
 import {
   renderNewIdeaPage,
   renderIdeaSuccess,
-  generateSlug,
-  extractTitleFromIdea,
-  IDEA_TEMPLATE,
 } from './views/new-idea.js';
+import {
+  renderSchedulesPage,
+  renderScheduleDetailPage,
+  renderScheduleEditPage,
+} from './views/schedules.js';
+import { calcNextRunAt } from '../services/recurring-scheduler.js';
 import {
   renderPublishPreview,
   renderPublishWorkflow,
@@ -89,6 +97,8 @@ import { renderArticlePreview, renderArticlePreviewFrame, parseImageManifest } f
 import { SubstackService } from '../services/substack.js';
 import { TwitterService } from '../services/twitter.js';
 import { executeTransition, autoAdvanceArticle, getLeagueDataTool, type ActionContext, type AutoAdvanceStep } from '../pipeline/actions.js';
+import { createIdeaArticle, IdeaArticleCreationError } from '../pipeline/idea-generation.js';
+import { buildInitialNextRunAt, createArticleSchedulerService } from '../pipeline/article-scheduler-service.js';
 import { assertPipelineConfigValid } from '../pipeline/validation.js';
 import { buildTeamRosterContext } from '../pipeline/roster-context.js';
 import { LLMGateway } from '../llm/gateway.js';
@@ -980,41 +990,155 @@ export function createApp(
     return c.html(renderArticleMetaEditForm(article));
   });
 
+  const getBodyValue = (body: Record<string, unknown>, ...keys: string[]): unknown => {
+    for (const key of keys) {
+      if (body[key] !== undefined) return body[key];
+    }
+    return undefined;
+  };
+  const parseCsvList = (value: unknown): string[] => String(value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const parsePanelConstraintsInput = (body: Record<string, unknown>): string | null => {
+    const rawJson = getBodyValue(body, 'panelConstraintsJson', 'panel_constraints_json');
+    if (typeof rawJson === 'string' && rawJson.trim()) {
+      return rawJson.trim();
+    }
+    const constraints: PanelConstraints = {};
+    const minAgents = parseInt(String(getBodyValue(body, 'panelMin', 'panel_min') ?? ''), 10);
+    const maxAgents = parseInt(String(getBodyValue(body, 'panelMax', 'panel_max') ?? ''), 10);
+    if (Number.isInteger(minAgents) && minAgents > 0) constraints.min_agents = minAgents;
+    if (Number.isInteger(maxAgents) && maxAgents > 0) constraints.max_agents = maxAgents;
+    const requiredAgents = parseCsvList(getBodyValue(body, 'requiredAgents', 'required_agents'));
+    if (requiredAgents.length > 0) constraints.required_agents = requiredAgents;
+    const excludedAgents = parseCsvList(getBodyValue(body, 'excludedAgents', 'excluded_agents'));
+    if (excludedAgents.length > 0) constraints.excluded_agents = excludedAgents;
+    const allowTeamAgentOmission = getBodyValue(body, 'allowTeamAgentOmission', 'allow_team_agent_omission');
+    if (allowTeamAgentOmission !== undefined) {
+      constraints.allow_team_agent_omission = ['true', '1', 'on'].includes(String(allowTeamAgentOmission));
+    }
+    const scopeMode = getBodyValue(body, 'scopeMode', 'scope_mode');
+    if (typeof scopeMode === 'string' && scopeMode.trim()) {
+      constraints.scope_mode = scopeMode.trim() as PanelConstraints['scope_mode'];
+    }
+    return stringifyPanelConstraints(constraints);
+  };
+  const parseEditorialRequest = (
+    body: Record<string, unknown>,
+    options?: { defaultDepth?: number; contentProfile?: 'accessible' | 'deep_dive' | null },
+  ) => {
+    const depthRaw = getBodyValue(body, 'depthLevel', 'depth_level');
+    const parsedDepth = parseInt(String(depthRaw ?? options?.defaultDepth ?? 2), 10);
+    const contentProfileRaw = getBodyValue(body, 'contentProfile', 'content_profile');
+    return resolveEditorialControls({
+      preset_id: typeof getBodyValue(body, 'presetId', 'preset_id') === 'string'
+        ? String(getBodyValue(body, 'presetId', 'preset_id'))
+        : undefined,
+      reader_profile: typeof getBodyValue(body, 'readerProfile', 'reader_profile') === 'string'
+        ? String(getBodyValue(body, 'readerProfile', 'reader_profile'))
+        : undefined,
+      article_form: typeof getBodyValue(body, 'articleForm', 'article_form') === 'string'
+        ? String(getBodyValue(body, 'articleForm', 'article_form'))
+        : undefined,
+      panel_shape: typeof getBodyValue(body, 'panelShape', 'panel_shape') === 'string'
+        ? String(getBodyValue(body, 'panelShape', 'panel_shape'))
+        : undefined,
+      analytics_mode: typeof getBodyValue(body, 'analyticsMode', 'analytics_mode') === 'string'
+        ? String(getBodyValue(body, 'analyticsMode', 'analytics_mode'))
+        : undefined,
+      panel_constraints_json: parsePanelConstraintsInput(body),
+      depth_level: Number.isInteger(parsedDepth) ? parsedDepth : (options?.defaultDepth ?? 2),
+      content_profile: typeof contentProfileRaw === 'string'
+        ? contentProfileRaw as 'accessible' | 'deep_dive'
+        : (options?.contentProfile ?? null),
+    });
+  };
+  const hasEditorialRequest = (body: Record<string, unknown>): boolean => [
+    'depthLevel',
+    'depth_level',
+    'contentProfile',
+    'content_profile',
+    'presetId',
+    'preset_id',
+    'readerProfile',
+    'reader_profile',
+    'articleForm',
+    'article_form',
+    'panelShape',
+    'panel_shape',
+    'analyticsMode',
+    'analytics_mode',
+    'panelConstraintsJson',
+    'panel_constraints_json',
+    'panelMin',
+    'panel_min',
+    'panelMax',
+    'panel_max',
+    'requiredAgents',
+    'required_agents',
+    'excludedAgents',
+    'excluded_agents',
+    'allowTeamAgentOmission',
+    'allow_team_agent_omission',
+    'scopeMode',
+    'scope_mode',
+  ].some((key) => body[key] != null);
+
   app.post('/htmx/articles/:id/edit-meta', async (c) => {
-    const id = c.req.param('id');
-    const article = repo.getArticle(id);
-    if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
-
-    const body = await c.req.parseBody();
-
-    const updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[] } = {};
-
-    if (body.title != null) {
-      const title = String(body.title).trim();
-      if (!title) return c.html('<p class="empty-state">Title cannot be empty</p>', 400);
-      updates.title = title;
-    }
-
-    if (body.subtitle !== undefined) {
-      const subtitle = String(body.subtitle ?? '').trim();
-      updates.subtitle = subtitle || null;
-    }
-
-    if (body.depth_level != null) {
-      const depth = parseInt(String(body.depth_level), 10);
-      if (!Number.isInteger(depth) || depth < 1 || depth > 4) {
-        return c.html('<p class="empty-state">Invalid depth level</p>', 400);
-      }
-      updates.depth_level = depth;
-    }
-
-    if (body.teams !== undefined) {
-      const raw = String(body.teams ?? '');
-      const teams = raw.split(',').map(t => t.trim()).filter(Boolean);
-      updates.teams = [...new Set(teams)];
-    }
-
     try {
+      const id = c.req.param('id');
+      const article = repo.getArticle(id);
+      if (!article) return c.html('<p class="empty-state">Article not found</p>', 404);
+
+      const body = await c.req.parseBody();
+
+      const updates: {
+        title?: string;
+        subtitle?: string | null;
+        depth_level?: number;
+        teams?: string[];
+        preset_id?: Article['preset_id'];
+        reader_profile?: Article['reader_profile'];
+        article_form?: Article['article_form'];
+        panel_shape?: Article['panel_shape'];
+        analytics_mode?: Article['analytics_mode'];
+        panel_constraints_json?: string | null;
+      } = {};
+
+      if (body.title != null) {
+        const title = String(body.title).trim();
+        if (!title) return c.html('<p class="empty-state">Title cannot be empty</p>', 400);
+        updates.title = title;
+      }
+
+      if (body.subtitle !== undefined) {
+        const subtitle = String(body.subtitle ?? '').trim();
+        updates.subtitle = subtitle || null;
+      }
+
+      if (hasEditorialRequest(body as Record<string, unknown>)) {
+        const editorial = parseEditorialRequest(body as Record<string, unknown>, {
+          defaultDepth: article.depth_level,
+          contentProfile: article.reader_profile === 'casual' || article.analytics_mode === 'explain_only'
+            ? 'accessible'
+            : 'deep_dive',
+        });
+        updates.depth_level = editorial.legacy_depth_level;
+        updates.preset_id = editorial.preset_id;
+        updates.reader_profile = editorial.reader_profile;
+        updates.article_form = editorial.article_form;
+        updates.panel_shape = editorial.panel_shape;
+        updates.analytics_mode = editorial.analytics_mode;
+        updates.panel_constraints_json = editorial.panel_constraints_json;
+      }
+
+      if (body.teams !== undefined) {
+        const raw = String(body.teams ?? '');
+        const teams = raw.split(',').map(t => t.trim()).filter(Boolean);
+        updates.teams = [...new Set(teams)];
+      }
+
       const updated = repo.updateArticle(id, updates);
       return c.html(renderArticleMetaDisplay(updated, repo.getUsageEvents(id)));
     } catch (err: unknown) {
@@ -1043,6 +1167,7 @@ export function createApp(
   app.get('/config', (c) => {
     const resolver = new SettingsResolver(repo, config);
     const profileSet = resolver.resolveProviderProfiles();
+    const articleSchedules = repo.listArticleSchedules();
     const publishing = resolver.resolvePublishingConfig();
     const images = resolver.resolveImageConfig();
     const auth = resolver.resolveDashboardAuth();
@@ -1057,6 +1182,10 @@ export function createApp(
       league: config.league,
       environment: config.env,
       activeTab,
+      availableTeams: (config.teams ?? []).map((team) => ({
+        abbr: team.abbr,
+        label: `${team.abbr} — ${team.city} ${team.name}`,
+      })),
       defaultProvider: profileSet.defaultProfile
         ? { label: profileSet.defaultProfile.label, providerId: profileSet.defaultProfile.providerId }
         : null,
@@ -1073,6 +1202,9 @@ export function createApp(
         isDefault: p.isDefault,
         enabled: p.enabled,
         config: p.config as Record<string, unknown>,
+      })),
+      articleSchedules: articleSchedules.map((schedule) => ({
+        ...schedule,
       })),
       publishing,
       images,
@@ -1135,6 +1267,192 @@ export function createApp(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${msg}</div>`, 500);
+    }
+  });
+
+  const knownTeams = new Set((config.teams ?? []).map((team) => team.abbr.toUpperCase()));
+  const normalizeScheduleTeam = (value: unknown): string => {
+    const team = String(value ?? '').trim().toUpperCase();
+    if (!team) throw new Error('Team is required');
+    if (!knownTeams.has(team)) throw new Error(`Unknown team: ${team}`);
+    return team;
+  };
+  const normalizeScheduleWeekday = (value: unknown): number => {
+    const weekday = parseInt(String(value ?? ''), 10);
+    if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) {
+      throw new Error('Weekday must be 0-6');
+    }
+    return weekday;
+  };
+  const normalizeScheduleDepth = (value: unknown): number => {
+    const depth = parseInt(String(value ?? ''), 10);
+    if (!Number.isInteger(depth) || depth < 1 || depth > 4) {
+      throw new Error('Depth level must be 1-4');
+    }
+    return depth;
+  };
+  const normalizeScheduleProviderMode = (value: unknown): 'default' | 'override' => {
+    const mode = String(value ?? 'default').trim();
+    if (mode !== 'default' && mode !== 'override') {
+      throw new Error('Provider mode must be default or override');
+    }
+    return mode;
+  };
+  const normalizeContentProfile = (value: unknown): 'accessible' | 'deep_dive' => {
+    const profile = String(value ?? '').trim();
+    if (profile !== 'accessible' && profile !== 'deep_dive') {
+      throw new Error('Content profile must be accessible or deep_dive');
+    }
+    return profile;
+  };
+  const normalizeTimeOfDay = (value: unknown): string => {
+    const time = String(value ?? '').trim();
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+      throw new Error('Time of day must be HH:MM');
+    }
+    return time;
+  };
+
+  app.post('/api/settings/article-schedules', async (c) => {
+    try {
+      const body = await c.req.parseBody();
+      const editorial = parseEditorialRequest(body as Record<string, unknown>, { defaultDepth: 2, contentProfile: null });
+      const schedule = repo.createArticleSchedule({
+        name: String(body['name'] ?? '').trim(),
+        team_abbr: normalizeScheduleTeam(body['teamAbbr']),
+        prompt: String(body['prompt'] ?? '').trim(),
+        weekday_utc: normalizeScheduleWeekday(body['weekdayUtc']),
+        time_of_day_utc: normalizeTimeOfDay(body['timeOfDayUtc']),
+        content_profile: editorial.legacy_content_profile,
+        depth_level: editorial.legacy_depth_level,
+        preset_id: editorial.preset_id,
+        reader_profile: editorial.reader_profile,
+        article_form: editorial.article_form,
+        panel_shape: editorial.panel_shape,
+        analytics_mode: editorial.analytics_mode,
+        panel_constraints_json: editorial.panel_constraints_json,
+        provider_mode: normalizeScheduleProviderMode(body['providerMode']),
+        provider_id: String(body['providerId'] ?? '').trim() || null,
+        enabled: body['enabled'] === 'true' || body['enabled'] === '1' || body['enabled'] === 'on',
+        next_run_at: buildInitialNextRunAt({
+          weekday_utc: normalizeScheduleWeekday(body['weekdayUtc']),
+          time_of_day_utc: normalizeTimeOfDay(body['timeOfDayUtc']),
+        }, new Date()),
+      });
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'article_schedule',
+        targetKey: schedule.id,
+        action: 'create',
+        afterJson: JSON.stringify(schedule),
+      });
+      c.header('HX-Redirect', '/config?tab=schedules');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Created</span> Schedule added</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${escapeHtml(msg)}</div>`, 400);
+    }
+  });
+
+  app.post('/api/settings/article-schedules/:id', async (c) => {
+    try {
+      const id = c.req.param('id');
+      const body = await c.req.parseBody();
+      const before = repo.getArticleSchedule(id);
+      if (!before) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Schedule not found</div>', 404);
+      }
+      const weekdayUtc = normalizeScheduleWeekday(body['weekdayUtc']);
+      const timeOfDayUtc = normalizeTimeOfDay(body['timeOfDayUtc']);
+      const editorial = parseEditorialRequest(body as Record<string, unknown>, {
+        defaultDepth: before.depth_level,
+        contentProfile: before.content_profile,
+      });
+      const updated = repo.updateArticleSchedule(id, {
+        name: String(body['name'] ?? '').trim(),
+        team_abbr: normalizeScheduleTeam(body['teamAbbr']),
+        prompt: String(body['prompt'] ?? '').trim(),
+        weekday_utc: weekdayUtc,
+        time_of_day_utc: timeOfDayUtc,
+        content_profile: editorial.legacy_content_profile,
+        depth_level: editorial.legacy_depth_level,
+        preset_id: editorial.preset_id,
+        reader_profile: editorial.reader_profile,
+        article_form: editorial.article_form,
+        panel_shape: editorial.panel_shape,
+        analytics_mode: editorial.analytics_mode,
+        panel_constraints_json: editorial.panel_constraints_json,
+        provider_mode: normalizeScheduleProviderMode(body['providerMode']),
+        provider_id: String(body['providerId'] ?? '').trim() || null,
+        ...(weekdayUtc !== before.weekday_utc || timeOfDayUtc !== before.time_of_day_utc
+          ? {
+            next_run_at: buildInitialNextRunAt({
+              weekday_utc: weekdayUtc,
+              time_of_day_utc: timeOfDayUtc,
+            }, new Date()),
+          }
+          : {}),
+      });
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'article_schedule',
+        targetKey: id,
+        action: 'update',
+        beforeJson: JSON.stringify(before),
+        afterJson: JSON.stringify(updated),
+      });
+      c.header('HX-Redirect', '/config?tab=schedules');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Updated</span> Schedule saved</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${escapeHtml(msg)}</div>`, 400);
+    }
+  });
+
+  app.post('/api/settings/article-schedules/:id/toggle', (c) => {
+    try {
+      const id = c.req.param('id');
+      const existing = repo.getArticleSchedule(id);
+      if (!existing) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Schedule not found</div>', 404);
+      }
+      const updated = repo.updateArticleSchedule(id, { enabled: existing.enabled !== 1 });
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'article_schedule',
+        targetKey: id,
+        action: 'update',
+        beforeJson: JSON.stringify({ enabled: existing.enabled === 1 }),
+        afterJson: JSON.stringify({ enabled: updated.enabled === 1 }),
+      });
+      c.header('HX-Redirect', '/config?tab=schedules');
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-approved">Toggled</span> Schedule ${updated.enabled === 1 ? 'enabled' : 'disabled'}</div>`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${escapeHtml(msg)}</div>`, 400);
+    }
+  });
+
+  app.delete('/api/settings/article-schedules/:id', (c) => {
+    try {
+      const id = c.req.param('id');
+      const before = repo.getArticleSchedule(id);
+      if (!before) {
+        return c.html('<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> Schedule not found</div>', 404);
+      }
+      repo.deleteArticleSchedule(id);
+      repo.recordSettingsAudit({
+        scopeType: 'workspace',
+        targetType: 'article_schedule',
+        targetKey: id,
+        action: 'delete',
+        beforeJson: JSON.stringify(before),
+      });
+      c.header('HX-Redirect', '/config?tab=schedules');
+      return c.html('<div class="settings-result"><span class="badge badge-verdict-approved">Deleted</span> Schedule removed</div>');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.html(`<div class="settings-result"><span class="badge badge-verdict-reject">Error</span> ${escapeHtml(msg)}</div>`, 400);
     }
   });
 
@@ -1451,14 +1769,36 @@ export function createApp(
       return c.json({ error: 'Body must be an object' }, 400);
     }
 
-    const allowed = new Set(['title', 'subtitle', 'depth_level', 'teams']);
+    const allowed = new Set([
+      'title',
+      'subtitle',
+      'depth_level',
+      'teams',
+      'preset_id',
+      'reader_profile',
+      'article_form',
+      'panel_shape',
+      'analytics_mode',
+      'panel_constraints_json',
+    ]);
     for (const key of Object.keys(body as Record<string, unknown>)) {
       if (!allowed.has(key)) {
         return c.json({ error: `Invalid field: ${key}` }, 400);
       }
     }
 
-    const updates: { title?: string; subtitle?: string | null; depth_level?: number; teams?: string[] } = {};
+    const updates: {
+      title?: string;
+      subtitle?: string | null;
+      depth_level?: number;
+      teams?: string[];
+      preset_id?: Article['preset_id'];
+      reader_profile?: Article['reader_profile'];
+      article_form?: Article['article_form'];
+      panel_shape?: Article['panel_shape'];
+      analytics_mode?: Article['analytics_mode'];
+      panel_constraints_json?: string | null;
+    } = {};
     const b = body as Record<string, unknown>;
 
     if ('title' in b) {
@@ -1475,11 +1815,33 @@ export function createApp(
       updates.subtitle = b.subtitle === null ? null : (b.subtitle as string).trim() || null;
     }
 
-    if ('depth_level' in b) {
-      if (typeof b.depth_level !== 'number' || !Number.isInteger(b.depth_level) || b.depth_level < 1 || b.depth_level > 4) {
-        return c.json({ error: 'depth_level must be an integer 1–4' }, 400);
+    if (
+      'depth_level' in b
+      || 'preset_id' in b
+      || 'reader_profile' in b
+      || 'article_form' in b
+      || 'panel_shape' in b
+      || 'analytics_mode' in b
+      || 'panel_constraints_json' in b
+    ) {
+      try {
+        const editorial = parseEditorialRequest(b, {
+          defaultDepth: article.depth_level,
+          contentProfile: article.reader_profile === 'casual' || article.analytics_mode === 'explain_only'
+            ? 'accessible'
+            : 'deep_dive',
+        });
+        updates.depth_level = editorial.legacy_depth_level;
+        updates.preset_id = editorial.preset_id;
+        updates.reader_profile = editorial.reader_profile;
+        updates.article_form = editorial.article_form;
+        updates.panel_shape = editorial.panel_shape;
+        updates.analytics_mode = editorial.analytics_mode;
+        updates.panel_constraints_json = editorial.panel_constraints_json;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Invalid editorial controls';
+        return c.json({ error: message }, 400);
       }
-      updates.depth_level = b.depth_level;
     }
 
     if ('teams' in b) {
@@ -1503,14 +1865,27 @@ export function createApp(
 
   app.post('/api/articles', async (c) => {
     const body = await c.req.json();
-    const { id, title, primary_team, league, depth_level } = body;
+    const { id, title, primary_team, league } = body;
 
     if (!id || !title) {
       return c.json({ error: 'id and title are required' }, 400);
     }
 
       try {
-        const article = repo.createArticle({ id, title, primary_team, league, depth_level });
+        const editorial = parseEditorialRequest(body as Record<string, unknown>, { defaultDepth: 2 });
+        const article = repo.createArticle({
+          id,
+          title,
+          primary_team,
+          league,
+          depth_level: editorial.legacy_depth_level,
+          preset_id: editorial.preset_id,
+          reader_profile: editorial.reader_profile,
+          article_form: editorial.article_form,
+          panel_shape: editorial.panel_shape,
+          analytics_mode: editorial.analytics_mode,
+          panel_constraints_json: editorial.panel_constraints_json,
+        });
 
       // Store idea artifact in DB
       repo.artifacts.put(id, 'idea.md', `# ${title}\n`);
@@ -1527,7 +1902,6 @@ export function createApp(
   app.post('/api/ideas', async (c) => {
     const body = await c.req.json();
     const prompt = (typeof body.prompt === 'string' ? body.prompt : '').trim();
-    let ideaTraceId: string | null = null;
 
     if (!prompt) {
       return c.json({ error: 'prompt is required' }, 400);
@@ -1535,185 +1909,48 @@ export function createApp(
 
     try {
       const teams: string[] = Array.isArray(body.teams) ? body.teams : [];
-      const depthLevel = [1, 2, 3, 4].includes(body.depthLevel) ? body.depthLevel : 2;
+      const editorial = parseEditorialRequest(body as Record<string, unknown>, { defaultDepth: 2 });
       const requestedProvider = typeof body.provider === 'string' ? body.provider.trim() : '';
       const autoAdvance = body.autoAdvance === true;
-      const pinnedAgents: string[] = Array.isArray(body.pinnedAgents) ? body.pinnedAgents.filter((a: unknown) => typeof a === 'string' && a.length > 0) : [];
-      const actionContext = deps?.actionContext;
+      const pinnedAgents: string[] = Array.isArray(body.pinnedAgents)
+        ? body.pinnedAgents.filter((a: unknown) => typeof a === 'string' && a.length > 0)
+        : [];
 
-      if (requestedProvider && actionContext && !actionContext.runner.gateway.getProvider(requestedProvider)) {
-        return c.json({ error: `Unknown provider: ${requestedProvider}` }, 400);
-      }
-
-      let ideaContent: string;
-      let title: string;
-      let ideaThinking: string | null = null;
-      let ideaModel = '';
-      let ideaAgent = '';
-      let ideaProvider = '';
-      let ideaTokensUsed: { prompt: number; completion: number } | undefined;
-
-      if (actionContext) {
-        // Build team context for the task
-        const teamContext = teams.length > 0
-          ? teams.map(abbr => {
-              const t = (config.teams ?? []).find(x => x.abbr === abbr);
-              return t ? `${t.abbr} — ${t.city} ${t.name}` : abbr;
-            }).join(', ')
-          : 'No specific team';
-
-        const depthLabels: Record<number, string> = {
-          1: '1 — Casual Fan (~800 words, 2 agents)',
-          2: '2 — The Beat (~1500 words, 3 agents)',
-          3: '3 — Deep Dive (~2500 words, 4-5 agents)',
-          4: '4 — Feature (~4000 words)',
-        };
-
-        // Use AgentRunner with Lead charter + idea-generation skill
-        // Inject roster context so the LLM doesn't reference stale player data
-        const rosterCtx = teams.length > 0 ? buildTeamRosterContext(teams[0], config.league, config.scriptsDir) : null;
-
-        const task = [
-          'Generate a structured article idea from the following prompt.',
-          `\nTeam context: ${teamContext}`,
-          `Depth level: ${depthLabels[depthLevel] ?? depthLabels[2]}`,
-          '\nUse this output template:\n',
-          IDEA_TEMPLATE,
-          '\nFill in every section with specific, actionable content. The Working Title should be clickbait-adjacent but honest, 60-80 characters.',
-          `\nUser prompt: ${prompt}`,
-        ].join('\n');
-
-        const result = await actionContext.runner.run({
-          agentName: 'lead',
-          provider: requestedProvider || undefined,
-          task,
-          skills: ['idea-generation'],
-          rosterContext: rosterCtx ?? undefined,
-          toolCalling: {
-            enabled: true,
-            includeLocalExtensions: true,
-            includeWebSearch: true,
-            allowWriteTools: false,
-            requestedTools: [getLeagueDataTool(config.league), 'prediction-markets', 'web_search'],
-            maxToolCalls: 50,
-            context: {
-              repo,
-              engine: actionContext.engine,
-              config,
-              actionContext,
-              stage: 1,
-              surface: 'ideaGeneration',
-              agentName: 'lead',
-            },
-          },
-          trace: {
-            repo,
-            stage: 1,
-            surface: 'ideaGeneration',
-          },
-        });
-
-        ideaContent = result.content;
-        title = extractTitleFromIdea(ideaContent);
-        ideaThinking = result.thinking;
-        ideaModel = result.model;
-        ideaAgent = result.agentName;
-        ideaProvider = result.provider;
-        ideaTokensUsed = result.tokensUsed;
-        ideaTraceId = result.traceId ?? null;
-      } else {
-        // Fallback: no LLM available — use raw prompt
-        const generated = generateTitleAndSlug(prompt);
-        title = generated.title;
-        ideaContent = `# Article Idea: ${title}\n\n## Working Title\n${title}\n\n## Angle / Tension\n${prompt}`;
-      }
-
-      let slug = generateSlug(title);
-      if (!slug) slug = generateSlug(prompt);
-      if (!slug) slug = `idea-${Date.now().toString(36)}`;
-
-      // Ensure uniqueness
-      if (repo.getArticle(slug)) {
-        slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
-      }
-
-      repo.createArticle({
-        id: slug,
-        title,
-        llm_provider: requestedProvider || undefined,
-        primary_team: teams[0] ?? undefined,
-        league: config.league,
-        depth_level: depthLevel,
+      const created = await createIdeaArticle({
+        repo,
+        config,
+        actionContext: deps?.actionContext,
+        prompt,
+        teams,
+        depthLevel: editorial.legacy_depth_level,
+        presetId: editorial.preset_id,
+        readerProfile: editorial.reader_profile,
+        articleForm: editorial.article_form,
+        panelShape: editorial.panel_shape,
+        analyticsMode: editorial.analytics_mode,
+        panelConstraintsJson: editorial.panel_constraints_json,
+        provider: requestedProvider || undefined,
+        pinnedAgents,
       });
 
-      const ideaStageRunId = repo.startStageRun({
-        articleId: slug,
-        stage: 1,
-        surface: 'ideaGeneration',
-        actor: 'ideaGeneration',
-        requestedModel: ideaModel || null,
-      });
-
-      // Store pinned expert agents
-      for (const agentName of pinnedAgents) {
-        repo.pinAgent(slug, agentName);
-      }
-
-      repo.artifacts.put(slug, 'idea.md', ideaContent);
-      if (ideaThinking) {
-        const header = `# Thinking Trace\n\n**Agent:** ${ideaAgent}  \n**Model:** ${ideaModel}  \n**Artifact:** idea.md\n\n---\n\n`;
-        repo.artifacts.put(slug, 'idea.thinking.md', header + ideaThinking);
-      }
-
-      if (ideaTokensUsed) {
-        repo.recordUsageEvent({
-          articleId: slug,
-          stage: 1,
-          surface: 'ideaGeneration',
-          stageRunId: ideaStageRunId,
-          provider: ideaProvider,
-          modelOrTool: ideaModel,
-          eventType: 'completed',
-          promptTokens: ideaTokensUsed.prompt,
-          outputTokens: ideaTokensUsed.completion,
-        });
-      }
-
-      if (ideaTraceId) {
-        repo.attachLlmTrace(ideaTraceId, {
-          articleId: slug,
-          stage: 1,
-          surface: 'ideaGeneration',
-          stageRunId: ideaStageRunId,
-        });
-      }
-
-      repo.finishStageRun(ideaStageRunId, 'completed');
-
-      bus.emit({ type: 'article_created', articleId: slug, data: { title }, timestamp: new Date().toISOString() });
+      bus.emit({ type: 'article_created', articleId: created.id, data: { title: created.title }, timestamp: new Date().toISOString() });
 
       return c.json({
-        id: slug,
-        title,
-        stage: 1,
+        id: created.id,
+        title: created.title,
+        stage: created.stage,
         autoAdvance,
       }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      const traceId = ideaTraceId
-        ?? (err instanceof Error && typeof (err as Error & { traceId?: unknown }).traceId === 'string'
-          ? (err as Error & { traceId?: string }).traceId ?? null
-          : null);
-      const traceUrl = traceId
-        ? (err instanceof Error && typeof (err as Error & { traceUrl?: unknown }).traceUrl === 'string'
-          ? (err as Error & { traceUrl?: string }).traceUrl ?? `/traces/${traceId}`
-          : `/traces/${traceId}`)
-        : null;
+      const traceId = err instanceof IdeaArticleCreationError ? err.traceId : null;
+      const traceUrl = err instanceof IdeaArticleCreationError ? err.traceUrl : null;
+      const status = err instanceof IdeaArticleCreationError && /^Unknown provider:/.test(message) ? 400 : 500;
       return c.json({
         error: message,
         traceId,
         traceUrl,
-      }, 500);
+      }, status);
     }
   });
 
@@ -1845,18 +2082,19 @@ export function createApp(
     const search = c.req.query('search') || undefined;
     const stageStr = c.req.query('stage');
     const team = c.req.query('team') || undefined;
-    const depthStr = c.req.query('depth');
+    const preset = c.req.query('preset') || undefined;
     const includeArchived = c.req.query('include_archived') === '1';
 
     const stage = stageStr ? parseInt(stageStr, 10) : undefined;
-    const depthLevel = depthStr ? parseInt(depthStr, 10) : undefined;
 
     // Only query if at least one filter is active
-    if (!search && stage == null && !team && depthLevel == null && !includeArchived) {
+    if (!search && stage == null && !team && !preset && !includeArchived) {
       return c.html('');
     }
 
-    const articles = repo.listArticles({ search, stage, team, depthLevel, limit: 50, excludeArchived: !includeArchived });
+    const articles = repo
+      .listArticles({ search, stage, team, limit: 50, excludeArchived: !includeArchived })
+      .filter((article) => !preset || article.preset_id === preset);
     const modelMap = repo.getPrimaryModels(articles.map(a => a.id));
     return c.html(renderFilteredArticles(articles, modelMap));
   });
@@ -2731,6 +2969,245 @@ export function createApp(
     return c.json({ success: true, status: 'started', agentCount: eligible.length });
   });
 
+  // ── Schedule Management ─────────────────────────────────────────────────────
+
+  app.get('/schedules', (c) => {
+    const schedules = repo.listArticleSchedules();
+    const teams = config.teams ?? [];
+    const providers = deps?.actionContext
+      ? deps.actionContext.runner.gateway.listProviders().map(p => ({ id: p.id, label: p.name ?? p.id }))
+      : [];
+    return c.html(renderSchedulesPage(schedules, teams, providers, config.leagueConfig.name));
+  });
+
+  app.post('/schedules/new', async (c) => {
+    const body = await c.req.parseBody();
+    const name = (body.name as string ?? '').trim();
+    const weekday_utc = parseInt(body.weekday_utc as string ?? '2', 10);
+    const time_of_day_utc = (body.time_of_day_utc as string ?? '09:00').trim();
+    const team_abbr = (body.team_abbr as string ?? '').trim();
+    const prompt = (body.prompt as string ?? '').trim();
+    const providerVal = (body.provider as string ?? 'default').trim();
+    const provider_mode = providerVal === 'default' ? 'default' as const : 'override' as const;
+    const provider_id = provider_mode === 'override' ? providerVal : null;
+
+    if (!name || !team_abbr || !prompt) {
+      return c.redirect('/schedules?error=missing+fields');
+    }
+
+    // Compute initial next_run_at
+    const nextRun = calcNextRunAt(weekday_utc, time_of_day_utc, new Date());
+    const nextRunISO = nextRun.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    const editorial = parseEditorialRequest(body as Record<string, unknown>, {
+      defaultDepth: 1,
+      contentProfile: 'accessible',
+    });
+
+    repo.createArticleSchedule({
+      name, weekday_utc, time_of_day_utc,
+      team_abbr, prompt,
+      depth_level: editorial.legacy_depth_level,
+      content_profile: editorial.legacy_content_profile,
+      preset_id: editorial.preset_id,
+      reader_profile: editorial.reader_profile,
+      article_form: editorial.article_form,
+      panel_shape: editorial.panel_shape,
+      analytics_mode: editorial.analytics_mode,
+      panel_constraints_json: editorial.panel_constraints_json,
+      provider_mode, provider_id,
+      next_run_at: nextRunISO,
+    });
+
+    return c.redirect(`/schedules?flash=${encodeURIComponent('Schedule created')}`);
+  });
+
+  app.get('/schedules/:id', (c) => {
+    const id = c.req.param('id');
+    const schedule = repo.getArticleSchedule(id);
+    if (!schedule) return c.html('<p>Schedule not found</p>', 404);
+    const runs = repo.listArticleScheduleRuns(id, 20);
+    const teams = config.teams ?? [];
+    const providers = deps?.actionContext
+      ? deps.actionContext.runner.gateway.listProviders().map(p => ({ id: p.id, label: p.name ?? p.id }))
+      : [];
+    return c.html(renderScheduleDetailPage(schedule, runs, teams, providers, config.leagueConfig.name));
+  });
+
+  app.get('/schedules/:id/edit', (c) => {
+    const id = c.req.param('id');
+    const schedule = repo.getArticleSchedule(id);
+    if (!schedule) return c.html('<p>Schedule not found</p>', 404);
+    const teams = config.teams ?? [];
+    const providers = deps?.actionContext
+      ? deps.actionContext.runner.gateway.listProviders().map(p => ({ id: p.id, label: p.name ?? p.id }))
+      : [];
+    return c.html(renderScheduleEditPage(schedule, teams, providers, config.leagueConfig.name));
+  });
+
+  app.post('/schedules/:id/edit', async (c) => {
+    const id = c.req.param('id');
+    const schedule = repo.getArticleSchedule(id);
+    if (!schedule) return c.html('<p>Schedule not found</p>', 404);
+
+    const body = await c.req.parseBody();
+    const name = (body.name as string ?? schedule.name).trim();
+    const weekday_utc = parseInt(body.weekday_utc as string ?? String(schedule.weekday_utc), 10);
+    const time_of_day_utc = (body.time_of_day_utc as string ?? schedule.time_of_day_utc).trim();
+    const team_abbr = (body.team_abbr as string ?? schedule.team_abbr).trim();
+    const prompt = (body.prompt as string ?? schedule.prompt).trim();
+    const providerVal = (body.provider as string ?? 'default').trim();
+    const provider_mode = providerVal === 'default' ? 'default' as const : 'override' as const;
+    const provider_id = provider_mode === 'override' ? providerVal : null;
+
+    // Recompute next_run_at when schedule time changes
+    const scheduleTimeChanged =
+      weekday_utc !== schedule.weekday_utc || time_of_day_utc !== schedule.time_of_day_utc;
+    const next_run_at = scheduleTimeChanged
+      ? calcNextRunAt(weekday_utc, time_of_day_utc, new Date()).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '')
+      : undefined;
+    const editorial = parseEditorialRequest(body as Record<string, unknown>, {
+      defaultDepth: schedule.depth_level,
+      contentProfile: schedule.content_profile,
+    });
+
+    repo.updateArticleSchedule(id, {
+      name: name || schedule.name,
+      weekday_utc, time_of_day_utc, team_abbr,
+      prompt: prompt || schedule.prompt,
+      depth_level: editorial.legacy_depth_level,
+      content_profile: editorial.legacy_content_profile,
+      preset_id: editorial.preset_id,
+      reader_profile: editorial.reader_profile,
+      article_form: editorial.article_form,
+      panel_shape: editorial.panel_shape,
+      analytics_mode: editorial.analytics_mode,
+      panel_constraints_json: editorial.panel_constraints_json,
+      provider_mode, provider_id,
+      ...(next_run_at !== undefined ? { next_run_at } : {}),
+    });
+
+    return c.redirect(`/schedules/${encodeURIComponent(id)}?flash=${encodeURIComponent('Schedule updated')}`);
+  });
+
+  app.post('/schedules/:id/toggle', (c) => {
+    const id = c.req.param('id');
+    const schedule = repo.getArticleSchedule(id);
+    if (!schedule) return c.html('<p>Schedule not found</p>', 404);
+    repo.updateArticleSchedule(id, { enabled: !schedule.enabled });
+    return c.redirect('/schedules');
+  });
+
+  app.post('/schedules/:id/delete', (c) => {
+    const id = c.req.param('id');
+    repo.deleteArticleSchedule(id);
+    return c.redirect('/schedules');
+  });
+
+  // ── API: Schedule list/create ────────────────────────────────────────────────
+  app.get('/api/schedules', (c) => {
+    return c.json(repo.listArticleSchedules());
+  });
+
+  app.post('/api/schedules', async (c) => {
+    const body = await c.req.json();
+    const name = (typeof body.name === 'string' ? body.name : '').trim();
+    const weekday_utc = typeof body.weekday_utc === 'number' ? body.weekday_utc : 2;
+    const time_of_day_utc = typeof body.time_of_day_utc === 'string' ? body.time_of_day_utc : '09:00';
+    const team_abbr = (typeof body.team_abbr === 'string' ? body.team_abbr : '').trim();
+    const prompt = (typeof body.prompt === 'string' ? body.prompt : '').trim();
+    const provider_mode = body.provider_mode === 'override' ? 'override' as const : 'default' as const;
+    const provider_id = provider_mode === 'override' && typeof body.provider_id === 'string' ? body.provider_id : null;
+
+    if (!name || !team_abbr || !prompt) {
+      return c.json({ error: 'name, team_abbr, and prompt are required' }, 400);
+    }
+    if (weekday_utc < 0 || weekday_utc > 6) {
+      return c.json({ error: 'weekday_utc must be 0–6' }, 400);
+    }
+
+    const nextRun = calcNextRunAt(weekday_utc, time_of_day_utc, new Date());
+    const nextRunISO = nextRun.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    const editorial = parseEditorialRequest(body as Record<string, unknown>, {
+      defaultDepth: 1,
+      contentProfile: 'accessible',
+    });
+
+    const schedule = repo.createArticleSchedule({
+      name, weekday_utc, time_of_day_utc,
+      team_abbr, prompt,
+      depth_level: editorial.legacy_depth_level,
+      content_profile: editorial.legacy_content_profile,
+      preset_id: editorial.preset_id,
+      reader_profile: editorial.reader_profile,
+      article_form: editorial.article_form,
+      panel_shape: editorial.panel_shape,
+      analytics_mode: editorial.analytics_mode,
+      panel_constraints_json: editorial.panel_constraints_json,
+      provider_mode, provider_id,
+      next_run_at: nextRunISO,
+    });
+
+    return c.json(schedule, 201);
+  });
+
+  app.patch('/api/schedules/:id', async (c) => {
+    try {
+      const id = c.req.param('id');
+      const schedule = repo.getArticleSchedule(id);
+      if (!schedule) return c.json({ error: 'Schedule not found' }, 404);
+      const body = await c.req.json();
+      const weekdayUtc = typeof body.weekday_utc === 'number'
+        ? body.weekday_utc
+        : schedule.weekday_utc;
+      const timeOfDayUtc = typeof body.time_of_day_utc === 'string'
+        ? body.time_of_day_utc
+        : schedule.time_of_day_utc;
+      const scheduleTimeChanged =
+        weekdayUtc !== schedule.weekday_utc || timeOfDayUtc !== schedule.time_of_day_utc;
+      const hasExplicitNextRunAt = Object.prototype.hasOwnProperty.call(body, 'next_run_at');
+      const updated = repo.updateArticleSchedule(id, {
+        ...(body as Record<string, unknown>),
+        ...(hasEditorialRequest(body as Record<string, unknown>)
+          ? (() => {
+            const editorial = parseEditorialRequest(body as Record<string, unknown>, {
+              defaultDepth: schedule.depth_level,
+              contentProfile: schedule.content_profile,
+            });
+            return {
+              depth_level: editorial.legacy_depth_level,
+              content_profile: editorial.legacy_content_profile,
+              preset_id: editorial.preset_id,
+              reader_profile: editorial.reader_profile,
+              article_form: editorial.article_form,
+              panel_shape: editorial.panel_shape,
+              analytics_mode: editorial.analytics_mode,
+              panel_constraints_json: editorial.panel_constraints_json,
+            };
+          })()
+          : {}),
+        ...(!hasExplicitNextRunAt && scheduleTimeChanged
+          ? {
+            next_run_at: calcNextRunAt(weekdayUtc, timeOfDayUtc, new Date())
+              .toISOString()
+              .replace('T', ' ')
+              .replace(/\.\d{3}Z$/, ''),
+          }
+          : {}),
+      });
+      return c.json(updated);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return c.json({ error: message }, 400);
+    }
+  });
+
+  app.delete('/api/schedules/:id', (c) => {
+    const id = c.req.param('id');
+    if (!repo.getArticleSchedule(id)) return c.json({ error: 'Schedule not found' }, 404);
+    repo.deleteArticleSchedule(id);
+    return c.json({ deleted: true });
+  });
+
   return app;
 }
 
@@ -3053,6 +3530,23 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     substackService,
     twitterService,
   });
+
+  const articleScheduler = actionContext
+    ? createArticleSchedulerService({
+        repo,
+        config,
+        actionContext,
+      })
+    : null;
+  if (articleScheduler) {
+    articleScheduler.start();
+    void articleScheduler.tick().catch((err) => {
+      console.warn(`[article-scheduler] Startup tick failed: ${err instanceof Error ? err.message : err}`);
+    });
+    console.log('[article-scheduler] Service started');
+  } else {
+    console.log('[article-scheduler] Service disabled — agent runner unavailable');
+  }
 
   // Preflight: block dangerous production configurations
   if (config.env === 'production') {

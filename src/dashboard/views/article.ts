@@ -5,19 +5,27 @@
  */
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
-import { STAGE_NAMES } from '../../types.js';
+import {
+  STAGE_NAMES,
+  formatPresetLabel,
+} from '../../types.js';
 import type { Article, Stage, EditorReview, UsageEvent } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { parseRevisionBlockerMetadata, type RevisionHistoryEntry } from '../../pipeline/conversation.js';
 import { markdownToHtml } from '../../services/markdown.js';
-
-const DEPTH_LABELS: Record<number, string> = {
-  1: 'Quick Take',
-  2: 'The Beat',
-  3: 'Deep Dive',
-  4: 'Feature',
-};
+import {
+  buildEditorialUiState,
+  formatContentProfileLabel,
+  formatEditorialSummary,
+  formatLegacyDepthLabel,
+  hasEditorialOverrides,
+  renderAnalyticsModeOptions,
+  renderArticleFormOptions,
+  renderPanelShapeOptions,
+  renderPresetOptions,
+  renderReaderProfileOptions,
+} from './editorial-controls.js';
 
 /** Artifact file names produced at each pipeline stage. */
 export const ARTIFACT_FILES = [
@@ -89,6 +97,7 @@ export function formatModelLabel(model: string): string {
 
 export function renderArticleMetaDisplay(article: Article, usageEvents?: UsageEvent[]): string {
   const teams = parseTeams(article.teams);
+  const editorial = buildEditorialUiState(article);
   const teamsBadges = teams.length > 0
     ? `<div class="meta-teams">${teams.map(t => `<span class="badge badge-team">${escapeHtml(t)}</span>`).join(' ')}</div>`
     : '';
@@ -116,13 +125,17 @@ export function renderArticleMetaDisplay(article: Article, usageEvents?: UsageEv
       </div>
       ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
       ${teamsBadges}
+      <p class="form-hint" style="margin:0.5rem 0 0">${escapeHtml(formatEditorialSummary(editorial))}</p>
       <div class="detail-meta">
         ${!teamsBadges && article.primary_team ? `<span class="badge badge-team">${escapeHtml(article.primary_team)}</span>` : ''}
         <span class="badge badge-stage badge-stage-${article.current_stage}">
           Stage ${article.current_stage} · ${escapeHtml(STAGE_NAMES[article.current_stage] ?? 'Unknown')}
         </span>
         <span class="badge badge-status badge-status-${article.status}">${escapeHtml(article.status)}</span>
-        <span class="badge badge-depth">${DEPTH_LABELS[article.depth_level] ?? `Depth ${article.depth_level}`}</span>
+        <span class="badge badge-depth">${escapeHtml(formatPresetLabel(article.preset_id))}</span>
+        <span class="badge">${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))}</span>
+        <span class="badge">${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}</span>
+        ${hasEditorialOverrides(editorial) ? '<span class="badge badge-team">Overrides</span>' : ''}
         ${modelBadge}
       </div>
     </div>`;
@@ -130,16 +143,11 @@ export function renderArticleMetaDisplay(article: Article, usageEvents?: UsageEv
 
 export function renderArticleMetaEditForm(article: Article): string {
   const teams = parseTeams(article.teams).join(', ');
-
-  const depthOptions: { value: number; label: string }[] = [
-    { value: 1, label: '1: Quick Take (~800 words)' },
-    { value: 2, label: '2: The Beat (~1500 words)' },
-    { value: 3, label: '3: Deep Dive (~2500 words)' },
-    { value: 4, label: '4: Feature (~4000 words)' },
-  ];
+  const editorial = buildEditorialUiState(article);
+  const advancedChecked = hasEditorialOverrides(editorial);
 
   const depthWarning = article.current_stage > 1
-    ? `<p class="meta-edit-warning">⚠️ Changing depth level after Stage 1 may desync prompts/panel sizing.</p>`
+    ? `<p class="meta-edit-warning">⚠️ Changing editorial controls after Stage 1 may desync prompts, panel sizing, or evaluation traces.</p>`
     : '';
 
   return `
@@ -165,17 +173,68 @@ export function renderArticleMetaEditForm(article: Article): string {
 
       <div class="meta-edit-row-2col">
         <div class="meta-edit-field">
-          <label class="meta-edit-label" for="meta-depth">Depth Level</label>
+          <label class="meta-edit-label" for="meta-preset">Editorial preset</label>
           ${depthWarning}
-          <select id="meta-depth" class="input input-full select" name="depth_level">
-            ${depthOptions.map(o => `<option value="${o.value}"${o.value === article.depth_level ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+          <select id="meta-preset" class="input input-full select" name="preset_id">
+            ${renderPresetOptions(editorial.preset_id)}
           </select>
+          <div class="meta-edit-hint">
+            Legacy compatibility stays in sync as ${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}.
+          </div>
         </div>
         <div class="meta-edit-field">
           <label class="meta-edit-label" for="meta-teams">Teams</label>
           <input id="meta-teams" class="input input-full" name="teams" type="text" value="${escapeHtml(teams)}" placeholder="seahawks, chiefs" />
           <div class="meta-edit-hint">Comma-separated team slugs.</div>
         </div>
+      </div>
+
+      <div class="meta-edit-field">
+        <label class="meta-edit-label">
+          <input
+            type="checkbox"
+            id="meta-use-advanced"
+            ${advancedChecked ? 'checked' : ''}
+            onchange="this.form.querySelectorAll('[data-editorial-advanced] select, [data-editorial-advanced] textarea').forEach((field) => { field.disabled = !this.checked; })">
+          Override preset defaults
+        </label>
+      </div>
+
+      <div class="meta-edit-row-2col" data-editorial-advanced>
+        <div class="meta-edit-field">
+          <label class="meta-edit-label" for="meta-reader-profile">Reader profile</label>
+          <select id="meta-reader-profile" class="input input-full select" name="reader_profile"${advancedChecked ? '' : ' disabled'}>
+            ${renderReaderProfileOptions(editorial.reader_profile)}
+          </select>
+          <div class="meta-edit-hint">Casual settings should keep analytics explained, not assumed.</div>
+        </div>
+        <div class="meta-edit-field">
+          <label class="meta-edit-label" for="meta-article-form">Article form</label>
+          <select id="meta-article-form" class="input input-full select" name="article_form"${advancedChecked ? '' : ' disabled'}>
+            ${renderArticleFormOptions(editorial.article_form)}
+          </select>
+        </div>
+      </div>
+
+      <div class="meta-edit-row-2col" data-editorial-advanced>
+        <div class="meta-edit-field">
+          <label class="meta-edit-label" for="meta-panel-shape">Panel shape</label>
+          <select id="meta-panel-shape" class="input input-full select" name="panel_shape"${advancedChecked ? '' : ' disabled'}>
+            ${renderPanelShapeOptions(editorial.panel_shape)}
+          </select>
+        </div>
+        <div class="meta-edit-field">
+          <label class="meta-edit-label" for="meta-analytics-mode">Analytics mode</label>
+          <select id="meta-analytics-mode" class="input input-full select" name="analytics_mode"${advancedChecked ? '' : ' disabled'}>
+            ${renderAnalyticsModeOptions(editorial.analytics_mode)}
+          </select>
+        </div>
+      </div>
+
+      <div class="meta-edit-field" data-editorial-advanced>
+        <label class="meta-edit-label" for="meta-panel-constraints">Panel constraints JSON</label>
+        <textarea id="meta-panel-constraints" class="input input-full textarea" name="panel_constraints_json" rows="3"${advancedChecked ? '' : ' disabled'}>${escapeHtml(editorial.panel_constraints_json ?? '')}</textarea>
+        <div class="meta-edit-hint">Optional hard min/max or required/excluded agent overrides.</div>
       </div>
 
       <div class="meta-edit-actions">

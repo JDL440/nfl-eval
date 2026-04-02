@@ -2,11 +2,20 @@
  * Executable model selection policy for the article pipeline.
  *
  * TypeScript port of content/model_policy.py — loads models.json and resolves
- * which LLM model to use based on stage, depth level, and task family.
+ * which LLM model to use based on stage, editorial controls, and task family.
  */
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  getPanelSizeGuidance,
+  resolveEditorialControls,
+  type AnalyticsMode,
+  type ArticleForm,
+  type EditorialPresetId,
+  type PanelShape,
+  type ReaderProfile,
+} from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +51,12 @@ export interface ResolvedModel {
 export interface ResolveParams {
   stageKey?: string;
   depthLevel?: number;
+  presetId?: EditorialPresetId;
+  readerProfile?: ReaderProfile;
+  articleForm?: ArticleForm;
+  panelShape?: PanelShape;
+  analyticsMode?: AnalyticsMode;
+  panelConstraintsJson?: string | null;
   taskFamily?: string;
   overrideModel?: string;
 }
@@ -49,13 +64,6 @@ export interface ResolveParams {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const PANEL_MODEL_KEYS: Record<number, string> = {
-  1: 'panel_casual',
-  2: 'panel_beat',
-  3: 'panel_deep_dive',
-  4: 'panel_deep_dive',
-};
 
 const STAGE_MODEL_KEY_ALIASES: Record<string, string> = {
   'lead_discussion_prompt': 'lead',
@@ -156,18 +164,61 @@ export class ModelPolicy {
   /**
    * Get panel size limits for a given depth level.
    */
-  getPanelSizeLimits(depthLevel: number): { min: number; max: number } {
-    const depthName = this.config.depth_level_map[String(depthLevel)];
-    if (!depthName) throw new Error(`Unknown depth level: ${depthLevel}`);
-    const limits = this.config.panel_size_limits[depthName];
-    if (!limits) throw new Error(`No panel size limits for depth: ${depthName}`);
-    return limits;
+  getPanelSizeLimits(
+    depthOrEditorial:
+      | number
+      | {
+        depthLevel?: number;
+        presetId?: EditorialPresetId;
+        readerProfile?: ReaderProfile;
+        articleForm?: ArticleForm;
+        panelShape?: PanelShape;
+        analyticsMode?: AnalyticsMode;
+        panelConstraintsJson?: string | null;
+      },
+  ): { min: number; max: number } {
+    if (typeof depthOrEditorial === 'number') {
+      if (!Number.isInteger(depthOrEditorial) || depthOrEditorial < 1 || depthOrEditorial > 4) {
+        throw new Error(`Unknown depth level: ${depthOrEditorial}`);
+      }
+      const controls = resolveEditorialControls({ depth_level: depthOrEditorial });
+      return getPanelSizeGuidance(controls);
+    }
+    const controls = resolveEditorialControls({
+      preset_id: depthOrEditorial.presetId,
+      reader_profile: depthOrEditorial.readerProfile,
+      article_form: depthOrEditorial.articleForm,
+      panel_shape: depthOrEditorial.panelShape,
+      analytics_mode: depthOrEditorial.analyticsMode,
+      panel_constraints_json: depthOrEditorial.panelConstraintsJson ?? null,
+      depth_level: depthOrEditorial.depthLevel,
+    });
+    return getPanelSizeGuidance(controls);
   }
 
   resolve(params: ResolveParams = {}): ResolvedModel {
-    const { stageKey, depthLevel, taskFamily, overrideModel } = params;
+    const {
+      stageKey,
+      depthLevel,
+      presetId,
+      readerProfile,
+      articleForm,
+      panelShape,
+      analyticsMode,
+      panelConstraintsJson,
+      taskFamily,
+      overrideModel,
+    } = params;
 
-    const stageModelKey = this._resolveStageModelKey(stageKey, depthLevel);
+    const stageModelKey = this._resolveStageModelKey(stageKey, {
+      depthLevel,
+      presetId,
+      readerProfile,
+      articleForm,
+      panelShape,
+      analyticsMode,
+      panelConstraintsJson,
+    });
     const resolvedTaskFamily = this._resolveTaskFamily(stageKey, taskFamily);
     const candidates = this._buildCandidates(stageKey, stageModelKey, resolvedTaskFamily);
 
@@ -213,18 +264,48 @@ export class ModelPolicy {
 
   private _resolveStageModelKey(
     stageKey: string | undefined,
-    depthLevel: number | undefined,
+    editorial: {
+      depthLevel?: number;
+      presetId?: EditorialPresetId;
+      readerProfile?: ReaderProfile;
+      articleForm?: ArticleForm;
+      panelShape?: PanelShape;
+      analyticsMode?: AnalyticsMode;
+      panelConstraintsJson?: string | null;
+    },
   ): string | null {
     if (!stageKey) return null;
     if (stageKey === 'panel') {
-      if (depthLevel == null) {
-        throw new Error("depth_level is required when stage_key='panel'");
+      if (
+        editorial.depthLevel == null &&
+        !editorial.articleForm &&
+        !editorial.panelShape &&
+        !editorial.presetId
+      ) {
+        throw new Error("depth_level or editorial controls are required when stage_key='panel'");
       }
-      const key = PANEL_MODEL_KEYS[depthLevel];
-      if (!key) {
-        throw new Error(`Unsupported panel depth level: ${depthLevel}. Use 1, 2, 3, or 4.`);
+      const controls = resolveEditorialControls({
+        preset_id: editorial.presetId,
+        reader_profile: editorial.readerProfile,
+        article_form: editorial.articleForm,
+        panel_shape: editorial.panelShape,
+        analytics_mode: editorial.analyticsMode,
+        panel_constraints_json: editorial.panelConstraintsJson ?? null,
+        depth_level: editorial.depthLevel,
+      });
+      const limits = getPanelSizeGuidance(controls);
+      if (controls.panel_shape === 'news_reaction' || limits.max <= 2) {
+        return 'panel_casual';
       }
-      return key;
+      if (
+        controls.panel_shape === 'trade_eval'
+        || controls.panel_shape === 'cohort_rank'
+        || controls.panel_shape === 'market_map'
+        || limits.max >= 5
+      ) {
+        return 'panel_deep_dive';
+      }
+      return 'panel_beat';
     }
     return STAGE_MODEL_KEY_ALIASES[stageKey] ?? stageKey;
   }

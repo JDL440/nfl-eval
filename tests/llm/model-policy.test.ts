@@ -31,8 +31,8 @@ describe('ModelPolicy', () => {
       expect(deep.selectedModel).toBe('gpt-5-mini');
     });
 
-    it('requires depth level for panel stage', () => {
-      expect(() => policy.resolve({ stageKey: 'panel' })).toThrow('depth_level is required');
+    it('requires editorial controls for panel stage', () => {
+      expect(() => policy.resolve({ stageKey: 'panel' })).toThrow('depth_level or editorial controls are required');
     });
 
     it('resolves by task family directly', () => {
@@ -104,7 +104,26 @@ describe('ModelPolicy', () => {
 
     it('returns limits for feature (depth 4)', () => {
       const limits = policy.getPanelSizeLimits(4);
-      expect(limits).toEqual({ min: 4, max: 5 });
+      expect(limits).toEqual({ min: 3, max: 4 });
+    });
+
+    it('keeps narrative features on the beat-sized default panel tier', () => {
+      const result = policy.resolve({
+        stageKey: 'panel',
+        presetId: 'narrative_feature',
+        articleForm: 'feature',
+        panelShape: 'auto',
+      });
+      expect(result.stageModelKey).toBe('panel_beat');
+    });
+
+    it('uses panel shape for complex comparison panels', () => {
+      const result = policy.resolve({
+        stageKey: 'panel',
+        articleForm: 'standard',
+        panelShape: 'trade_eval',
+      });
+      expect(result.stageModelKey).toBe('panel_deep_dive');
     });
 
     it('throws for invalid depth level', () => {

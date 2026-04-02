@@ -518,6 +518,49 @@ describe('STAGE_ACTIONS', () => {
       expect(result.success).toBe(true);
       expect(fixtures.repo.artifacts.get('test-cp', 'panel-composition.md')).toBeTruthy();
     });
+
+    it('uses preset and panel constraints to shape the compose-panel prompt', async () => {
+      fixtures.repo.createArticle({
+        id: 'test-cp-controls',
+        title: 'Test: feature trade panel',
+        primary_team: 'SEA',
+        depth_level: 4,
+        preset_id: 'narrative_feature',
+        article_form: 'feature',
+        panel_shape: 'trade_eval',
+        analytics_mode: 'normal',
+        panel_constraints_json: JSON.stringify({
+          min_agents: 4,
+          max_agents: 4,
+          required_agents: ['cap', 'playerrep'],
+          allow_team_agent_omission: true,
+        }),
+      });
+      fixtures.repo.artifacts.put('test-cp-controls', 'idea.md', '# Idea');
+      fixtures.repo.artifacts.put('test-cp-controls', 'discussion-prompt.md', '# Prompt\nEvaluate both sides of the trade.');
+      fixtures.repo.advanceStage('test-cp-controls', 1, 2, 'test-setup');
+
+      const runSpy = vi.spyOn(fixtures.ctx.runner, 'run').mockResolvedValue({
+        content: '## Panel\n- **CAP** — Cap analysis\n- **PlayerRep** — Player valuation\n- **SEA** — Seahawks context\n- **NYJ** — Jets context',
+        thinking: null,
+        model: 'stub-model',
+        provider: 'stub',
+        agentName: 'lead',
+        memoriesUsed: 0,
+      });
+
+      const result = await STAGE_ACTIONS.composePanel('test-cp-controls', fixtures.ctx);
+
+      expect(result.success).toBe(true);
+      const task = runSpy.mock.calls[0]?.[0]?.task ?? '';
+      expect(task).toContain('Editorial preset: Narrative Feature');
+      expect(task).toContain('Panel shape: Trade evaluation');
+      expect(task).toContain('Panel size target: 4 agents');
+      expect(task).toContain('Feature is an article-form choice');
+      expect(task).toContain('Trade evaluations should cover both sides of the transaction');
+      expect(task).toContain('Required agents: cap, playerrep');
+      expect(task).toContain('Include a primary-team agent only when it materially improves the panel');
+    });
   });
 
   // ── runDiscussion (3→4) ──────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import { join, basename } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { initDataDir, refreshCorePromptDefaults } from '../config/index.js';
 import { AgentMemory } from '../agents/memory.js';
+import { Repository } from '../db/repository.js';
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -134,67 +135,32 @@ function copyPipelineDb(
     return;
   }
 
-  if (!dryRun) {
-    if (!existsSync(dest)) {
-      copyFileSync(src, dest);
-    }
-
-    // Add league column if it doesn't exist
-    const db = new DatabaseSync(dest);
-    try {
-      const cols = db.prepare('PRAGMA table_info(articles)').all() as unknown as Array<{ name: string }>;
-      const hasLeague = cols.some((c) => c.name === 'league');
-      if (!hasLeague) {
-        db.exec(`ALTER TABLE articles ADD COLUMN league TEXT NOT NULL DEFAULT '${league}'`);
-        report.articlesCreated++;
+    if (!dryRun) {
+      if (!existsSync(dest)) {
+        copyFileSync(src, dest);
       }
-      // Also drop and recreate the view to include league
-      db.exec('DROP VIEW IF EXISTS pipeline_board');
-      db.exec(`
-        CREATE VIEW IF NOT EXISTS pipeline_board AS
-        SELECT
-          a.id, a.title, a.primary_team,
-          '${league}' as league,
-          a.status, a.current_stage,
-          CASE a.current_stage
-            WHEN 1 THEN 'Idea Generation'
-            WHEN 2 THEN 'Discussion Prompt'
-            WHEN 3 THEN 'Panel Composition'
-            WHEN 4 THEN 'Panel Discussion'
-            WHEN 5 THEN 'Article Drafting'
-            WHEN 6 THEN 'Editor Pass'
-            WHEN 7 THEN 'Publisher Pass'
-            WHEN 8 THEN 'Published'
-            ELSE 'Unknown'
-          END AS stage_name,
-          a.discussion_path, a.article_path,
-          a.depth_level,
-          CASE a.depth_level
-            WHEN 1 THEN 'Casual Fan'
-            WHEN 2 THEN 'The Beat'
-            WHEN 3 THEN 'Deep Dive'
-            ELSE 'Unknown'
-          END AS depth_name,
-          a.target_publish_date, a.publish_window,
-          a.time_sensitive, a.expires_at,
-          a.published_at, a.updated_at
-        FROM articles a
-        ORDER BY
-          CASE a.status
-            WHEN 'in_production' THEN 1
-            WHEN 'proposed'      THEN 2
-            WHEN 'approved'      THEN 3
-            WHEN 'published'     THEN 4
-            WHEN 'archived'      THEN 5
-            ELSE 6
-          END,
-          a.time_sensitive DESC,
-          a.target_publish_date ASC NULLS LAST
-      `);
+
+      // Add league column if it doesn't exist
+      const db = new DatabaseSync(dest);
+      try {
+        db.exec('DROP VIEW IF EXISTS pipeline_board');
+        const cols = db.prepare('PRAGMA table_info(articles)').all() as unknown as Array<{ name: string }>;
+        const hasLeague = cols.some((c) => c.name === 'league');
+        if (!hasLeague) {
+          db.exec(`ALTER TABLE articles ADD COLUMN league TEXT NOT NULL DEFAULT '${league}'`);
+          report.articlesCreated++;
+        }
+      } catch (err) {
+        report.errors.push(`pipeline.db migration error: ${(err as Error).message}`);
+      } finally {
+        db.close();
+      }
+
+    try {
+      const repo = new Repository(dest);
+      repo.close();
     } catch (err) {
-      report.errors.push(`pipeline.db migration error: ${(err as Error).message}`);
-    } finally {
-      db.close();
+      report.errors.push(`pipeline.db schema sync error: ${(err as Error).message}`);
     }
   }
 
