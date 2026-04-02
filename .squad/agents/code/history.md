@@ -46,11 +46,24 @@
 
 ## Learnings
 
-### Schedules/settings patch verification (2026-04-02)
+### Styling follow-up commit and push (2026-04-02T16-20-11Z)
 
-- The current `src\dashboard\views\config.ts` schedules tab now matches the intended advanced-JSON pattern: `panelConstraintsJson` renders inside a `<details class="settings-advanced">` section, carries inline `setCustomValidity(...)` JSON-object validation, and shows a concrete schema example immediately below the textarea.
-- `src\dashboard\public\styles.css` adds the shared settings primitives that make the schedules patch look native to the rest of the settings UI (`.settings-grid-2`, rounded settings inputs/textarea, `.settings-advanced`, `.settings-json-input`, and schema-example chrome) instead of shipping one-off schedule-only styles.
-- Focused confidence slice for this patch is `npm test -- tests/dashboard/config.test.ts tests/dashboard/settings-routes.test.ts`; it passed on HEAD and covers schedules-tab rendering plus the 400 HTMX error path for malformed `panelConstraintsJson`.
+**Status:** ✅ Completed and pushed to origin/main
+
+- The New Idea advanced section keeps provider selection and editorial overrides inside bottom `<details id="idea-advanced-section">` so `tests\dashboard\new-idea.test.ts` asserts advanced block sits below pinned agents / auto-advance with provider control intact.
+- The schedules/settings styling pass uses shared advanced-settings primitives across `src\dashboard\views\config.ts` and `src\dashboard\public\styles.css`: `.settings-advanced`, `.settings-grid-2`, `.settings-json-input`, schema-example callout are the reusable contract.
+- Validation slice: `npx vitest run tests/dashboard/new-idea.test.ts tests/dashboard/config.test.ts tests/dashboard/settings-routes.test.ts` + `npm run v2:build` both passed.
+- Commit: `8658a6f1b93a5973f32f520eb58db871edc5fd00` "Polish dashboard advanced settings"
+- Push to origin/main successful. Files staged: new-idea.ts, config.ts, styles.css. Unrelated doc deleted: docs/writer-revision-handoff-packers.md.
+
+### Schedules/settings patch verification and merge (2026-04-02T16-20-11Z)
+
+**Status:** ✅ Merged into styling commit
+
+- `src\dashboard\views\config.ts` schedules tab matches intended advanced-JSON pattern: `panelConstraintsJson` renders inside `<details class="settings-advanced">` with inline JSON validation and schema example below textarea.
+- `src\dashboard\public\styles.css` adds shared settings primitives (`.settings-grid-2`, `.settings-advanced`, `.settings-json-input`) that make schedules patch native to settings UI instead of one-off styles.
+- Test coverage: `npm test -- tests/dashboard/config.test.ts tests/dashboard/settings-routes.test.ts` validates schedules-tab rendering and 400 HTMX error path for malformed JSON.
+- Cross-team coordination: UX finished config.ts schedules tab update; Code validated seams and confirmed implementation sound; both decisions merged to decisions.md; commit staged and pushed.
 
 ### Schedule-fix audit snapshot (2026-04-02)
 
