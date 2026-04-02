@@ -1,3 +1,14 @@
+## Spawn Complete — Schedules Advanced Panel Validation (2026-04-02T16:02:56Z)
+
+- **Status:** Complete. Validation passed; not required for user-visible result.
+- **Batch:** Three code validation tasks.
+- **Outcomes:**
+  - **Validate patch:** Confirmed seams sound across types, dashboard, and migration.
+  - **Inspect UX:** Confirmed reusable settings-advanced pattern.
+  - **Trace coupling:** Documented panelConstraintsJson coupling across dashboard forms and API routes.
+- **Coordination:** UX delivered config.ts schedules tab update; Code validated and confirmed implementation sound.
+- **Tests:** Full focused bundle passed.
+
 ## Spawn Batch — App/Runtime + Engineering-System Split (2026-03-29T19:07:44.9412166Z)
 
 - **Status:** Two implementation streams launched.
@@ -34,6 +45,12 @@
 - Article contract artifact: Stage 3→4 (discussion) now generates `article-contract.md` capturing thesis, tensions, evidence anchors, structure expectations, and open cautions. Both Writer (Stage 5) and Editor (Stage 6) receive the contract via existing context-config patterns.
 
 ## Learnings
+
+### Schedules/settings patch verification (2026-04-02)
+
+- The current `src\dashboard\views\config.ts` schedules tab now matches the intended advanced-JSON pattern: `panelConstraintsJson` renders inside a `<details class="settings-advanced">` section, carries inline `setCustomValidity(...)` JSON-object validation, and shows a concrete schema example immediately below the textarea.
+- `src\dashboard\public\styles.css` adds the shared settings primitives that make the schedules patch look native to the rest of the settings UI (`.settings-grid-2`, rounded settings inputs/textarea, `.settings-advanced`, `.settings-json-input`, and schema-example chrome) instead of shipping one-off schedule-only styles.
+- Focused confidence slice for this patch is `npm test -- tests/dashboard/config.test.ts tests/dashboard/settings-routes.test.ts`; it passed on HEAD and covers schedules-tab rendering plus the 400 HTMX error path for malformed `panelConstraintsJson`.
 
 ### Schedule-fix audit snapshot (2026-04-02)
 
