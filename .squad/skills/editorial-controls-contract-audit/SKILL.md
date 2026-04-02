@@ -78,6 +78,7 @@ A good audit should return:
 
 ## Additional audit notes
 
-- Check for **hidden advanced controls**: if routes accept preset-era fields but views never render them, call that out as contract drift.
+- Check for **split advanced controls**: if one surface exposes preset-era fields but sibling surfaces only expose legacy depth/profile controls, call that out as contract drift.
 - Check for **mixed legacy defaults** on create forms. A default `content_profile` + `depth_level` combination can normalize into a different saved value once preset resolution runs.
 - When repositories already store preset-era columns, test both **create** and **partial update** paths. Create may derive correctly from legacy fields while updates silently preserve stale `article_form` / preset values.
+
