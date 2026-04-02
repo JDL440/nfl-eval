@@ -7,6 +7,10 @@
 
 # Research Agent History
 
+## Core Context (Archived 2026-04-02)
+
+**Architectural patterns & team decisions:** LM Studio uses app-managed JSON tool-loop (no native tool API support in OpenAI-compat layer); Gemini moved to native structured tool calling with opaque `providerState` continuation. Depth redesign identified as UI+validation refinement of already-correct architecture: new preset fields (reader_profile, article_form, panel_shape, analytics_mode) already exist in types.ts and are persisted; migration strategy is additive-first (keep depth_level as compatibility alias, backfill new fields, refactor runtime in sequence: model-policy → panel-size → compose-panel → prompt). Key research outputs are captured in decisions.md; no blocking technical debt for redesign.
+
 ## 2026-03-28: LM Studio Tool-Use Behavior Audit
 
 ### Request
@@ -162,9 +166,68 @@ Both audits converge: article detail should be editorial-first. Existing trace i
 - Code agent to implement hierarchy changes with focused view tests
 - DevOps to extend e2e fixtures for article-detail state validation
 
+## 2026-04-02: No-Code-Change Depth/Panel Redesign Impact
+
+### Request
+Review the depth/panel redesign research note and analyze schedule/depth-level risk areas, compatibility constraints, and existing patterns against current code.
+
+### Key Findings
+
+#### Architecture Status
+**The split model is already implemented in production code.** The types system, data model, resolution logic, and model policy all support independent reader_profile, article_form, panel_shape, and analytics_mode controls. No schema changes or runtime rewrites needed.
+
+- **Types.ts is architecture-complete**: EditorialControls, ResolvedEditorialControls, EDITORIAL_PRESETS, deriveDepthLevelFromArticleForm, resolveEditorialControls(), getPanelSizeGuidance()
+- **Data model stores both old + new**: Article and ArticleSchedule interfaces have depth_level (legacy) plus all split fields
+- **Panel size logic is shape-first**: getPanelSizeGuidance() keys off panel_shape, not depth
+- **Model policy is agnostic**: Accepts both legacy (depthLevel) and new params
+
+#### Compatibility Constraints
+1. **UI surfaces are inconsistent**: new-idea.ts and home filter expose 3 depth options; schedules.ts exposes 4
+2. **Schedule semantics need clarification**: Currently (content_profile + depth_level) pairs; should migrate to presets or explicit controls
+3. **Article metadata edit has stage-1 lock**: Currently prevents ANY depth change post-stage-1; should refine to only lock reader_profile + article_form, allow panel_shape/analytics_mode changes
+4. **Prompts expect collapsed depth_level**: Idea-gen and composePanel prompts parse depth as single signal; should migrate to separate reader_profile + article_form + panel_shape signals
+
+#### Existing Patterns Preserved
+- Presets as UI entry point (EDITORIAL_PRESETS already defined)
+- Panel shape driving agent composition (getPanelSizeGuidance() correct)
+- Additive migration with depth_level backward-compat
+- Content profile as reader-experience summary
+- Panel constraints as advanced override
+
+#### Test Coverage
+All 235 dashboard tests passing; none use the split fields directly. Tests should extend to cover:
+- Legacy (depth_level only) → preset resolution
+- Split controls → panel size guidance
+- Schedule creation with preset vs explicit controls
+
+### Risk Assessment
+- **Data integrity:** LOW — fields already exist, backfill via resolveEditorialControls() is safe
+- **Prompt coupling:** MEDIUM — prompts must be updated to parse new controls separately, but model policy already supports both paths
+- **UI inconsistency:** LOW — can migrate surface-by-surface without breaking anything
+- **Stage-1 lock:** MEDIUM — validation logic must evolve from "don't change depth" to "don't change reader_profile/article_form"
+
+### Implementation Roadmap
+1. **Phase 1 (Safe now):** Auto-backfill new fields from legacy depth_level via resolveEditorialControls()
+2. **Phase 2 (UI alignment):** Replace depth dropdowns with preset selector + advanced panel (new-idea, schedules, home filter)
+3. **Phase 3 (Validation):** Refine post-stage-1 lock to granular field-level rules
+4. **Phase 4 (Prompts):** Update Lead/Writer/Editor agent context to parse split controls
+5. **Phase 5 (Deprecation):** Mark depth_level deprecated (keep in schema, disallow in new paths)
+
+### Recommendation
+**Start implementation now; no blocking issues.** The redesign is a UI + validation refinement of an already-correct architecture. Lead the UI phase with new-idea.ts and schedules.ts, coordinate with UX on preset messaging.
+
+### Files Analyzed
+- src/types.ts (types, presets, resolution, panel-size logic)
+- src/llm/model-policy.ts (model selection, panel-size acceptance)
+- src/dashboard/views/new-idea.ts, schedules.ts (UI surfaces)
+- src/dashboard/server.ts (API routes)
+- tests/dashboard/schedules.test.ts (current test patterns)
+
 ## Learnings
 
 - 2026-03-30 — Debug/trace surfaces are well-segregated; the issue is article-detail hierarchy, not trace isolation. Article page mixes machine metadata with editorial context; moving debug content to secondary areas aligns with existing trace-page strategy. No new trace infrastructure needed; just hierarchy/copy fixes.
+
+- 2026-04-02 — Depth/panel split is architecturally complete in code; migration is UI-forward. The types, data model, and resolution logic already support independent reader_profile/article_form/panel_shape/analytics_mode controls. No schema migration needed; fields exist and can be backfilled from depth_level via resolveEditorialControls(). Focus implementation on: (1) UI surface alignment (new-idea, schedules presets), (2) stage-1 lock refinement (granular field rules), (3) prompt integration with split controls.
 
 
 ## Learnings
@@ -179,3 +242,35 @@ Both audits converge: article detail should be editorial-first. Existing trace i
   - per-session `research\*.md`
 - Session UUID folders are much easier to triage when paired with session-store summaries (for example: `ee3cf027-724e-49f5-b205-0e8b3c3e90fc` = “Rearchitect Project For Version 2”, `fded7635-6d90-4180-ae1f-02247f6d5b78` = “Add Advanced LLM Inputs Outputs Page”).
 - Recommended repo destination for later copy-in: `C:\github\nfl-eval\research\copilot-session-archive\` with collision-safe filenames that preserve date, session summary, session id, and original basename.
+
+### 2026-04-02: Depth/panel redesign handoff rules
+
+- The depth redesign should be treated as a separation-of-concerns migration: reader sophistication, article ambition, panel topology, and analytics intensity must become distinct controls instead of continuing to share `depth_level`.
+- `Feature` is not a true orchestration tier in current runtime behavior; research recommends moving it under `article_form`/preset vocabulary rather than keeping it as a fourth depth level.
+- Panel construction should key off first-class `panel_shape` intent, with optional panel constraints, instead of using audience depth as a proxy for team composition or agent count.
+- Compatibility work must be additive first: keep `depth_level` during migration, backfill new fields from existing depth/content-profile data, and only remove old validators/mappings after UI, API, prompts, and runtime all read the split model.
+- Key reference artifact for this handoff is `C:\Users\jdl44\.copilot\session-state\bb1ef496-5028-423f-b95b-62853c89d6c9\research\depth-level-on-scheudling-shows-4-values-while-new.md`.
+
+### 2026-04-02: Depth/Panel Redesign Decisions Merged
+- **Spawn:** Backend Squad Agent requested impact scans from UX, Code, Research for depth/panel redesign
+- **Analysis:** All three agents completed read-only audits
+- **Decisions merged:** All inbox findings consolidated to `.squad/decisions/decisions.md` (2026-04-02T05:45:01Z)
+
+#### UX Findings
+- Dashboard surfaces split: new-idea/home expose depths 1–3; article/schedules expose 1–4
+- Ghost option: Feature depth 4 cannot be created via primary UX, only set in metadata
+- Inconsistent labels across surfaces (Casual Fan vs. Quick Take for depth 1)
+- Decision: Unify terminology and option sets across all surfaces; migrate to preset-driven UX
+
+#### Code Findings
+- Preset model (reader_profile, article_form, panel_shape, analytics_mode) already exists in `src\types.ts` and is persisted
+- Current inconsistency: new-idea/home expose 1–3; API/DB accept 1–4; runtime collapses 3–4 to same tier
+- No partial changes allowed — all affected surfaces must move together (12 files)
+- Decision: Target preset-based model as source of truth; migrate all surfaces deliberately
+
+#### Research Findings
+- Migration must be additive-first: keep `depth_level` as compatibility alias while introducing new fields
+- Preserve schedule semantics: approachable-vs-deeper behavior must survive as presets
+- Runtime refactor sequence: model-policy → panel-size → compose-panel → prompt before removal
+- Execution rules documented with non-negotiable compatibility expectations
+- Decision: Migration strategy established; ready for staged implementation planning

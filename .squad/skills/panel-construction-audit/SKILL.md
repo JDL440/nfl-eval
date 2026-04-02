@@ -44,6 +44,7 @@ tools: [view, rg]
 2. **Depth drift**
    - Do UI labels, stored depth enums, and runtime branching agree?
    - Watch especially for depth levels accepted in UI but collapsed in runtime logic.
+   - Check whether richer editorial controls already exist in `src/types.ts` / `src/db/repository.ts` (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, `panel_constraints_json`) but are still hidden behind legacy `depth_level` controls in the dashboard.
 3. **Validation gaps**
    - Does the system verify panel size, role mix, pinned-agent inclusion, and roster validity structurally?
    - Or does it only check for non-empty markdown?
@@ -67,3 +68,4 @@ Summaries should cite:
 - `article_panels` may sound like full panel state but can still be only pinned-agent storage.
 - `discussion_prompts` can exist in schema without driving runtime composition.
 - A parseable `panel-composition.md` is not the same as a validated composition contract.
+- If the redesign is preset-first, verify `resolveEditorialControls()` remains the single compatibility seam that derives legacy `depth_level` / `content_profile` for old routes, schedules, and MCP tools.

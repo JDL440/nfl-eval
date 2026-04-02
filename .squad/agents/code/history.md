@@ -17,6 +17,28 @@
 - Article contract artifact: Stage 3→4 (discussion) now generates `article-contract.md` capturing thesis, tensions, evidence anchors, structure expectations, and open cautions. Both Writer (Stage 5) and Editor (Stage 6) receive the contract via existing context-config patterns.
 
 ## Learnings
+
+### Depth-Level Redesign Impact Analysis (2025-01-21)
+
+**Architecture Pattern**: `depth_level` is an overloaded integer that simultaneously controls reader-facing messaging (casual/engaged/expert), article form (brief/standard/deep/feature), and panel orchestration (size limits, model selection). The codebase already hints at the better separation: `content_profile` ('accessible'|'deep_dive') is stored separately on schedules, proving the concepts want to split.
+
+**Type System Status**: `src/types.ts` already defines the target types (ReaderProfile, ArticleForm, PanelShape, AnalyticsMode, EditorialPresetId, EDITORIAL_PRESETS map) but routes still use DepthLevel. Bridge functions needed.
+
+**Data Contract Inconsistency**: New-idea and home filter expose only 3 depth options (1–3: Casual/The Beat/Deep Dive), while schedules/metadata/API allow 4 (adding Feature). This silent inconsistency is a design smell: Feature (depth 4) maps to same panel bucket as depth 3 in DEPTH_LEVEL_MAP, making it vestigial. Recommend Feature become an article_form value, not a depth level.
+
+**Route Impact**: 11 routes directly couple to depth_level (POST /api/ideas, POST/PATCH /api/articles, 4x schedule CRUD, 2x metadata edit, filtered articles, home). All must expand to accept editorial controls while maintaining backward compat during migration. Schedules are highest-risk: they store both content_profile + depth_level redundantly; redesign must clarify which becomes primary.
+
+**Panel Composition Intimacy**: Stage 3 (Panel Composition) uses article.depth_level to set min/max agent count. ModelPolicy.resolve() maps depth to panel model keys. This deep coupling means changing "reader depth" in Stage 1+ automatically changes panel constraints set in Stage 3, violating separation of concerns. Must refactor to pass editorial controls separately from panel constraints.
+
+**SSE/HTMX Brittleness**: Article metadata edits (POST /htmx/articles/:id/edit-meta) don't emit events on depth change; page stays stale if user changes depth after Stage 3 commit. Must add migration or locking logic to prevent post-Stage-1 depth changes from desync'ing panel.
+
+**Test Suite Scope**: All 10 dashboard test files are affected (schedules.test.ts highest impact; tests assert depth 1–4 values in schedule fixtures). Must implement bridge logic so tests can use either depth or preset during migration.
+
+**Recommendation**: Use 3-phase approach: (1) add bridge functions in types.ts, (2) expand routes to accept preset_id OR depthLevel, (3) refactor panel composition to use editorial controls instead of raw depth. Keep depth_level in DB/API during migration for compatibility.
+- 2026-04-02 — Pre-implementation depth/panel scan confirmed the lowest-risk redesign seam is to keep `depth_level` as a compatibility alias while moving UX and orchestration onto the already-persisted editorial controls (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, `panel_constraints_json`). The files that must move together are `src\dashboard\views\new-idea.ts`, `home.ts`, `article.ts`, `config.ts`, `schedules.ts`, `src\dashboard\server.ts`, `src\pipeline\idea-generation.ts`, `src\services\article-creation.ts`, `src\pipeline\actions.ts`, `src\pipeline\article-scheduler-service.ts`, `src\llm\model-policy.ts`, `src\tools\pipeline-tools.ts`, plus the schedule/article repository seams in `src\db\repository.ts` and `src\db\schema.sql`.
+- 2026-04-02 — Depth/panel redesign audit found the dashboard is split across two contracts: legacy `depth_level` / `content_profile` still drive rendered controls in `src\dashboard\views\new-idea.ts`, `home.ts`, `article.ts`, `config.ts`, `schedules.ts`, `src\dashboard\server.ts`, and `src\pipeline\article-scheduler-service.ts`, while the new preset model already exists in `src\types.ts` and is persisted through `src\db\repository.ts`. Any redesign must update all of those surfaces together or operators will keep seeing mismatched labels/options (3 depths vs 4, Feature mapped onto Deep Dive) and schedule flows will remain inconsistent.
+- 2026-04-02 — Current focused dashboard validation is blocked by a pre-existing runtime failure unrelated to this audit’s code changes: `npm test -- tests/dashboard/new-idea.test.ts tests/dashboard/schedules.test.ts tests/dashboard/config.test.ts tests/dashboard/settings-routes.test.ts tests/dashboard/server.test.ts` collapses because repository create/update paths call `resolveEditorialControls(...)`, but Vitest reports `ReferenceError: resolveEditorialControls is not defined` from `src\db\repository.ts`. Treat those dashboard suites as unreliable proof for redesign work until that repository/runtime seam is repaired.
+- 2026-04-02 — Dashboard depth/panel redesign audit complete: identified overloading of `depth_level` (1–4) into four concepts (reader sophistication, article length, panel size, model selection), causing user-visible inconsistencies (new-idea+home expose 1–3 only, article+schedules expose 1–4, API accepts 1–4, runtime collapses 3&4 to same policy bucket). Full analysis in `.squad/decisions/inbox/code-dashboard-depth-audit.md` covering affected surfaces, validation seams, test gaps, and implementation sequence. **Code implementation scope** (Phase 1–2, no dependencies): unify UI option sets (2–3 hours), tighten validation (3–4 hours), add tests (4–5 hours) — all within scope; Phase 3 (preset integration) and Feature semantics require Lead approval on schema/API contract. Audit recommends no code changes at this stage, only analysis and readiness for staged implementation.
 - 2026-04-01 — Native Gemini tool calls now depend on opaque `providerState` continuity: `src\llm\gateway.ts` exposes providerState on chat requests/responses, `src\agents\runner.ts` threads it through both tool loops, and `src\llm\providers\gemini.ts` must round-trip raw `contents` (including `thoughtSignature`) while only appending trailing tool results as `functionResponse` parts between calls.
 - 2026-04-01 — Manual Gemini verification now lives at `test-gemini.ts`: use `npx tsx test-gemini.ts` to exercise the native-tool path end to end by carrying `providerState` from the first Gemini tool call into the follow-up tool-result turn.
 - 2026-04-01 — Keep Gemini on the structured-tool path without changing runner routing: `src\agents\runner.ts` should continue choosing native structured tool calling outside the LM Studio legacy gate, while `tests\llm\providers.test.ts` plus repo-root `test-gemini.ts` are the proof seam for providerState-native tool continuity.
@@ -46,6 +68,55 @@
 
 
 - 2026-03-29 — Stage 4 contract promotion complete: `article-contract.md` now generated in `runDiscussion()` via `generateArticleContract()` helper across all three discussion paths (normal synthesis, single-moderator fallback, all-panelists-failed fallback); new `requireArticleContract()` and `requireDiscussionComplete()` guards enforce hard 4→5 prerequisite requiring BOTH discussion-summary.md and article-contract.md; `writeDraft()` contract generation reduced to recovery-only path with warning log; skill documentation updated to reflect both artifacts as Stage 4 outputs; all 153 pipeline tests passing with proper multi-call tracking in test providers.
+
+## Depth / Panel Redesign Impact Analysis (2026-04-02)
+
+### Spawn: Depth/Panel Redesign Implementation-Impact Analysis
+- **Request:** Backend Squad Agent spawned UX, Code, Research for read-only impact scans on depth/panel redesign
+- **Status:** Completed and merged to decisions.md
+
+### From UX — Dashboard Depth/Panel Inconsistencies
+- New-idea + home expose only depths 1–3; article metadata + schedules expose 1–4
+- Users cannot select Feature (depth 4) at intake but can set it later → ghost option
+- Terminology inconsistent: "Casual Fan / The Beat / Deep Dive" vs. "Quick Take / The Beat / Deep Dive / Feature"
+- Full audit in `.squad/decisions/decisions.md` (now live)
+- Key decisions: Unify terminology, add depth 4 to new-idea/home, eventually migrate to preset-driven model (reader_profile, article_form, panel_shape, analytics_mode)
+
+### From Research — Redesign Execution Rules
+- Migration must be additive-first: introduce new preset fields while keeping `depth_level` as compatibility alias
+- Runtime refactor sequence: model-policy → panel-size → compose-panel → prompt contracts before depth_level removal
+- Preserve schedule semantics: approachable-vs-deeper slot behavior must survive as presets/reader-profile
+- 12 key files affected when implementing: types.ts, model-policy.ts, actions.ts, idea-generation.ts, views (4), server.ts, repository.ts, migrate.ts
+- Full rules in `.squad/decisions/decisions.md` (now live)
+
+### Decisions Merged (2026-04-02T05:45:01Z)
+- Code: Use preset-based editorial model as target source of truth
+- Research: Split depth_level into reader_profile + article_form + panel_shape + analytics_mode
+- UX: Unify terminology; also decided to show actual LLM model badge from usage provenance (not just provider)
+- All decisions live in `.squad/decisions/decisions.md`; inbox cleaned
+
+### Key Findings
+
+1. **UI Inconsistency:** New-idea and home expose 1–3 only; article metadata and schedules expose 1–4; API+DB accept 1–4 everywhere.
+2. **Label Divergence:** New-idea calls them "Casual Fan / The Beat / Deep Dive"; article.ts calls them "Quick Take / The Beat / Deep Dive / Feature"; inconsistent terminology across surfaces.
+3. **Runtime Mapping Collapse:** DEPTH_LEVEL_MAP collapses depths 3 AND 4 into single `deep_dive` policy bucket; Feature is cosmetically distinct in UI but orchestrationally identical to Deep Dive.
+4. **Validation Inconsistency:** `POST /api/ideas` soft-defaults invalid depth to 2 (hides bugs); `PATCH /api/articles` rejects invalid depth (correct); `normalizeScheduleDepth` throws error (correct).
+5. **Schedule Slots Already Split:** `content_profile` (accessible/deep_dive) + `depth_level` (1–4) are two dimensions, signaling that "reader experience" and "article ambition" should be separate concepts; this is the seed of the preset model.
+6. **Foundation Ready:** `types.ts` already defines EditorialPresets, PanelConstraints, resolveEditorialControls, and presetFromLegacy; the split is modeled but not surfaced in UX.
+7. **Test Gaps:** No test for depth=4 submission in new-idea; no test for depth 4 filter in home; no test for Feature schedule auto-run; missing depth change after Stage 1 behavior tests.
+
+### Recommended Sequence (No Code Changes at This Stage)
+
+1. **Clarify terminology:** Feature should be article_form='feature', not depth_level=4; update documentation and comments.
+2. **Unify UI option sets:** All depth dropdowns should expose 1–4 with consistent labels (Brief / Standard / Deep / Feature).
+3. **Tighten validation:** Replace soft defaults with strict error messages; guide users to valid range.
+4. **Integrate presets:** New flows use preset_id as primary control; depth_level as fallback for backward compat.
+5. **Resolve Feature:** Ensure depth 4 articles get appropriate panel_shape and analytics_mode (not auto-deep_dive).
+6. **Add test coverage:** Tests for depth 4 across all surfaces; Feature schedule auto-run; depth change audit trail.
+
+### Deliverable
+
+Full audit report: `.squad/decisions/inbox/code-dashboard-depth-audit.md` — covers affected surfaces, inconsistencies, validation seams, legacy compatibility mappings, test gaps, and concrete recommended changes with file references and line numbers.
 
 - 2026-03-29T23:35:51Z — DevOps fixture narrowing complete: E2E tests updated to write `article-contract.md` alongside `discussion-summary.md` before Stage 4→5 advances. Modified 4 test files (ux-happy-path, edge-cases, pipeline, full-lifecycle) with fixture-only changes; enhanced `advanceToStage()` helper to auto-write contract. Fixture-only audit: no product code modified per decision. E2E run: 91/93 passing, 2 pre-existing memory-storage failures unrelated to contract fixture changes. Stage 4→5 guard now consistent between runtime (`requireDiscussionComplete()`) and E2E test fixtures.
 - 2026-03-29 — Blocker/escalation scout confirmed the repeat-detection seam is already implementation-grade: `runEditor()` persists structured blocker metadata only when `editor-review.md` contains exact `[BLOCKER type:id]` tags, `revision_summaries` is the durable source of truth used by detection/UI/tests, and the paused Lead-review UI currently reuses existing Stage-4 send-back plus archive flows rather than dedicated `REFRAME` / `WAIT` / `ABANDON` mutations.

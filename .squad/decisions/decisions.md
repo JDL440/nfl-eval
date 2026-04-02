@@ -179,4 +179,130 @@ None — changes were content/layout only, no new reusable patterns extracted.
 
 ---
 
+## Depth/Panel Redesign Analysis (2026-04-02)
+
+### Code Decision — Dashboard Depth/Panel Audit
+
+**Date:** 2026-04-02  
+**Owner:** Code  
+**Status:** Proposed
+
+#### Decision
+
+Treat the preset-based editorial model in `src\types.ts` (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, `panel_constraints_json`) as the target source of truth, and migrate dashboard/UI surfaces to it deliberately instead of extending legacy `depth_level` semantics.
+
+#### Why
+
+`depth_level` is currently overloaded across reader-facing copy, article length, panel sizing, schedule defaults, and model selection. The audit found that:
+
+- `new-idea.ts` and `home.ts` expose only levels 1–3.
+- `article.ts`, `config.ts`, `schedules.ts`, schedule APIs, and repository validation accept 1–4.
+- `src\types.ts` and `src\llm\model-policy.ts` collapse depth 4 back onto the same orchestration bucket as depth 3.
+- schedules already store both `content_profile` and `depth_level`, proving editorial intent and runtime shape are separate concepts.
+
+#### Implication
+
+When this work is implemented, change all affected surfaces together:
+
+1. operator-facing selectors/labels,
+2. schedule forms + schedule runtime,
+3. article metadata editing,
+4. home filters/search,
+5. idea creation payloads and defaults,
+6. model/panel policy seams,
+7. tests and migration/legacy-compatibility copy.
+
+Do **not** ship partial UI changes that rename controls without also reconciling defaults, validation, and legacy mappings.
+
+---
+
+### Research Decision — Depth/Panel Redesign Execution Rules
+
+**Date:** 2026-04-02  
+**Owner:** Research  
+**Status:** Proposed
+
+#### Context
+
+- The saved research report found that `depth_level` is overloaded across reader-facing labeling, article ambition, panel sizing, model policy, prompts, schedules, API validation, and database state.
+- Current product surfaces are inconsistent: some show three values while schedules, metadata, API, and DB allow four.
+- Runtime behavior already proves `Feature` is not a distinct orchestration tier because levels 3 and 4 collapse into the same deep-dive bucket.
+
+#### Decision
+
+- Treat the redesign as a split of one overloaded control into explicit dimensions:
+  - `reader_profile` for assumed reader sophistication
+  - `article_form` for length/ambition, including `feature`
+  - `panel_shape` for orchestration topology
+  - `analytics_mode` for how aggressively advanced metrics are used
+- Keep preset-driven UX for the normal path, with advanced overrides for panel constraints and required/excluded agents.
+- Make `panel_shape` the primary runtime input for panel composition and panel sizing; `reader_profile` should influence prose/jargon expectations, not team topology.
+- Stop presenting `Feature` as a separate depth level. If it remains user-visible, present it as a preset/article form instead.
+
+#### Non-Negotiable Compatibility / Migration Expectations
+
+- Migration must be additive first: introduce new fields while keeping `depth_level` alive as a compatibility alias/derived field.
+- Short-term UI mitigation must remove the current vocabulary mismatch: all user-facing surfaces need coherent preset naming and the same exposed choices.
+- Backfill new article/schedule fields from existing `depth_level` plus schedule `content_profile`; specifically, `accessible` schedules must not default to metrics-forward behavior.
+- Runtime refactor must update model-policy resolution, panel-size limits, compose-panel inputs, and prompt contracts to consume the split model before `depth_level` removal is attempted.
+- Do not drop old validators, API payload support, label maps, migration labels, or filters until every dependent surface has moved to the new fields.
+- Preserve schedule semantics during migration: the current approachable-vs-deeper slot behavior must survive as presets/reader-profile behavior, not disappear in the redesign.
+
+#### Why
+
+- This preserves compatibility while removing the root cause of the 3-vs-4 mismatch and the false coupling between audience depth and orchestration shape.
+- It also creates a first-class path for trade, cohort, market-map, and feature pieces that do not fit the current single-team depth abstraction.
+
+#### Key Files
+
+- `src\types.ts`
+- `src\llm\model-policy.ts`
+- `src\pipeline\actions.ts`
+- `src\pipeline\idea-generation.ts`
+- `src\dashboard\views\new-idea.ts`
+- `src\dashboard\views\home.ts`
+- `src\dashboard\views\article.ts`
+- `src\dashboard\views\config.ts`
+- `src\dashboard\views\schedules.ts`
+- `src\dashboard\server.ts`
+- `src\db\repository.ts`
+- `src\migration\migrate.ts`
+
+---
+
+### UX Decision — Article Model Badge Provenance
+
+**Date:** 2026-04-02  
+**Owner:** UX  
+**Status:** Proposed
+
+#### Context
+
+- Editorial users want the actual LLM model shown on article detail and dashboard cards, not just the provider family.
+- Existing article metadata only stores `articles.llm_provider`, while exact model names already exist in `usage_events.model_or_tool`.
+
+#### Decision
+
+- Show the model badge from usage provenance whenever usage events exist.
+- Derive the displayed model by choosing the per-article model with the highest combined prompt + output token count.
+- Fall back to `articles.llm_provider` only when no usage events are available.
+- Keep the badge in the existing badge pattern (`badge badge-model`) on article detail and card views.
+- Normalize display labels for readability by trimming `models/` prefixes, dropping `-preview`, and removing trailing `:001`-style suffixes.
+
+#### Why
+
+- Provider badges are too coarse for editorial review; users care which exact model actually produced the work.
+- Token-weighted dominance gives a stable "primary model" even when a story mixes smaller auxiliary calls with one main writing model.
+- Reusing the existing badge pattern keeps the UI additive and familiar.
+
+#### Key Files
+
+- `src\db\repository.ts`
+- `src\dashboard\server.ts`
+- `src\dashboard\views\article.ts`
+- `src\dashboard\views\home.ts`
+- `src\dashboard\public\styles.css`
+
+---
+
 ## End of Decisions
