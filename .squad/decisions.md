@@ -701,3 +701,66 @@ Treat legacy `depth_level` and schedule `content_profile` as **derived compatibi
 
 This decision approves the **architecture direction and rollout rules only**. It does not approve a specific implementation diff, field-removal timing, or UX copy package; those should be reviewed by Code/UX against these source-of-truth rules.
 
+
+
+---
+
+# UX Depth / Panel Audit
+
+## Context
+
+Backend requested a read-only audit of every dashboard/UI surface touched by the depth/panel redesign.
+
+## Decision
+
+Treat the redesign as **five live UX contracts** that must be migrated together:
+
+1. `src\dashboard\views\new-idea.ts`
+2. `src\dashboard\views\home.ts` + `/htmx/filtered-articles`
+3. `src\dashboard\views\article.ts` + `/htmx/articles/:id/edit-meta`
+4. `src\dashboard\views\config.ts` + `/api/settings/article-schedules*`
+5. `src\dashboard\views\schedules.ts` + `/schedules*` / `/api/schedules*`
+
+Do not frame the current state as a single “depth control” rollout. The repo is already split between preset-first surfaces, legacy depth/profile surfaces, and compatibility routes.
+
+## Findings
+
+### New idea
+
+- `src\dashboard\views\new-idea.ts` is preset-first and no longer renders `depthLevel`.
+- Its subtitle still tells users to “choose the right depth.”
+- `IDEA_TEMPLATE` still asks Lead to output `## Depth Level {1|2|3}`.
+
+### Home filter
+
+- `src\dashboard\views\home.ts` labels the filter as presets (`Casual Explainer`, `Beat Analysis`, `Technical Deep Dive`, `Narrative Feature`).
+- `src\dashboard\server.ts` still parses the query as `depth` and filters by legacy `depth_level`.
+
+### Article metadata
+
+- `src\dashboard\views\article.ts` renders preset-first metadata controls.
+- `POST /htmx/articles/:id/edit-meta` still ignores those fields and only saves `title`, `subtitle`, `depth_level`, and `teams`.
+
+### Schedules
+
+- `config.ts` schedules are preset-first, HTMX-driven, and camelCase.
+- `schedules.ts` remains legacy depth/profile, full-page, and snake_case.
+- Both remain live against the same schedule model.
+
+## Recommended direction
+
+1. Pick one visible vocabulary and use it consistently.
+2. Either make the home filter a real preset filter or rename it honestly as depth.
+3. Align article metadata form fields with the handler before more UX iteration.
+4. Retire or fully align legacy `/schedules*`.
+5. Keep compatibility messaging explicit wherever legacy depth/profile still appears.
+
+## Test focus
+
+- `tests\dashboard\new-idea.test.ts`
+- `tests\dashboard\metadata-edit.test.ts`
+- `tests\dashboard\config.test.ts`
+- `tests\dashboard\settings-routes.test.ts`
+- `tests\dashboard\schedules.test.ts`
+- `tests\dashboard\server.test.ts`
+
