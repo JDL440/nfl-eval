@@ -336,3 +336,368 @@ The dashboard already has:
 
 
 
+
+
+---
+
+# UX Decision Inbox — Depth / Panel Audit
+
+**Date:** 2026-04-02  
+**Owner:** UX  
+**Status:** Audit ready for implementation planning
+
+## Decision
+
+Treat the depth/panel redesign as a **preset-first migration with an explicit legacy bridge**, not as a cosmetic label refresh.
+
+That means:
+
+1. **One editorial vocabulary** must govern all dashboard surfaces.
+   - New idea, home filter, article metadata, settings schedules, and standalone schedules cannot keep showing different names or different option counts for the same stored concept.
+2. **Legacy edits must never silently no-op.**
+   - If a surface still exposes legacy `depth_level` / `content_profile`, saving those fields must either recompute the preset-derived fields or the UI must stop pretending those controls are editable.
+3. **Hidden advanced state must not be overwritten by simple forms.**
+   - If `preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, or `panel_constraints_json` are persisted, any schedule/article form that omits them must preserve them or expose them.
+4. **Schedule UX must converge on one contract.**
+   - The HTMX settings schedules flow and the standalone `/schedules*` flow currently behave like two products. Either retire the legacy surface or align field names, defaults, validation, and persistence semantics.
+
+## Why
+
+The current implementation already exposes the redesign in storage and server parsing, but not consistently in UI:
+
+- `src\dashboard\views\new-idea.ts` and `src\dashboard\views\home.ts` still expose only three depth choices.
+- `src\dashboard\views\article.ts`, `src\dashboard\views\config.ts`, and `src\dashboard\views\schedules.ts` expose four legacy depth choices.
+- `src\types.ts` resolves presets and advanced editorial controls, but most dashboard surfaces still render only legacy depth/profile controls.
+
+Two compatibility failures are now visible:
+
+1. **Article metadata depth edits can silently fail.**
+   - `src\db\repository.ts:updateArticle()` feeds `updates.depth_level` through `resolveEditorialControls()` while preserving `article.preset_id`.
+   - Because `resolveEditorialControls()` prioritizes `preset_id`, an operator can select a new depth in `src\dashboard\views\article.ts` and still persist the old effective depth.
+   - This is already surfacing in `tests\dashboard\metadata-edit.test.ts`.
+
+2. **The two schedule surfaces fail in opposite ways.**
+   - `src\dashboard\server.ts:/api/settings/article-schedules*` recomputes and writes preset-derived fields from the simple form, so editing a schedule in Settings can wipe richer hidden controls.
+   - `src\dashboard\server.ts:/schedules/:id/edit` passes only legacy fields into `repo.updateArticleSchedule()`, which preserves the existing preset and can ignore the operator’s changed depth/profile selection.
+
+## Implementation guidance
+
+### Phase 0 — stabilize operator truth
+
+- Make every live surface either:
+  - preset-first with advanced overrides, or
+  - clearly legacy/compatibility-only.
+- Do not allow a form to show editable legacy fields when those edits will be ignored.
+
+### Phase 1 — unify primary UX
+
+- Replace the public-facing “Depth Level” control on primary surfaces with a consistent preset vocabulary.
+- If depth remains temporarily visible, expose all supported values everywhere, including home filters and new-idea creation.
+
+### Phase 2 — converge schedules
+
+- Choose one schedule surface as canonical.
+- If `/schedules*` stays live, it must match Settings on:
+  - field names
+  - copy
+  - defaults
+  - validation feedback
+  - persistence behavior
+
+### Phase 3 — protect advanced state
+
+- Add regression coverage for:
+  - preset preservation when simple forms save
+  - explicit depth changes actually changing effective values
+  - hidden advanced controls not being dropped
+  - parity between settings schedules and standalone schedules
+
+## Audit evidence
+
+- `src\dashboard\views\new-idea.ts:239-244`
+- `src\dashboard\views\home.ts:82-90`
+- `src\dashboard\views\article.ts:134-172`
+- `src\dashboard\views\config.ts:301-475`
+- `src\dashboard\views\schedules.ts:120-214`
+- `src\dashboard\server.ts:1027-1056`
+- `src\dashboard\server.ts:1267-1360`
+- `src\dashboard\server.ts:2879-2966`
+- `src\db\repository.ts:1219-1325`
+- `src\db\repository.ts:2348-2564`
+- `src\types.ts:189-300`
+
+## Audit addendum — 2026-04-02 (surface consistency)
+- Split advanced-controls contract: `new-idea.ts` already exposes `presetId`, `readerProfile`, `articleForm`, `panelShape`, `analyticsMode`, and panel constraints, but the other audited dashboard views do not. Treat that asymmetry as migration debt, not optional polish.
+- Mixed legacy schedule values are not stable across surfaces. `/config?tab=schedules` normalizes `contentProfile + depthLevel` through preset resolution, while `/schedules` stores the raw pair. The same operator choice can therefore save as different persisted values depending on which schedule UI they used.
+- Partial legacy-only updates are unsafe once preset columns exist. `updateArticle()` and `updateArticleSchedule()` merge incoming `depth_level` with existing `article_form` / preset fields, so changing only the legacy depth on an existing record can round-trip back to the old derived depth.
+
+## Comprehensive Audit Summary — 2026-04-02 UX Depth/Panel Audit
+
+### Affected Surfaces & Inconsistencies
+
+#### 1. New Idea Form (`src/dashboard/views/new-idea.ts:238–244`)
+- **Depth range:** 1–3 only (Casual Fan, The Beat, Deep Dive)
+- **Form field:** `depthLevel` (camelCase)
+- **Limitation:** Cannot create Feature (depth 4) articles via primary UX intake
+
+#### 2. Home Filter (`src/dashboard/views/home.ts:82–90`)
+- **Depth range:** 1–3 only (matches new-idea terminology)
+- **Query param:** `depth`
+- **Limitation:** Hides depth 4 from filtering even though metadata/schedules allow setting it
+
+#### 3. Article Metadata Editor (`src/dashboard/views/article.ts:15–20, 134–172`)
+- **Depth range:** 1–4 (Casual Fan, The Beat, Deep Dive, Feature)
+- **Form field:** `depth_level` (snake_case — inconsistent with new-idea camelCase)
+- **Persistence issue:** Does not sync preset/editorial fields when legacy depth is edited
+- **No preset awareness:** Metadata editing stays legacy-only
+
+#### 4. Schedule Configuration (`src/dashboard/views/schedules.ts:147–160` + `config.ts`)
+- **Settings tab** (`src/dashboard/views/config.ts`):
+  - Field names: camelCase (`depthLevel`, `contentProfile`)
+  - Delivery: HTMX/fragments
+  - Depth range: 1–4
+  - Semantics: Dual-select pattern (`content_profile` as 'accessible' | 'deep_dive' separate from `depthLevel`)
+  - Persistence: Normalizes through `parseEditorialRequest()` in `src/dashboard/server.ts:1267–1364`
+  
+- **Legacy `/schedules` route** (`src/dashboard/views/schedules.ts:147–160`):
+  - Field names: snake_case (`depth_level`, `content_profile`)
+  - Delivery: Full-page forms with traditional POST/redirect
+  - Depth range: 1–4
+  - Persistence: Raw `depth_level`/`content_profile` stored directly in `src/dashboard/server.ts:2872–3027` without preset normalization
+
+- **Two distinct UX contracts** over the same model — different field names, different delivery mechanisms, different persistence semantics
+
+#### 5. Server Validation & Persistence Seams (`src/dashboard/server.ts`)
+- **`POST /api/ideas:1727`** — Form field `depthLevel` (camelCase), accepts depths 1–4
+- **`POST /htmx/articles/:id/edit-meta:1887`** — Form field `depth_level` (snake_case), accepts depths 1–4, persists without preset sync
+- **`GET /htmx/filtered-articles:1202`** — Query param `depth`, filters by value
+- **`POST /api/settings/article-schedules*:1267–1364`** — Normalizes camelCase through `parseEditorialRequest()`, writes preset-derived fields
+- **Legacy `/schedules*:2872–3027`** — Persists raw `depth_level`/`content_profile` directly without preset normalization
+
+### Core Problems
+
+#### Problem 1: Ghost Option (Depth 4)
+- **Definition:** Depth 4 ("Feature") is selectable in article metadata and schedules, but cannot be created via new-idea intake or filtered in home queue.
+- **Runtime collapse:** `DEPTH_LEVEL_MAP` (src/types.ts:77–82) maps both depth 3 and depth 4 to `deep_dive` orchestration tier, making depth 4 functionally redundant for panel composition and model selection.
+- **Operator impact:** Users can set depth 4 in metadata/schedules but the system will not let them create or filter Feature articles, creating confusion and workflow friction.
+
+#### Problem 2: Naming Inconsistency
+- **New-idea form:** `depthLevel` (camelCase)
+- **Article metadata:** `depth_level` (snake_case)
+- **Settings schedules:** `depthLevel` (camelCase)
+- **Legacy schedules:** `depth_level` (snake_case)
+- **Terminology drift:** "Casual Fan / The Beat / Deep Dive" (new-idea/home) vs "Casual Fan / The Beat / Deep Dive / Feature" (article/schedules)
+
+#### Problem 3: Preset vs Depth Split
+- **New-idea:** Depth only (implicit preset defaults)
+- **Article metadata:** Depth only (no preset awareness)
+- **Schedules:** Both `depth_level` and `content_profile` dual-select (partial two-axis model)
+- **Storage:** Full editorial preset fields (`preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`) persisted but not surfaced for edit or display
+
+#### Problem 4: Validation Seam Inconsistency
+- Both `/api/ideas` and metadata edit endpoints accept 1–4 regardless of what the UI offers
+- Settings schedules normalize through `parseEditorialRequest()` but legacy API does not
+- Article metadata edits do not recompute preset-derived fields when legacy depth changes
+- Home filter omits depth 4 while backend/metadata still persist it
+
+#### Problem 5: Schedule Surface Parity Failure
+- Two schedule routes edit the same underlying records but:
+  - Use different field names (camelCase vs snake_case)
+  - Use different defaults and copy
+  - Use different persistence semantics (one normalizes presets, one preserves raw values)
+  - Operators see different choices depending on which route they use
+
+### Required Changes
+
+#### Short-term (Pre-redesign)
+1. **Add depth 4 to new-idea and home filter** or explicitly retire it from metadata/schedules
+2. **Standardize field naming** to either all snake_case or all camelCase across all surfaces
+3. **Clarify depth 4 semantics** — is it truly distinct from depth 3, or should it be relabeled/collapsed?
+4. **Make article metadata editing preset-aware** so edits keep preset-derived fields internally consistent
+
+#### Medium-term (Redesign)
+1. **Align all surfaces** around one canonical editorial-controls model (presets or legacy)
+2. **Converge schedule flows** — either retire legacy `/schedules` or align field names, defaults, validation, terminology with settings
+3. **Ensure surface parity** — operators can create/edit/filter the same set of options across all surfaces
+4. **Document schedule semantics** — clarify whether `content_profile` is orthogonal to `depth_level` or derived from it
+
+#### Testing & Validation
+1. **Expand `tests/dashboard/`** to lock option-set parity (new-idea depth choices must match home filter)
+2. **Add regression coverage** for preset preservation when legacy fields are edited
+3. **Add coverage** for schedule create/edit flows (settings HTMX vs legacy full-page) to ensure parity
+4. **Document legacy compatibility behavior** and deprecation timeline
+
+### Key Files for Implementation
+- `src/dashboard/views/new-idea.ts` (form field naming, depth range)
+- `src/dashboard/views/home.ts` (filter depth range)
+- `src/dashboard/views/article.ts` (metadata edit form, preset awareness)
+- `src/dashboard/views/config.ts` (settings schedules tab)
+- `src/dashboard/views/schedules.ts` (legacy schedules form)
+- `src/dashboard/server.ts` (validation, persistence seams at 1202, 1267–1364, 1727, 1887, 2872–3027)
+- `src/types.ts` (DEPTH_LEVEL_MAP, editorial preset model)
+- `src/db/repository.ts` (updateArticle, updateArticleSchedule, preset sync logic)
+- `tests/dashboard/*.test.ts` (regression coverage for parity and preset preservation)
+
+## Current Branch State Addendum
+
+**As of latest audit:**
+
+### Migration Status: Asymmetric (Some surfaces preset-first, others still legacy)
+
+#### Preset-First Surfaces
+- **new-idea.ts:** Exposes preset controls (presetId, readerProfile, articleForm, panelShape, analyticsMode) + depth 1–3 via depthLevel field
+- **article.ts:** Renders preset from persistent fields but metadata editor still shows only legacy depth_level (no preset awareness)
+
+#### Hybrid/Legacy Surfaces
+- **home.ts:** Shows four preset labels ("Casual Fan", "The Beat", "Deep Dive", "Feature") but form still uses `name="depth"` numeric values — no preset awareness in filter
+- **config.ts (schedules tab):** Preset-first with camelCase field normalization (depthLevel, contentProfile) but shows hidden legacy mapping in metadata; normalizes through parseEditorialRequest()
+- **schedules.ts (legacy `/schedules` routes):** Fully legacy — snake_case form names (depth_level, content_profile), no preset normalization, persists raw values directly
+
+#### Runtime Collapse
+- **types.ts:** DEPTH_LEVEL_MAP still flattens depths 3 and 4 to `deep_dive` orchestration tier
+- **Implication:** Depth 4 is selectable in UI but functionally redundant at runtime; not a true fourth editorial tier
+
+### Key Migration Debt
+1. **Asymmetric form contracts:** new-idea uses preset fields, article metadata uses legacy-only, home/config/schedules mix both
+2. **No preset sync on legacy edits:** Article metadata editor accepts depth_level changes but doesn't update underlying preset fields; edits can silently snap back to preset-derived values
+3. **Two schedule surfaces, one model:** Settings tab (HTMX, camelCase, normalized) vs legacy routes (full-page, snake_case, raw) both write to same records with different semantics
+4. **Home filter partial migration:** Shows preset labels but queries on numeric depth, blocking full preset-aware filtering
+5. **Depth 4 phantom option:** Can be set in metadata/schedules but not created via new-idea, not filtered in home, collapses to depth 3 at runtime
+
+### Next Phase Priorities
+1. **Template from preset-first surfaces:** Use new-idea.ts as the template for full preset-first migration (not a depth cosmetic refresh)
+2. **Audit before unifying:** Document which surfaces can be safely migrated together (create/edit/filter) vs which must stay legacy until their persistence path is retired
+3. **Schedule surface convergence:** Either retire legacy `/schedules` or align both surfaces on one field naming + persistence strategy
+4. **Test parity locks:** Add regression tests that assert feature parity across create/filter/edit/schedule flows to prevent asymmetry regressions
+
+
+---
+
+# Research Decision Inbox: Depth/Panel Dashboard Audit
+
+## Decision / Recommendation
+
+Treat the dashboard work as a **consistency and compatibility repair**, not a fresh architecture design. The split editorial model already exists in the schema, types, repository, and idea-generation/runtime helpers; the immediate work is to make every dashboard/UI surface either fully legacy-consistent or fully split-model-aware.
+
+## What must be true
+
+1. **One primary vocabulary per surface.**
+   - If a surface stays legacy for now, it must use the same option set everywhere.
+   - If a surface adopts the redesign, it must expose presets as the simple path and advanced split controls as the explicit override path.
+
+2. **Legacy edits must remain authoritative during migration.**
+   - When a dashboard route accepts only `depth_level` or `content_profile`, repository update logic must recompute split fields from those legacy inputs instead of letting stale `preset_id` / `article_form` / `reader_profile` values win.
+
+3. **Schedule creation/edit and schedule execution must use the same editorial contract.**
+   - The fields accepted in `src\dashboard\server.ts`
+   - The values shown in `src\dashboard\views\config.ts` / `src\dashboard\views\schedules.ts`
+   - The values passed into `createIdeaArticle()` from `src\pipeline\article-scheduler-service.ts`
+   must all describe the same preset/controls.
+
+## Why this matters
+
+- Right now the product is internally split: storage/runtime knows about presets and split controls, but dashboard surfaces still present mostly legacy controls.
+- That mismatch is already causing baseline failures in metadata-edit and schedule update tests, which means migration compatibility is not theoretical; it is currently broken on write paths.
+
+## Recommended order
+
+1. Fix legacy write compatibility in repository/update flows.
+2. Align all visible dashboard terminology and option sets.
+3. Then expose presets + advanced controls where desired.
+
+## Key files
+
+- `src\types.ts`
+- `src\db\repository.ts`
+- `src\dashboard\server.ts`
+- `src\dashboard\views\new-idea.ts`
+- `src\dashboard\views\home.ts`
+- `src\dashboard\views\article.ts`
+- `src\dashboard\views\config.ts`
+- `src\dashboard\views\schedules.ts`
+- `src\pipeline\article-scheduler-service.ts`
+
+
+---
+
+# Code — depth/panel redesign compatibility
+
+## Decision
+
+Keep `depth_level` as a compatibility contract while migrating the dashboard to richer editorial controls.
+
+## Context
+
+- `src\dashboard\server.ts` already supports richer editorial inputs through `parseEditorialRequest()`.
+- Operator-facing views and specs still rely on legacy fields and labels:
+  - `src\dashboard\views\new-idea.ts`
+  - `src\dashboard\views\home.ts`
+  - `src\dashboard\views\article.ts`
+  - `src\dashboard\views\config.ts`
+  - `src\dashboard\views\schedules.ts`
+  - `tests\dashboard\new-idea.test.ts`
+  - `tests\dashboard\metadata-edit.test.ts`
+  - `tests\dashboard\schedules.test.ts`
+  - `tests\dashboard\settings-routes.test.ts`
+  - `tests\dashboard\config.test.ts`
+
+## Implication
+
+The redesign should migrate route/view/test seams in phases, preserving:
+
+1. `depthLevel` and `depth_level` request compatibility
+2. schedule `contentProfile` / `content_profile` compatibility
+3. HTMX fragment shapes and `HX-Redirect` flows on `/config?tab=schedules`
+4. existing SSE event names: `article_created`, `stage_changed`, `stage_working`, `pipeline_complete`
+
+Do not drop or silently reinterpret `depth_level` until home, new-idea, article metadata, config schedules, standalone schedules, and their dashboard tests are aligned.
+
+
+---
+
+# Lead — Editorial controls architecture / migration plan
+
+## Decision
+
+Adopt the split editorial-controls model as the single canonical contract across storage, runtime, API, and UX:
+
+- `preset_id`
+- `reader_profile`
+- `article_form`
+- `panel_shape`
+- `analytics_mode`
+- `panel_constraints_json`
+
+Treat legacy `depth_level` and schedule `content_profile` as **derived compatibility fields only** during rollout. They may remain readable/exported temporarily, but they should not stay as independent editable authorities once the migration lands.
+
+## Why
+
+- The research report established that legacy depth is overloaded across reader intent, article size, panel sizing, and runtime/model policy.
+- `src\types.ts`, `src\db\schema.sql`, and `src\db\repository.ts` already encode the cleaner split model, so the architectural direction is now clear.
+- Remaining drift is mostly at the seams: dashboard labels/forms, route normalization, scheduled article creation, model policy, and tool manifests/tests.
+
+## Rollout rules
+
+1. **Source of truth**
+   - Canonical authoring contract lives in `src\types.ts` and is persisted by `src\db\repository.ts`.
+2. **Derived compatibility**
+   - `depth_level` derives from `article_form`.
+   - `content_profile` derives from `reader_profile` + `analytics_mode`.
+3. **Deprecated**
+   - Any surface that still presents `depth_level` / `content_profile` as primary editable concepts is deprecated and should be migrated.
+4. **Runtime**
+   - Panel sizing/topology should key off `panel_shape` + `panel_constraints_json`, with `article_form` as the fallback shape-size hint.
+   - Reader-facing tone/metrics policy should key off `reader_profile` + `analytics_mode`.
+5. **Compatibility exit**
+   - Remove legacy write authority last, after UI/API/runtime/tests all consume canonical fields consistently.
+
+## Noted risks
+
+- Manual idea creation and scheduled creation are not yet aligned; `src\pipeline\idea-generation.ts` is more migrated than `src\services\article-creation.ts`.
+- Dashboard/API update paths for schedules still show drift risk in focused vitest failures (`tests\dashboard\schedules.test.ts`, `tests\dashboard\settings-routes.test.ts`).
+- `src\llm\model-policy.ts` and `src\tools\pipeline-tools.ts` still expose legacy depth semantics, so leaving them untouched would preserve hidden double-authority.
+
+## Approval scope guard
+
+This decision approves the **architecture direction and rollout rules only**. It does not approve a specific implementation diff, field-removal timing, or UX copy package; those should be reviewed by Code/UX against these source-of-truth rules.
+
