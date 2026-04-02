@@ -1,5 +1,25 @@
 # Decisions Log
 
+## Code — Editorial Follow-ups (2026-04-02)
+
+**Date:** 2026-04-02  
+**Owner:** Code  
+**Status:** Approved
+
+### Schedule State Preservation
+
+Preserve schedule `next_run_at` on config edits unless `weekdayUtc` or `timeOfDayUtc` changes. Name, prompt, provider, and editorial-only edits should be state-preserving — the schedule's next run time should not reset simply because metadata changed.
+
+**Rationale:** Editorial changes (name, prompt) should not disrupt running schedules. Only changes to *when* the schedule runs should reset timing.
+
+---
+
+### Migration View Compatibility
+
+Keep migration view compatibility anchored on the live repository/schema contract by dropping `pipeline_board` view and letting `Repository` recreate it instead of hand-maintaining a divergent compatibility view.
+
+**Rationale:** Compatibility views are maintenance debt. Let the source-of-truth (Repository) own the schema; migrations should only concern themselves with data transitions.
+
 ## Dashboard Cleanup Decisions (2026-03-29)
 
 ### Dashboard Simplification Pass — UX Review

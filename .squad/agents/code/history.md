@@ -13,6 +13,15 @@
 - **Implementation readiness:** Both code and UX decisions finalized. Preset-first runtime migration established with explicit legacy bridge and recomputation guards. Schedule surface convergence and test parity coverage documented in inbox decisions (now merged into decisions.md).
 - **Summary:** Audit found depth/panel redesign complete and sound. Code decision establishes compatibility-first preset model: depth/profile writable and derived, feature treated as article form, panel constraints drive model policy. UX decision phases out ghost options, converges schedule surfaces, and requires one editorial vocabulary across all dashboard surfaces.
 
+## Team Coordination — Editorial Follow-up Fixes (2026-04-02T14:06:28Z)
+
+- **Status:** Code + Lead completed correctness fixes session.
+- **Batch:** editorial follow-up fixes across db, dashboard, migration, and types layers.
+- **Code Deliverables:** 9 files changed; focused tests 68/68 passed; npm run v2:build passed.
+- **Lead Review:** APPROVED — no concrete remaining correctness bugs in requested batch.
+- **Decisions Merged:** Schedule state preservation (editorial-only edits preserve next_run_at); migration view compatibility (drop pipeline_board, let Repository recreate).
+- **Outcome:** Staged and ready for merge.
+
 # Code Agent Project History
 
 ## Core Context
@@ -25,6 +34,11 @@
 - Article contract artifact: Stage 3→4 (discussion) now generates `article-contract.md` capturing thesis, tensions, evidence anchors, structure expectations, and open cautions. Both Writer (Stage 5) and Editor (Stage 6) receive the contract via existing context-config patterns.
 
 ## Learnings
+
+### Editorial regression verification sweep (2026-04-02)
+
+- The current hotfix path for editorial regressions is now locked by focused tests across `tests\dashboard\metadata-edit.test.ts`, `tests\dashboard\schedules.test.ts`, `tests\dashboard\settings-routes.test.ts`, `tests\db\schedule.test.ts`, `tests\db\repository.test.ts`, and `tests\migration\migrate.test.ts`; use that slice before touching compatibility logic again.
+- `src\dashboard\server.ts` should only recompute schedule `next_run_at` when weekday/time changes, while `src\migration\migrate.ts` should continue dropping `pipeline_board` and letting `new Repository(dest)` recreate the authoritative current-schema view contract.
 
 ### Editorial follow-up fixes (2026-04-02)
 
