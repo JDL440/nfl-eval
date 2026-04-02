@@ -26,6 +26,8 @@ For each concept that appears in multiple places, document:
 | Article metadata | article.ts | depth_level | 1–4 | /htmx/articles/{id}/edit-meta | POST | 1–4, warn if stage > 1 |
 | Schedule config | schedules.ts | depth_level | 1–4 | /api/settings/article-schedules | POST | 1–4 validated |
 
+When the repo has both a “new” admin surface and an older full-page/API surface for the same records, map them as separate rows even if they hit the same table. In this repo, the settings schedules flow (`config.ts` + `/api/settings/article-schedules*`) and the legacy schedules flow (`schedules.ts` + `/schedules*` + `/api/schedules*`) are a paired contract and should be audited together.
+
 ### 2. Identify Inconsistencies
 
 Check for:
@@ -34,6 +36,7 @@ Check for:
 - **Default values:** Are defaults consistent?
 - **Validation logic:** Is validation same everywhere?
 - **Label text:** Do labels explain the concept uniformly?
+- **Legacy/live duplication:** Is there a still-live legacy route or admin page editing the same model with different copy, defaults, or validation?
 
 ### 3. Trace Backend Integration
 
@@ -50,6 +53,7 @@ Identify where the concept flows:
 - **Type system:** TypeScript interfaces, enums, types
 - **Pipeline:** Does the concept affect downstream orchestration? (DEPTH_LEVEL_MAP collapse)
 - **Tests:** How many test files reference this concept? (grep needed)
+- **Parallel route families:** Does one route family normalize into the new model while another still persists legacy fields directly?
 
 ### 5. Check for Dual-Control Patterns
 
@@ -116,10 +120,45 @@ Create a human-readable report with:
 - 🚩 Form field named differently across surfaces
 - 🚩 API accepts range wider than UI offers
 - 🚩 Filter dropdown doesn't show all possible values in the database
+- 🚩 Replacement surface and legacy surface both remain live but drift in labels/defaults
 - 🚩 Runtime collapse (e.g., values 3 and 4 map to same orchestration tier)
 - 🚩 More than two form field names for the same concept
 - 🚩 Test files hardcoding payloads with inconsistent field names
 - 🚩 Warning text about changing value after a certain stage (suggests ordering dependency)
+
+## New Failure Mode: Derived-Control Priority Inversion
+
+When a redesign introduces derived fields like `preset_id`, `reader_profile`, `article_form`, or `panel_shape`, legacy forms can fail in **two opposite ways**:
+
+1. **Preserved preset overrides explicit legacy edits**
+   - Example: a form submits `depth_level=4`, but update logic keeps the old `preset_id`.
+   - If the resolver prioritizes `preset_id`, the user-visible depth change silently no-ops.
+2. **Simple form overwrites hidden advanced state**
+   - Example: a settings form only renders `depthLevel` + `contentProfile`, then the server recomputes and rewrites `preset_id`, `panel_shape`, `analytics_mode`, and `panel_constraints_json`.
+   - Operators think they edited a simple field, but actually erased richer configuration they could not see.
+
+### Audit check
+
+For every derived-control migration, inspect both:
+
+- **update paths that preserve existing derived fields** (`repo.update*`, compatibility bridges)
+- **update paths that recompute derived fields from partial forms** (`server.ts` request parsers)
+
+If both patterns exist in the same product area, the UI surfaces are almost certainly diverging.
+
+## New Failure Mode: Dual Live Contracts
+
+If both a replacement settings surface and a legacy full-page surface remain live, treat them as separate contracts until proven otherwise.
+
+Checklist:
+
+- Do they use different field names? (`teamAbbr` vs `team_abbr`)
+- Different interaction models? (HTMX + `HX-Redirect` vs full-page redirect)
+- Different defaults? (for example `accessible + depth 3` vs `accessible + depth 2`)
+- Different validation/error affordances? (inline result vs redirect/500 risk)
+- Different persistence semantics? (preserve existing preset vs recompute from legacy fields)
+
+If yes, audit them independently and recommend convergence or retirement rather than assuming they are interchangeable skins.
 
 ## Reusability
 

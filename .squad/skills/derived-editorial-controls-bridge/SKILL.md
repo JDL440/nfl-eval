@@ -66,6 +66,8 @@ Otherwise you silently collapse valid old behavior during create/update flows.
 - Partial rollouts are the main failure mode: schema + types can be “done” while routes/views/prompts still drift.
 - “Feature” often belongs to article form, not orchestration depth.
 - A derived helper that works for articles may still be wrong for schedules if schedules carry extra editorial state.
+- Once records persist `preset_id`, legacy-only PATCH or form-update flows can silently no-op if the route sends only `depth_level` / `content_profile` into a resolver that prioritizes the stored preset. Resolve canonical controls at the route boundary, then persist both canonical and legacy-compat fields together.
+- Default legacy tuples are part of the compatibility contract. If a form defaults to a visible `content_profile + depth_level` pair that cannot round-trip through canonical derivation, the saved record will drift from what the operator thought they submitted.
 
 ## Key files to inspect
 

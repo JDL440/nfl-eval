@@ -251,6 +251,14 @@ All 235 dashboard tests passing; none use the split fields directly. Tests shoul
 - Compatibility work must be additive first: keep `depth_level` during migration, backfill new fields from existing depth/content-profile data, and only remove old validators/mappings after UI, API, prompts, and runtime all read the split model.
 - Key reference artifact for this handoff is `C:\Users\jdl44\.copilot\session-state\bb1ef496-5028-423f-b95b-62853c89d6c9\research\depth-level-on-scheudling-shows-4-values-while-new.md`.
 
+### 2026-04-02: Dashboard surface audit for depth/panel redesign
+
+- The split editorial model is already live in storage/types/runtime (`src\types.ts`, `src\db\schema.sql`, `src\db\repository.ts`), but the dashboard surfaces named in the audit still mostly expose only legacy controls (`depth_level`, `content_profile`) and do not surface `preset_id`, `reader_profile`, `article_form`, `panel_shape`, `analytics_mode`, or `panel_constraints_json`.
+- `src\dashboard\views\new-idea.ts` and `src\dashboard\views\home.ts` still present only three depth choices, while `src\dashboard\views\article.ts`, `src\dashboard\views\config.ts`, `src\dashboard\views\schedules.ts`, and server validators/routes accept four; this is the core user-visible terminology drift.
+- The highest-risk compatibility bug is in repository update paths: `src\db\repository.ts` resolves editorial controls during `updateArticle()` and `updateArticleSchedule()`, so legacy-only edits can be silently overridden by already-populated split fields. This is why current baseline tests fail when trying to change `depth_level` or `content_profile` through legacy dashboard routes.
+- Schedule execution is still legacy-first end to end: schedule forms/routes in `src\dashboard\server.ts` accept only `depth_level`/`content_profile`, and `src\pipeline\article-scheduler-service.ts` passes only `depthLevel` into `createIdeaArticle()`, even though the schedule record already stores resolved preset/split fields.
+- Relevant baseline failures observed during audit: `tests\dashboard\metadata-edit.test.ts`, `tests\dashboard\schedules.test.ts`, and `tests\dashboard\settings-routes.test.ts` currently fail because legacy route edits do not round-trip once split editorial fields exist.
+
 ### 2026-04-02: Depth/Panel Redesign Decisions Merged
 - **Spawn:** Backend Squad Agent requested impact scans from UX, Code, Research for depth/panel redesign
 - **Analysis:** All three agents completed read-only audits

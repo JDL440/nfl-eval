@@ -75,3 +75,9 @@ A good audit should return:
 
 - In this repo, `src\types.ts` and `src\db\repository.ts` may already be migrated further than the dashboard views.
 - Verify whether `updateArticle()` and `updateArticleSchedule()` recompute preset/editorial fields when only `depth_level` or `content_profile` changes. If not, report that as contract drift, not just copy drift.
+
+## Additional audit notes
+
+- Check for **hidden advanced controls**: if routes accept preset-era fields but views never render them, call that out as contract drift.
+- Check for **mixed legacy defaults** on create forms. A default `content_profile` + `depth_level` combination can normalize into a different saved value once preset resolution runs.
+- When repositories already store preset-era columns, test both **create** and **partial update** paths. Create may derive correctly from legacy fields while updates silently preserve stale `article_form` / preset values.
