@@ -106,6 +106,14 @@ describe('Dashboard article metadata editing', () => {
   describe('HTMX inline metadata partials', () => {
     it('GET /htmx/articles/:id/meta returns display partial', async () => {
       repo.createArticle({ id: 'h1', title: 'HTMX Title' });
+      repo.recordUsageEvent({
+        articleId: 'h1',
+        surface: 'ideaGeneration',
+        provider: 'openai',
+        modelOrTool: 'gpt-5.2-codex',
+        promptTokens: 300,
+        outputTokens: 150,
+      });
 
       const res = await app.request('/htmx/articles/h1/meta');
       expect(res.status).toBe(200);
@@ -113,6 +121,7 @@ describe('Dashboard article metadata editing', () => {
       expect(html).toContain('HTMX Title');
       expect(html).toContain('hx-get="/htmx/articles/h1/edit-meta"');
       expect(html).toContain('id="article-meta"');
+      expect(html).toContain('badge-model">gpt-5.2-codex</span>');
     });
 
     it('POST /htmx/articles/:id/edit-meta saves and returns updated display partial', async () => {

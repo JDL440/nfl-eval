@@ -62,10 +62,43 @@ function parseTeams(raw: string | null): string[] {
   return [];
 }
 
-export function renderArticleMetaDisplay(article: Article): string {
+export function derivePrimaryModel(usageEvents: UsageEvent[]): string | null {
+  const totals = new Map<string, number>();
+  for (const ev of usageEvents) {
+    if (!ev.model_or_tool) continue;
+    if (ev.model_or_tool === 'writer-factcheck') continue;
+    const prev = totals.get(ev.model_or_tool) ?? 0;
+    totals.set(ev.model_or_tool, prev + (ev.prompt_tokens ?? 0) + (ev.output_tokens ?? 0));
+  }
+  if (totals.size === 0) return null;
+  let best: string | null = null;
+  let bestTokens = -1;
+  for (const [model, tokens] of totals) {
+    if (tokens > bestTokens) { best = model; bestTokens = tokens; }
+  }
+  return best;
+}
+
+export function formatModelLabel(model: string): string {
+  let label = model.replace(/^models\//, '');
+  label = label.replace(/-preview$/, '');
+  label = label.replace(/:[\w-]+$/, '');
+  if (label.length > 28) label = label.slice(0, 26) + '…';
+  return label;
+}
+
+export function renderArticleMetaDisplay(article: Article, usageEvents?: UsageEvent[]): string {
   const teams = parseTeams(article.teams);
   const teamsBadges = teams.length > 0
     ? `<div class="meta-teams">${teams.map(t => `<span class="badge badge-team">${escapeHtml(t)}</span>`).join(' ')}</div>`
+    : '';
+
+  const primaryModel = usageEvents ? derivePrimaryModel(usageEvents) : null;
+  const modelLabel = primaryModel
+    ? formatModelLabel(primaryModel)
+    : (article.llm_provider ? formatModelLabel(article.llm_provider) : null);
+  const modelBadge = modelLabel
+    ? `<span class="badge badge-model">${escapeHtml(modelLabel)}</span>`
     : '';
 
   return `
@@ -90,6 +123,7 @@ export function renderArticleMetaDisplay(article: Article): string {
         </span>
         <span class="badge badge-status badge-status-${article.status}">${escapeHtml(article.status)}</span>
         <span class="badge badge-depth">${DEPTH_LABELS[article.depth_level] ?? `Depth ${article.depth_level}`}</span>
+        ${modelBadge}
       </div>
     </div>`;
 }
@@ -180,7 +214,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           hx-get="/htmx/articles/${eid}/live-header"
           hx-trigger="sse:stage_changed, sse:pipeline_complete"
           hx-swap="innerHTML">
-          ${renderArticleMetaDisplay(article)}
+          ${renderArticleMetaDisplay(article, usageEvents)}
         </div>
       </div>
 
@@ -207,8 +241,8 @@ export function renderArticleDetail(data: ArticleDetailData): string {
 
 // ── Partial renders for SSE-driven live updates ─────────────────────────────
 
-export function renderLiveHeader(article: Article): string {
-  return renderArticleMetaDisplay(article);
+export function renderLiveHeader(article: Article, usageEvents?: UsageEvent[]): string {
+  return renderArticleMetaDisplay(article, usageEvents);
 }
 
 export function renderLiveArtifacts(article: Article, artifactNames?: string[]): string {

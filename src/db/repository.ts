@@ -428,6 +428,40 @@ export class Repository {
     return stmt.all(articleId, limit) as unknown as UsageEvent[];
   }
 
+  /**
+   * For each article in the given list, return the dominant LLM model by
+   * total (prompt + output) tokens. Excludes null model_or_tool values and
+   * events from the writer-factcheck actor (tool calls, not generation).
+   */
+  getPrimaryModels(articleIds: string[]): Map<string, string> {
+    const result = new Map<string, string>();
+    if (articleIds.length === 0) return result;
+
+    const placeholders = articleIds.map(() => '?').join(', ');
+    const stmt = this.db.prepare(
+      `SELECT article_id, model_or_tool,
+              COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(output_tokens), 0) AS total_tokens
+       FROM usage_events
+       WHERE article_id IN (${placeholders})
+         AND model_or_tool IS NOT NULL
+         AND model_or_tool != 'writer-factcheck'
+       GROUP BY article_id, model_or_tool
+       ORDER BY article_id, total_tokens DESC`,
+    );
+
+    type Row = { article_id: string; model_or_tool: string; total_tokens: number };
+    const rows = stmt.all(...articleIds) as Row[];
+
+    for (const row of rows) {
+      // First row per article_id is the dominant model (ORDER BY total_tokens DESC)
+      if (!result.has(row.article_id)) {
+        result.set(row.article_id, row.model_or_tool);
+      }
+    }
+
+    return result;
+  }
+
   getStageRuns(articleId: string, limit = 100): StageRun[] {
     const stmt = this.db.prepare(
       'SELECT * FROM stage_runs WHERE article_id = ? ORDER BY started_at DESC LIMIT ?',
