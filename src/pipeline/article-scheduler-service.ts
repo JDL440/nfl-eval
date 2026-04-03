@@ -92,6 +92,57 @@ export class ArticleSchedulerService {
     }
   }
 
+  /**
+   * Recover runs that were interrupted by a server restart.
+   * - `created_article` runs with an article_id → resume auto-advance.
+   * - `claimed` runs (no article yet) → mark failed (discovery can't be resumed).
+   */
+  async recoverOrphanedRuns(): Promise<number> {
+    const orphans = this.repo.listOrphanedScheduleRuns();
+    if (orphans.length === 0) return 0;
+
+    this.logger.log(`[article-scheduler] Recovering ${orphans.length} orphaned run(s)…`);
+    let recovered = 0;
+
+    for (const run of orphans) {
+      try {
+        if (run.status === 'created_article' && run.article_id) {
+          const schedule = this.repo.getArticleSchedule(run.schedule_id);
+          const maxStage = schedule?.max_advance_stage ?? 7;
+          let advanceError: string | undefined;
+          if (maxStage > 1) {
+            const result = await autoAdvanceArticle(run.article_id, this.actionContext, { maxStage });
+            advanceError = result.error ?? undefined;
+          }
+          this.repo.markArticleScheduleRunCompleted(run.id, {
+            status: advanceError ? 'failed' : 'completed',
+            article_id: run.article_id,
+            error_text: advanceError ?? null,
+          });
+          this.logger.log(`[article-scheduler] Recovered run ${run.id} → article ${run.article_id} (${advanceError ? 'failed' : 'completed'})`);
+        } else {
+          // claimed but never reached article creation — can't resume
+          this.repo.markArticleScheduleRunCompleted(run.id, {
+            status: 'failed',
+            error_text: 'Interrupted by server restart before article creation',
+          });
+          this.logger.warn(`[article-scheduler] Marked orphaned run ${run.id} as failed (no article created)`);
+        }
+        recovered++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`[article-scheduler] Recovery failed for run ${run.id}: ${msg}`);
+        try {
+          this.repo.markArticleScheduleRunCompleted(run.id, {
+            status: 'failed',
+            error_text: `Recovery failed: ${msg}`,
+          });
+        } catch { /* best-effort */ }
+      }
+    }
+    return recovered;
+  }
+
   private async processSchedule(schedule: ArticleSchedule): Promise<ArticleSchedulerTickResult['results'][number]> {
     const run = this.repo.claimArticleScheduleRun(schedule.id, schedule.next_run_at);
     if (!run) {

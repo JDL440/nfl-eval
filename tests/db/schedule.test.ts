@@ -347,6 +347,63 @@ describe('Article Schedule Repository', () => {
     });
   });
 
+  describe('orphaned run detection', () => {
+    it('returns claimed runs without completed_at', () => {
+      const s = repo.createArticleSchedule({
+        name: 'X',
+        weekday_utc: 2,
+        time_of_day_utc: '09:00',
+        team_abbr: 'sea',
+        prompt: 'p',
+        content_profile: 'accessible',
+        depth_level: 2,
+        next_run_at: '2025-07-01 09:00:00',
+      });
+      repo.claimArticleScheduleRun(s.id, '2025-07-01 09:00:00');
+      const orphans = repo.listOrphanedScheduleRuns();
+      expect(orphans.length).toBe(1);
+      expect(orphans[0].status).toBe('claimed');
+    });
+
+    it('returns created_article runs without completed_at', () => {
+      const s = repo.createArticleSchedule({
+        name: 'X',
+        weekday_utc: 2,
+        time_of_day_utc: '09:00',
+        team_abbr: 'sea',
+        prompt: 'p',
+        content_profile: 'accessible',
+        depth_level: 2,
+        next_run_at: '2025-07-01 09:00:00',
+      });
+      repo.createArticle({ id: 'art-1', title: 'Test' });
+      const run = repo.claimArticleScheduleRun(s.id, '2025-07-01 09:00:00')!;
+      repo.updateArticleScheduleRun(run.id, { status: 'created_article', article_id: 'art-1' });
+      const orphans = repo.listOrphanedScheduleRuns();
+      expect(orphans.length).toBe(1);
+      expect(orphans[0].status).toBe('created_article');
+      expect(orphans[0].article_id).toBe('art-1');
+    });
+
+    it('excludes completed and failed runs', () => {
+      const s = repo.createArticleSchedule({
+        name: 'X',
+        weekday_utc: 2,
+        time_of_day_utc: '09:00',
+        team_abbr: 'sea',
+        prompt: 'p',
+        content_profile: 'accessible',
+        depth_level: 2,
+        next_run_at: '2025-07-01 09:00:00',
+      });
+      repo.createArticle({ id: 'art-2', title: 'Test' });
+      const run = repo.claimArticleScheduleRun(s.id, '2025-07-01 09:00:00')!;
+      repo.markArticleScheduleRunCompleted(run.id, { status: 'completed', article_id: 'art-2' });
+      const orphans = repo.listOrphanedScheduleRuns();
+      expect(orphans.length).toBe(0);
+    });
+  });
+
   describe('legacy editorial backfill', () => {
     it('backfills existing schedule rows from legacy depth/content semantics', () => {
       repo.close();

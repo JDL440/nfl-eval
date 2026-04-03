@@ -717,6 +717,16 @@ export class Repository {
     ).all(scheduleId, limit) as unknown as ArticleScheduleRun[];
   }
 
+  /** Find runs that were claimed or partially completed but never finished (e.g. server crash). */
+  listOrphanedScheduleRuns(): ArticleScheduleRun[] {
+    return this.db.prepare(
+      `SELECT * FROM article_schedule_runs
+       WHERE status IN ('claimed', 'created_article')
+         AND completed_at IS NULL
+       ORDER BY started_at ASC`,
+    ).all() as unknown as ArticleScheduleRun[];
+  }
+
   getArticleScheduleRun(runId: string): ArticleScheduleRun | null {
     const row = this.db.prepare(
       'SELECT * FROM article_schedule_runs WHERE id = ?',

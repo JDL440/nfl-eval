@@ -3645,9 +3645,12 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     : null;
   if (articleScheduler) {
     articleScheduler.start();
-    void articleScheduler.tick().catch((err) => {
-      console.warn(`[article-scheduler] Startup tick failed: ${err instanceof Error ? err.message : err}`);
-    });
+    // Recover any runs orphaned by a previous server crash, then do a normal tick
+    void articleScheduler.recoverOrphanedRuns()
+      .then(() => articleScheduler.tick())
+      .catch((err) => {
+        console.warn(`[article-scheduler] Startup recovery/tick failed: ${err instanceof Error ? err.message : err}`);
+      });
     console.log('[article-scheduler] Service started');
   } else {
     console.log('[article-scheduler] Service disabled — agent runner unavailable');
