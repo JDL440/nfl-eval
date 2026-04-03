@@ -3,7 +3,7 @@
  */
 
 import { renderLayout, escapeHtml } from './layout.js';
-import { formatPresetLabel } from '../../types.js';
+import { formatPresetLabel, STAGE_NAMES } from '../../types.js';
 import type { ArticleSchedule, ArticleScheduleRun } from '../../types.js';
 import {
   buildEditorialUiState,
@@ -150,9 +150,11 @@ function renderScheduleForm(
     panel_constraints_json: null,
     provider_mode: 'default' as const,
     provider_id: null,
+    max_advance_stage: 7,
   };
   const editorial = buildEditorialUiState(v);
   const advancedChecked = schedule ? hasEditorialOverrides(editorial) : false;
+  const currentMaxStage = schedule?.max_advance_stage ?? v.max_advance_stage;
 
   const teamOptions = teams.map(t =>
     `<option value="${escapeHtml(t.abbr)}" ${v.team_abbr === t.abbr ? 'selected' : ''}>
@@ -163,6 +165,11 @@ function renderScheduleForm(
   const weekdayOptions = WEEKDAY_NAMES.map((name, i) =>
     `<option value="${i}" ${v.weekday_utc === i ? 'selected' : ''}>${name}</option>`,
   ).join('');
+
+  const maxStageOptions = ([1, 2, 3, 4, 5, 6, 7] as const).map(s => {
+    const label = s === 1 ? 'Idea only (no auto-advance)' : s === 7 ? `Full pipeline (${STAGE_NAMES[s]})` : `Through ${STAGE_NAMES[s]}`;
+    return `<option value="${s}" ${currentMaxStage === s ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('');
 
   const providerOptions = [
     `<option value="default" ${v.provider_mode === 'default' ? 'selected' : ''}>Use runtime default</option>`,
@@ -202,6 +209,10 @@ function renderScheduleForm(
       <div class="form-group">
         <label for="sched-provider">Provider</label>
         <select id="sched-provider" name="provider" class="input">${providerOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="sched-max-stage">Auto-advance</label>
+        <select id="sched-max-stage" name="max_advance_stage" class="input">${maxStageOptions}</select>
       </div>
       <div class="form-group form-group-full">
         <label>

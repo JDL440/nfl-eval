@@ -293,6 +293,7 @@ CREATE TABLE IF NOT EXISTS article_schedules (
     panel_constraints_json TEXT,
     provider_mode     TEXT NOT NULL DEFAULT 'default' CHECK (provider_mode IN ('default', 'override')),
     provider_id       TEXT,
+    max_advance_stage INTEGER NOT NULL DEFAULT 7,
     last_run_at       TEXT,
     next_run_at       TEXT NOT NULL,
     created_at        TEXT NOT NULL DEFAULT (datetime('now')),

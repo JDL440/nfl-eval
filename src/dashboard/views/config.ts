@@ -3,7 +3,7 @@
  */
 
 import { renderLayout, escapeHtml } from './layout.js';
-import { formatPresetLabel } from '../../types.js';
+import { formatPresetLabel, STAGE_NAMES } from '../../types.js';
 import {
   buildEditorialUiState,
   formatContentProfileLabel,
@@ -86,6 +86,7 @@ export interface ConfigPageData {
     panel_constraints_json: string | null;
     provider_mode: 'default' | 'override';
     provider_id: string | null;
+    max_advance_stage: number;
     last_run_at: string | null;
     next_run_at: string;
     created_at: string;
@@ -394,6 +395,11 @@ function renderSchedulesTab(data: ConfigPageData): string {
       label: profile.isDefault ? `${profile.label} (${profile.providerId}, default)` : `${profile.label} (${profile.providerId})`,
     }));
 
+  const renderMaxStageOptions = (selected: number) => ([1, 2, 3, 4, 5, 6, 7] as const).map(s => {
+    const label = s === 1 ? 'Idea only (no auto-advance)' : s === 7 ? `Full pipeline (${STAGE_NAMES[s]})` : `Through ${STAGE_NAMES[s]}`;
+    return `<option value="${s}"${selected === s ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('');
+
   const scheduleCards = data.articleSchedules.length > 0
     ? data.articleSchedules.map((schedule) => {
       const editorial = buildEditorialUiState(schedule);
@@ -462,6 +468,12 @@ function renderSchedulesTab(data: ConfigPageData): string {
                 <select name="providerId">
                   <option value="">None</option>
                   ${providerOptions.map((option) => `<option value="${escapeHtml(option.id)}"${option.id === schedule.provider_id ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Auto-advance</label>
+                <select name="maxAdvanceStage">
+                  ${renderMaxStageOptions(schedule.max_advance_stage)}
                 </select>
               </div>
             </div>
@@ -573,6 +585,12 @@ function renderSchedulesTab(data: ConfigPageData): string {
             <select id="schedule-provider-id" name="providerId">
               <option value="">None</option>
               ${providerOptions.map((option) => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="schedule-max-stage">Auto-advance</label>
+            <select id="schedule-max-stage" name="maxAdvanceStage">
+              ${renderMaxStageOptions(7)}
             </select>
           </div>
         </div>

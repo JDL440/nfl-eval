@@ -136,14 +136,18 @@ export class ArticleSchedulerService {
         article_id: article.id,
       });
 
-      const autoAdvance = await autoAdvanceArticle(article.id, this.actionContext, { maxStage: 7 });
+      let advanceError: string | undefined;
+      if (schedule.max_advance_stage > 1) {
+        const autoAdvance = await autoAdvanceArticle(article.id, this.actionContext, { maxStage: schedule.max_advance_stage });
+        advanceError = autoAdvance.error ?? undefined;
+      }
       this.repo.markArticleScheduleRunCompleted(run.id, {
-        status: autoAdvance.error ? 'failed' : 'completed',
+        status: advanceError ? 'failed' : 'completed',
         article_id: article.id,
-        error_text: autoAdvance.error ?? null,
+        error_text: advanceError ?? null,
       });
-      if (autoAdvance.error) {
-        return { scheduleId: schedule.id, runId: run.id, status: 'failed', articleId: article.id, error: autoAdvance.error };
+      if (advanceError) {
+        return { scheduleId: schedule.id, runId: run.id, status: 'failed', articleId: article.id, error: advanceError };
       }
       this.logger.log(`[article-scheduler] Completed schedule ${schedule.id} → article ${article.id}`);
       return { scheduleId: schedule.id, runId: run.id, status: 'completed', articleId: article.id };

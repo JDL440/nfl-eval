@@ -1337,6 +1337,7 @@ export function createApp(
         panel_constraints_json: editorial.panel_constraints_json,
         provider_mode: normalizeScheduleProviderMode(body['providerMode']),
         provider_id: String(body['providerId'] ?? '').trim() || null,
+        max_advance_stage: parseInt(String(body['maxAdvanceStage'] ?? '7'), 10) || 7,
         enabled: body['enabled'] === 'true' || body['enabled'] === '1' || body['enabled'] === 'on',
         next_run_at: buildInitialNextRunAt({
           weekday_utc: normalizeScheduleWeekday(body['weekdayUtc']),
@@ -1388,6 +1389,7 @@ export function createApp(
         panel_constraints_json: editorial.panel_constraints_json,
         provider_mode: normalizeScheduleProviderMode(body['providerMode']),
         provider_id: String(body['providerId'] ?? '').trim() || null,
+        max_advance_stage: parseInt(String(body['maxAdvanceStage'] ?? String(before.max_advance_stage)), 10) || 7,
         ...(weekdayUtc !== before.weekday_utc || timeOfDayUtc !== before.time_of_day_utc
           ? {
             next_run_at: buildInitialNextRunAt({
@@ -3087,6 +3089,7 @@ export function createApp(
     const providerVal = (body.provider as string ?? 'default').trim();
     const provider_mode = providerVal === 'default' ? 'default' as const : 'override' as const;
     const provider_id = provider_mode === 'override' ? providerVal : null;
+    const max_advance_stage = parseInt(body.max_advance_stage as string ?? '7', 10) || 7;
 
     if (!name || !team_abbr || !prompt) {
       return c.redirect('/schedules?error=missing+fields');
@@ -3112,6 +3115,7 @@ export function createApp(
       analytics_mode: editorial.analytics_mode,
       panel_constraints_json: editorial.panel_constraints_json,
       provider_mode, provider_id,
+      max_advance_stage,
       next_run_at: nextRunISO,
     });
 
@@ -3155,6 +3159,7 @@ export function createApp(
     const providerVal = (body.provider as string ?? 'default').trim();
     const provider_mode = providerVal === 'default' ? 'default' as const : 'override' as const;
     const provider_id = provider_mode === 'override' ? providerVal : null;
+    const max_advance_stage = parseInt(body.max_advance_stage as string ?? String(schedule.max_advance_stage), 10) || 7;
 
     // Recompute next_run_at when schedule time changes
     const scheduleTimeChanged =
@@ -3180,6 +3185,7 @@ export function createApp(
       analytics_mode: editorial.analytics_mode,
       panel_constraints_json: editorial.panel_constraints_json,
       provider_mode, provider_id,
+      max_advance_stage,
       ...(next_run_at !== undefined ? { next_run_at } : {}),
     });
 
@@ -3214,6 +3220,7 @@ export function createApp(
     const prompt = (typeof body.prompt === 'string' ? body.prompt : '').trim();
     const provider_mode = body.provider_mode === 'override' ? 'override' as const : 'default' as const;
     const provider_id = provider_mode === 'override' && typeof body.provider_id === 'string' ? body.provider_id : null;
+    const max_advance_stage = typeof body.max_advance_stage === 'number' ? body.max_advance_stage : 7;
 
     if (!name || !team_abbr || !prompt) {
       return c.json({ error: 'name, team_abbr, and prompt are required' }, 400);
@@ -3241,6 +3248,7 @@ export function createApp(
       analytics_mode: editorial.analytics_mode,
       panel_constraints_json: editorial.panel_constraints_json,
       provider_mode, provider_id,
+      max_advance_stage,
       next_run_at: nextRunISO,
     });
 

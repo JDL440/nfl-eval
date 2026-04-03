@@ -575,6 +575,9 @@ export class Repository {
     if (!columnNames.has('panel_constraints_json')) {
       this.db.exec('ALTER TABLE article_schedules ADD COLUMN panel_constraints_json TEXT');
     }
+    if (!columnNames.has('max_advance_stage')) {
+      this.db.exec('ALTER TABLE article_schedules ADD COLUMN max_advance_stage INTEGER NOT NULL DEFAULT 7');
+    }
     const rows = this.db.prepare(`
       SELECT id, content_profile, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json
       FROM article_schedules
@@ -2414,6 +2417,7 @@ export class Repository {
     panel_constraints_json?: string | null;
     provider_mode?: ArticleScheduleProviderMode;
     provider_id?: string | null;
+    max_advance_stage?: number;
     enabled?: boolean;
     next_run_at: string;
   }): ArticleSchedule {
@@ -2422,6 +2426,7 @@ export class Repository {
     const prompt = input.prompt.trim();
     const providerMode = input.provider_mode ?? 'default';
     const providerId = providerMode === 'override' ? (input.provider_id?.trim() || null) : null;
+    const maxAdvanceStage = input.max_advance_stage ?? 7;
 
     if (!name) throw new Error('name is required');
     if (!teamAbbr) throw new Error('team_abbr is required');
@@ -2449,8 +2454,8 @@ export class Repository {
     const now = nowISO();
     this.db.prepare(
       `INSERT INTO article_schedules
-       (id, name, enabled, team_abbr, prompt, weekday_utc, time_of_day_utc, content_profile, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json, provider_mode, provider_id, next_run_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, name, enabled, team_abbr, prompt, weekday_utc, time_of_day_utc, content_profile, depth_level, preset_id, reader_profile, article_form, panel_shape, analytics_mode, panel_constraints_json, provider_mode, provider_id, max_advance_stage, next_run_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       name,
@@ -2469,6 +2474,7 @@ export class Repository {
       editorial.panel_constraints_json,
       providerMode,
       providerId,
+      maxAdvanceStage,
       input.next_run_at,
       now,
       now,
@@ -2492,6 +2498,7 @@ export class Repository {
     panel_constraints_json?: string | null;
     provider_mode?: ArticleScheduleProviderMode;
     provider_id?: string | null;
+    max_advance_stage?: number;
     enabled?: boolean;
     next_run_at?: string;
     last_run_at?: string | null;
@@ -2590,6 +2597,10 @@ export class Repository {
     if (patch.enabled !== undefined) {
       setParts.push('enabled = ?');
       params.push(patch.enabled ? 1 : 0);
+    }
+    if (patch.max_advance_stage !== undefined) {
+      setParts.push('max_advance_stage = ?');
+      params.push(patch.max_advance_stage);
     }
     if (patch.next_run_at !== undefined) {
       setParts.push('next_run_at = ?');

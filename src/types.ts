@@ -594,6 +594,7 @@ export interface ArticleSchedule {
   panel_constraints_json: string | null;
   provider_mode: ArticleScheduleProviderMode;
   provider_id: string | null;
+  max_advance_stage: number;
   last_run_at: string | null;
   next_run_at: string;
   created_at: string;
