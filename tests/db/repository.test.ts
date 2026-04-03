@@ -1176,4 +1176,145 @@ describe('Repository', () => {
       expect(repo.getPinnedAgents('pin-test')).toEqual([]);
     });
   });
+
+  // ── Artifact edit history + feedback packets ─────────────────────────────
+
+  describe('Artifact edit history + feedback packets', () => {
+    beforeEach(() => {
+      repo.createArticle({ id: 'fb-test', title: 'Feedback Test' });
+    });
+
+    it('saveArtifactEditSnapshot records a snapshot and returns an id', () => {
+      const id = repo.saveArtifactEditSnapshot('fb-test', 'draft.md', 'old', 'new');
+      expect(id).toBeGreaterThan(0);
+      const history = repo.getArtifactEditHistory('fb-test', 'draft.md');
+      expect(history).toHaveLength(1);
+      expect(history[0].previous_content).toBe('old');
+      expect(history[0].new_content).toBe('new');
+      expect(history[0].edited_by).toBe('human');
+      expect(history[0].edit_source).toBe('dashboard');
+    });
+
+    it('getArtifactEditHistory returns all snapshots for the artifact', () => {
+      repo.saveArtifactEditSnapshot('fb-test', 'draft.md', 'v0', 'v1');
+      repo.saveArtifactEditSnapshot('fb-test', 'draft.md', 'v1', 'v2');
+      repo.saveArtifactEditSnapshot('fb-test', 'draft.md', 'v2', 'v3');
+      const history = repo.getArtifactEditHistory('fb-test', 'draft.md');
+      expect(history).toHaveLength(3);
+      const contents = history.map((h) => h.new_content).sort();
+      expect(contents).toEqual(['v1', 'v2', 'v3']);
+    });
+
+    it('createFeedbackPacket creates a pending packet', () => {
+      const packet = repo.createFeedbackPacket('fb-test', 'Fix the intro', {
+        targetArtifact: 'draft.md',
+        targetStage: 5,
+      });
+      expect(packet.id).toBeGreaterThan(0);
+      expect(packet.article_id).toBe('fb-test');
+      expect(packet.instructions).toBe('Fix the intro');
+      expect(packet.target_artifact).toBe('draft.md');
+      expect(packet.target_stage).toBe(5);
+      expect(packet.status).toBe('pending');
+      expect(packet.created_by).toBe('human');
+      expect(packet.consumed_by).toBeNull();
+    });
+
+    it('createFeedbackPacket supersedes existing pending packets for same artifact', () => {
+      const first = repo.createFeedbackPacket('fb-test', 'First feedback', {
+        targetArtifact: 'draft.md',
+      });
+      const second = repo.createFeedbackPacket('fb-test', 'Revised feedback', {
+        targetArtifact: 'draft.md',
+      });
+
+      const firstAfter = repo.getFeedbackPacket(first.id);
+      expect(firstAfter!.status).toBe('superseded');
+
+      const secondAfter = repo.getFeedbackPacket(second.id);
+      expect(secondAfter!.status).toBe('pending');
+    });
+
+    it('getPendingFeedback returns only pending packets', () => {
+      repo.createFeedbackPacket('fb-test', 'First', { targetArtifact: 'draft.md' });
+      repo.createFeedbackPacket('fb-test', 'Second', { targetArtifact: 'draft.md' });
+      repo.createFeedbackPacket('fb-test', 'Third for idea', { targetArtifact: 'idea.md' });
+
+      const pending = repo.getPendingFeedback('fb-test');
+      // First was superseded by Second; Second and Third should be pending
+      expect(pending).toHaveLength(2);
+      expect(pending.map((p) => p.instructions)).toContain('Second');
+      expect(pending.map((p) => p.instructions)).toContain('Third for idea');
+    });
+
+    it('markFeedbackConsumed sets status and consumer info', () => {
+      const packet = repo.createFeedbackPacket('fb-test', 'Consume me', {
+        targetArtifact: 'draft.md',
+      });
+      repo.markFeedbackConsumed(packet.id, 'stage-5-agent');
+
+      const after = repo.getFeedbackPacket(packet.id);
+      expect(after!.status).toBe('consumed');
+      expect(after!.consumed_by).toBe('stage-5-agent');
+      expect(after!.consumed_at).toBeTruthy();
+    });
+
+    it('getFeedbackPacket returns null for nonexistent id', () => {
+      expect(repo.getFeedbackPacket(99999)).toBeNull();
+    });
+
+    it('feedback packets survive regressStage', () => {
+      // Advance to stage 5
+      for (let s = 2; s <= 5; s++) {
+        repo.advanceStage('fb-test', s - 1, s, 'test');
+      }
+
+      // Create a feedback packet and a snapshot
+      repo.createFeedbackPacket('fb-test', 'Fix the draft', {
+        targetArtifact: 'draft.md',
+        targetStage: 5,
+      });
+      repo.saveArtifactEditSnapshot('fb-test', 'draft.md', 'old', 'new');
+
+      // Regress to stage 4
+      repo.regressStage('fb-test', 5, 4, 'editor', 'Needs rework');
+
+      const pending = repo.getPendingFeedback('fb-test');
+      expect(pending).toHaveLength(1);
+      expect(pending[0].instructions).toBe('Fix the draft');
+
+      const edits = repo.getArticleEditHistory('fb-test');
+      expect(edits).toHaveLength(1);
+    });
+
+    it('feedback packets survive clearArtifactsAfterStage', () => {
+      repo.artifacts.put('fb-test', 'draft.md', 'draft content');
+      repo.createFeedbackPacket('fb-test', 'Improve draft', {
+        targetArtifact: 'draft.md',
+      });
+      repo.saveArtifactEditSnapshot('fb-test', 'draft.md', 'old', 'new');
+
+      repo.clearArtifactsAfterStage('fb-test', 2);
+
+      // Artifacts cleared, but feedback + edits survive
+      expect(repo.artifacts.get('fb-test', 'draft.md')).toBeNull();
+      const pending = repo.getPendingFeedback('fb-test');
+      expect(pending).toHaveLength(1);
+      const edits = repo.getArticleEditHistory('fb-test');
+      expect(edits).toHaveLength(1);
+    });
+
+    it('deleteArticle cleans up feedback packets and edit history', () => {
+      repo.createFeedbackPacket('fb-test', 'Some feedback');
+      repo.saveArtifactEditSnapshot('fb-test', 'idea.md', 'before', 'after');
+
+      repo.deleteArticle('fb-test');
+
+      // Article gone — create a new repo query won't find them
+      // Use a fresh article to confirm the tables are clean
+      repo.createArticle({ id: 'fb-test-2', title: 'Another' });
+      expect(repo.getPendingFeedback('fb-test')).toEqual([]);
+      expect(repo.getArticleEditHistory('fb-test')).toEqual([]);
+    });
+  });
 });

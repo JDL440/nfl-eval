@@ -1299,4 +1299,110 @@ describe('Dashboard Server', () => {
       expect(res.status).toBe(422);
     });
   });
+
+  // ── Artifact edit + feedback routes ──────────────────────────────────────
+
+  describe('Artifact edit + feedback routes', () => {
+    it('POST /htmx/articles/:id/artifact/:name/edit saves content and returns success', async () => {
+      repo.createArticle({ id: 'edit-ok', title: 'Edit Test' });
+      repo.artifacts.put('edit-ok', 'draft.md', 'original content');
+
+      const res = await app.request('/htmx/articles/edit-ok/artifact/draft.md/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ content: 'updated content' }).toString(),
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('advance-success');
+      expect(html).toContain('Artifact saved');
+
+      // Verify artifact was updated
+      expect(repo.artifacts.get('edit-ok', 'draft.md')).toBe('updated content');
+
+      // Verify edit snapshot was recorded
+      const history = repo.getArtifactEditHistory('edit-ok', 'draft.md');
+      expect(history).toHaveLength(1);
+      expect(history[0].previous_content).toBe('original content');
+      expect(history[0].new_content).toBe('updated content');
+    });
+
+    it('POST /htmx/articles/:id/artifact/:name/edit rejects non-editable artifacts', async () => {
+      repo.createArticle({ id: 'edit-bad', title: 'Bad Edit' });
+
+      const res = await app.request('/htmx/articles/edit-bad/artifact/secrets.txt/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ content: 'hacked' }).toString(),
+      });
+      expect(res.status).toBe(400);
+      const html = await res.text();
+      expect(html).toContain('not editable');
+    });
+
+    it('POST /htmx/articles/:id/feedback creates a feedback packet', async () => {
+      repo.createArticle({ id: 'fb-route', title: 'Feedback Route' });
+
+      const res = await app.request('/htmx/articles/fb-route/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          instructions: 'Please fix the intro paragraph',
+          target_artifact: 'draft.md',
+        }).toString(),
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('advance-success');
+      expect(html).toContain('Feedback submitted');
+
+      const pending = repo.getPendingFeedback('fb-route');
+      expect(pending).toHaveLength(1);
+      expect(pending[0].instructions).toBe('Please fix the intro paragraph');
+      expect(pending[0].target_artifact).toBe('draft.md');
+    });
+
+    it('POST /htmx/articles/:id/feedback rejects empty instructions', async () => {
+      repo.createArticle({ id: 'fb-empty', title: 'Empty Feedback' });
+
+      const res = await app.request('/htmx/articles/fb-empty/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ instructions: '' }).toString(),
+      });
+      expect(res.status).toBe(422);
+      const html = await res.text();
+      expect(html).toContain('Instructions are required');
+    });
+
+    it('GET /api/articles/:id/feedback returns pending packets as JSON', async () => {
+      repo.createArticle({ id: 'fb-api', title: 'Feedback API' });
+      repo.createFeedbackPacket('fb-api', 'Fix tone', { targetArtifact: 'draft.md' });
+      repo.createFeedbackPacket('fb-api', 'Expand intro', { targetArtifact: 'idea.md' });
+
+      const res = await app.request('/api/articles/fb-api/feedback');
+      expect(res.status).toBe(200);
+      const packets = await res.json() as Array<{ instructions: string; status: string }>;
+      expect(packets).toHaveLength(2);
+      expect(packets.every((p) => p.status === 'pending')).toBe(true);
+    });
+
+    it('POST /htmx/articles/:id/artifact/:name/edit returns 404 for missing article', async () => {
+      const res = await app.request('/htmx/articles/ghost/artifact/draft.md/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ content: 'content' }).toString(),
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('POST /htmx/articles/:id/feedback returns 404 for missing article', async () => {
+      const res = await app.request('/htmx/articles/ghost/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ instructions: 'Fix it' }).toString(),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
 });
