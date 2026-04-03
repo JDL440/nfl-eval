@@ -17,12 +17,13 @@ import {
   renderPresetOptions,
   renderReaderProfileOptions,
 } from './editorial-controls.js';
+import { renderScheduleTimezoneScript } from './schedule-timezone.js';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function formatScheduleTime(schedule: ArticleSchedule): string {
   const day = WEEKDAY_NAMES[schedule.weekday_utc] ?? `Day ${schedule.weekday_utc}`;
-  return `${day} ${schedule.time_of_day_utc} UTC`;
+  return `<span data-utc-weekday="${schedule.weekday_utc}" data-utc-time="${escapeHtml(schedule.time_of_day_utc)}">${day} ${schedule.time_of_day_utc} UTC</span>`;
 }
 
 function statusBadge(enabled: number): string {
@@ -95,7 +96,7 @@ export function renderSchedulesPage(
     </div>
   `;
 
-  return renderLayout('Article Schedules', body, labName);
+  return renderLayout('Article Schedules', body + renderScheduleTimezoneScript(), labName);
 }
 
 function renderScheduleRow(s: ArticleSchedule): string {
@@ -104,14 +105,14 @@ function renderScheduleRow(s: ArticleSchedule): string {
   return `
     <tr id="schedule-row-${eid}">
       <td><a href="/schedules/${eid}">${escapeHtml(s.name)}</a></td>
-      <td>${escapeHtml(formatScheduleTime(s))}</td>
+      <td>${formatScheduleTime(s)}</td>
       <td>${escapeHtml(s.team_abbr.toUpperCase())}</td>
       <td>
         <strong>${escapeHtml(formatPresetLabel(s.preset_id))}</strong>
         <div class="form-hint">${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}</div>
       </td>
-      <td>${s.last_run_at ? escapeHtml(s.last_run_at.slice(0, 16)) : '—'}</td>
-      <td>${s.next_run_at ? escapeHtml(s.next_run_at.slice(0, 16)) : '—'}</td>
+      <td>${s.last_run_at ? `<span data-utc-datetime="${escapeHtml(s.last_run_at)}">${escapeHtml(s.last_run_at.slice(0, 16))}</span>` : '—'}</td>
+      <td>${s.next_run_at ? `<span data-utc-datetime="${escapeHtml(s.next_run_at)}">${escapeHtml(s.next_run_at.slice(0, 16))}</span>` : '—'}</td>
       <td>${statusBadge(s.enabled)}</td>
       <td class="actions">
         <a href="/schedules/${eid}/edit" class="btn btn-sm btn-secondary">Edit</a>
@@ -174,20 +175,20 @@ function renderScheduleForm(
   const submitLabel = schedule ? 'Save Changes' : 'Create Schedule';
 
   return `
-    <form method="POST" action="${action}" class="form-grid">
+    <form method="POST" action="${action}" class="form-grid" data-schedule-tz>
       <div class="form-group">
         <label for="sched-name">Name</label>
         <input id="sched-name" name="name" type="text" required
           value="${escapeHtml(v.name)}" placeholder="e.g. Tuesday Accessible" class="input" />
       </div>
       <div class="form-group">
-        <label for="sched-weekday">Day of Week</label>
-        <select id="sched-weekday" name="weekday_utc" class="input">${weekdayOptions}</select>
+        <label for="sched-weekday" data-tz-label>Day of Week (UTC)</label>
+        <select id="sched-weekday" name="weekday_utc" class="input" data-tz-weekday>${weekdayOptions}</select>
       </div>
       <div class="form-group">
-        <label for="sched-time">Time (UTC)</label>
+        <label for="sched-time" data-tz-label>Time (UTC)</label>
         <input id="sched-time" name="time_of_day_utc" type="time"
-          value="${escapeHtml(v.time_of_day_utc)}" class="input" />
+          value="${escapeHtml(v.time_of_day_utc)}" class="input" data-tz-time />
       </div>
       <div class="form-group">
         <label for="sched-team">Primary Team</label>
@@ -255,7 +256,7 @@ export function renderScheduleDetailPage(
   const body = `
     <div class="page-header">
       <h1>${escapeHtml(schedule.name)}</h1>
-      <p class="subtitle">${escapeHtml(formatScheduleTime(schedule))} — ${escapeHtml(schedule.team_abbr.toUpperCase())} — ${escapeHtml(formatPresetLabel(schedule.preset_id))}</p>
+      <p class="subtitle">${formatScheduleTime(schedule)} — ${escapeHtml(schedule.team_abbr.toUpperCase())} — ${escapeHtml(formatPresetLabel(schedule.preset_id))}</p>
     </div>
     ${flashMessage ? `<div class="flash flash-success">${escapeHtml(flashMessage)}</div>` : ''}
 
@@ -278,13 +279,13 @@ export function renderScheduleDetailPage(
               <tbody>
                 ${runs.map(r => `
                   <tr>
-                    <td>${escapeHtml(r.scheduled_for.slice(0, 16))}</td>
+                    <td><span data-utc-datetime="${escapeHtml(r.scheduled_for)}">${escapeHtml(r.scheduled_for.slice(0, 16))}</span></td>
                     <td>${runStatusBadge(r.status)}</td>
                     <td>${r.article_id
                       ? `<a href="/articles/${escapeHtml(r.article_id)}">${escapeHtml(r.article_id)}</a>`
                       : '—'}</td>
                     <td>${r.error_text ? `<span class="text-error">${escapeHtml(r.error_text.slice(0, 80))}</span>` : '—'}</td>
-                    <td>${r.completed_at ? escapeHtml(r.completed_at.slice(0, 16)) : '—'}</td>
+                    <td>${r.completed_at ? `<span data-utc-datetime="${escapeHtml(r.completed_at)}">${escapeHtml(r.completed_at.slice(0, 16))}</span>` : '—'}</td>
                   </tr>`).join('')}
               </tbody>
             </table>`
@@ -292,7 +293,7 @@ export function renderScheduleDetailPage(
       </div>
     </div>`;
 
-  return renderLayout(`Schedule: ${schedule.name}`, body, labName);
+  return renderLayout(`Schedule: ${schedule.name}`, body + renderScheduleTimezoneScript(), labName);
 }
 
 export function renderScheduleEditPage(
@@ -312,5 +313,5 @@ export function renderScheduleEditPage(
         ${renderScheduleForm(schedule, teams, providers)}
       </div>
     </div>`;
-  return renderLayout(`Edit Schedule: ${schedule.name}`, body, labName);
+  return renderLayout(`Edit Schedule: ${schedule.name}`, body + renderScheduleTimezoneScript(), labName);
 }

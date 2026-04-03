@@ -24,6 +24,7 @@ import {
   PANEL_SHAPE_LABELS,
   READER_PROFILE_LABELS,
 } from '../../types.js';
+import { renderScheduleTimezoneScript } from './schedule-timezone.js';
 
 // ── Legacy interfaces (kept for backward-compat / test contracts) ───────────
 
@@ -403,7 +404,7 @@ function renderSchedulesTab(data: ConfigPageData): string {
             <div>
               <strong>${escapeHtml(schedule.name)}</strong>
               <span class="badge badge-team">${escapeHtml(schedule.team_abbr)}</span>
-              <span class="badge badge-depth">${escapeHtml(String(schedule.time_of_day_utc))} UTC</span>
+              <span class="badge badge-depth" data-utc-weekday="${schedule.weekday_utc}" data-utc-time="${escapeHtml(schedule.time_of_day_utc)}">${escapeHtml(weekdayOptions.find(o => o.value === schedule.weekday_utc)?.label ?? '')} ${escapeHtml(String(schedule.time_of_day_utc))} UTC</span>
               <span class="badge">${escapeHtml(formatPresetLabel(schedule.preset_id))}</span>
               ${schedule.enabled === 1 ? '<span class="badge badge-verdict-approved">Enabled</span>' : '<span class="badge badge-verdict-reject">Disabled</span>'}
             </div>
@@ -416,7 +417,7 @@ function renderSchedulesTab(data: ConfigPageData): string {
               </form>
             </div>
           </div>
-          <form class="settings-form" hx-post="/api/settings/article-schedules/${escapeHtml(schedule.id)}" hx-target="#schedule-result" hx-swap="innerHTML">
+          <form class="settings-form" hx-post="/api/settings/article-schedules/${escapeHtml(schedule.id)}" hx-target="#schedule-result" hx-swap="innerHTML" data-schedule-tz>
             <div class="form-group">
               <label>Name</label>
               <input type="text" name="name" value="${escapeHtml(schedule.name)}" required>
@@ -433,14 +434,14 @@ function renderSchedulesTab(data: ConfigPageData): string {
                 </select>
               </div>
               <div class="form-group">
-                <label>Weekday (UTC)</label>
-                <select name="weekdayUtc">
+                <label data-tz-label>Weekday (UTC)</label>
+                <select name="weekdayUtc" data-tz-weekday>
                   ${weekdayOptions.map((option) => `<option value="${option.value}"${option.value === schedule.weekday_utc ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
                 </select>
               </div>
               <div class="form-group">
-                <label>Time (UTC)</label>
-                <input type="time" name="timeOfDayUtc" value="${escapeHtml(schedule.time_of_day_utc)}" required>
+                <label data-tz-label>Time (UTC)</label>
+                <input type="time" name="timeOfDayUtc" value="${escapeHtml(schedule.time_of_day_utc)}" required data-tz-time>
               </div>
               <div class="form-group">
                 <label>Editorial preset</label>
@@ -510,8 +511,8 @@ function renderSchedulesTab(data: ConfigPageData): string {
               </div>
             </details>
             <dl class="settings-kv">
-              <div><dt>Next run</dt><dd><code>${escapeHtml(schedule.next_run_at)}</code></dd></div>
-              <div><dt>Last run</dt><dd>${escapeHtml(schedule.last_run_at ?? 'Never')}</dd></div>
+              <div><dt>Next run</dt><dd><code data-utc-datetime="${escapeHtml(schedule.next_run_at)}">${escapeHtml(schedule.next_run_at)}</code></dd></div>
+              <div><dt>Last run</dt><dd${schedule.last_run_at ? ` data-utc-datetime="${escapeHtml(schedule.last_run_at)}"` : ''}>${escapeHtml(schedule.last_run_at ?? 'Never')}</dd></div>
             </dl>
             <button type="submit" class="btn btn-primary">Save Schedule</button>
           </form>
@@ -527,7 +528,7 @@ function renderSchedulesTab(data: ConfigPageData): string {
     </section>
       <section class="detail-section settings-panel">
         <h2>Add Schedule</h2>
-        <form class="settings-form" hx-post="/api/settings/article-schedules" hx-target="#add-schedule-result" hx-swap="innerHTML">
+        <form class="settings-form" hx-post="/api/settings/article-schedules" hx-target="#add-schedule-result" hx-swap="innerHTML" data-schedule-tz>
         <div class="form-group">
           <label for="schedule-name">Name</label>
           <input id="schedule-name" name="name" type="text" placeholder="Seahawks Tuesday accessible" required>
@@ -544,14 +545,14 @@ function renderSchedulesTab(data: ConfigPageData): string {
             </select>
           </div>
           <div class="form-group">
-            <label for="schedule-weekday">Weekday (UTC)</label>
-            <select id="schedule-weekday" name="weekdayUtc">
+            <label for="schedule-weekday" data-tz-label>Weekday (UTC)</label>
+            <select id="schedule-weekday" name="weekdayUtc" data-tz-weekday>
               ${weekdayOptions.map((option) => `<option value="${option.value}"${option.value === 2 ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label for="schedule-time">Time (UTC)</label>
-            <input id="schedule-time" name="timeOfDayUtc" type="time" value="14:00" required>
+            <label for="schedule-time" data-tz-label>Time (UTC)</label>
+            <input id="schedule-time" name="timeOfDayUtc" type="time" value="14:00" required data-tz-time>
           </div>
           <div class="form-group">
             <label for="schedule-preset">Editorial preset</label>
@@ -625,7 +626,8 @@ function renderSchedulesTab(data: ConfigPageData): string {
         <button type="submit" class="btn btn-primary">Create Schedule</button>
       </form>
       <div id="add-schedule-result" class="settings-result"></div>
-    </section>`;
+    </section>
+    ${renderScheduleTimezoneScript()}`;
 }
 
 // ── Tab 3: Publishing ───────────────────────────────────────────────────────
