@@ -1,4 +1,20 @@
+---
+title: Seattle duplicate-angle audit seam
+owner: Data
+date: 2026-04-03
+---
+
+- Current app code does not implement an explicit “recent related articles” or duplicate-angle lookup.
+- The operational seam today is: runtime SQLite history first, then `Repository.listArticles()` team/title filters plus repo `content/articles/**` recency review.
+- For Seattle, the recent repo artifact cluster is already heavy on three lanes: Puka-vs-Seattle structural weakness, Emmanwori/chess-piece validation, and RB pick-64 roster-allocation debate. A Tuesday casual prompt should avoid rephrasing those same explanatory takes.
+
 # Active Decisions
+
+- **Data: Repo-only history audit rule** (2026-04-03): For repo-only article-history audits, treat `content/articles/**` plus config/runtime path code as primary evidence when `content/pipeline.db` is empty; do not claim live article rows from the repo DB copy. This repo can carry a zero-byte placeholder DB while the app is configured to use `~/.nfl-lab/pipeline.db` at runtime, so duplicate-angle analysis inside the repo must be grounded in checked-in artifacts and code contracts.
+
+- **Data: Article history + duplicate-risk brief** (2026-04-03): Current code has durable per-article history in SQLite plus repo/file mirrors, but no dedicated "recent related articles" recommender for duplicate-angle avoidance. The practical duplicate check is still manual: use runtime article history when available, then team-filtered article lists / repo article files to inspect recent Seahawks themes before drafting new casual prompts. For Seattle specifically, mid-March repo artifacts already cover Puka-vs-Seattle structural weakness, Emmanwori/chess-piece validation, JSN extension timing, Witherspoon extension economics, and RB/draft-board debate. A Tuesday casual prompt should avoid another "explain one existing roster flaw" version of those. See `.squad/agents/data/history.md` → Seahawks Theme Cluster for full artifact listing.
+
+- **Decision: Artifact Editing + Feedback Loop Design** (2026-04-02): PENDING TEAM REVIEW. Design allows users to edit artifacts directly in dashboard, send corrective feedback to agents, and track edits/responses. Core components: artifact_edits table (audit trail), artifact_feedback_packets table (grouping), updated regress flow bundling edits + feedback together. Phases: Phase 1 (Foundation): schema + edit routes + simple UI; Phase 2 (Bundling): feedback packets + regress integration; Phase 3 (Injection): agent context + acknowledgment loop; Phase 4 (Polish): versioning UI, metrics, docs. Non-binding decisions: user edits are suggestions (agents free to ignore), feedback bundled with regression (not separate system), backward-compatible (no breaking schema changes). Acceptance criteria and implementation owner documented in `.squad/decisions/inbox/research-artifact-feedback-design.md`. Next step: Code Agent architecture review & Phase 1 scope sign-off.
 
 - **UX: New Idea advanced section** (2026-04-02): Collapse advanced editorial controls (depth, format, model, provider selection) into a single bottom-of-form collapsible section. Keep default idea intake focused on prompt, teams, preset, pinned agents, and auto-advance. Preserve less-common overrides while keeping the form uncluttered. Constraint kept: The provider/model selector stays outside the override-disabled controls inside the advanced section so existing request payload behavior remains unchanged. Rationale: Default intake should guide editors toward preset-first thinking; advanced toggles are available but not cognitive load in the happy path. Tests: `tests/dashboard/new-idea.test.ts` passing. Build passed. Files: `src/dashboard/views/new-idea.ts`.
 
@@ -1457,160 +1473,6 @@ If preset and advanced fields are always submitted together, a newly selected pr
 - Casual-facing copy should explicitly discourage unexplained analytics rather than hoping legacy depth semantics imply it.
 
 
-## Decision: ux-review-findings
-# UX Review Findings — Editorial State Inconsistencies
-
-**Date:** 2025-01-XX  
-**Reviewer:** UX  
-**Scope:** Dashboard UI for editorial metadata intake, filtering, scheduling, and publishing
-
----
-
-## CRITICAL FINDINGS
-
-### 1. **Schedules UX Exposes 4 Depth Values While Intake & Filtering Expose Only 3**
-
-**Impact:** Data loss risk on round-trip UX; user confusion about what "Feature" means.
-
-- **new-idea.ts** (line 263-269): `renderPresetOptions()` exposes only 4 presets (`casual_explainer`, `beat_analysis`, `technical_deep_dive`, `narrative_feature`). No explicit depth level selector.
-- **schedules.ts** (line 131-244): Form default and rendering show `depth_level: 1..4` with legacy label fallback (line 111: `formatLegacyDepthLabel()`). The form initializes `depth_level: 1` (line 142) but allows 1-4 via the database API.
-- **types.ts** (line 77-82): `DEPTH_LEVEL_MAP` collapses depth 4 onto `deep_dive`, same bucket as depth 3. This is the stated architectural problem.
-- **home.ts**: No depth filter selector. Home only filters by preset (line 82-88), not by legacy depth.
-
-**Evidence chain:**
-- When user creates via new-idea form: they pick a preset (which maps to article_form, which derives depth_level).
-- If that article is later scheduled via schedules form: the UI shows `formatLegacyDepthLabel(depth_level)` — depth 4 will say "Feature," depth 3 says "Deep Dive," but pipeline treats them identically (line 81 in types.ts).
-- If user tries to filter home articles by depth: no such filter exists. Only preset filter (which is read-only from creation time).
-
-**Recommended action:** Align surfaces to expose the same set of values. Either:
-1. Stop offering depth 4 in schedule forms, or
-2. Add depth filter to home search, or  
-3. Split presentation: show preset in intake/schedules, show derived legacy labels read-only.
-
----
-
-### 2. **Hidden Data Loss: `depth_level` and `content_profile` Both Persist but UI Maps Them Inconsistently**
-
-**Impact:** When editorial controls are overridden, derived fields may not sync. Metadata edit form can stale panel sizing.
-
-- **article.ts** (removed in diff): Old form had explicit depth level selector (1-4 with word-count hints).
-- **new article creation** (server.ts): When creating via new-idea, `depth_level` is derived from `article_form` (types.ts line 189-199), `content_profile` is derived from `reader_profile` + `analyticsMode` (types.ts line 202-208).
-- **schedules persistence** (types.ts line 567-589): ArticleSchedule stores all six fields: `depth_level`, `content_profile`, AND the new four-axis controls (`reader_profile`, `article_form`, `panel_shape`, `analytics_mode`).
-- **editorial-controls.ts** (line 40-61): `buildEditorialUiState()` resolves legacy fields ON READ. If user changes preset in schedules form, `legacy_depth_level` is re-derived, potentially differing from what was saved.
-
-**Scenario where data desync occurs:**
-1. Schedule created with preset `technical_deep_dive` → auto-derives `depth_level: 3`, `content_profile: 'deep_dive'`.
-2. Admin manually edits schedule: changes `analytics_mode` to `explain_only` (keeping everything else).
-3. On re-render, `deriveContentProfileFromControls()` (line 202-208) now returns `'accessible'`, but `depth_level` stays 3.
-4. User sees `"3 — Deep Dive · Accessible"` hint (line 199), but runtime behavior may expect `depth_dive` content profile.
-
-**Recommended action:** 
-- Store a `precomputed_legacy_depth` and `precomputed_legacy_profile` snapshot in DB on schedule save (alongside the new four-axis fields).
-- OR: Make editorial-controls.ts derivation deterministic per preset, not per individual axis (i.e., don't let `analyticsMode` alone flip content_profile if preset choice is already explicit).
-
----
-
-### 3. **Preset Label Mismatch: "narrative_feature" Preset But "Feature" Depth Display**
-
-**Impact:** Semantic confusion; preset names don't match UI labels.
-
-- **editorial-controls.ts** (line 21): `LEGACY_DEPTH_LABELS[4] = 'Feature'`.
-- **types.ts** (line 34-38): `EditorialPresetId` enum has `'narrative_feature'` as the label.
-- **schedules.ts** (line 110): Renders preset via `formatPresetLabel(s.preset_id)` from types.ts, which will show "Narrative Feature", not "Feature".
-- But editorial-controls.ts line 103-104 shows in form hint: "Legacy compatibility stays at {depth label} · {profile}" — so if preset is `narrative_feature`, the hint will say "Feature" (derived from depth 4).
-
-**User perspective:** In schedules table, they see "Narrative Feature" (preset name), but in the form hint they see "Feature" (legacy depth name). No clear signal that these are the same thing.
-
-**Recommended action:**
-- Rename preset to match: either `feature` or `narrative_feature_deep_dive`, OR
-- In schedules table row, render both the preset name AND the legacy depth label for clarity (e.g., "Narrative Feature (Feature, Deep Dive)").
-
----
-
-### 4. **Metadata Edit Form Removed: No Path to Change Depth After Stage 1**
-
-**Impact:** Users cannot adjust article ambition/panel sizing after intake; forced to re-submit or manually edit DB.
-
-- **article.ts diff**: Old form (deleted in this changeset) had explicit depth selector with warning: _"Changing depth level after Stage 1 may desync prompts/panel sizing"_ (line 127 in old code).
-- **New article.ts** (currently): No depth/preset controls in `renderArticleMetaEditForm()`. Only title, subtitle, teams.
-- **server.ts**: Routes still accept PATCH to `/api/articles/:id` with `depth_level` and `preset_id` (grep shows these are whitelisted fields), but the UI has no form to edit them.
-
-**Scenario:** User realizes depth 2 idea should be depth 3 after seeing discussion prompt. Can't change it in UI. Must use API or contact admin.
-
-**Recommended action:**
-- Either restore preset/form selector in article edit form (with strong warning), OR
-- Document that depth changes post-Stage-1 require API calls, not UI (and surface that in help text).
-
----
-
-### 5. **Inconsistent Field Names Across Surfaces (camelCase vs snake_case)**
-
-**Impact:** Client-side form submission logic must translate; harder to debug, easier to miss fields.
-
-- **server.ts**: Accepts both `depthLevel` (camelCase) and `depth_level` (snake_case) in form bodies via `getBodyValue(body, 'depthLevel', 'depth_level')` (grep output).
-- **new-idea.ts** (line 263): Form field `name="presetId"` (camelCase).
-- **schedules.ts** (line 198): Form field `name="preset_id"` (snake_case).
-- **editorial-controls.ts**: Internal helper `buildLegacyFields()` returns `{ depthLevel, contentProfile }` (camelCase).
-
-**Consequence:** When new-idea form POSTs, it sends `{ presetId, articleForm, readerProfile, ... }` (camelCase). Server must normalize. When schedules form POSTs, field names are snake_case. This is error-prone; if a field is forgotten in the translation, it silently doesn't update.
-
-**Recommended action:**
-- Standardize on one convention in form submission (recommend snake_case to match DB).
-- Validate all expected fields in server route and reject if missing, rather than silently defaulting.
-
----
-
-## LOWER-PRIORITY FINDINGS
-
-### 6. **Panel Constraints JSON Not Exposed in New-Idea Form**
-
-- **schedules.ts** (line 236-238): Advanced panel constraints JSON editor exists in schedule form.
-- **new-idea.ts** (line 284-327): No such field in idea form, even though editorial-controls.ts supports it.
-- User cannot pin specific agents or enforce multi-team scope at idea time; must manually edit schedule later.
-- _Impact: Moderate._ Presets handle common cases; expert users can override in schedules. No data loss.
-
----
-
-### 7. **No Preset Reordering / Prioritization for Intake**
-
-- **types.ts** (line 84-89): `EDITORIAL_PRESET_ORDER` is hardcoded: `casual_explainer` → `beat_analysis` → `technical_deep_dive` → `narrative_feature`.
-- **editorial-controls.ts** (line 72-76): Renders presets in order.
-- If org's most common preset changes (e.g., narratives become most popular), form UX doesn't adapt.
-- _Impact: Low._ Order can be re-hardcoded if needed. No runtime issue.
-
----
-
-## SUMMARY TABLE: Which Surfaces Expose Which Values?
-
-| Surface | depth_level (1-4) | preset | article_form | reader_profile | panel_shape | content_profile | analytics_mode |
-|---------|-------------------|--------|--------------|-----------------|-------------|-----------------|-----------------|
-| **new-idea** form | Derived only | ✅ Explicit | Conditional override | Conditional | Conditional | Derived | Conditional |
-| **schedules** form | ✅ Explicit (default 1) | ✅ Explicit | Conditional | Conditional | Conditional | Derived | Conditional |
-| **home** filters | ❌ No filter | ✅ Filter exists | ❌ No filter | ❌ No filter | ❌ No filter | ❌ No filter | ❌ No filter |
-| **article** detail (old) | ✅ Shown, editable | — | — | — | — | — | — |
-| **article** detail (new) | ✅ Shown (read-only badge) | ✅ Shown badge | — | — | — | — | — |
-| **DB schema** | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted | ✅ Persisted |
-
-**Key:** ✅ = Exposed / ❌ = Not exposed / Derived = Computed on read
-
----
-
-## TEST COVERAGE GAPS
-
-1. **Round-trip UX test:** Create article via new-idea with preset X → navigate to schedules → verify depth/profile match.
-2. **Metadata edit test:** When schedule depth changes from 3→2, verify that derived content_profile is recalculated and saved correctly.
-3. **Filter consistency test:** Filter home articles by preset; verify that no depth-4 articles are silently hidden.
-
----
-
-## NEXT STEPS FOR ARCHITECTURE TEAM
-
-1. Decide on canonical editorial state: Is it the four-axis model (reader_profile, article_form, panel_shape, analytics_mode) or the legacy (depth_level, content_profile)?
-2. If migrating to four-axis: migrate all form surfaces (intake, schedules, article detail) to expose four-axis controls; deprecate depth_level from UI payloads (can remain in DB as derived field for backward compat).
-3. If keeping legacy: remove the four-axis fields from schedule UI to reduce confusion; derive them server-side only.
-4. Update tests to verify round-trip consistency: creation → schedule → publish, all fields stable.
-
-
 ## Decision: ux-schedules-audit-detailed
 ---
 title: Schedule Routes Audit — Operator Mental Models & Evidence
@@ -2103,3 +1965,4 @@ ext_run_at\ when weekday or time actually changes.
 
 - This approval applies only to the six seams above.
 - It does **not** supersede the broader contract concern that legacy schedule tuples can still be rewritten when the system writes legacy fields back from preset-derived defaults.
+

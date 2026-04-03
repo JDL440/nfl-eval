@@ -214,6 +214,113 @@ All 235 dashboard tests passing; none use the split fields directly. Tests shoul
 5. **Phase 5 (Deprecation):** Mark depth_level deprecated (keep in schema, disallow in new paths)
 
 ### Recommendation
+
+## 2026-04-02: Artifact Editing & Send-Back Feedback Loop Research
+
+### Request
+Conduct thorough research on two critical gaps:
+1. Users cannot directly edit artifacts in the dashboard
+2. "Send Back" feature doesn't wire feedback back to agents for incorporation
+
+Produce comprehensive design proposal including data model, routes, UX, agent integration, and rollout plan.
+
+### Key Findings
+
+#### Gap #1: No Direct Artifact Editing in UI
+- **Current state:** Artifacts are read-only (displayed via GET /htmx/articles/:id/artifact/:name)
+- **Code evidence:** renderArtifactContent() (article.ts:381) only renders HTML; no POST/PUT/PATCH routes exist for edits
+- **Impact:** Editors must regress article to ask agent to fix typos, rewrite sections, or incorporate corrections
+- **Architecture verified:** ArtifactStore is well-designed (artifacts table has created_at/updated_at; upsert logic is sound)
+
+#### Gap #2: Send-Back Reason Field is Decoupled from Agents
+- **Current flow:** User submits "Send Back" form (to_stage, reason) → route handler → engine.regress() → repository.regressStage()
+- **Reason storage:** Stored in stage_transitions.notes as `Regression: ${reason}` (server.ts:2259, repository.ts:1888)
+- **Agent awareness:** ZERO — agents don't query stage_transitions; they re-run from fresh context (original prompt, no user feedback)
+- **Design gap:** No mechanism to inject reason or user edits into agent prompt when re-running
+- **Code evidence:** Traced full execution path (server.ts:2244–2267 → engine.ts:430 → repository.ts:1848); no feedback injection anywhere
+
+#### Gap #3: Artifact Deletion on Regress is Destructive
+- **Current behavior:** regressStage() calls clearArtifactsAfterStage() which hard-deletes all artifacts from stages > toStage
+- **No backup:** Deleted artifacts are gone (no version history, no undo)
+- **Implication:** If user had edited artifact and regressed, those edits vanish
+- **Code location:** repository.ts:1897–1930 (clearArtifactsAfterStage with pattern-based stage mapping)
+
+#### Downstream Effects (Verified)
+1. **Editor experience:** Editor sees artifact, can't edit in-place → must regress → waits for agent → sees agent's fresh output (no user input)
+2. **Agent behavior:** Auto-advance loop re-runs stage; agents start with original context; no knowledge that they're in a revision cycle or what the actual problem is
+3. **Audit trail weakness:** Reason is logged but useless (not visible to agents or future reviewers)
+4. **Quality impact:** Iterations take longer because feedback isn't actionable/embedded in agent context
+
+#### Architecture Verified (Sound)
+- ✅ Database schema supports versioning: artifacts(article_id, name, created_at, updated_at, content)
+- ✅ Repository pattern is extensible: new tables (artifact_edits, feedback_packets) fit naturally
+- ✅ Pipeline already tracks transitions: stage_transitions table can be enhanced with feedback references
+- ✅ Agent runner pattern supports context injection: agents receive Repository + custom prompts; feedback context could be injected similar to revision history
+
+### Recommended Design
+
+**Core Model: Artifact Feedback Envelope**
+
+Three new tables:
+1. **artifact_edits** — tracks every user/agent edit with reason, category, diff history
+2. **artifact_feedback_packets** — groups related edits + regression into atomic feedback submission
+3. **articles.feedback_state** — 'none' | 'pending_review' | 'acknowledged' (tracks whether agent has processed feedback)
+
+**Routes (New/Enhanced):**
+- POST /articles/:id/artifacts/edit — save artifact edit (with reason + category)
+- POST /articles/:id/regress (enhanced) — optional edits array + reason bundled as feedback packet
+- POST /articles/:id/feedback-acknowledge (for agents) — report whether feedback was used
+
+**UX Flow:**
+1. Editor clicks "Edit This Artifact" button in artifact tab
+2. Markdown editor opens (CodeMirror or similar)
+3. Editor makes changes, fills in "Reason for change" + "Category" (typo, fact, tone, structure, clarity, other)
+4. Saves as draft, OR clicks "Save & Request Revision"
+5. If regressing: form appears asking for target stage + allows multi-artifact edit + overall feedback
+6. Submits; feedback packet is created, edits are saved, article regresses
+7. Agent re-runs; feedback context is injected into prompt ("USER EDITS BELOW: ..."); agent acknowledges receipt
+8. Dashboard shows "Agent reviewed your feedback: [incorporated | ignored | noted]"
+
+**Agent Integration:**
+- When agents re-run after feedback, pipeline injects markdown block with user edits + reasons
+- Explicit instruction: "User feedback below is INFORMATIONAL, not binding—you may incorporate or generate fresh content"
+- Agent feedback-acknowledge endpoint tracks decisions (incorporated vs. ignored) for metrics
+
+**Rollout: 4 phases over 3–4 months**
+1. **Phase 1 (Foundation):** Schema, basic edit routes, simple textarea UI
+2. **Phase 2 (Bundling):** Feedback packets, regress + edits together, enhanced UX
+3. **Phase 3 (Injection):** Agent context building, feedback loop, acknowledgment
+4. **Phase 4 (Polish):** Versioning UI, metrics, documentation
+
+### Key Design Decisions
+
+1. **User edits are suggestions, not commands** — Agents can generate fresh content or incorporate; explicit in prompt
+2. **Feedback is bundled (edits + regression together)** — Ensures feedback reaches agent without requiring separate "instructions" entity
+3. **Backward compatible** — No breaking changes; existing regress() method still works; feedback is opt-in
+4. **Versioning focused on audit, not undo** — Keep history for comparison; don't resurrect old versions automatically
+
+### Confidence Level
+
+- ✅ **HIGH** on architecture (code traced end-to-end, gaps verified)
+- ✅ **HIGH** on schema design (artifact_edits + feedback_packets fit naturally)
+- ⚠️ **MEDIUM** on agent integration (assumes agents can handle injected markdown block in prompt; needs Code/Data agent validation)
+- ⚠️ **MEDIUM** on UX (assumes CodeMirror + simple form is acceptable; needs UX agent sign-off)
+
+### Next Action
+
+**For Backend agent:** Use this design as input for architecture decision. Recommend starting with Phase 1 (edit routes + basic UI) as early win; Phase 2–4 can be planned once Phase 1 is validated with team.
+
+### Files Analyzed
+- src/dashboard/views/article.ts (renderArtifactContent, artifact tabs, send-back form)
+- src/dashboard/server.ts (routes: /articles/:id, /htmx/articles/:id/artifact/:name, /htmx/articles/:id/regress)
+- src/pipeline/engine.ts (advance, regress methods)
+- src/db/repository.ts (regressStage, clearArtifactsAfterStage)
+- src/db/artifact-store.ts (ArtifactStore class, artifact read/write)
+- src/db/schema.sql (articles, artifacts, stage_transitions tables)
+- src/pipeline/conversation.ts (revision history tracking)
+- src/types.ts (Article, Stage, ArticleStatus types)
+
+### Recommendation
 **Start implementation now; no blocking issues.** The redesign is a UI + validation refinement of an already-correct architecture. Lead the UI phase with new-idea.ts and schedules.ts, coordinate with UX on preset messaging.
 
 ### Files Analyzed
@@ -224,6 +331,8 @@ All 235 dashboard tests passing; none use the split fields directly. Tests shoul
 - tests/dashboard/schedules.test.ts (current test patterns)
 
 ## Learnings
+
+- 2026-04-03 — The canonical “new idea” prompt chain is split across three layers: `src/pipeline/idea-generation.ts` builds the live Lead task, `src/dashboard/views/new-idea.ts` provides the canonical markdown output template, and `src/config/defaults/skills/idea-generation.md` supplies freshness/year-accuracy guardrails. For scheduled Tuesday casual slots, the repo’s native framing already points to `casual_explainer` + `reader_profile=casual` + `article_form=brief` + `analytics_mode=explain_only`, with explicit UI hints in `src/dashboard/views/config.ts` and `src/dashboard/views/schedules.ts`. Existing `content/articles/*/idea.md` artifacts are useful for tone/examples but drift structurally, so future prompt-mirroring work should treat runtime/template files as source of truth and use Seahawks discussion-prompt artifacts only as tone/scaling references.
 
 - 2026-03-30 — Debug/trace surfaces are well-segregated; the issue is article-detail hierarchy, not trace isolation. Article page mixes machine metadata with editorial context; moving debug content to secondary areas aligns with existing trace-page strategy. No new trace infrastructure needed; just hierarchy/copy fixes.
 

@@ -18,8 +18,12 @@
 - DevOps verification on 2026-03-28: targeted LM Studio + tool-loop tests passed via `npm run test -- tests/llm/provider-lmstudio.test.ts tests/agents/runner.test.ts tests/agents/local-tools.test.ts`, and `npm run v2:build` passed cleanly.
 - Local LM Studio was reachable at `http://localhost:1234/v1/models` and returned a live model list, but this worktree shell had no `LLM_PROVIDER`, `LMSTUDIO_URL`, or `LMSTUDIO_MODEL` set, so dashboard startup would not auto-register LM Studio without an explicit env opt-in (`src/dashboard/server.ts`).
 - DevOps branch sync on 2026-03-29: `feature/agenteval` was clean but 8 commits behind `origin/main`; `git fetch origin main` followed by `git merge --no-ff --no-edit origin/main` updated the worktree branch without conflicts or discarded changes.
-
-## 2026-03-28: LM Studio eval follow-up
+- Recurring article schedule config is managed in two dashboard surfaces: `/config?tab=schedules` for the admin/settings workflow and `/schedules` for the dedicated schedule page, both backed by `repo.createArticleSchedule` / `repo.updateArticleSchedule` in `src/dashboard/server.ts`.
+- The schedule prompt/instruction source of truth is `article_schedules.prompt`, persisted alongside timing, team, preset, reader profile, article form, panel shape, analytics mode, provider override, and panel constraints in `src/db/schema.sql` and `src/db/repository.ts`.
+- Tuesday casual slots default to weekday `2`, preset `casual_explainer`, `reader_profile=casual`, `article_form=brief`, `panel_shape=news_reaction`, and `analytics_mode=explain_only`; the UI explicitly hints that Tuesday-style slots should stay explain-only (`src/dashboard/views/schedules.ts`, `src/dashboard/views/config.ts`, `src/types.ts`).
+- Scheduled execution currently runs through `ArticleSchedulerService` started at dashboard boot, not the older `RecurringScheduler`; it uses `schedule.prompt` in discovery (`Base prompt:`) and again in idea creation (`Base schedule prompt:`), then stores per-run `discovery_json` and `selected_story_json` in `article_schedule_runs` (`src/dashboard/server.ts`, `src/pipeline/article-scheduler-service.ts`, `src/db/schema.sql`).
+
+## 2026-03-28: LM Studio eval follow-up
 
 - Treat LM Studio live evaluation as an opt-in local verification path; keep `LLM_PROVIDER=lmstudio` or `LMSTUDIO_URL` explicit.
 - Live `/v1/models` and plain-chat tool-call behavior were confirmed, but `response_format: json_object` failed with LM Studio-specific validation.
