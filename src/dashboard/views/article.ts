@@ -6,6 +6,7 @@
 
 import { renderLayout, escapeHtml, formatDate } from './layout.js';
 import {
+  EDITABLE_ARTIFACT_NAMES,
   STAGE_NAMES,
   formatPresetLabel,
 } from '../../types.js';
@@ -382,6 +383,7 @@ export function renderArtifactContent(
   name: string,
   content: string | null,
   persistedThinkingContent?: string | null,
+  articleId?: string | null,
 ): string {
   if (content == null) {
     return `<p class="empty-state">Not yet created</p>`;
@@ -404,7 +406,43 @@ export function renderArtifactContent(
     ? `<div class="artifact-rendered">${markdownToHtml(output)}</div>`
     : `<pre class="artifact-pre">${escapeHtml(output)}</pre>`;
 
-  return thinkingHtml + outputHtml;
+  const editPanelHtml =
+    articleId && EDITABLE_ARTIFACT_NAMES.includes(name)
+      ? `<div class="artifact-edit-panel" style="margin-top: 1rem; border-top: 1px solid var(--border-color, #ddd); padding-top: 1rem;">
+  <details class="artifact-edit-details">
+    <summary class="btn btn-secondary btn-sm">✏️ Edit Artifact</summary>
+    <div style="margin-top: 0.75rem;">
+      <textarea class="artifact-editor" name="content" rows="18"
+        style="width:100%;font-family:monospace;font-size:0.85rem;padding:0.5rem;border:1px solid var(--border-color,#ccc);border-radius:4px;resize:vertical;"
+      >${escapeHtml(output)}</textarea>
+      <div style="margin-top: 0.5rem; display:flex; gap: 0.5rem; align-items:flex-start; flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" type="button"
+          hx-post="/htmx/articles/${encodeURIComponent(articleId)}/artifact/${encodeURIComponent(name)}/edit"
+          hx-include="closest .artifact-edit-details"
+          hx-target="closest .artifact-edit-panel"
+          hx-swap="afterend"
+          onclick="this.closest('.artifact-edit-details').open = false">
+          💾 Save
+        </button>
+        <div style="flex:1;min-width:200px;">
+          <input type="text" name="instructions" placeholder="Instructions for the agent (optional — submit to create feedback packet)"
+            style="width:100%;padding:0.35rem 0.5rem;border:1px solid var(--border-color,#ccc);border-radius:4px;font-size:0.85rem;" />
+        </div>
+        <button class="btn btn-warning btn-sm" type="button"
+          hx-post="/htmx/articles/${encodeURIComponent(articleId)}/feedback"
+          hx-include="closest .artifact-edit-details"
+          hx-target="closest .artifact-edit-panel"
+          hx-swap="afterend"
+          hx-vals='js:(function(elt){ var d = elt.closest(".artifact-edit-details"); return { target_artifact: "${name}", edited_content: d.querySelector("textarea").value }; })(this)'>
+          📝 Save &amp; Submit Feedback
+        </button>
+      </div>
+    </div>
+  </details>
+</div>`
+      : '';
+
+  return thinkingHtml + outputHtml + editPanelHtml;
 }
 
 function summarizeMarkdown(content: string, maxLength = 220): string {
@@ -576,13 +614,24 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, isAdva
               hx-post="/htmx/articles/${escapeHtml(article.id)}/regress"
               hx-target="#advance-result-${escapeHtml(article.id)}"
               hx-swap="innerHTML"
+              hx-on::before-request="(function(evt) {
+                var form = evt.target;
+                var instructions = (form.querySelector('[name=reason]').value || '').trim();
+                if (instructions) {
+                  var fd = new FormData();
+                  fd.append('instructions', instructions);
+                  fd.append('target_stage', form.querySelector('[name=to_stage]').value);
+                  fetch('/htmx/articles/${escapeHtml(article.id)}/feedback', { method: 'POST', body: fd });
+                }
+              })(event)"
               hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
               hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
               <label>Send back to:</label>
               <select name="to_stage"><option value="4">${escapeHtml(STAGE_NAMES[4])}</option></select>
-              <label>Reason:</label>
-              <input type="text" name="reason" placeholder="Reason for sending back..." />
-              <button type="submit" class="btn btn-danger btn-sm">Confirm Send Back</button>
+              <label>Feedback instructions:</label>
+              <textarea name="reason" rows="3" placeholder="What should change? Be specific — this will be injected into the agent's next run..."
+                style="width:100%;font-size:0.85rem;padding:0.35rem 0.5rem;border:1px solid var(--border-color,#ccc);border-radius:4px;resize:vertical;"></textarea>
+              <button type="submit" class="btn btn-danger btn-sm">↩ Send Back with Feedback</button>
             </form>
           </details>
         </div>
@@ -626,13 +675,24 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, isAdva
               hx-post="/htmx/articles/${escapeHtml(article.id)}/regress"
               hx-target="#advance-result-${escapeHtml(article.id)}"
               hx-swap="innerHTML"
+              hx-on::before-request="(function(evt) {
+                var form = evt.target;
+                var instructions = (form.querySelector('[name=reason]').value || '').trim();
+                if (instructions) {
+                  var fd = new FormData();
+                  fd.append('instructions', instructions);
+                  fd.append('target_stage', form.querySelector('[name=to_stage]').value);
+                  fetch('/htmx/articles/${escapeHtml(article.id)}/feedback', { method: 'POST', body: fd });
+                }
+              })(event)"
               hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
               hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
               <label>Send back to:</label>
               <select name="to_stage">${regressOptions}</select>
-              <label>Reason:</label>
-              <input type="text" name="reason" placeholder="Reason for sending back..." />
-              <button type="submit" class="btn btn-danger btn-sm">Confirm Send Back</button>
+              <label>Feedback instructions:</label>
+              <textarea name="reason" rows="3" placeholder="What should change? Be specific — this will be injected into the agent's next run..."
+                style="width:100%;font-size:0.85rem;padding:0.35rem 0.5rem;border:1px solid var(--border-color,#ccc);border-radius:4px;resize:vertical;"></textarea>
+              <button type="submit" class="btn btn-danger btn-sm">↩ Send Back with Feedback</button>
             </form>
           </details>
         </div>
@@ -673,13 +733,24 @@ function renderActionPanel(article: Article, advanceCheck?: AdvanceCheck, isAdva
               hx-post="/htmx/articles/${eid}/regress"
               hx-target="#advance-result-${eid}"
               hx-swap="innerHTML"
+              hx-on::before-request="(function(evt) {
+                var form = evt.target;
+                var instructions = (form.querySelector('[name=reason]').value || '').trim();
+                if (instructions) {
+                  var fd = new FormData();
+                  fd.append('instructions', instructions);
+                  fd.append('target_stage', form.querySelector('[name=to_stage]').value);
+                  fetch('/htmx/articles/${eid}/feedback', { method: 'POST', body: fd });
+                }
+              })(event)"
               hx-on::after-request="if(event.detail.successful) { this.closest('details').open = false; }"
               hx-on::after-settle="if(event.detail.successful) { setTimeout(() => window.location.reload(), 1000); }">
               <label>Send back to:</label>
               <select name="to_stage">${regressOptions}</select>
-              <label>Reason:</label>
-              <input type="text" name="reason" placeholder="Reason for sending back..." />
-              <button type="submit" class="btn btn-danger btn-sm">Confirm Send Back</button>
+              <label>Feedback instructions:</label>
+              <textarea name="reason" rows="3" placeholder="What should change? Be specific — this will be injected into the agent's next run..."
+                style="width:100%;font-size:0.85rem;padding:0.35rem 0.5rem;border:1px solid var(--border-color,#ccc);border-radius:4px;resize:vertical;"></textarea>
+              <button type="submit" class="btn btn-danger btn-sm">↩ Send Back with Feedback</button>
             </form>
           </details>` : ''}
       </div>

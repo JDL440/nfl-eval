@@ -30,7 +30,10 @@ import type {
   ArticleRetrospective,
   ArticleRetrospectiveFinding,
   ArticleRun,
+  ArtifactEditSnapshot,
   EditorialPresetId,
+  FeedbackPacket,
+  FeedbackPacketStatus,
   LlmTrace,
   LlmTraceStatus,
   ArticleStatus,
@@ -61,6 +64,7 @@ import {
   VALID_USAGE_EVENT_TYPES,
   VALID_NOTE_TYPES,
   VALID_NOTE_TARGETS,
+  VALID_FEEDBACK_PACKET_STATUSES,
 } from '../types.js';
 
 import { ArtifactStore } from './artifact-store.js';
@@ -2748,6 +2752,121 @@ export class Repository {
 
   // ── Archive / Delete ────────────────────────────────────────────────────────
 
+  // ── Artifact edit history + feedback packets ──────────────────────────────
+
+  /** Record an auditable snapshot of a human edit to an artifact. */
+  saveArtifactEditSnapshot(
+    articleId: string,
+    artifactName: string,
+    previousContent: string,
+    newContent: string,
+    editedBy = 'human',
+    editSource = 'dashboard',
+  ): number {
+    const stmt = this.db.prepare(
+      `INSERT INTO artifact_edit_history
+       (article_id, artifact_name, previous_content, new_content, edited_by, edit_source)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(articleId, artifactName, previousContent, newContent, editedBy, editSource);
+    const row = this.db.prepare('SELECT last_insert_rowid() as id').get() as { id: number };
+    return row.id;
+  }
+
+  /** Get edit history for a specific artifact (newest first). */
+  getArtifactEditHistory(articleId: string, artifactName: string, limit = 50): ArtifactEditSnapshot[] {
+    return this.db.prepare(
+      `SELECT * FROM artifact_edit_history
+       WHERE article_id = ? AND artifact_name = ?
+       ORDER BY created_at DESC LIMIT ?`,
+    ).all(articleId, artifactName, limit) as unknown as ArtifactEditSnapshot[];
+  }
+
+  /** Get all edit history for an article (newest first). */
+  getArticleEditHistory(articleId: string, limit = 100): ArtifactEditSnapshot[] {
+    return this.db.prepare(
+      `SELECT * FROM artifact_edit_history
+       WHERE article_id = ?
+       ORDER BY created_at DESC LIMIT ?`,
+    ).all(articleId, limit) as unknown as ArtifactEditSnapshot[];
+  }
+
+  /** Create a new feedback packet with structured correction instructions. */
+  createFeedbackPacket(
+    articleId: string,
+    instructions: string,
+    opts: {
+      targetArtifact?: string;
+      targetStage?: number;
+      editedContent?: string;
+      createdBy?: string;
+    } = {},
+  ): FeedbackPacket {
+    if (opts.targetStage != null) validateStage(opts.targetStage, 'target_stage');
+
+    // Supersede any existing pending packets for the same article+artifact
+    this.supersedePendingFeedback(articleId, opts.targetArtifact ?? null);
+
+    const stmt = this.db.prepare(
+      `INSERT INTO feedback_packets
+       (article_id, target_artifact, target_stage, instructions, edited_content, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run(
+      articleId,
+      opts.targetArtifact ?? null,
+      opts.targetStage ?? null,
+      instructions,
+      opts.editedContent ?? null,
+      opts.createdBy ?? 'human',
+    );
+    const row = this.db.prepare('SELECT last_insert_rowid() as id').get() as { id: number };
+    return this.db.prepare('SELECT * FROM feedback_packets WHERE id = ?').get(row.id) as unknown as FeedbackPacket;
+  }
+
+  /** Get all pending feedback packets for an article (newest first). */
+  getPendingFeedback(articleId: string): FeedbackPacket[] {
+    return this.db.prepare(
+      `SELECT * FROM feedback_packets
+       WHERE article_id = ? AND status = 'pending'
+       ORDER BY created_at DESC`,
+    ).all(articleId) as unknown as FeedbackPacket[];
+  }
+
+  /** Get a single feedback packet by ID. */
+  getFeedbackPacket(packetId: number): FeedbackPacket | null {
+    const row = this.db.prepare('SELECT * FROM feedback_packets WHERE id = ?').get(packetId);
+    return (row as unknown as FeedbackPacket) ?? null;
+  }
+
+  /** Mark a feedback packet as consumed by an agent. */
+  markFeedbackConsumed(packetId: number, consumedBy: string): void {
+    this.db.prepare(
+      `UPDATE feedback_packets
+       SET status = 'consumed', consumed_by = ?, consumed_at = ?
+       WHERE id = ? AND status = 'pending'`,
+    ).run(consumedBy, nowISO(), packetId);
+  }
+
+  /** Mark all pending packets for an article+artifact as superseded. */
+  supersedePendingFeedback(articleId: string, targetArtifact: string | null): void {
+    if (targetArtifact) {
+      this.db.prepare(
+        `UPDATE feedback_packets
+         SET status = 'superseded'
+         WHERE article_id = ? AND target_artifact = ? AND status = 'pending'`,
+      ).run(articleId, targetArtifact);
+    } else {
+      this.db.prepare(
+        `UPDATE feedback_packets
+         SET status = 'superseded'
+         WHERE article_id = ? AND target_artifact IS NULL AND status = 'pending'`,
+      ).run(articleId);
+    }
+  }
+
+  // ── Archive / Delete ────────────────────────────────────────────────────────
+
   /** Soft-archive an article (works from any stage). */
   archiveArticle(articleId: string): Article {
     const article = this.getArticle(articleId);
@@ -2816,6 +2935,8 @@ export class Repository {
     this.db.prepare('DELETE FROM editor_reviews WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM publisher_pass WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM article_panels WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM feedback_packets WHERE article_id = ?').run(articleId);
+    this.db.prepare('DELETE FROM artifact_edit_history WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM notes WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM discussion_prompts WHERE article_id = ?').run(articleId);
     this.db.prepare('DELETE FROM artifacts WHERE article_id = ?').run(articleId);

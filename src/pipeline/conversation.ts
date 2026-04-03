@@ -223,6 +223,26 @@ export function addConversationTurn(
 }
 
 /**
+ * Log human feedback from the dashboard as a conversation turn so that
+ * downstream context helpers automatically include it.
+ */
+export function addHumanFeedbackConversationTurn(
+  repo: Repository,
+  articleId: string,
+  stage: number,
+  instructions: string,
+  targetArtifact?: string | null,
+): number {
+  const lines = ['## Human Feedback (Dashboard)', ''];
+  if (targetArtifact) {
+    lines.push(`**Target artifact:** ${targetArtifact}`, '');
+  }
+  lines.push('**Instructions:**', instructions);
+
+  return addConversationTurn(repo, articleId, stage, 'human', 'user', lines.join('\n'));
+}
+
+/**
  * Retrieve the conversation history for an article.
  * Supports filtering by stage, agent, and limiting results.
  */

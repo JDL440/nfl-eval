@@ -2209,7 +2209,11 @@ export async function autoAdvanceArticle(
           revisionCount++;
           if (revisionCount <= maxRevisions) {
             try {
-              // Preserve editor feedback so the writer can address it on re-draft
+              // Preserve editor feedback so the writer can address it on re-draft.
+              // Note: feedback_packets (human corrections) live in their own DB table
+              // and are NOT deleted by clearArtifactsAfterStage or regressStage,
+              // so they survive this regress-and-retry loop automatically.
+              // Routes reject new feedback submission while auto-advance is active (409).
               const editorFeedback = isWriterStructureSendBack
                 ? buildWriterSendBackReview((result.error ?? '').replace(/^Guard failed:\s*/i, ''))
                 : repo.artifacts.get(articleId, 'editor-review.md');

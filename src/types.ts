@@ -735,6 +735,51 @@ export interface StageInference {
   detail: string;
 }
 
+// ── Artifact editing + feedback ──────────────────────────────────────────────
+
+export type FeedbackPacketStatus = 'pending' | 'consumed' | 'superseded';
+
+export const VALID_FEEDBACK_PACKET_STATUSES: readonly FeedbackPacketStatus[] = [
+  'pending', 'consumed', 'superseded',
+] as const;
+
+export interface ArtifactEditSnapshot {
+  id: number;
+  article_id: string;
+  artifact_name: string;
+  previous_content: string;
+  new_content: string;
+  edited_by: string;
+  edit_source: string;
+  created_at: string;
+}
+
+export interface FeedbackPacket {
+  id: number;
+  article_id: string;
+  target_artifact: string | null;
+  target_stage: number | null;
+  instructions: string;
+  edited_content: string | null;
+  status: FeedbackPacketStatus;
+  created_by: string;
+  consumed_by: string | null;
+  consumed_at: string | null;
+  created_at: string;
+}
+
+/** Names of artifacts that dashboard users may edit directly. */
+export const EDITABLE_ARTIFACT_NAMES: readonly string[] = [
+  'idea.md',
+  'discussion-prompt.md',
+  'panel-composition.md',
+  'discussion-summary.md',
+  'article-contract.md',
+  'draft.md',
+  'editor-review.md',
+  'lead-review.md',
+] as const;
+
 export interface ResolvedModel {
   selected_model: string;
   candidates: string[];

@@ -26,6 +26,7 @@ import {
   resolveDashboardAuthConfig,
 } from '../config/index.js';
 import {
+  EDITABLE_ARTIFACT_NAMES,
   STAGE_NAMES,
   VALID_STAGES,
   resolveEditorialControls,
@@ -2168,7 +2169,88 @@ export function createApp(
       ? repo.artifacts.get(id, name.replace(/\.md$/i, '.thinking.md'))
       : null;
 
-    return c.html(renderArtifactContent(name, content, persistedThinkingContent));
+    return c.html(renderArtifactContent(name, content, persistedThinkingContent, id));
+  });
+
+  // ── htmx: save artifact edit (no rerun) ─────────────────────────────────
+
+  app.post('/htmx/articles/:id/artifact/:name/edit', async (c) => {
+    const id = c.req.param('id');
+    const name = c.req.param('name');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<div class="advance-result advance-error">Article not found</div>', 404);
+
+    if (!(EDITABLE_ARTIFACT_NAMES as readonly string[]).includes(name)) {
+      return c.html('<div class="advance-result advance-error">Artifact is not editable</div>', 400);
+    }
+
+    if (activeAdvances.has(id)) {
+      return c.html('<div class="advance-result advance-error">Cannot edit while auto-advance is running</div>', 409);
+    }
+
+    const body = await c.req.parseBody();
+    const content = body.content as string | undefined;
+    if (!content) {
+      return c.html('<div class="advance-result advance-error">Content is required</div>', 422);
+    }
+
+    const previousContent = repo.artifacts.get(id, name) ?? '';
+    repo.saveArtifactEditSnapshot(id, name, previousContent, content);
+    repo.artifacts.put(id, name, content);
+
+    return c.html('<div class="advance-result advance-success">✅ Artifact saved</div>');
+  });
+
+  // ── htmx: submit feedback packet ───────────────────────────────────────
+
+  app.post('/htmx/articles/:id/feedback', async (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.html('<div class="advance-result advance-error">Article not found</div>', 404);
+
+    if (activeAdvances.has(id)) {
+      return c.html('<div class="advance-result advance-error">Cannot submit feedback while auto-advance is running</div>', 409);
+    }
+
+    const body = await c.req.parseBody();
+    const instructions = ((body.instructions as string) ?? '').trim();
+    if (!instructions) {
+      return c.html('<div class="advance-result advance-error">Instructions are required</div>', 422);
+    }
+
+    const targetArtifact = (body.target_artifact as string) || undefined;
+    const targetStageRaw = body.target_stage as string | undefined;
+    const targetStage = targetStageRaw ? parseInt(targetStageRaw, 10) : undefined;
+    const editedContent = (body.edited_content as string) || undefined;
+
+    if (targetArtifact && !(EDITABLE_ARTIFACT_NAMES as readonly string[]).includes(targetArtifact)) {
+      return c.html(`<div class="advance-result advance-error">Artifact &quot;${escapeHtml(targetArtifact)}&quot; is not editable</div>`, 400);
+    }
+
+    if (editedContent && targetArtifact) {
+      const previousContent = repo.artifacts.get(id, targetArtifact) ?? '';
+      repo.saveArtifactEditSnapshot(id, targetArtifact, previousContent, editedContent);
+      repo.artifacts.put(id, targetArtifact, editedContent);
+    }
+
+    repo.createFeedbackPacket(id, instructions, {
+      targetArtifact,
+      targetStage,
+      editedContent,
+      createdBy: 'human',
+    });
+
+    return c.html('<div class="advance-result advance-success">✅ Feedback submitted</div>');
+  });
+
+  // ── api: pending feedback for article ───────────────────────────────────
+
+  app.get('/api/articles/:id/feedback', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.json({ error: 'Article not found' }, 404);
+
+    return c.json(repo.getPendingFeedback(id));
   });
 
   // ── htmx: usage panel ───────────────────────────────────────────────────

@@ -341,6 +341,48 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_article
     ON artifacts(article_id, name);
 
 -- ─────────────────────────────────────────────
+-- ARTIFACT EDIT HISTORY
+-- Auditable snapshots of human edits to artifacts.
+-- Survives stage regression (no FK to artifacts).
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS artifact_edit_history (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id      TEXT NOT NULL,
+    artifact_name   TEXT NOT NULL,
+    previous_content TEXT NOT NULL DEFAULT '',
+    new_content     TEXT NOT NULL DEFAULT '',
+    edited_by       TEXT NOT NULL DEFAULT 'human',
+    edit_source     TEXT NOT NULL DEFAULT 'dashboard',
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_artifact_edit_history_article
+    ON artifact_edit_history(article_id, artifact_name, created_at DESC);
+
+-- ─────────────────────────────────────────────
+-- FEEDBACK PACKETS
+-- Structured human correction instructions for agent reruns.
+-- Self-contained — no FK to editor_reviews (deleted on regress).
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS feedback_packets (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id      TEXT NOT NULL,
+    target_artifact TEXT,
+    target_stage    INTEGER,
+    instructions    TEXT NOT NULL,
+    edited_content  TEXT,
+    status          TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'consumed', 'superseded')),
+    created_by      TEXT NOT NULL DEFAULT 'human',
+    consumed_by     TEXT,
+    consumed_at     TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_packets_article
+    ON feedback_packets(article_id, status, created_at DESC);
+
+-- ─────────────────────────────────────────────
 -- CONVENIENCE VIEW: Pipeline Board
 -- ─────────────────────────────────────────────
 CREATE VIEW IF NOT EXISTS pipeline_board AS
