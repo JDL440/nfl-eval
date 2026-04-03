@@ -6,8 +6,10 @@ import { join } from 'node:path';
 // ---------------------------------------------------------------------------
 
 export interface ImageGenerationConfig {
-  provider: 'gemini' | 'imagen' | 'stub';
+  provider: 'gemini' | 'azure' | 'imagen' | 'stub';
   apiKey?: string;
+  /** Azure endpoint base URL (e.g. https://nfl-eval.openai.azure.com) */
+  azureEndpoint?: string;
   outputDir: string;
 }
 
@@ -196,7 +198,7 @@ function validateConfig(config: ImageGenerationConfig): void {
   if (!config.outputDir) {
     throw new Error('ImageGenerationConfig.outputDir is required');
   }
-  const validProviders = ['gemini', 'imagen', 'stub'] as const;
+  const validProviders = ['gemini', 'azure', 'imagen', 'stub'] as const;
   if (!validProviders.includes(config.provider)) {
     throw new Error(
       `Invalid provider '${config.provider as string}'. Must be one of: ${validProviders.join(', ')}`,
@@ -299,6 +301,88 @@ export class GeminiImageProvider implements ImageProvider {
   }
 }
 
+/** Azure OpenAI image provider using MAI-Image-2 (or any compatible model). */
+export class AzureImageProvider implements ImageProvider {
+  id = 'azure';
+  private apiKey: string;
+  private endpoint: string;
+  private model: string;
+
+  constructor(apiKey: string, endpoint: string, model = 'MAI-Image-2') {
+    if (!apiKey) throw new Error('AzureImageProvider requires an API key');
+    if (!endpoint) throw new Error('AzureImageProvider requires an endpoint URL');
+    this.apiKey = apiKey;
+    this.endpoint = endpoint.replace(/\/+$/, '');
+    this.model = model;
+  }
+
+  private azureSize(ar?: string): string {
+    if (ar === '1:1') return '1024x1024';
+    if (ar === '4:3') return '1024x1024';
+    // 16:9 — Azure supports 1792x1024 for landscape
+    return '1792x1024';
+  }
+
+  async generate(prompt: ImagePrompt, outputPath: string): Promise<ImageResult> {
+    const dims = ASPECT_DIMENSIONS[prompt.aspectRatio ?? '16:9'];
+    const promptText = buildPromptText(prompt);
+    const size = this.azureSize(prompt.aspectRatio);
+
+    const url = `${this.endpoint}/openai/v1/images/generations`;
+    const body = {
+      prompt: promptText,
+      size,
+      n: 1,
+      model: this.model,
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Azure Image API error ${res.status}: ${text}`);
+    }
+
+    const json = (await res.json()) as {
+      data?: { b64_json?: string; url?: string }[];
+    };
+
+    const imgData = json.data?.[0];
+    if (!imgData) {
+      throw new Error('Azure Image API returned no image data');
+    }
+
+    let buf: Buffer;
+    if (imgData.b64_json) {
+      buf = Buffer.from(imgData.b64_json, 'base64');
+    } else if (imgData.url) {
+      const dlRes = await fetch(imgData.url);
+      if (!dlRes.ok) throw new Error(`Failed to download Azure image: ${dlRes.status}`);
+      buf = Buffer.from(await dlRes.arrayBuffer());
+    } else {
+      throw new Error('Azure Image API returned neither b64_json nor url');
+    }
+
+    ensureDir(join(outputPath, '..'));
+    writeFileSync(outputPath, buf);
+
+    return {
+      path: outputPath,
+      width: dims.width,
+      height: dims.height,
+      prompt: promptText,
+      provider: this.id,
+    };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -320,6 +404,15 @@ export class ImageService {
           throw new Error("Provider 'gemini' requires config.apiKey (GEMINI_API_KEY)");
         }
         this.provider = new GeminiImageProvider(config.apiKey);
+        break;
+      case 'azure':
+        if (!config.apiKey) {
+          throw new Error("Provider 'azure' requires config.apiKey (AZURE_IMAGE_API_KEY)");
+        }
+        if (!config.azureEndpoint) {
+          throw new Error("Provider 'azure' requires config.azureEndpoint (AZURE_IMAGE_ENDPOINT)");
+        }
+        this.provider = new AzureImageProvider(config.apiKey, config.azureEndpoint);
         break;
       case 'imagen':
         // Imagen provider not yet implemented — fall through to error

@@ -102,6 +102,7 @@ export interface ResolvedImageConfig {
   provider: string;
   defaultEnabled: boolean;
   geminiKeyConfigured: boolean;
+  azureKeyConfigured: boolean;
 }
 
 export interface ResolvedUiPreferences {

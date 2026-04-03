@@ -180,13 +180,17 @@ export class SettingsResolver {
 
   // ── Image Config ──
   resolveImageConfig(): ResolvedImageConfig {
-    const provider = (this.ws('images', 'provider') as string) ?? 'gemini';
+    const provider = (this.ws('images', 'provider') as string) ?? 'azure';
     const defaultEnabled = (this.ws('images', 'default_enabled') as boolean) ?? true;
     const geminiKeyConfigured = Boolean(
       this.tryDecryptSecret('workspace', null, 'images', 'gemini_api_key')
       ?? process.env['GEMINI_API_KEY']?.trim()
     );
-    return { provider, defaultEnabled, geminiKeyConfigured };
+    const azureKeyConfigured = Boolean(
+      this.tryDecryptSecret('workspace', null, 'images', 'azure_api_key')
+      ?? process.env['AZURE_IMAGE_API_KEY']?.trim()
+    );
+    return { provider, defaultEnabled, geminiKeyConfigured, azureKeyConfigured };
   }
 
   // ── UI Preferences ──
@@ -240,6 +244,7 @@ export class SettingsResolver {
     const img = this.resolveImageConfig();
     add('images.provider', img.provider, 'workspace');
     add('images.gemini_key', img.geminiKeyConfigured ? 'configured' : null, img.geminiKeyConfigured ? 'workspace' : 'env', true);
+    add('images.azure_key', img.azureKeyConfigured ? 'configured' : null, img.azureKeyConfigured ? 'workspace' : 'env', true);
 
     // Auth
     const auth = this.resolveDashboardAuth();
@@ -254,7 +259,7 @@ export class SettingsResolver {
     const serviceReadiness: Record<string, { ready: boolean; detail: string }> = {
       'substack': { ready: pub.substackTokenConfigured && Boolean(pub.substackPublicationUrl), detail: pub.substackTokenConfigured ? 'Configured' : 'Token missing' },
       'twitter': { ready: pub.twitterCredentialsConfigured, detail: pub.twitterCredentialsConfigured ? 'Configured' : 'Credentials missing' },
-      'images': { ready: img.geminiKeyConfigured, detail: img.geminiKeyConfigured ? 'Gemini configured' : 'Gemini key missing' },
+      'images': { ready: img.azureKeyConfigured || img.geminiKeyConfigured, detail: img.azureKeyConfigured ? 'Azure configured' : img.geminiKeyConfigured ? 'Gemini configured' : 'No image API key' },
     };
 
     return { entries, serviceReadiness };

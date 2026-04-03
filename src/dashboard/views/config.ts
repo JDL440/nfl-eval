@@ -111,6 +111,7 @@ export interface ConfigPageData {
     provider: string;
     defaultEnabled: boolean;
     geminiKeyConfigured: boolean;
+    azureKeyConfigured: boolean;
   };
   // Access
   dashboardAuth: {
@@ -747,6 +748,7 @@ function renderImagesTab(data: ConfigPageData): string {
         <div class="form-group">
           <label for="img-provider">Provider</label>
           <select id="img-provider" name="provider">
+            <option value="azure"${optionSelected(images.provider, 'azure')}>Azure (MAI-Image-2)</option>
             <option value="gemini"${optionSelected(images.provider, 'gemini')}>Gemini</option>
           </select>
         </div>
@@ -761,19 +763,25 @@ function renderImagesTab(data: ConfigPageData): string {
     </section>
 
     <section class="detail-section settings-panel">
-      <h2>API Key</h2>
+      <h2>API Keys</h2>
       <dl class="settings-kv">
+        <div><dt>Azure Image API Key</dt><dd>${secretStatusHtml(images.azureKeyConfigured)}</dd></div>
         <div><dt>Gemini API Key</dt><dd>${secretStatusHtml(images.geminiKeyConfigured)}</dd></div>
       </dl>
       <form class="settings-form" hx-post="/api/settings/secrets" hx-target="#images-secrets-result" hx-swap="innerHTML">
         <input type="hidden" name="group" value="images">
+        <div class="form-group">
+          <label for="secret-azure-key">Azure Image API Key</label>
+          <input type="password" id="secret-azure-key" name="azureApiKey" placeholder="Paste new key to update">
+          <p class="form-hint">Write-only. Leave blank to keep current value.</p>
+        </div>
         <div class="form-group">
           <label for="secret-gemini-key">Gemini API Key</label>
           <input type="password" id="secret-gemini-key" name="geminiApiKey" placeholder="Paste new key to update">
           <p class="form-hint">Write-only. Leave blank to keep current value.</p>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Update Key</button>
+          <button type="submit" class="btn btn-primary">Update Keys</button>
         </div>
       </form>
       <div id="images-secrets-result" class="settings-result"></div>

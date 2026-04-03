@@ -2894,7 +2894,7 @@ export function createApp(
       return c.html(renderAdvanceResult(false, 'Draft must exist first (Stage 5+)'), 422);
     }
     if (!imageService) {
-      return c.html(renderAdvanceResult(false, 'Image service not configured \u2014 set GEMINI_API_KEY'), 500);
+      return c.html(renderAdvanceResult(false, 'Image service not configured — set AZURE_IMAGE_API_KEY or GEMINI_API_KEY'), 500);
     }
 
     try {
@@ -3568,17 +3568,30 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Agent runner not available — auto-advance will use lightweight mode: ${err instanceof Error ? err.message : err}`);
   }
 
-  // Build ImageService (Gemini if key available, otherwise stub)
+  // Build ImageService — prefer Azure if configured, then Gemini, then stub
   let imageService: ImageService | undefined;
   try {
+    const azureKey = process.env['AZURE_IMAGE_API_KEY'];
+    const azureEndpoint = process.env['AZURE_IMAGE_ENDPOINT'];
     const geminiKey = process.env['GEMINI_API_KEY'];
-    const provider = geminiKey ? 'gemini' : 'stub';
-    if (!geminiKey) {
-      console.log('GEMINI_API_KEY not set — using stub image provider (placeholder PNGs)');
+
+    let provider: 'azure' | 'gemini' | 'stub';
+    let apiKey: string | undefined;
+    if (azureKey && azureEndpoint) {
+      provider = 'azure';
+      apiKey = azureKey;
+    } else if (geminiKey) {
+      provider = 'gemini';
+      apiKey = geminiKey;
+    } else {
+      provider = 'stub';
+      console.log('No image API key set (AZURE_IMAGE_API_KEY / GEMINI_API_KEY) — using stub provider');
     }
+
     imageService = new ImageService({
       provider,
-      apiKey: geminiKey,
+      apiKey,
+      azureEndpoint,
       outputDir: config.imagesDir,
     });
     console.log(`Image service initialized (provider: ${provider})`);
