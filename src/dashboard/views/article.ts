@@ -10,7 +10,7 @@ import {
   STAGE_NAMES,
   formatPresetLabel,
 } from '../../types.js';
-import type { Article, Stage, EditorReview, UsageEvent } from '../../types.js';
+import type { Article, Stage, EditorReview, UsageEvent, ArtifactEditSnapshot, FeedbackPacket } from '../../types.js';
 import type { AppConfig } from '../../config/index.js';
 import type { AdvanceCheck } from '../../pipeline/engine.js';
 import { parseRevisionBlockerMetadata, type RevisionHistoryEntry } from '../../pipeline/conversation.js';
@@ -56,6 +56,8 @@ export interface ArticleDetailData {
   flashMessage?: string;
   errorMessage?: string;
   isAdvancing?: boolean;
+  editHistory?: ArtifactEditSnapshot[];
+  feedbackPackets?: FeedbackPacket[];
 }
 
 function parseTeams(raw: string | null): string[] {
@@ -252,7 +254,7 @@ export function renderArticleMetaEditForm(article: Article): string {
 }
 
 export function renderArticleDetail(data: ArticleDetailData): string {
-  const { config, article, reviews, revisionHistory, advanceCheck, usageEvents, artifactNames, flashMessage, errorMessage, isAdvancing } = data;
+  const { config, article, reviews, revisionHistory, advanceCheck, usageEvents, artifactNames, flashMessage, errorMessage, isAdvancing, editHistory, feedbackPackets } = data;
 
   let flashBanner = '';
   if (flashMessage) {
@@ -291,6 +293,7 @@ export function renderArticleDetail(data: ArticleDetailData): string {
           </div>
           ${(revisionHistory?.length ?? 0) === 0 && reviews.length > 0 ? renderEditorReviews(reviews) : ''}
           ${renderUsagePanel(usageEvents ?? [])}
+          ${(editHistory?.length || feedbackPackets?.length) ? renderAuditTrail(editHistory ?? [], feedbackPackets ?? []) : ''}
         </div>
       </div>
     </div>
@@ -1141,6 +1144,79 @@ export function renderUsagePanel(events: UsageEvent[]): string {
       ${modelRows ? `<div class="usage-breakdown"><h3>By Model</h3>${modelRows}</div>` : ''}
       ${providerRows ? `<div class="usage-breakdown"><h3>By Provider</h3>${providerRows}</div>` : ''}
       ${stageRows ? `<div class="usage-breakdown"><h3>By Stage</h3>${stageRows}</div>` : ''}
+    </section>`;
+}
+
+// ── Audit Trail ─────────────────────────────────────────────────────────────
+
+export function renderAuditTrail(
+  editHistory: ArtifactEditSnapshot[],
+  feedbackPackets: FeedbackPacket[],
+): string {
+  const editCount = editHistory.length;
+  const feedbackCount = feedbackPackets.length;
+
+  const statusBadge = (status: string): string => {
+    switch (status) {
+      case 'pending':    return '<span class="verdict-badge" style="background:#f59e0b22;color:#b45309">🟡 pending</span>';
+      case 'consumed':   return '<span class="verdict-badge" style="background:#10b98122;color:#047857">✅ consumed</span>';
+      case 'superseded': return '<span class="verdict-badge" style="background:#6b728022;color:#4b5563">⏭️ superseded</span>';
+      default:           return `<span class="verdict-badge">${escapeHtml(status)}</span>`;
+    }
+  };
+
+  const feedbackCards = feedbackPackets.map(p => `
+    <div class="review-card" style="margin-bottom:0.5rem">
+      <div class="review-header">
+        ${statusBadge(p.status)}
+        ${p.target_artifact ? `<span class="stat stat-note">${escapeHtml(p.target_artifact)}</span>` : ''}
+        <span class="meta-date">${escapeHtml(formatDate(p.created_at))}</span>
+      </div>
+      <p style="margin:0.4rem 0">${escapeHtml(p.instructions)}</p>
+      ${p.consumed_by ? `<div class="review-stats"><span class="stat stat-note">Consumed by ${escapeHtml(p.consumed_by)}${p.consumed_at ? ` on ${escapeHtml(formatDate(p.consumed_at))}` : ''}</span></div>` : ''}
+      ${p.created_by ? `<div class="review-stats"><span class="stat stat-note">Created by ${escapeHtml(p.created_by)}</span></div>` : ''}
+    </div>
+  `).join('');
+
+  const truncate = (text: string, max: number): string =>
+    text.length > max ? text.slice(0, max) + '…' : text;
+
+  const editRows = editHistory.map(e => `
+    <details class="review-card" style="margin-bottom:0.5rem">
+      <summary class="review-header" style="cursor:pointer;list-style:none">
+        <span class="stat stat-note">${escapeHtml(e.artifact_name)}</span>
+        <span class="meta-date">${escapeHtml(formatDate(e.created_at))}</span>
+        <span class="stat stat-note">${escapeHtml(e.edited_by)}</span>
+        ${e.edit_source ? `<span class="stat stat-note">${escapeHtml(e.edit_source)}</span>` : ''}
+      </summary>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;font-size:0.82rem">
+        <div>
+          <strong>Previous</strong>
+          <pre style="white-space:pre-wrap;background:var(--color-bg);padding:0.5rem;border-radius:4px;max-height:10rem;overflow:auto">${escapeHtml(truncate(e.previous_content || '(empty)', 200))}</pre>
+        </div>
+        <div>
+          <strong>New</strong>
+          <pre style="white-space:pre-wrap;background:var(--color-bg);padding:0.5rem;border-radius:4px;max-height:10rem;overflow:auto">${escapeHtml(truncate(e.new_content || '(empty)', 200))}</pre>
+        </div>
+      </div>
+    </details>
+  `).join('');
+
+  return `
+    <section class="detail-section">
+      <h2>📋 Audit Trail <span class="stat stat-note">(${editCount} edit${editCount !== 1 ? 's' : ''}, ${feedbackCount} feedback packet${feedbackCount !== 1 ? 's' : ''})</span></h2>
+      ${feedbackCount > 0 ? `
+        <details open>
+          <summary style="cursor:pointer;font-weight:600;margin-bottom:0.5rem">Feedback Packets (${feedbackCount})</summary>
+          <div class="review-list">${feedbackCards}</div>
+        </details>
+      ` : ''}
+      ${editCount > 0 ? `
+        <details${feedbackCount === 0 ? ' open' : ''}>
+          <summary style="cursor:pointer;font-weight:600;margin-bottom:0.5rem">Edit History (${editCount})</summary>
+          <div class="review-list">${editRows}</div>
+        </details>
+      ` : ''}
     </section>`;
 }
 

@@ -56,6 +56,7 @@ import {
   renderArticleMetaEditForm,
   renderLiveHeader,
   renderLiveArtifacts,
+  renderAuditTrail,
   ARTIFACT_FILES,
   OPTIONAL_ARTIFACT_FILES,
 } from './views/article.js';
@@ -876,6 +877,8 @@ export function createApp(
         flashMessage,
         errorMessage,
         isAdvancing: activeAdvances.has(id),
+        editHistory: repo.getArticleEditHistory(id, 50),
+        feedbackPackets: repo.getAllFeedback(id, 50),
       }),
     );
   });
@@ -2251,6 +2254,18 @@ export function createApp(
     if (!article) return c.json({ error: 'Article not found' }, 404);
 
     return c.json(repo.getPendingFeedback(id));
+  });
+
+  // ── htmx: audit trail panel ─────────────────────────────────────────────
+  app.get('/htmx/articles/:id/audit-trail', (c) => {
+    const id = c.req.param('id');
+    const article = repo.getArticle(id);
+    if (!article) return c.notFound();
+
+    const editHistory = repo.getArticleEditHistory(id, 50);
+    const feedbackPackets = repo.getAllFeedback(id, 50);
+
+    return c.html(renderAuditTrail(editHistory, feedbackPackets));
   });
 
   // ── htmx: usage panel ───────────────────────────────────────────────────

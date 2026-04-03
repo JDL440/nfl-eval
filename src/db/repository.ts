@@ -2833,6 +2833,15 @@ export class Repository {
     ).all(articleId) as unknown as FeedbackPacket[];
   }
 
+  /** Get all feedback packets for an article (any status, newest first). */
+  getAllFeedback(articleId: string, limit = 50): FeedbackPacket[] {
+    return this.db.prepare(
+      `SELECT * FROM feedback_packets
+       WHERE article_id = ?
+       ORDER BY created_at DESC LIMIT ?`,
+    ).all(articleId, limit) as unknown as FeedbackPacket[];
+  }
+
   /** Get a single feedback packet by ID. */
   getFeedbackPacket(packetId: number): FeedbackPacket | null {
     const row = this.db.prepare('SELECT * FROM feedback_packets WHERE id = ?').get(packetId);

@@ -1989,7 +1989,13 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
     const article = ctx.repo.getArticle(articleId);
     if (!article) throw new Error(`Article '${articleId}' not found`);
 
-    const content = gatherContext(ctx.repo, articleId, 'runPublisherPass', ctx.config);
+    let content = gatherContext(ctx.repo, articleId, 'runPublisherPass', ctx.config);
+
+    // Inject any pending human feedback packets
+    const { feedbackContext, packetIds: feedbackPacketIds } = buildHumanFeedbackContext(ctx.repo, articleId);
+    if (feedbackContext) {
+      content = content + '\n\n' + feedbackContext;
+    }
 
     // Inject roster context for publisher agent
     const rosterCtx = article.primary_team
@@ -2042,6 +2048,11 @@ async function runPublisherPass(articleId: string, ctx: ActionContext): Promise<
 
     writeAgentResult(ctx.repo, articleId, 'publisher-pass.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runPublisherPass', result);
+
+    // Mark human feedback as consumed
+    for (const pktId of feedbackPacketIds) {
+      ctx.repo.markFeedbackConsumed(pktId, 'publisher');
+    }
 
     // Record publisher output as a conversation turn
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'publisher', 'assistant', result.content);
