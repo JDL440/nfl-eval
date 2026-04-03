@@ -6,6 +6,7 @@ import {
   ImageService,
   StubImageProvider,
   GeminiImageProvider,
+  extractArticleSummary,
   type ImageGenerationConfig,
   type ImagePrompt,
 } from '../../src/services/image.js';
@@ -312,5 +313,100 @@ describe('ImageService', () => {
 
     expect(result.cover).toBeUndefined();
     expect(result.inline).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractArticleSummary tests
+// ---------------------------------------------------------------------------
+
+describe('extractArticleSummary', () => {
+  it('extracts body prose after the title heading', () => {
+    const draft = [
+      '# The Big Game Recap',
+      '',
+      '*A thrilling Sunday in the NFL*',
+      '',
+      'The Kansas City Chiefs dominated the first half with a relentless ground game.',
+      'Patrick Mahomes connected on 22 of 28 passes for 310 yards.',
+    ].join('\n');
+
+    const summary = extractArticleSummary(draft);
+    expect(summary).toContain('Kansas City Chiefs');
+    expect(summary).toContain('Patrick Mahomes');
+    // Should NOT include the subtitle (italic line)
+    expect(summary).not.toContain('thrilling Sunday');
+  });
+
+  it('skips editorial preamble before the heading', () => {
+    const draft = [
+      '**Preflight complete.** Three 🔴 contradicted claims from `panel-factcheck.md` are scrubbed.',
+      'DEN pick origin fixed. SF volume narrative preserved.',
+      '',
+      '# The No-Net Draft: Four Teams, One Thursday',
+      '',
+      'Houston enters the 2026 draft with legitimate needs at cornerback and edge rusher.',
+    ].join('\n');
+
+    const summary = extractArticleSummary(draft);
+    expect(summary).toContain('Houston');
+    expect(summary).not.toContain('Preflight');
+    expect(summary).not.toContain('contradicted');
+  });
+
+  it('skips emoji-prefixed editorial lines', () => {
+    const draft = [
+      '🔴 Wrong team cited for pick',
+      '⚠️ Cap figure needs attribution',
+      '✅ All player names verified',
+      '',
+      '# Draft Day Decisions',
+      '',
+      'Three teams face pivotal choices in the first round.',
+    ].join('\n');
+
+    const summary = extractArticleSummary(draft);
+    expect(summary).toContain('Three teams');
+    expect(summary).not.toContain('Wrong team');
+    expect(summary).not.toContain('Cap figure');
+  });
+
+  it('falls back to title when no body prose found', () => {
+    const draft = '# The Big Game Recap\n\n---\n\n';
+    const summary = extractArticleSummary(draft);
+    expect(summary).toBe('The Big Game Recap');
+  });
+
+  it('handles drafts with no heading by stripping noise', () => {
+    const draft = [
+      '**Preflight complete.** All checks passed.',
+      'The Cowboys secured a dominant victory on Monday Night Football.',
+    ].join('\n');
+
+    const summary = extractArticleSummary(draft);
+    expect(summary).toContain('Cowboys');
+    expect(summary).not.toContain('Preflight');
+  });
+
+  it('respects maxLen parameter', () => {
+    const draft = '# Title\n\n' + 'A'.repeat(1000);
+    const summary = extractArticleSummary(draft, 100);
+    expect(summary.length).toBeLessThanOrEqual(100);
+  });
+
+  it('skips sub-headings and horizontal rules', () => {
+    const draft = [
+      '# Main Title',
+      '',
+      '## Section One',
+      '',
+      '---',
+      '',
+      'The actual content starts here with real analysis.',
+    ].join('\n');
+
+    const summary = extractArticleSummary(draft);
+    expect(summary).toContain('actual content');
+    expect(summary).not.toContain('Section One');
   });
 });

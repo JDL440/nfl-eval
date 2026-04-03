@@ -61,7 +61,7 @@ import {
   OPTIONAL_ARTIFACT_FILES,
 } from './views/article.js';
 import type { ArtifactName } from './views/article.js';
-import { ImageService } from '../services/image.js';
+import { ImageService, extractArticleSummary } from '../services/image.js';
 import type { ImageGenerationConfig, ImageResult } from '../services/image.js';
 import { estimateImageCost, estimateCost } from '../llm/pricing.js';
 import { escapeHtml } from './views/layout.js';
@@ -353,7 +353,7 @@ export function createApp(
     if (!art || art.current_stage < 5) return;
     try {
       const rawDraft = repo.artifacts.get(articleId, 'draft.md');
-      const summary = rawDraft ? separateThinking(rawDraft).output.slice(0, 500) : '';
+      const summary = rawDraft ? extractArticleSummary(separateThinking(rawDraft).output) : '';
       const team = art.primary_team ?? undefined;
       const results = await imageService.generateArticleImages(articleId, {
         cover: { description: art.title, imageType: 'cover', articleTitle: art.title, articleSummary: summary, team, aspectRatio: '16:9' },
@@ -2819,7 +2819,7 @@ export function createApp(
 
     try {
       const draft = repo.artifacts.get(id, 'draft.md');
-      const summary = draft?.slice(0, 500) ?? '';
+      const summary = draft ? extractArticleSummary(separateThinking(draft).output) : '';
       const team = article.primary_team ?? undefined;
 
       const results = await imageService.generateArticleImages(id, {
@@ -2900,7 +2900,7 @@ export function createApp(
     try {
       // Call imageService directly (NOT autoGenerateImages) so errors propagate to the user
       const rawDraft2 = repo.artifacts.get(id, 'draft.md');
-      const summary = rawDraft2 ? separateThinking(rawDraft2).output.slice(0, 500) : '';
+      const summary = rawDraft2 ? extractArticleSummary(separateThinking(rawDraft2).output) : '';
       const team = article.primary_team ?? undefined;
       const results = await imageService.generateArticleImages(id, {
         cover: { description: article.title, imageType: 'cover', articleTitle: article.title, articleSummary: summary, team, aspectRatio: '16:9' },

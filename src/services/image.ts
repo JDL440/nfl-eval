@@ -74,6 +74,66 @@ const STYLE_GUIDE = [
   'No oversaturation, no neon glow, no fantasy lighting.',
 ].join(' ');
 
+/**
+ * Extract a clean article summary from raw draft markdown, skipping any
+ * editorial preamble the LLM may have included (preflight notes, revision
+ * commentary, meta-instructions, etc.).
+ *
+ * Strategy: find the first `# ` heading (the article title), then grab the
+ * first real prose paragraph after it. Falls back to the title itself if
+ * no body paragraph is found.
+ */
+export function extractArticleSummary(raw: string, maxLen = 500): string {
+  // Find the first markdown H1 heading — that's the article title
+  const titleMatch = raw.match(/^# +(.+)$/m);
+  if (!titleMatch) {
+    // No heading found — strip obvious editorial noise and take what's left
+    return stripEditorialNoise(raw).slice(0, maxLen).trim();
+  }
+
+  // Everything after the title line
+  const afterTitle = raw.slice(raw.indexOf(titleMatch[0]) + titleMatch[0].length);
+
+  // Collect non-empty, non-heading, non-editorial lines as "body" prose
+  const lines = afterTitle.split('\n');
+  const proseLines: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Skip sub-headings, TLDR bullets, horizontal rules, images, bold-only labels
+    if (/^#{1,6} /.test(trimmed)) continue;
+    if (/^(-{3,}|\*{3,})$/.test(trimmed)) continue;
+    if (/^!\[/.test(trimmed)) continue;
+    // Skip lines that look like editorial/meta (emoji markers, bold-only preamble, pipeline jargon)
+    if (/^\*\*(Preflight|Editor|Revision|Summary|Note|Warning|Context|Status)/i.test(trimmed)) continue;
+    if (/^(🔴|🟡|🟢|⚠️|✅|❌)/.test(trimmed)) continue;
+    // Skip subtitle (italic line immediately after title)
+    if (/^\*[^*]+\*$/.test(trimmed) && proseLines.length === 0) continue;
+
+    proseLines.push(trimmed);
+    if (proseLines.join(' ').length >= maxLen) break;
+  }
+
+  const body = proseLines.join(' ').slice(0, maxLen).trim();
+  return body || titleMatch[1].trim().slice(0, maxLen);
+}
+
+/** Strip obvious editorial noise patterns from text when no heading is found. */
+function stripEditorialNoise(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return false;
+      if (/^\*\*(Preflight|Editor|Revision|Note|Warning|Status)/i.test(t)) return false;
+      if (/^(🔴|🟡|🟢|⚠️|✅|❌)/.test(t)) return false;
+      if (/^```/.test(t)) return false;
+      return true;
+    })
+    .join(' ')
+    .trim();
+}
+
 function buildPromptText(prompt: ImagePrompt): string {
   // Fully custom prompt bypasses all template logic
   if (prompt.customPrompt) return prompt.customPrompt;
