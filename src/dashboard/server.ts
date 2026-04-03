@@ -3568,16 +3568,27 @@ export async function startServer(overrides?: Partial<AppConfig>): Promise<void>
     console.log(`Agent runner not available — auto-advance will use lightweight mode: ${err instanceof Error ? err.message : err}`);
   }
 
-  // Build ImageService — prefer Azure if configured, then Gemini, then stub
+  // Build ImageService — use workspace setting if saved, else auto-detect from env
   let imageService: ImageService | undefined;
   try {
     const azureKey = process.env['AZURE_IMAGE_API_KEY'];
     const azureEndpoint = process.env['AZURE_IMAGE_ENDPOINT'];
     const geminiKey = process.env['GEMINI_API_KEY'];
 
+    const resolver = new SettingsResolver(repo, config);
+    const imgConfig = resolver.resolveImageConfig();
+    const preferred = imgConfig.provider as string;
+
     let provider: 'azure' | 'gemini' | 'stub';
     let apiKey: string | undefined;
-    if (azureKey && azureEndpoint) {
+
+    if (preferred === 'azure' && azureKey && azureEndpoint) {
+      provider = 'azure';
+      apiKey = azureKey;
+    } else if (preferred === 'gemini' && geminiKey) {
+      provider = 'gemini';
+      apiKey = geminiKey;
+    } else if (azureKey && azureEndpoint) {
       provider = 'azure';
       apiKey = azureKey;
     } else if (geminiKey) {
