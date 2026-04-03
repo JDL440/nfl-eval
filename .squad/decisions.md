@@ -1,14 +1,6 @@
----
-title: Seattle duplicate-angle audit seam
-owner: Data
-date: 2026-04-03
----
-
-- Current app code does not implement an explicit “recent related articles” or duplicate-angle lookup.
-- The operational seam today is: runtime SQLite history first, then `Repository.listArticles()` team/title filters plus repo `content/articles/**` recency review.
-- For Seattle, the recent repo artifact cluster is already heavy on three lanes: Puka-vs-Seattle structural weakness, Emmanwori/chess-piece validation, and RB pick-64 roster-allocation debate. A Tuesday casual prompt should avoid rephrasing those same explanatory takes.
-
 # Active Decisions
+
+- **Data: Seattle duplicate-angle audit seam** (2026-04-03): Current app code does not implement an explicit "recent related articles" or duplicate-angle lookup. The operational seam today is: runtime SQLite history first, then `Repository.listArticles()` team/title filters plus repo `content/articles/**` recency review. For Seattle, the recent repo artifact cluster is already heavy on three lanes: Puka-vs-Seattle structural weakness, Emmanwori/chess-piece validation, and RB pick-64 roster-allocation debate. A Tuesday casual prompt should avoid rephrasing those same explanatory takes.
 
 - **Data: Repo-only history audit rule** (2026-04-03): For repo-only article-history audits, treat `content/articles/**` plus config/runtime path code as primary evidence when `content/pipeline.db` is empty; do not claim live article rows from the repo DB copy. This repo can carry a zero-byte placeholder DB while the app is configured to use `~/.nfl-lab/pipeline.db` at runtime, so duplicate-angle analysis inside the repo must be grounded in checked-in artifacts and code contracts.
 

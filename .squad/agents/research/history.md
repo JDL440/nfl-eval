@@ -11,6 +11,12 @@
 
 **Architectural patterns & team decisions:** LM Studio uses app-managed JSON tool-loop (no native tool API support in OpenAI-compat layer); Gemini moved to native structured tool calling with opaque `providerState` continuation. Depth redesign identified as UI+validation refinement of already-correct architecture: new preset fields (reader_profile, article_form, panel_shape, analytics_mode) already exist in types.ts and are persisted; migration strategy is additive-first (keep depth_level as compatibility alias, backfill new fields, refactor runtime in sequence: model-policy → panel-size → compose-panel → prompt). Key research outputs are captured in decisions.md; no blocking technical debt for redesign.
 
+## Core Context (Updated 2026-04-03)
+
+- LM Studio remains app-managed JSON tool-loop only; canonical sources are src/llm/providers/lmstudio.ts, src/agents/runner.ts, and src/agents/local-tools.ts.
+- Repo-only Seahawks history audits should prefer content/articles/** plus runtime path contracts when content/pipeline.db is a zero-byte placeholder.
+- Tuesday casual prompts should avoid reusing the recent Seattle clusters: Puka-vs-Seattle structural weakness, extension economics, and RB-at-64.
+
 ## 2026-03-28: LM Studio Tool-Use Behavior Audit
 
 ### Request
@@ -391,3 +397,9 @@ Three new tables:
 - Runtime refactor sequence: model-policy → panel-size → compose-panel → prompt before removal
 - Execution rules documented with non-negotiable compatibility expectations
 - Decision: Migration strategy established; ready for staged implementation planning
+
+
+## Cross-Agent Context Updates (2026-04-03T07:24:06Z)
+
+### From Orchestration (Scribe)
+**Tuesday Seahawks prompt support:** Keep new-idea prompt work anchored to the canonical idea-generation stack and preserve the repo-only history audit guardrail that relies on content/articles/** when content/pipeline.db is empty.

@@ -51,3 +51,8 @@
 - **NSSM Configuration:** For NSSM service setup, set environment variable: \NFL_SCRIPTS_DIR=C:\github\nfl-eval\content\data\
 - **Validation:** Build passes, 144 tests pass, no regressions
 - **Commit:** 78e646c5
+
+## Cross-Agent Context Updates (2026-04-03T07:24:06Z)
+
+### From Orchestration (Scribe)
+**Tuesday schedule surface:** /schedules and /config?tab=schedules remain the schedule-entry surfaces; rticle_schedules.prompt is the prompt source of truth and rticle_schedule_runs.discovery_json / selected_story_json capture per-run history.
