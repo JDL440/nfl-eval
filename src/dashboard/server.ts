@@ -1181,6 +1181,12 @@ export function createApp(
 
     const activeTab = (c.req.query('tab') as string) || 'overview';
 
+    // Live provider list (same source as new-idea page)
+    const runner = deps?.actionContext?.runner;
+    const llmProviders = runner
+      ? runner.gateway.listProviders().map((p) => ({ id: p.id, name: p.name ?? p.id }))
+      : [];
+
     return c.html(renderConfigPage({
       labName: config.leagueConfig.name,
       league: config.league,
@@ -1207,6 +1213,7 @@ export function createApp(
         enabled: p.enabled,
         config: p.config as Record<string, unknown>,
       })),
+      llmProviders,
       articleSchedules: articleSchedules.map((schedule) => ({
         ...schedule,
       })),
@@ -1302,6 +1309,12 @@ export function createApp(
     }
     return mode;
   };
+  /** Parse max_advance_stage from form value; returns fallback on missing/NaN. */
+  const safeParseStage = (value: unknown, fallback: number): number => {
+    if (value === undefined || value === null || value === '') return fallback;
+    const n = parseInt(String(value), 10);
+    return isNaN(n) ? fallback : Math.max(1, Math.min(7, n));
+  };
   const normalizeContentProfile = (value: unknown): 'accessible' | 'deep_dive' => {
     const profile = String(value ?? '').trim();
     if (profile !== 'accessible' && profile !== 'deep_dive') {
@@ -1337,7 +1350,7 @@ export function createApp(
         panel_constraints_json: editorial.panel_constraints_json,
         provider_mode: normalizeScheduleProviderMode(body['providerMode']),
         provider_id: String(body['providerId'] ?? '').trim() || null,
-        max_advance_stage: parseInt(String(body['maxAdvanceStage'] ?? '7'), 10) || 7,
+        max_advance_stage: safeParseStage(body['maxAdvanceStage'], 7),
         enabled: body['enabled'] === 'true' || body['enabled'] === '1' || body['enabled'] === 'on',
         next_run_at: buildInitialNextRunAt({
           weekday_utc: normalizeScheduleWeekday(body['weekdayUtc']),
@@ -1389,7 +1402,7 @@ export function createApp(
         panel_constraints_json: editorial.panel_constraints_json,
         provider_mode: normalizeScheduleProviderMode(body['providerMode']),
         provider_id: String(body['providerId'] ?? '').trim() || null,
-        max_advance_stage: parseInt(String(body['maxAdvanceStage'] ?? String(before.max_advance_stage)), 10) || 7,
+        max_advance_stage: safeParseStage(body['maxAdvanceStage'], before.max_advance_stage),
         ...(weekdayUtc !== before.weekday_utc || timeOfDayUtc !== before.time_of_day_utc
           ? {
             next_run_at: buildInitialNextRunAt({
@@ -3089,7 +3102,7 @@ export function createApp(
     const providerVal = (body.provider as string ?? 'default').trim();
     const provider_mode = providerVal === 'default' ? 'default' as const : 'override' as const;
     const provider_id = provider_mode === 'override' ? providerVal : null;
-    const max_advance_stage = parseInt(body.max_advance_stage as string ?? '7', 10) || 7;
+    const max_advance_stage = safeParseStage(body.max_advance_stage, 7);
 
     if (!name || !team_abbr || !prompt) {
       return c.redirect('/schedules?error=missing+fields');
@@ -3159,7 +3172,7 @@ export function createApp(
     const providerVal = (body.provider as string ?? 'default').trim();
     const provider_mode = providerVal === 'default' ? 'default' as const : 'override' as const;
     const provider_id = provider_mode === 'override' ? providerVal : null;
-    const max_advance_stage = parseInt(body.max_advance_stage as string ?? String(schedule.max_advance_stage), 10) || 7;
+    const max_advance_stage = safeParseStage(body.max_advance_stage, schedule.max_advance_stage);
 
     // Recompute next_run_at when schedule time changes
     const scheduleTimeChanged =

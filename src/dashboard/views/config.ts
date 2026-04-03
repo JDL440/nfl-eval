@@ -68,6 +68,8 @@ export interface ConfigPageData {
     enabled: boolean;
     config: Record<string, unknown>;
   }>;
+  /** Live gateway providers (same source as new-idea page). */
+  llmProviders: Array<{ id: string; name: string }>;
   articleSchedules: Array<{
     id: string;
     name: string;
@@ -388,12 +390,14 @@ function renderSchedulesTab(data: ConfigPageData): string {
     { value: 5, label: 'Friday' },
     { value: 6, label: 'Saturday' },
   ];
-  const providerOptions = data.providerProfiles
-    .filter((profile) => profile.enabled)
-    .map((profile) => ({
-      id: profile.providerId,
-      label: profile.isDefault ? `${profile.label} (${profile.providerId}, default)` : `${profile.label} (${profile.providerId})`,
-    }));
+  const providerOptions = data.llmProviders.length > 0
+    ? data.llmProviders.map((p) => ({ id: p.id, label: p.name }))
+    : data.providerProfiles
+        .filter((profile) => profile.enabled)
+        .map((profile) => ({
+          id: profile.providerId,
+          label: profile.isDefault ? `${profile.label} (${profile.providerId}, default)` : `${profile.label} (${profile.providerId})`,
+        }));
 
   const renderMaxStageOptions = (selected: number) => ([1, 2, 3, 4, 5, 6, 7] as const).map(s => {
     const label = s === 1 ? 'Idea only (no auto-advance)' : s === 7 ? `Full pipeline (${STAGE_NAMES[s]})` : `Through ${STAGE_NAMES[s]}`;
