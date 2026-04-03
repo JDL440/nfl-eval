@@ -190,7 +190,7 @@ function renderScheduleForm(
       </div>
       <div class="form-group">
         <label for="sched-weekday" data-tz-label>Day of Week (UTC)</label>
-        <select id="sched-weekday" name="weekday_utc" class="input" data-tz-weekday>${weekdayOptions}</select>
+        <select id="sched-weekday" name="weekday_utc" class="input select" data-tz-weekday>${weekdayOptions}</select>
       </div>
       <div class="form-group">
         <label for="sched-time" data-tz-label>Time (UTC)</label>
@@ -199,20 +199,20 @@ function renderScheduleForm(
       </div>
       <div class="form-group">
         <label for="sched-team">Primary Team</label>
-        <select id="sched-team" name="team_abbr" class="input">${teamOptions}</select>
+        <select id="sched-team" name="team_abbr" class="input select">${teamOptions}</select>
       </div>
       <div class="form-group">
         <label for="sched-preset">Editorial Preset</label>
-        <select id="sched-preset" name="preset_id" class="input">${renderPresetOptions(editorial.preset_id)}</select>
+        <select id="sched-preset" name="preset_id" class="input select">${renderPresetOptions(editorial.preset_id)}</select>
         <div class="form-hint">${escapeHtml(getPresetDescription(editorial.preset_id))} Legacy compatibility stays at ${escapeHtml(formatLegacyDepthLabel(editorial.legacy_depth_level))} · ${escapeHtml(formatContentProfileLabel(editorial.legacy_content_profile))}.</div>
       </div>
       <div class="form-group">
         <label for="sched-provider">Provider</label>
-        <select id="sched-provider" name="provider" class="input">${providerOptions}</select>
+        <select id="sched-provider" name="provider" class="input select">${providerOptions}</select>
       </div>
       <div class="form-group">
         <label for="sched-max-stage">Auto-advance</label>
-        <select id="sched-max-stage" name="max_advance_stage" class="input">${maxStageOptions}</select>
+        <select id="sched-max-stage" name="max_advance_stage" class="input select">${maxStageOptions}</select>
       </div>
       <div class="form-group form-group-full">
         <label>
@@ -225,19 +225,19 @@ function renderScheduleForm(
       </div>
       <div class="form-group" data-schedule-advanced>
         <label for="sched-reader-profile">Reader Profile</label>
-        <select id="sched-reader-profile" name="reader_profile" class="input"${advancedChecked ? '' : ' disabled'}>${renderReaderProfileOptions(editorial.reader_profile)}</select>
+        <select id="sched-reader-profile" name="reader_profile" class="input select"${advancedChecked ? '' : ' disabled'}>${renderReaderProfileOptions(editorial.reader_profile)}</select>
       </div>
       <div class="form-group" data-schedule-advanced>
         <label for="sched-article-form">Article Form</label>
-        <select id="sched-article-form" name="article_form" class="input"${advancedChecked ? '' : ' disabled'}>${renderArticleFormOptions(editorial.article_form)}</select>
+        <select id="sched-article-form" name="article_form" class="input select"${advancedChecked ? '' : ' disabled'}>${renderArticleFormOptions(editorial.article_form)}</select>
       </div>
       <div class="form-group" data-schedule-advanced>
         <label for="sched-panel-shape">Panel Shape</label>
-        <select id="sched-panel-shape" name="panel_shape" class="input"${advancedChecked ? '' : ' disabled'}>${renderPanelShapeOptions(editorial.panel_shape)}</select>
+        <select id="sched-panel-shape" name="panel_shape" class="input select"${advancedChecked ? '' : ' disabled'}>${renderPanelShapeOptions(editorial.panel_shape)}</select>
       </div>
       <div class="form-group" data-schedule-advanced>
         <label for="sched-analytics-mode">Analytics Mode</label>
-        <select id="sched-analytics-mode" name="analytics_mode" class="input"${advancedChecked ? '' : ' disabled'}>${renderAnalyticsModeOptions(editorial.analytics_mode)}</select>
+        <select id="sched-analytics-mode" name="analytics_mode" class="input select"${advancedChecked ? '' : ' disabled'}>${renderAnalyticsModeOptions(editorial.analytics_mode)}</select>
         <div class="form-hint">Tuesday-style slots should usually stay explain-only. Thursday-style slots can lean metrics-forward.</div>
       </div>
       <div class="form-group form-group-full">

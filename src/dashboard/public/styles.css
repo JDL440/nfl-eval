@@ -459,6 +459,32 @@ a:hover { text-decoration: underline; }
   padding-right: 28px;
 }
 
+/* Ensure all form selects get consistent dark-mode styling */
+.form-group select,
+.settings-form select {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color 0.15s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.form-group select:focus,
+.settings-form select:focus { border-color: var(--color-accent); }
+.form-group select option,
+.settings-form select option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
 .form-row-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
