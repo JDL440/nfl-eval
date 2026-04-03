@@ -27,8 +27,9 @@
 ### Structure Craft
 - **Opening hooks** must create urgency in 2-3 sentences. The reader decides in 5 seconds whether to keep scrolling.
 - **Section pacing:** Alternate between narrative paragraphs and data tables. Never three paragraphs of text without a visual break. Never two tables back-to-back without narrative context.
-- **Expert quotes:** Format as blockquotes with attribution. These are the "personality" moments — where the reader hears the experts arguing.
+- **Expert quotes:** Format as blockquotes with descriptive analyst titles for attribution — e.g. `> *"Quote."* — **Salary Cap Analyst**` or `> *"Quote."* — **Seahawks Team Analyst**`. Never use raw agent codes (CAP, SEA, MEDIA) or internal identifiers. These are the "personality" moments — where the reader hears the experts arguing.
 - **Disagreements:** The expert panel disagreeing IS the product. Don't smooth over disagreements — frame them as the central tension of the piece.
+- **Alternative options:** When the panel debates different strategic approaches, describe each option in plain language (e.g. "the extension route" vs "the trade-back approach"). Never reference "Path A", "Path B", or "Path C" by letter.
 - **Conclusions:** Take a position. "Both sides have a point" is a failure. The panel has a recommendation — state it clearly.
 - **Teasers:** Every article ends with a "Next from the panel" hook that reads like a cliffhanger for the next real piece in the pipeline, not a generic housekeeping note.
 

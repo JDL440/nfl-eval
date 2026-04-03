@@ -24,6 +24,8 @@ const WRITER_PREFLIGHT_CHECKS = [
   '- Names: prefer exact names from supplied artifacts for consistency, but do not stop the draft over harmless name expansions or alternate full-name wording alone.',
   '- Precise facts: if you state a contract figure, date, draft fact, or stat, it must come from supplied artifacts or the bounded writer fact-check. Otherwise attribute it, soften it, or cut it.',
   '- No guesswork: do not add new unsupported specifics just to make the prose sound smoother.',
+  '- Content purity: never expose internal pipeline names (CAP, SEA, MEDIA, OFFENSE, etc.) as labels or attribution — use the descriptive analyst titles from the discussion summary (e.g. "Salary Cap Analyst"). Never reference "Path A / Path B / Path C" by letter — describe each option substantively. Never include meta-commentary about the writing process ("Here is the article", "Based on the panel discussion", "I\'ve drafted").',
+  '- TLDR accuracy: every TLDR bullet must be factually and temporally consistent with the article body. Do not claim events at times that contradict known schedules or timelines.',
 ] as const;
 
 const NAME_PATTERN = /([A-Z][a-z]+(?:[-'][A-Za-z]+)?[ \t]+[A-Z][A-Za-z'-]+(?:[ \t]+[A-Z][A-Za-z'-]+){0,2}(?:[ \t]+(?:Jr\.?|Sr\.?|II|III|IV))?)/g;
@@ -154,6 +156,7 @@ export function runWriterPreflight(params: {
 
   const allIssues = dedupeIssues([
     ...findPlaceholderLeakageIssues(params.draft),
+    ...findContentPurityIssues(params.draft),
     ...findUnsourcedClaimIssues(draftText, sourceText),
     ...findUnsourcedDateIssues(draftText, sourceText),
   ]);
@@ -186,6 +189,74 @@ function findPlaceholderLeakageIssues(draft: string): WriterPreflightIssue[] {
       severity: 'blocking',
       code: 'placeholder-leakage',
       message: `Draft still includes placeholder or scaffolding text ("${match[0]}"). Remove it before handing the article to Editor.`,
+    });
+    break;
+  }
+
+  return issues;
+}
+
+// ── Content purity checks (advisory) ────────────────────────────────────────
+// Detects internal pipeline artifacts that leaked into the reader-facing draft.
+// All issues are advisory — they flag for human review but never block the draft
+// to avoid self-heal death loops.
+
+const RAW_AGENT_ID_PATTERN = /(?:^|\n)#+\s*(?:CAP|SEA|MEDIA|OFFENSE|DEFENSE|DRAFT|ANALYTICS|PLAYERREP|INJURY|FANTASY|SPECIALTEAMS|COLLEGESCOUT)\b/;
+const AGENT_LABEL_IN_PROSE = /\b(?:CAP|MEDIA|OFFENSE|DEFENSE|ANALYTICS|PLAYERREP|SPECIALTEAMS|COLLEGESCOUT)\s*(?::|—|–|-)\s/;
+const PATH_LABEL_PATTERN = /\bPath [A-Z]\b/;
+const META_COMMENTARY_PATTERNS = [
+  // Preambles — writer announcing the article instead of just writing it
+  /^(?:Here (?:is|are) the article|Below is the (?:article|draft))/im,
+  /^(?:Based on the panel discussion|Drawing from the panel)/im,
+  /^(?:I've (?:drafted|written|composed|prepared))/im,
+  /^(?:This article (?:synthesizes|draws on|is based on))/im,
+  // Postambles — writer commenting on the finished product
+  /(?:I hope this|Let me know if|Feel free to|This can be (?:revised|adjusted|modified))/im,
+  // Self-referential process language
+  /\b(?:as an AI|as a language model|in this analysis,? I)\b/i,
+  // Editor/reviewer voice leaking into article body
+  /^(?:The draft (?:should|needs to|could)|Writer (?:should|needs|must))/im,
+  /^(?:This piece (?:effectively|successfully|does a good job))/im,
+];
+
+export function findContentPurityIssues(draft: string): WriterPreflightIssue[] {
+  const issues: WriterPreflightIssue[] = [];
+
+  // Raw agent IDs used as section headers or labels
+  const headerMatch = draft.match(RAW_AGENT_ID_PATTERN);
+  if (headerMatch) {
+    issues.push({
+      severity: 'advisory',
+      code: 'raw-agent-id',
+      message: `Draft uses a raw pipeline agent ID as a header or label ("${headerMatch[0].trim()}"). Use descriptive analyst titles instead (e.g. "Salary Cap Analyst").`,
+    });
+  }
+  const labelMatch = draft.match(AGENT_LABEL_IN_PROSE);
+  if (labelMatch) {
+    issues.push({
+      severity: 'advisory',
+      code: 'raw-agent-id',
+      message: `Draft uses a raw pipeline agent ID in prose ("${labelMatch[0].trim()}"). Replace with a descriptive analyst title.`,
+    });
+  }
+
+  // Unexplained "Path A/B/C" references
+  if (PATH_LABEL_PATTERN.test(draft)) {
+    issues.push({
+      severity: 'advisory',
+      code: 'unexplained-path-label',
+      message: 'Draft references a "Path [letter]" label. Describe each option substantively instead of using letter labels from the internal discussion framework.',
+    });
+  }
+
+  // Meta-commentary about the writing process
+  for (const pattern of META_COMMENTARY_PATTERNS) {
+    const match = draft.match(pattern);
+    if (!match) continue;
+    issues.push({
+      severity: 'advisory',
+      code: 'meta-commentary',
+      message: `Draft includes meta-commentary about the writing process ("${match[0]}"). The article should read as a standalone piece with no reference to its production.`,
     });
     break;
   }

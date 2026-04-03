@@ -44,10 +44,16 @@ Before reviewing, read `article-contract.md` if it is present. Treat that artifa
 
 ### Style & Readability
 - Check tone consistency — "The Ringer meets OverTheCap"
-- Verify expert quotes are attributed correctly
+- Verify expert quotes are attributed correctly using descriptive analyst titles (e.g. "Salary Cap Analyst"), not raw agent codes (CAP, SEA, MEDIA)
 - Check table formatting — clean, aligned, accurate data
 - Ensure the opening hook creates urgency
 - Check the headline — clickbait-adjacent but honest
+
+### Content Purity
+- No raw pipeline agent names used as labels or attribution (CAP, SEA, MEDIA, OFFENSE, DEFENSE, etc.)
+- No unexplained "Path A / Path B / Path C" references — options must be described substantively
+- No meta-commentary about the article production process ("Here is the article", "Based on the panel discussion")
+- TLDR bullets must be temporally and factually consistent with the article body — flag any timing claims that contradict known schedules
 
 ### Structural Review
 - Confirm the draft satisfies `article-contract.md` when present: the core thesis is answered, required tensions are preserved, required evidence anchors appear, and any listed cautions are acknowledged.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildWriterPreflightArtifact, buildWriterPreflightChecklist, runWriterPreflight } from '../../src/pipeline/writer-preflight.js';
+import { buildWriterPreflightArtifact, buildWriterPreflightChecklist, findContentPurityIssues, runWriterPreflight } from '../../src/pipeline/writer-preflight.js';
 
 describe('writer preflight', () => {
   it('builds a short checklist focused on top blockers', () => {
@@ -209,5 +209,98 @@ describe('writer preflight', () => {
     expect(artifact).toContain('passed with advisories');
     expect(artifact).toContain('Advisory Issues (for human review at publish time)');
     expect(artifact).toContain('[unsourced-contract-claim]');
+  });
+});
+
+describe('content purity', () => {
+  it('flags raw agent IDs used as section headers', () => {
+    const issues = findContentPurityIssues('## Introduction\n\nSome text.\n\n## CAP — Salary analysis\n\nMore text.');
+    expect(issues.some((i) => i.code === 'raw-agent-id')).toBe(true);
+    expect(issues[0]?.severity).toBe('advisory');
+  });
+
+  it('flags raw agent IDs used as prose labels', () => {
+    const issues = findContentPurityIssues('MEDIA: reported that the team is looking at options. DEFENSE — suggests blitz packages.');
+    expect(issues.some((i) => i.code === 'raw-agent-id')).toBe(true);
+  });
+
+  it('flags unexplained Path labels', () => {
+    const issues = findContentPurityIssues('The team should consider Path A, which offers cap relief.');
+    expect(issues.some((i) => i.code === 'unexplained-path-label')).toBe(true);
+    expect(issues[0]?.severity).toBe('advisory');
+  });
+
+  it('flags meta-commentary about the writing process', () => {
+    const issues = findContentPurityIssues('Here is the article based on the expert panel discussion.\n\n# Headline');
+    expect(issues.some((i) => i.code === 'meta-commentary')).toBe(true);
+  });
+
+  it('flags "Based on the panel discussion" preamble', () => {
+    const issues = findContentPurityIssues('Based on the panel discussion, we can see three key areas of concern.');
+    expect(issues.some((i) => i.code === 'meta-commentary')).toBe(true);
+  });
+
+  it('does not flag clean article content', () => {
+    const clean = `# The Seahawks' Cap Crossroads
+
+*Why Seattle's next move defines their competitive window*
+
+> **📋 TLDR**
+> - The Seahawks face a $15M cap decision
+> - The Salary Cap Analyst sees room for an extension
+> - The Draft Analyst prefers trading back
+> - The panel recommends a measured approach
+
+**By: The NFL Lab Expert Panel**
+
+The Seahawks are at a crossroads. Their salary cap flexibility this offseason could define the next three years.
+
+> *"The cap structure actually gives Seattle more room than people think."* — **Salary Cap Analyst**`;
+
+    const issues = findContentPurityIssues(clean);
+    expect(issues).toHaveLength(0);
+  });
+
+  it('does not flag "Path" in non-label contexts', () => {
+    const issues = findContentPurityIssues('The Seahawks have a clear path to the playoffs this season.');
+    expect(issues).toHaveLength(0);
+  });
+
+  it('does not flag team abbreviations in non-label contexts', () => {
+    const issues = findContentPurityIssues('The SEA offense ranked 12th in EPA per play last season.');
+    expect(issues).toHaveLength(0);
+  });
+
+  it('integrates with runWriterPreflight as advisory issues', () => {
+    const state = runWriterPreflight({
+      draft: '## CAP — Cap Analysis\n\nPath A offers better long-term value.',
+      sourceArtifacts: [
+        { name: 'discussion-summary.md', content: 'The panel discussed cap implications.' },
+      ],
+    });
+
+    expect(state.blockingIssues).toHaveLength(0);
+    expect(state.advisoryIssues.some((i) => i.code === 'raw-agent-id')).toBe(true);
+    expect(state.advisoryIssues.some((i) => i.code === 'unexplained-path-label')).toBe(true);
+  });
+
+  it('flags postamble commentary like "I hope this" or "Let me know if"', () => {
+    const issues = findContentPurityIssues('Great analysis overall.\n\nI hope this captures the key dynamics of the Seahawks offseason.');
+    expect(issues.some((i) => i.code === 'meta-commentary')).toBe(true);
+  });
+
+  it('flags "Feel free to adjust" closing notes', () => {
+    const issues = findContentPurityIssues('The cap picture is clear.\n\nFeel free to adjust the tone as needed.');
+    expect(issues.some((i) => i.code === 'meta-commentary')).toBe(true);
+  });
+
+  it('flags editor/reviewer voice leaked into article body', () => {
+    const issues = findContentPurityIssues('The draft should include more specific contract numbers for the extension.');
+    expect(issues.some((i) => i.code === 'meta-commentary')).toBe(true);
+  });
+
+  it('flags self-referential AI language', () => {
+    const issues = findContentPurityIssues('As an AI analyst, the data suggests the Seahawks should trade back.');
+    expect(issues.some((i) => i.code === 'meta-commentary')).toBe(true);
   });
 });

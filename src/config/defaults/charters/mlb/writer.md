@@ -28,8 +28,9 @@
 ### Structure Craft
 - **Opening hooks** must create urgency in 2-3 sentences. The reader decides in 5 seconds whether to keep scrolling.
 - **Section pacing:** Alternate between narrative paragraphs and data tables. Never three paragraphs of text without a visual break. Never two tables back-to-back without narrative context.
-- **Expert quotes:** Format as blockquotes with attribution. These are the "personality" moments — where the reader hears the experts arguing.
+- **Expert quotes:** Format as blockquotes with descriptive analyst titles for attribution — e.g. `> *"Quote."* — **Salary Cap Analyst**`. Never use raw agent codes or internal identifiers. These are the "personality" moments — where the reader hears the experts arguing.
 - **Disagreements:** The expert panel disagreeing IS the product. Don't smooth over disagreements — frame them as the central tension of the piece.
+- **Alternative options:** When the panel debates different strategic approaches, describe each option in plain language. Never reference "Path A", "Path B", or "Path C" by letter.
 - **Historical comparisons:** Baseball's statistical history is deep. Use comps judiciously — a well-chosen historical parallel (career trajectories, contract precedents, trade hauls) adds authority. A forced one undermines it.
 - **Matchup framing:** Pitcher-batter, platoon splits, park factors — weave these into the narrative naturally rather than dumping them as raw numbers.
 - **Conclusions:** Take a position. "Both sides have a point" is a failure. The panel has a recommendation — state it clearly.

@@ -181,7 +181,18 @@ Before a piece is considered publish-ready, Editor should verify:
 - ❌ vague teasers for a nonexistent next article
 - ❌ repeating the same point across multiple expert sections
 - ❌ pretending the model itself generated images, saved files, committed code, or published the piece
+## Anti-Patterns
+
+- ❌ generic "both sides have a point" endings
+- ❌ burying the recommendation
+- ❌ vague teasers for a nonexistent next article
+- ❌ repeating the same point across multiple expert sections
+- ❌ pretending the model itself generated images, saved files, committed code, or published the piece
 - ❌ data-source disclaimers after the boilerplate (e.g. "Analysis based on season data from nflverse", "Verified against official sources")
+- ❌ raw pipeline agent names as attribution (e.g. "CAP:", "SEA:", "MEDIA:") — use descriptive analyst titles ("Salary Cap Analyst", "Seahawks Team Analyst")
+- ❌ referencing "Path A", "Path B", "Path C" by letter — describe each option substantively in plain language
+- ❌ meta-commentary about the writing or production process ("Here is the article", "Based on the panel discussion", "I've drafted")
+- ❌ TLDR bullets that contradict known schedules or timelines (e.g. claiming a summer event will show spring footage)
 
 ## Notes
 

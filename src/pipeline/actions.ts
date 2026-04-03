@@ -5,7 +5,7 @@
  * loading input artifacts, calling the appropriate agent, and writing output.
  */
 
-import type { Stage } from '../types.js';
+import type { Stage, ResolvedEditorialControls } from '../types.js';
 import {
   ANALYTICS_MODE_LABELS,
   ARTICLE_FORM_LABELS,
@@ -89,6 +89,112 @@ interface DraftValidationState {
 export interface PanelMember {
   agentName: string;
   role: string;
+}
+
+// ── Panelist display names ──────────────────────────────────────────────────
+// Maps internal agent IDs to reader-friendly titles so articles never expose
+// raw pipeline identifiers like "CAP:" or "SEA:".
+
+const SPECIALIST_DISPLAY_NAMES: Record<string, string> = {
+  'cap': 'Salary Cap Analyst',
+  'playerrep': 'Player Agent Analyst',
+  'player-rep': 'Player Agent Analyst',
+  'draft': 'Draft Analyst',
+  'collegescout': 'College Scouting Analyst',
+  'college-scout': 'College Scouting Analyst',
+  'analytics': 'Data & Analytics Analyst',
+  'offense': 'Offensive Scheme Analyst',
+  'defense': 'Defensive Scheme Analyst',
+  'media': 'NFL Media Analyst',
+  'injury': 'Injury & Recovery Analyst',
+  'fantasy': 'Fantasy Impact Analyst',
+  'specialteams': 'Special Teams Analyst',
+  'special-teams': 'Special Teams Analyst',
+};
+
+/**
+ * Convert an internal agent identifier + role into a reader-friendly display
+ * name suitable for article attribution (e.g. blockquotes, section headers).
+ *
+ * Known specialists get a curated title; team agents derive their name from the
+ * role description (e.g. "Seahawks team context: …" → "Seahawks Team Analyst").
+ */
+export function formatPanelistDisplayName(agentName: string, role: string): string {
+  const normalized = agentName.toLowerCase().replace(/\s+/g, '-');
+  if (SPECIALIST_DISPLAY_NAMES[normalized]) {
+    return SPECIALIST_DISPLAY_NAMES[normalized];
+  }
+  // Derive from role — take the focus area before detail separator
+  const shortRole = role.split(/[:—\u2014]/)[0]?.trim();
+  if (!shortRole) {
+    return agentName.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Analyst';
+  }
+  // Team agents: role usually starts with "TeamName team …"
+  const teamMatch = shortRole.match(/^(.+?)\s+team\b/i);
+  if (teamMatch) {
+    return `${teamMatch[1]} Team Analyst`;
+  }
+  // Generic fallback: title-case the short role
+  const titled = shortRole.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  if (/analyst|expert|specialist|scout/i.test(titled)) return titled;
+  return `${titled} Analyst`;
+}
+
+// ── Editorial guidance for downstream stages ────────────────────────────────
+// Converts resolved editorial controls into natural-language instructions that
+// tell the writer/editor HOW to calibrate tone, depth, and analytics usage.
+
+export function buildEditorialGuidance(editorial: ResolvedEditorialControls): string {
+  const lines: string[] = [
+    `**Editorial preset:** ${formatPresetLabel(editorial.preset_id)}`,
+    `**Reader profile:** ${READER_PROFILE_LABELS[editorial.reader_profile]}`,
+    `**Article form:** ${ARTICLE_FORM_LABELS[editorial.article_form]}`,
+    `**Analytics mode:** ${ANALYTICS_MODE_LABELS[editorial.analytics_mode]}`,
+  ];
+
+  // Casual / explain-only: suppress tables and advanced metrics
+  if (editorial.reader_profile === 'casual' || editorial.analytics_mode === 'explain_only') {
+    lines.push('');
+    lines.push('**Tone & data guidelines (casual / explain-only):**');
+    lines.push('- Write for a casual fan — avoid jargon and insider shorthand.');
+    lines.push('- Do NOT include analytics tables, stat-heavy breakdowns, or advanced metrics (e.g. EPA, DVOA, WAR, PFF grades).');
+    lines.push('- When data supports a point, describe the insight in plain language instead of citing raw numbers.');
+    lines.push('- Keep the article brief and narrative-driven; if a table is absolutely necessary, limit to one small, simple table.');
+    lines.push('- TLDR bullets should be conversational, not stat-loaded.');
+  }
+
+  // Metrics-forward: encourage deep analytics
+  if (editorial.analytics_mode === 'metrics_forward') {
+    lines.push('');
+    lines.push('**Tone & data guidelines (metrics-forward):**');
+    lines.push('- Include detailed analytics tables with specific metrics.');
+    lines.push('- Cite advanced stats (EPA, DVOA, PFF grades, WAR, etc.) and provide context for each metric.');
+    lines.push('- Assume the reader has deep football/baseball analytics literacy.');
+  }
+
+  // Hardcore profile: can use insider language
+  if (editorial.reader_profile === 'hardcore') {
+    lines.push('');
+    lines.push('**Tone guidelines (hardcore reader):**');
+    lines.push('- Technical depth is expected — use insider terminology freely.');
+    lines.push('- Multiple data tables and cross-referenced metrics are welcome.');
+  }
+
+  // Brief form: constrain length
+  if (editorial.article_form === 'brief') {
+    lines.push('');
+    lines.push('**Length guideline (brief form):**');
+    lines.push('- Target 600–900 words. Avoid exhaustive breakdowns.');
+  }
+
+  // Feature form: allow expansive writing
+  if (editorial.article_form === 'feature') {
+    lines.push('');
+    lines.push('**Length guideline (feature form):**');
+    lines.push('- This is a feature-length piece. Rich narrative, multiple data exhibits, and deep analysis are expected.');
+  }
+
+  return lines.join('\n');
 }
 
 interface RetrospectiveIssueSummary {
@@ -743,11 +849,14 @@ function buildDraftRepairInstruction(state: DraftValidationState): string {
 
 const WRITER_EDITOR_PREFLIGHT_CHECKLIST = buildWriterPreflightChecklist();
 
-function buildWriterTask(isRevision: boolean): string {
+function buildWriterTask(isRevision: boolean, editorialGuidance?: string): string {
   const modeInstruction = isRevision
     ? 'You are REVISING an existing draft — NOT writing from scratch. Your previous draft and the current editor review are both provided. Read the editor review carefully, then make ONLY the changes the editor requested. Keep everything the editor praised.'
-    : 'Write an analytical article draft based on the panel discussion.';
-  return `${modeInstruction} Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.\n\n${WRITER_EDITOR_PREFLIGHT_CHECKLIST}\n\nOutput the complete article markdown.`;
+    : 'Write an analytical article draft based on the panel discussion. Write for the reader — the article must read as a complete, self-contained piece with no trace of the AI production pipeline.';
+  const editorialBlock = editorialGuidance
+    ? `\n\n## Editorial Controls (follow these closely)\n${editorialGuidance}`
+    : '';
+  return `${modeInstruction} Use the bounded writer fact-check contract only for specific risky claims; do not turn Stage 5 into open-ended research.${editorialBlock}\n\n${WRITER_EDITOR_PREFLIGHT_CHECKLIST}\n\nOutput the complete article markdown.`;
 }
 
 function validateDraftOutput(
@@ -1155,9 +1264,24 @@ async function generatePrompt(articleId: string, ctx: ActionContext): Promise<Ac
 
     const ideaWithRoster = gatherContext(ctx.repo, articleId, 'generatePrompt', ctx.config);
 
+    // Resolve editorial controls so the lead frames the discussion at the right depth
+    const editorial = resolveEditorialControls({
+      preset_id: article.preset_id,
+      reader_profile: article.reader_profile,
+      article_form: article.article_form,
+      panel_shape: article.panel_shape,
+      analytics_mode: article.analytics_mode,
+      depth_level: article.depth_level,
+    });
+    const audienceHint = editorial.reader_profile === 'casual' || editorial.analytics_mode === 'explain_only'
+      ? ' This article targets casual fans — frame tensions and data anchors in accessible, jargon-free language. Avoid structuring the prompt around advanced analytics or stat-heavy comparisons.'
+      : editorial.analytics_mode === 'metrics_forward'
+        ? ' This article targets analytics-literate readers — frame tensions around specific metrics and statistical comparisons.'
+        : '';
+
     const result = await runAgent(ctx, articleId, article.current_stage, 'generatePrompt', {
       agentName: 'lead',
-      task: 'Generate a discussion prompt from the following idea. Cross-reference player names and team assignments against the roster context provided. If the roster data shows a player on a different team, correct the premise. If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions.',
+      task: `Generate a discussion prompt from the following idea. BEFORE building the prompt, use web_search to verify the core factual premise of the idea (e.g. if the idea claims an event happened or will happen, confirm the timing and facts are correct). If the premise is wrong, correct it. Cross-reference player names and team assignments against the roster context provided. If the roster data shows a player on a different team, correct the premise. If a player is simply not found in the roster data, note it as a caveat — roster data updates daily and may lag behind very recent transactions. When framing alternative options in "The Paths", describe each option substantively (e.g. "the extension route", "the trade-back approach") — do not label them as "Path A", "Path B", etc.${audienceHint}`,
       skills: ['discussion-prompt'],
       articleContext: {
         slug: articleId,
@@ -1412,13 +1536,13 @@ async function runDiscussion(articleId: string, ctx: ActionContext): Promise<Act
     // Build synthesis input from individual contributions
     const individualContributions = successfulResults
       .map(({ panelist, result }) =>
-        `## ${panelist.agentName.toUpperCase()} — ${panelist.role}\n\n${result!.content}`)
+        `## ${formatPanelistDisplayName(panelist.agentName, panelist.role)}\n\n${result!.content}`)
       .join('\n\n---\n\n');
 
     // Synthesize via moderator
     const synthesisResult = await runAgent(ctx, articleId, article.current_stage, 'runDiscussion-synthesis', {
       agentName: 'panel-moderator',
-      task: `Synthesize these panel contributions into a coherent discussion summary. Preserve disagreements and tension — don't smooth over conflicts.\n\n${individualContributions}`,
+      task: `Synthesize these panel contributions into a coherent discussion summary. Preserve disagreements and tension — don't smooth over conflicts. Use the analyst titles shown in the section headers (e.g. "Salary Cap Analyst", "Seahawks Team Analyst") when attributing positions — never use raw agent codes like CAP, SEA, or MEDIA. When framing alternative options, describe each option substantively (e.g. "the extension route" vs "the trade-back approach") — do not label them as "Path A", "Path B", etc.\n\n${individualContributions}`,
       skills: ['article-discussion'],
         rosterContext: rosterCtx ?? undefined,
         articleContext: {
@@ -1603,7 +1727,18 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       content = content + '\n\n' + feedbackContext;
     }
 
-    const task = buildWriterTask(isRevision);
+    // Resolve editorial controls so the writer knows the target audience and tone
+    const editorial = resolveEditorialControls({
+      preset_id: article.preset_id,
+      reader_profile: article.reader_profile,
+      article_form: article.article_form,
+      panel_shape: article.panel_shape,
+      analytics_mode: article.analytics_mode,
+      depth_level: article.depth_level,
+    });
+    const editorialGuidance = buildEditorialGuidance(editorial);
+
+    const task = buildWriterTask(isRevision, editorialGuidance);
 
     const result = await runAgent(ctx, articleId, article.current_stage, 'writeDraft', {
       agentName: 'writer',
@@ -1750,9 +1885,21 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
       content = content + '\n\n' + feedbackContext;
     }
 
+    // Resolve editorial controls so the editor evaluates against the right audience expectations
+    const editorial = resolveEditorialControls({
+      preset_id: article.preset_id,
+      reader_profile: article.reader_profile,
+      article_form: article.article_form,
+      panel_shape: article.panel_shape,
+      analytics_mode: article.analytics_mode,
+      depth_level: article.depth_level,
+    });
+    const editorialGuidance = buildEditorialGuidance(editorial);
+    const editorialEditorBlock = `\n\n## Editorial Controls (evaluate the draft against these expectations)\n${editorialGuidance}`;
+
     const result = await runAgent(ctx, articleId, article.current_stage, 'runEditor', {
       agentName: 'editor',
-      task: `Review the article draft against the article contract and provide editorial feedback. The article contract defines the required thesis, tensions, evidence anchors, and structure expectations — use it as your evaluation rubric. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If \`writer-factcheck.md\` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED\n\n${EDITOR_REVISE_BLOCKER_TAG_GUIDANCE}`,
+      task: `Review the article draft against the article contract and provide editorial feedback. The article contract defines the required thesis, tensions, evidence anchors, and structure expectations — use it as your evaluation rubric. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If \`writer-factcheck.md\` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.${editorialEditorBlock}\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED\n\n${EDITOR_REVISE_BLOCKER_TAG_GUIDANCE}`,
       skills: ['editor-review'],
       conversationContext: fullConversationCtx,
       articleContext: {

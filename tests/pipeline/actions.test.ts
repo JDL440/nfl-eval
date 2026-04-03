@@ -23,6 +23,7 @@ import {
 import { ModelPolicy } from '../../src/llm/model-policy.js';
 import type { AppConfig } from '../../src/config/index.js';
 import type { Stage } from '../../src/types.js';
+import { resolveEditorialControls } from '../../src/types.js';
 
 import {
   STAGE_ACTIONS,
@@ -35,6 +36,8 @@ import {
   resetContextConfigCache,
   recordAgentUsage,
   parsePanelComposition,
+  formatPanelistDisplayName,
+  buildEditorialGuidance,
   type ActionContext,
   type PanelMember,
 } from '../../src/pipeline/actions.js';
@@ -707,6 +710,94 @@ describe('STAGE_ACTIONS', () => {
       const result = parsePanelComposition(content);
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({ agentName: 'defense', role: 'Defensive scheme analysis' });
+    });
+  });
+
+  // ── formatPanelistDisplayName ──────────────────────────────────────────────
+
+  describe('formatPanelistDisplayName', () => {
+    it('maps known specialist agent IDs to curated titles', () => {
+      expect(formatPanelistDisplayName('cap', 'Salary cap analysis: market comps')).toBe('Salary Cap Analyst');
+      expect(formatPanelistDisplayName('playerrep', 'Player valuation: production metrics')).toBe('Player Agent Analyst');
+      expect(formatPanelistDisplayName('defense', 'Defensive scheme analysis')).toBe('Defensive Scheme Analyst');
+      expect(formatPanelistDisplayName('media', 'NFL media coverage')).toBe('NFL Media Analyst');
+      expect(formatPanelistDisplayName('draft', 'Draft evaluation')).toBe('Draft Analyst');
+      expect(formatPanelistDisplayName('analytics', 'Data analysis')).toBe('Data & Analytics Analyst');
+      expect(formatPanelistDisplayName('fantasy', 'Fantasy impact')).toBe('Fantasy Impact Analyst');
+    });
+
+    it('is case-insensitive on agent name', () => {
+      expect(formatPanelistDisplayName('CAP', 'Salary cap analysis')).toBe('Salary Cap Analyst');
+      expect(formatPanelistDisplayName('PlayerRep', 'Player valuation')).toBe('Player Agent Analyst');
+    });
+
+    it('derives team agent names from role', () => {
+      expect(formatPanelistDisplayName('sea', 'Seahawks team context: roster gaps, competitive window')).toBe('Seahawks Team Analyst');
+      expect(formatPanelistDisplayName('gb', 'Packers team context: cap position')).toBe('Packers Team Analyst');
+    });
+
+    it('falls back to title-cased role for unknown agents', () => {
+      expect(formatPanelistDisplayName('custom', 'Special coverage analysis: niche topics')).toBe('Special Coverage Analysis Analyst');
+    });
+
+    it('falls back to title-cased agent name when role is empty', () => {
+      expect(formatPanelistDisplayName('some-agent', '')).toBe('Some Agent Analyst');
+    });
+
+    it('preserves role text that already contains a title word', () => {
+      expect(formatPanelistDisplayName('unknown', 'Senior draft scout: film analysis')).toBe('Senior Draft Scout');
+    });
+  });
+
+  describe('buildEditorialGuidance', () => {
+    it('includes casual/explain-only guidelines for casual_explainer preset', () => {
+      const editorial = resolveEditorialControls({ preset_id: 'casual_explainer' });
+      const guidance = buildEditorialGuidance(editorial);
+      expect(guidance).toContain('Casual Explainer');
+      expect(guidance).toContain('Casual');
+      expect(guidance).toContain('Explain-only');
+      expect(guidance).toContain('Do NOT include analytics tables');
+      expect(guidance).toContain('casual fan');
+      expect(guidance).toContain('Brief');
+    });
+
+    it('includes metrics-forward guidelines for technical_deep_dive preset', () => {
+      const editorial = resolveEditorialControls({ preset_id: 'technical_deep_dive' });
+      const guidance = buildEditorialGuidance(editorial);
+      expect(guidance).toContain('Metrics-forward');
+      expect(guidance).toContain('detailed analytics tables');
+      expect(guidance).toContain('EPA, DVOA');
+    });
+
+    it('includes hardcore reader guidelines for hardcore reader profile', () => {
+      const editorial = resolveEditorialControls({ preset_id: 'technical_deep_dive', reader_profile: 'hardcore' });
+      const guidance = buildEditorialGuidance(editorial);
+      expect(guidance).toContain('Hardcore');
+      expect(guidance).toContain('insider terminology');
+    });
+
+    it('includes feature length guideline for feature form', () => {
+      const editorial = resolveEditorialControls({ preset_id: 'narrative_feature' });
+      const guidance = buildEditorialGuidance(editorial);
+      expect(guidance).toContain('feature-length');
+    });
+
+    it('does not include casual guidelines for beat_analysis preset', () => {
+      const editorial = resolveEditorialControls({ preset_id: 'beat_analysis' });
+      const guidance = buildEditorialGuidance(editorial);
+      expect(guidance).not.toContain('Do NOT include analytics tables');
+      expect(guidance).not.toContain('casual fan');
+      expect(guidance).toContain('Normal');
+      expect(guidance).toContain('Engaged');
+    });
+
+    it('always includes the four editorial control header lines', () => {
+      const editorial = resolveEditorialControls({ preset_id: 'beat_analysis' });
+      const guidance = buildEditorialGuidance(editorial);
+      expect(guidance).toContain('**Editorial preset:**');
+      expect(guidance).toContain('**Reader profile:**');
+      expect(guidance).toContain('**Article form:**');
+      expect(guidance).toContain('**Analytics mode:**');
     });
   });
 

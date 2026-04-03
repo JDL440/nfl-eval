@@ -1,0 +1,98 @@
+
+> nfl-eval@1.0.0 test
+> vitest run metadata-edit.test.ts schedules.test.ts settings-routes.test.ts schedule.test.ts migrate.test.ts article-scheduler-service.test.ts --reporter=verbose
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/github/nfl-eval[39m
+
+(node:17440) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86584) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39368) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32620) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:24992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22mcreates and retrieves a schedule[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22mlists schedules[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mparseHistoryMd[2m > [22mparses heading-based entries[32m 2[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mparseHistoryMd[2m > [22mparses horizontal-rule-based entries[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mparseHistoryMd[2m > [22mreturns empty for empty input[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mparseHistoryMd[2m > [22mtreats short fragments as non-entries[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mparseHistoryMd[2m > [22mdetects decision category from keywords[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mdry run reports actions without executing[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22mupdates a schedule[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22menables and disables a schedule[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22mdeletes a schedule[32m 35[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mpipeline.db gets league column added[32m 125[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22mreturns due schedules[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule CRUD[2m > [22mdoes not return disabled schedules as due[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule run claim idempotency[2m > [22mclaims a run slot and returns a run object[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m tests/pipeline/article-scheduler-service.test.ts[2m > [22marticle scheduler service utilities[2m > [22mcomputes next Tuesday slot from Monday[32m 2[2mms[22m[39m
+ [32mΓ£ô[39m tests/pipeline/article-scheduler-service.test.ts[2m > [22marticle scheduler service utilities[2m > [22mrolls forward a week when the same-day slot has passed[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests/pipeline/article-scheduler-service.test.ts[2m > [22marticle scheduler service utilities[2m > [22mparses ranked discovery JSON and preserves the selected candidate[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests/pipeline/article-scheduler-service.test.ts[2m > [22marticle scheduler service utilities[2m > [22mrejects discovery output without valid candidates[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests/pipeline/article-scheduler-service.test.ts[2m > [22mArticleSchedulerService[2m > [22mruns a mocked schedule tick end to end with preset-driven controls[32m 49[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mbackfills legacy article editorial columns during migration[32m 140[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule run claim idempotency[2m > [22mreturns null on second claim for same slot[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule run claim idempotency[2m > [22mallows claiming different slots for the same schedule[32m 35[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule run claim idempotency[2m > [22mcompletes a run and records article id[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mrecreates pipeline_board with the current schema contract[32m 128[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule run claim idempotency[2m > [22mfails a run and records error text[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mschedule run listing[2m > [22mlists runs newest first[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/db/schedule.test.ts[2m > [22mArticle Schedule Repository[2m > [22mlegacy editorial backfill[2m > [22mbackfills existing schedule rows from legacy depth/content semantics[32m 76[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22marticle directories are copied to correct location[32m 118[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/workspace[2m > [22msaves publishing settings from form[32m 62[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mGET /api/schedules returns empty array initially[32m 47[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mPOST /api/schedules creates a schedule[32m 44[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/metadata-edit.test.ts[2m > [22mDashboard article metadata editing[2m > [22mPATCH /api/articles/:id[2m > [22mupdates whitelisted fields with validation + normalization[32m 55[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/metadata-edit.test.ts[2m > [22mDashboard article metadata editing[2m > [22mPATCH /api/articles/:id[2m > [22mrejects unknown fields (id/slug immutability)[32m 43[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mcharter files are copied[32m 117[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/metadata-edit.test.ts[2m > [22mDashboard article metadata editing[2m > [22mHTMX inline metadata partials[2m > [22mGET /htmx/articles/:id/meta returns display partial[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/metadata-edit.test.ts[2m > [22mDashboard article metadata editing[2m > [22mHTMX inline metadata partials[2m > [22mPOST /htmx/articles/:id/edit-meta saves and returns updated display partial[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/metadata-edit.test.ts[2m > [22mDashboard article metadata editing[2m > [22mHTMX inline metadata partials[2m > [22mPOST /htmx/articles/:id/edit-meta returns a 400 partial for invalid panel constraints JSON[32m 39[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/workspace[2m > [22msaves images settings from form[32m 48[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/workspace[2m > [22msaves access/auth settings from form[32m 44[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/workspace[2m > [22mreturns 400 when namespace is missing[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mPOST /api/schedules returns 400 if required fields missing[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mGET /api/schedules returns created schedule[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mPATCH /api/schedules/:id updates a schedule[32m 39[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mskill files are copied[32m 117[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mPATCH /api/schedules/:id preserves canonical editorial overrides on non-editorial edits[32m 35[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mDELETE /api/schedules/:id removes the schedule[32m 42[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mGET /schedules renders the schedule list page[32m 35[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/me[2m > [22msaves user preferences from form[32m 42[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/provider-profiles (create)[2m > [22mcreates a provider profile from form[32m 46[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/provider-profiles (create)[2m > [22mreturns 400 if provider or label missing[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/schedules.test.ts[2m > [22mSchedule API routes[2m > [22mTuesday accessible schedule has depth 1, Thursday deep dive has depth 3[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mrefreshes only the allowlisted core prompts after migration[32m 122[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/provider-profiles/:id (update)[2m > [22mupdates a provider profile[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/provider-profiles/:id/set-default[2m > [22msets a profile as default[32m 39[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/provider-profiles/:id/toggle[2m > [22mtoggles enabled state of a profile[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mDELETE /api/settings/provider-profiles/:id[2m > [22mdeletes a provider profile via hx-delete[32m 45[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22marticle schedule settings routes[2m > [22mcreates a schedule from the config form[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22marticle schedule settings routes[2m > [22mupdates a schedule from the config form[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mhistory.md conversion creates memory entries[32m 113[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mhandles missing v1 files gracefully[32m 41[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22marticle schedule settings routes[2m > [22mpreserves next_run_at when schedule timing is unchanged[32m 35[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22marticle schedule settings routes[2m > [22mtoggles a schedule enabled state[32m 52[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22marticle schedule settings routes[2m > [22mdeletes a schedule[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mrunning twice does not duplicate[32m 139[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/secrets[2m > [22mstores publishing secrets from form[32m 64[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/secrets[2m > [22mstores image secrets from form[32m 31[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/secrets[2m > [22mreturns error when crypto is unavailable[32m 33[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mPOST /api/settings/secrets/clear[2m > [22mclears a secret[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/dashboard/settings-routes.test.ts[2m > [22mSettings API Routes[2m > [22mGET /api/settings/effective[2m > [22mreturns effective settings JSON[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mrespects skipArticles flag[32m 117[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22mrespects skipMemory flag[32m 89[2mms[22m[39m
+ [32mΓ£ô[39m tests/migration/migrate.test.ts[2m > [22mmigrate[2m > [22msupports custom league parameter[32m 98[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[32m73 passed[39m[22m[90m (73)[39m
+[2m   Start at [22m 07:03:08
+[2m   Duration [22m 2.71s[2m (transform 712ms, setup 103ms, collect 2.80s, tests 3.54s, environment 1ms, prepare 818ms)[22m
+
