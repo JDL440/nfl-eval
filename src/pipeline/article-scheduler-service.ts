@@ -98,6 +98,14 @@ export class ArticleSchedulerService {
       return { scheduleId: schedule.id, status: 'duplicate' };
     }
 
+    // Advance schedule timing immediately so the dashboard reflects the
+    // run-in-progress and a second tick can never re-fire this slot.
+    const nextRunAt = computeNextRunAt(schedule, new Date(schedule.next_run_at));
+    this.repo.updateArticleSchedule(schedule.id, {
+      last_run_at: schedule.next_run_at,
+      next_run_at: nextRunAt,
+    });
+
     try {
       const discovery = await this.runStoryDiscovery(schedule);
       const selected = selectScheduledStory(discovery.candidates, discovery.selectedIndex);
@@ -129,11 +137,6 @@ export class ArticleSchedulerService {
       });
 
       const autoAdvance = await autoAdvanceArticle(article.id, this.actionContext, { maxStage: 7 });
-      const nextRunAt = computeNextRunAt(schedule, new Date(schedule.next_run_at));
-      this.repo.updateArticleSchedule(schedule.id, {
-        last_run_at: schedule.next_run_at,
-        next_run_at: nextRunAt,
-      });
       this.repo.markArticleScheduleRunCompleted(run.id, {
         status: autoAdvance.error ? 'failed' : 'completed',
         article_id: article.id,
@@ -146,11 +149,6 @@ export class ArticleSchedulerService {
       return { scheduleId: schedule.id, runId: run.id, status: 'completed', articleId: article.id };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const nextRunAt = computeNextRunAt(schedule, new Date(schedule.next_run_at));
-      this.repo.updateArticleSchedule(schedule.id, {
-        last_run_at: schedule.next_run_at,
-        next_run_at: nextRunAt,
-      });
       this.repo.markArticleScheduleRunCompleted(run.id, {
         status: 'failed',
         error_text: message,
