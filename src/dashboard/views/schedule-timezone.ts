@@ -19,13 +19,19 @@ export function renderScheduleTimezoneScript(): string {
 
   function utcToLocal(wkUtc, timeUtc) {
     var p = timeUtc.split(':');
-    var d = new Date(Date.UTC(2024, 0, 7 + wkUtc, +p[0], +p[1]));
+    // Use current week so the DST offset is correct for today
+    var now = new Date();
+    var refDate = now.getUTCDate() - now.getUTCDay() + wkUtc;
+    var d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), refDate, +p[0], +p[1]));
     return { weekday: d.getDay(), time: pad(d.getHours()) + ':' + pad(d.getMinutes()) };
   }
 
   function localToUtc(wkLocal, timeLocal) {
     var p = timeLocal.split(':');
-    var d = new Date(2024, 0, 7 + wkLocal, +p[0], +p[1]);
+    // Use current week so the DST offset is correct for today
+    var now = new Date();
+    var refDate = now.getDate() - now.getDay() + wkLocal;
+    var d = new Date(now.getFullYear(), now.getMonth(), refDate, +p[0], +p[1]);
     return { weekday: d.getUTCDay(), time: pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) };
   }
 
