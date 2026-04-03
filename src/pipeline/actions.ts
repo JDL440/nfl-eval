@@ -227,6 +227,32 @@ function writeArtifact(repo: Repository, articleId: string, filename: string, co
   repo.artifacts.put(articleId, filename, content);
 }
 
+function buildHumanFeedbackContext(repo: Repository, articleId: string): {
+  feedbackContext: string | null;
+  packetIds: number[];
+} {
+  const packets = repo.getPendingFeedback(articleId);
+  if (packets.length === 0) return { feedbackContext: null, packetIds: [] };
+
+  const parts: string[] = ['## Human Feedback (Apply These Corrections)', ''];
+  for (const pkt of packets) {
+    parts.push(`### Feedback #${pkt.id}`);
+    if (pkt.target_artifact) {
+      parts.push(`**Target:** ${pkt.target_artifact}`);
+    }
+    parts.push(`**Instructions:** ${pkt.instructions}`);
+    if (pkt.edited_content) {
+      parts.push('', '**Preferred corrected text:**', '```', pkt.edited_content, '```');
+    }
+    parts.push('');
+  }
+
+  return {
+    feedbackContext: parts.join('\n'),
+    packetIds: packets.map(p => p.id),
+  };
+}
+
 function buildLeadReviewHandoff(
   repo: Repository,
   articleId: string,
@@ -1571,6 +1597,12 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
       }
     }
 
+    // Inject any pending human feedback packets
+    const { feedbackContext, packetIds: feedbackPacketIds } = buildHumanFeedbackContext(ctx.repo, articleId);
+    if (feedbackContext) {
+      content = content + '\n\n' + feedbackContext;
+    }
+
     const task = buildWriterTask(isRevision);
 
     const result = await runAgent(ctx, articleId, article.current_stage, 'writeDraft', {
@@ -1588,6 +1620,11 @@ async function writeDraft(articleId: string, ctx: ActionContext): Promise<Action
 
     writeAgentResult(ctx.repo, articleId, 'draft.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'writeDraft', result);
+
+    // Mark human feedback as consumed
+    for (const pktId of feedbackPacketIds) {
+      ctx.repo.markFeedbackConsumed(pktId, 'writer');
+    }
 
     // Record writer output as a conversation turn
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'writer', 'assistant', result.content);
@@ -1707,6 +1744,12 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
     const editorPreviousReviews = buildEditorPreviousReviews(editorTurns);
     const fullConversationCtx = [conversationCtx, editorPreviousReviews].filter(Boolean).join('\n\n---\n\n') || undefined;
 
+    // Inject any pending human feedback packets
+    const { feedbackContext, packetIds: feedbackPacketIds } = buildHumanFeedbackContext(ctx.repo, articleId);
+    if (feedbackContext) {
+      content = content + '\n\n' + feedbackContext;
+    }
+
     const result = await runAgent(ctx, articleId, article.current_stage, 'runEditor', {
       agentName: 'editor',
       task: `Review the article draft against the article contract and provide editorial feedback. The article contract defines the required thesis, tensions, evidence anchors, and structure expectations — use it as your evaluation rubric. Use the current roster context to verify player names and team assignments. If a player is listed on a DIFFERENT team in the roster data, flag as 🔴 ERROR. If a player is simply not found in the roster, flag as ⚠️ CAUTION — roster data updates daily and may lag behind reported transactions by 24-48 hours. Do not REJECT or REVISE solely because a recently reported signing/trade is not yet in the data. If \`writer-factcheck.md\` is present, treat it as an advisory Stage 5 ledger: reuse its verified/attributed/omitted claim notes, scrutinize anything it left unresolved, and do not treat it as final approval.\n\n⚠️ CRITICAL OUTPUT FORMAT: Your review MUST end with a ## Verdict section containing EXACTLY one of these words on its own line: APPROVED, REVISE, or REJECT. No other format is accepted. Example:\n\n## Verdict\nAPPROVED\n\n${EDITOR_REVISE_BLOCKER_TAG_GUIDANCE}`,
@@ -1722,6 +1765,11 @@ async function runEditor(articleId: string, ctx: ActionContext): Promise<ActionR
 
     writeAgentResult(ctx.repo, articleId, 'editor-review.md', result);
     recordAgentUsage(ctx, articleId, article.current_stage, 'runEditor', result);
+
+    // Mark human feedback as consumed
+    for (const pktId of feedbackPacketIds) {
+      ctx.repo.markFeedbackConsumed(pktId, 'editor');
+    }
 
     // Record editor review as a conversation turn
     addConversationTurn(ctx.repo, articleId, article.current_stage, 'editor', 'assistant', result.content);
